@@ -1,0 +1,90 @@
+.timelineContainer {
+  padding: 12px 16px;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlBtn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.controlBtn:hover {
+  border-color: var(--color-accent-primary);
+  color: var(--color-text-secondary);
+}
+
+.chartWrapper {
+  height: 180px;
+  width: 100%;
+}
+
+.snapshotRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 4px 0;
+}
+
+.snapshot {
+  width: 64px;
+  height: 40px;
+  border-radius: 4px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.snapshot:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.snapshotActive {
+  border-color: var(--color-accent-secondary);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+}
+
+.snapshotTime {
+  position: absolute;
+  bottom: 2px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0 4px;
+  border-radius: 2px;
+}
