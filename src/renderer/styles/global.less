@@ -93,3 +93,36 @@ html, body, #root {
 .ant-tabs-tabpane-hidden {
   display: none !important;
 }
+
+/* Profiler Spin wrapper: fill available flex space */
+.profiler-spin-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  .ant-spin-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .ant-spin-blur {
+    opacity: 0.3;
+  }
+
+  .ant-spin {
+    max-height: none !important;
+  }
+
+  .ant-spin-text {
+    color: #7c3aed;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .ant-spin-dot-item {
+    background-color: #7c3aed;
+  }
+}

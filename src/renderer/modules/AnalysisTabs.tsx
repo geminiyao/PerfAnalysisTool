@@ -1,17 +1,27 @@
 import React, { useMemo } from 'react'
 import { Tabs } from 'antd'
-import { LayoutDashboard, Cpu, Zap, MemoryStick, Gauge } from 'lucide-react'
+import { LayoutDashboard, Cpu, Zap, MemoryStick, Gauge, Activity } from 'lucide-react'
 import { useAnalysisStore } from '@/store/analysisStore'
 import OverviewModule from './Overview'
 import CpuModule from './CpuModule'
 import PowerModule from './PowerModule'
 import MemoryModule from './MemoryModule'
 import FpsModule from './FpsModule'
+import ProfilerModule from './ProfilerModule'
 
 const AnalysisTabs: React.FC = () => {
   const { activeTab, setActiveTab } = useAnalysisStore()
 
   const tabItems = useMemo(() => [
+    {
+      key: 'profiler',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Activity size={14} /> Profiler Analyzer
+        </span>
+      ),
+      children: <ProfilerModule />
+    },
     {
       key: 'overview',
       label: (

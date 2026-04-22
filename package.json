@@ -46,6 +46,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "@tencent-ai/agent-sdk": "file:./vendor/agent-sdk",
     "antd": "^5.22.0",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",

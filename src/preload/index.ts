@@ -12,6 +12,24 @@ const electronAPI = {
   },
   system: {
     getMemoryUsage: () => ipcRenderer.invoke('system:getMemoryUsage')
+  },
+  profiler: {
+    openFile: () => ipcRenderer.invoke('profiler:openFile'),
+    loadFile: (filePath: string) => ipcRenderer.invoke('profiler:loadFile', filePath),
+    reanalyze: (options: any) => ipcRenderer.invoke('profiler:reanalyze', options),
+    getCurrentAnalysis: () => ipcRenderer.invoke('profiler:getCurrentAnalysis'),
+    exportCsv: () => ipcRenderer.invoke('profiler:exportCsv')
+  },
+  ai: {
+    analyze: (prompt: string) => ipcRenderer.invoke('ai:analyze', prompt),
+    abort: () => ipcRenderer.invoke('ai:abort'),
+    setConfig: (config: any) => ipcRenderer.invoke('ai:setConfig', config),
+    getConfig: () => ipcRenderer.invoke('ai:getConfig'),
+    onStream: (callback: (data: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data)
+      ipcRenderer.on('ai:stream', handler)
+      return () => ipcRenderer.removeListener('ai:stream', handler)
+    }
   }
 }
 

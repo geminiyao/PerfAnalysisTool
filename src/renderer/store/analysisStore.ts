@@ -11,7 +11,7 @@ interface AnalysisState {
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
-  activeTab: 'overview',
+  activeTab: 'profiler',
   timelineData: {},
   selectedTimeRange: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
