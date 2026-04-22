@@ -1,0 +1,920 @@
+{
+  "endpoint": "https://copilot.tencent.com",
+  "stagingEndpoint": "https://staging-copilot.tencent.com",
+  "defaultRelatedModels": {
+    "lite": "claude-haiku-4.5",
+    "reasoning": "claude-opus-4.5"
+  },
+  "agents": [
+    {
+      "name": "cli",
+      "instructions": "cli-agent-prompt",
+      "description": "cli agent",
+      "models": [
+        "claude-sonnet-4.6",
+        "claude-sonnet-4.6-1m",
+        "claude-4.5",
+        "claude-opus-4.6",
+        "claude-opus-4.6-1m",
+        "claude-opus-4.5",
+        "claude-haiku-4.5",
+        "gemini-3.1-pro",
+        "gemini-3.0-flash",
+        "gemini-2.5-pro",
+        "gemini-3.1-flash-lite",
+        "gpt-5.4",
+        "gpt-5.2",
+        "gpt-5.3-codex",
+        "gpt-5.2-codex",
+        "gpt-5.1",
+        "gpt-5.1-codex",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex-mini",
+        "glm-5.0-turbo-ioa",
+        "glm-5v-turbo-ioa",
+        "glm-5.0-ioa",
+        "glm-4.7-ioa",
+        "minimax-m2.7-ioa",
+        "minimax-m2.5-ioa",
+        "kimi-k2.5-ioa",
+        "deepseek-v3-2-volc-ioa",
+        "hunyuan-2.0-thinking-ioa"
+      ],
+      "modelTags": [
+        "craft"
+      ],
+      "commands": [
+        "init",
+        "compact",
+        "statusline",
+        "insights"
+      ],
+      "tools": [
+        "Agent",
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "EnterPlanMode",
+        "ExitPlanMode",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "TaskStop",
+        "TaskOutput",
+        "Skill",
+        "AskUserQuestion",
+        "StructuredOutput",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "SendMessage",
+        "TeamCreate",
+        "TeamDelete",
+        "NotebookEdit",
+        "LSP",
+        "ImageGen",
+        "ImageEdit",
+        "EnterWorktree",
+        "LeaveWorktree",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DelegateTool",
+        "WeChatReply",
+        "WeComReply"
+      ],
+      "tags": [
+        "cli",
+        "default",
+        "model:craft"
+      ]
+    },
+    {
+      "name": "general-purpose",
+      "instructions": "cli-agent-prompt",
+      "description": "general-purpose agent",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "TaskStop",
+        "TaskOutput",
+        "Skill",
+        "AskUserQuestion",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "SendMessage",
+        "NotebookEdit",
+        "LSP"
+      ],
+      "tags": [
+        "cli",
+        "general-purpose"
+      ]
+    },
+    {
+      "name": "compact",
+      "instructions": "compact-agent-prompt",
+      "description": "compact agent",
+      "tools": [
+        "Read"
+      ],
+      "tags": [
+        "cli",
+        "compact"
+      ]
+    },
+    {
+      "name": "contentAnalyzer",
+      "instructions": "content-analyzer-agent-instructions",
+      "description": "content analyzer agent",
+      "models": [
+        "lite"
+      ],
+      "tags": [
+        "cli",
+        "content-analyzer"
+      ],
+      "tools": []
+    },
+    {
+      "name": "terminalTitleGenerator",
+      "instructions": "terminal-title-generator-instructions",
+      "description": "Generate terminal window titles from conversation topics.",
+      "models": [
+        "lite"
+      ],
+      "tags": [
+        "cli",
+        "terminal-title-generator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "summaryGenerator",
+      "instructions": "summary-generator-instructions",
+      "description": "Generate session summaries from conversation content.",
+      "models": [
+        "lite"
+      ],
+      "tags": [
+        "cli",
+        "summary-generator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "promptHookEvaluator",
+      "instructions": "prompt-hook-evaluator-instructions",
+      "description": "Evaluates prompt hooks using LLM to determine if conditions are met",
+      "models": [
+        "lite"
+      ],
+      "tags": [
+        "cli",
+        "prompt-hook-evaluator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "insightsAnalyzer",
+      "instructions": "base-agent-instructions",
+      "description": "Analyzes user usage data facets for the /insights command",
+      "tags": [
+        "cli",
+        "insights-analyzer"
+      ],
+      "tools": []
+    },
+    {
+      "name": "agentInstructions",
+      "instructions": "agent-instructions",
+      "description": "generating agent instructions",
+      "tags": [
+        "cli",
+        "agent-instructions"
+      ],
+      "tools": []
+    },
+    {
+      "name": "statusline-setup",
+      "instructions": "agent-statusline-instructions",
+      "description": "Use this agent to configure the user's Codebuddy Code status line setting.",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "ToolSearch",
+        "DeferExecuteTool"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Explore",
+      "instructions": "agent-explore-instructions",
+      "description": "Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions.",
+      "models": [
+        "lite"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "Skill",
+        "SendMessage",
+        "ToolSearch",
+        "DeferExecuteTool"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Bash",
+      "instructions": "agent-bash-instructions",
+      "description": "Command execution specialist for running bash commands. Use this for git operations, running build tools, executing tests, installing dependencies, and other terminal tasks.",
+      "color": "#5b9bd5",
+      "models": [
+        "lite"
+      ],
+      "tools": [
+        "Bash"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Plan",
+      "instructions": "agent-plan-instructions",
+      "description": "Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions. (Tools: All tools)",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "Skill",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "TeamCreate",
+        "TeamDelete",
+        "SendMessage"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "credits": "x0.00 credits",
+      "id": "deepseek-v3-2-volc-ioa",
+      "name": "DeepSeek-V3.2",
+      "vendor": "e",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 96000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 96000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "deepseek-v3-2-volc-ioa",
+        "reasoning": "deepseek-v3-2-volc-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "minimax-m2.5-ioa",
+      "name": "MiniMax-M2.5",
+      "vendor": "e",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "minimax-m2.5-ioa",
+        "reasoning": "minimax-m2.5-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "minimax-m2.7-ioa",
+      "name": "MiniMax-M2.7",
+      "vendor": "f",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "minimax-m2.7-ioa",
+        "reasoning": "minimax-m2.7-ioa"
+      }
+    },
+    {
+      "credits": "x0.54 credits",
+      "id": "kimi-k2-thinking",
+      "name": "Kimi-K2-Thinking",
+      "vendor": "f",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 164000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "maxAllowedSize": 164000
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "kimi-k2.5-ioa",
+      "name": "Kimi-K2.5",
+      "vendor": "f",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 164000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "temperature": 1,
+      "onlyReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "maxAllowedSize": 164000,
+      "relatedModels": {
+        "lite": "kimi-k2.5-ioa",
+        "reasoning": "kimi-k2.5-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-5.0-ioa",
+      "name": "GLM-5.0",
+      "vendor": "e",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "temperature": 1,
+      "relatedModels": {
+        "lite": "glm-5.0-ioa",
+        "reasoning": "glm-5.0-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-5.0-turbo-ioa",
+      "name": "GLM-5.0-Turbo",
+      "vendor": "e",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "glm-5.0-turbo-ioa",
+        "reasoning": "glm-5.0-turbo-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-5v-turbo-ioa",
+      "name": "GLM-5v-Turbo",
+      "vendor": "e",
+      "maxOutputTokens": 38000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "glm-5v-turbo-ioa",
+        "reasoning": "glm-5v-turbo-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-4.7-ioa",
+      "name": "GLM-4.7",
+      "vendor": "f",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 160000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 160000,
+      "supportsReasoning": true,
+      "temperature": 1,
+      "relatedModels": {
+        "lite": "glm-4.7-ioa",
+        "reasoning": "glm-4.7-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-4.6v-ioa",
+      "name": "GLM-4.6V",
+      "vendor": "e",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "maxAllowedSize": 128000,
+      "relatedModels": {
+        "lite": "glm-4.6v-ioa",
+        "reasoning": "glm-4.6v-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "glm-4.6-ioa",
+      "name": "GLM-4.6",
+      "vendor": "f",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 168000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 168000,
+      "supportsReasoning": true,
+      "temperature": 1,
+      "relatedModels": {
+        "lite": "glm-4.6-ioa",
+        "reasoning": "glm-4.6-ioa"
+      }
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "hunyuan-2.0-thinking-ioa",
+      "name": "Hunyuan-2.0-Thinking",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 128000,
+      "maxAllowedSize": 128000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "supportsReasoning": true,
+      "temperature": 0.7,
+      "onlyReasoning": true,
+      "top_p": 0.8,
+      "top_k": 20,
+      "repetition_penalty": 1.05,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "hunyuan-2.0-thinking-ioa",
+        "reasoning": "hunyuan-2.0-thinking-ioa"
+      }
+    },
+    {
+      "credits": "x2.00 credits",
+      "id": "claude-sonnet-4.6",
+      "name": "Claude-Sonnet-4.6",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 176000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 80000,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x2.00 credits",
+      "id": "claude-sonnet-4.6-1m",
+      "name": "Claude-Sonnet-4.6-1M",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 1000000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 1000000,
+      "temperature": 1,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x3.33 credits",
+      "id": "claude-opus-4.6",
+      "name": "Claude-Opus-4.6",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 176000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 80000,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x3.33 credits",
+      "id": "claude-opus-4.6-1m",
+      "name": "Claude-Opus-4.6-1M",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 1000000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 1000000,
+      "temperature": 1,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x3.33 credits",
+      "id": "claude-opus-4.5",
+      "name": "Claude-Opus-4.5",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 176000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 80000,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x2.00 credits",
+      "id": "claude-4.5",
+      "name": "Claude-Sonnet-4.5",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 176000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 80000,
+      "supportsReasoning": true
+    },
+    {
+      "credits": "x0.67 credits",
+      "id": "claude-haiku-4.5",
+      "name": "Claude-Haiku-4.5",
+      "vendor": "e",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 176000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 80000,
+      "supportsReasoning": true,
+      "tags": [
+        "lite"
+      ]
+    },
+    {
+      "credits": "x1.65 credits",
+      "id": "gpt-5.4",
+      "name": "GPT-5.4",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x1.25 credits",
+      "id": "gpt-5.3-codex",
+      "name": "GPT-5.3-Codex",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x1.25 credits",
+      "id": "gpt-5.2",
+      "name": "GPT-5.2",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x1.25 credits",
+      "id": "gpt-5.2-codex",
+      "name": "GPT-5.2-Codex",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x0.90 credits",
+      "id": "gpt-5.1",
+      "name": "GPT-5.1",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x0.90 credits",
+      "id": "gpt-5.1-codex",
+      "name": "GPT-5.1-Codex",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x0.90 credits",
+      "id": "gpt-5.1-codex-max",
+      "maxAllowedSize": 272000,
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "name": "GPT-5.1-Codex-Max",
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "supportsToolCall": true,
+      "vendor": "e"
+    },
+    {
+      "credits": "x0.18 credits",
+      "id": "gpt-5.1-codex-mini",
+      "name": "GPT-5.1-Codex-Mini",
+      "vendor": "e",
+      "maxInputTokens": 272000,
+      "maxOutputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "relatedModels": {
+        "lite": "gpt-5.1-codex-mini",
+        "reasoning": "claude-opus-4.5"
+      }
+    },
+    {
+      "credits": "x1.32 credits",
+      "id": "gemini-3.1-pro",
+      "name": "Gemini-3.1-Pro",
+      "maxOutputTokens": 64000,
+      "maxInputTokens": 400000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "maxAllowedSize": 400000
+    },
+    {
+      "credits": "x0.33 credits",
+      "id": "gemini-3.0-flash",
+      "name": "Gemini-3.0-Flash",
+      "maxOutputTokens": 64000,
+      "maxInputTokens": 400000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "maxAllowedSize": 400000,
+      "relatedModels": {
+        "lite": "gemini-3.0-flash",
+        "reasoning": "claude-opus-4.5"
+      }
+    },
+    {
+      "credits": "x0.90 credits",
+      "id": "gemini-2.5-pro",
+      "name": "Gemini-2.5-Pro",
+      "maxOutputTokens": 64000,
+      "maxInputTokens": 400000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "supportsReasoning": true,
+      "maxAllowedSize": 400000
+    },
+    {
+      "credits": "x0.17 credits",
+      "id": "gemini-3.1-flash-lite",
+      "name": "Gemini-3.1-flash-lite",
+      "vendor": "e",
+      "maxOutputTokens": 65536,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": true,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x4.96 credits",
+      "id": "gemini-3.0-pro-image",
+      "name": "Gemini-3.0-Pro-Image",
+      "tags": [
+        "text-to-image",
+        "image-to-image"
+      ]
+    },
+    {
+      "credits": "x1.78 credits",
+      "id": "gemini-3.1-flash-image",
+      "name": "Gemini-3.1-Flash-Image",
+      "tags": [
+        "text-to-image",
+        "image-to-image"
+      ]
+    },
+    {
+      "credits": "x1.14 credits",
+      "id": "gemini-2.5-flash-image",
+      "name": "Gemini-2.5-Flash-Image",
+      "tags": [
+        "text-to-image",
+        "image-to-image"
+      ]
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "hunyuan-image-v3.0-ioa",
+      "name": "Hunyuan-Image-V3",
+      "tags": [
+        "text-to-image"
+      ]
+    },
+    {
+      "credits": "x0.00 credits",
+      "id": "hunyuan-image-v2.0-general-edit-ioa",
+      "name": "Hunyuan-Image-Edit",
+      "tags": [
+        "image-to-image"
+      ]
+    }
+  ],
+  "links": {
+    "officialWebsite": "https://copilot.tencent.com/cli",
+    "helpDocument": "https://copilot.tencent.com/docs/cli",
+    "issueFeedback": "https://cnb.cool/codebuddy/codebuddy-code/-/issues",
+    "issueCreation": "https://cnb.cool/codebuddy/codebuddy-code/-/issues/new",
+    "mcpHelpDocument": "https://copilot.tencent.com/docs/cli/mcp",
+    "hooksHelpDocument": "https://copilot.tencent.com/docs/cli/hooks",
+    "sandboxHelpDocument": "https://copilot.tencent.com/docs/cli/bash-sandboxing",
+    "upgradeUrl": ""
+  },
+  "productFeatures": {
+    "BillingNotice": false,
+    "CustomModelsJSON": true,
+    "DeferToolLoading": true,
+    "ImageGen": true,
+    "ImageEdit": true,
+    "RequestBodyGzip": true,
+    "RemoteControl": true,
+    "ScheduledTasks": true
+  },
+  "config": {
+    "creditPurchaseActions": {
+      "6004": {
+        "labelZh": "升级专业版",
+        "labelEn": "Upgrade to Pro",
+        "url": "https://www.codebuddy.cn/profile/plan",
+        "showButton": true
+      },
+      "6005": {
+        "labelZh": "升级专业版",
+        "labelEn": "Upgrade to Pro",
+        "url": "https://www.codebuddy.cn/profile/plan",
+        "showButton": true
+      },
+      "14018": {
+        "labelZh": "获取 Credits",
+        "labelEn": "Get credits",
+        "url": "https://www.codebuddy.cn/profile/plan",
+        "showButton": true
+      }
+    }
+  },
+  "commit": "c41d8aa1406a451bb1cdcc8ab211131f9e614985",
+  "date": "2026-04-03T06:45:03.622Z"
+}

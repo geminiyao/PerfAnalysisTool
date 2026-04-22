@@ -1,0 +1,44 @@
+{
+  "name": "@tencent-ai/codebuddy-code",
+  "version": "2.76.0",
+  "description": "Use CodeBuddy, Tencent's AI assistant, right from your terminal. CodeBuddy can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
+  "main": "lib/node/index.js",
+  "typings": "lib/node/index.d.ts",
+  "license": "SEE LICENSE IN README.md",
+  "bin": {
+    "codebuddy": "./bin/codebuddy",
+    "cbc": "./bin/codebuddy"
+  },
+  "dependencies": {},
+  "keywords": [
+    "codebuddy",
+    "ai-assistant",
+    "terminal",
+    "cli"
+  ],
+  "files": [
+    "dist",
+    "bin",
+    "vendor",
+    "CHANGELOG.md",
+    "product.json",
+    "product.*.json"
+  ],
+  "homepage": "https://cnb.cool/codebuddy/codebuddy-code",
+  "bugs": {
+    "url": "https://cnb.cool/codebuddy/codebuddy-code/-/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {},
+  "devDependencies": {},
+  "optionalDependencies": {
+    "@lydell/node-pty": "1.1.0",
+    "@lydell/node-pty-darwin-arm64": "1.1.0",
+    "@lydell/node-pty-darwin-x64": "1.1.0",
+    "@lydell/node-pty-linux-x64": "1.1.0",
+    "@lydell/node-pty-win32-arm64": "1.1.0",
+    "@lydell/node-pty-win32-x64": "1.1.0"
+  }
+}

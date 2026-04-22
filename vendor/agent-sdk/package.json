@@ -1,0 +1,36 @@
+{
+  "name": "@tencent-ai/agent-sdk",
+  "version": "0.3.110",
+  "description": "CodeBuddy Code SDK for JavaScript/TypeScript",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "@genie/monorepo": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./lib/index.js"
+    }
+  },
+  "license": "MIT",
+  "files": [
+    "lib",
+    "cli"
+  ],
+  "keywords": [
+    "agent-sdk",
+    "codebuddy-code"
+  ],
+  "scripts": {},
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.14.1",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {},
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,409 @@
+{
+  "agents": [
+    {
+      "name": "cli",
+      "instructions": "cli-agent-prompt",
+      "description": "cli agent",
+      "models": [
+        "glm-4.7",
+        "glm-4.6",
+        "deepseek-v3-2-volc",
+        "deepseek-v3.1",
+        "deepseek-v3-0324"
+      ],
+      "modelTags": [
+        "craft"
+      ],
+      "commands": [
+        "init",
+        "compact",
+        "statusline",
+        "insights"
+      ],
+      "tools": [
+        "Agent",
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "EnterPlanMode",
+        "ExitPlanMode",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "TaskStop",
+        "TaskOutput",
+        "Skill",
+        "AskUserQuestion",
+        "StructuredOutput",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "SendMessage",
+        "TeamCreate",
+        "TeamDelete",
+        "NotebookEdit",
+        "LSP",
+        "ImageGen",
+        "EnterWorktree",
+        "LeaveWorktree",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DelegateTool",
+        "WeChatReply",
+        "WeComReply"
+      ],
+      "tags": [
+        "cli",
+        "default",
+        "model:craft"
+      ]
+    },
+    {
+      "name": "general-purpose",
+      "instructions": "cli-agent-prompt",
+      "description": "taskgeneral-purpose agent",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "TaskStop",
+        "TaskOutput",
+        "Skill",
+        "AskUserQuestion",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "SendMessage",
+        "NotebookEdit",
+        "LSP"
+      ],
+      "tags": [
+        "cli",
+        "general-purpose"
+      ]
+    },
+    {
+      "name": "compact",
+      "instructions": "compact-agent-prompt",
+      "description": "compact agent",
+      "tools": [
+        "Read"
+      ],
+      "tags": [
+        "cli",
+        "compact"
+      ]
+    },
+    {
+      "name": "contentAnalyzer",
+      "instructions": "content-analyzer-agent-instructions",
+      "description": "content analyzer agent",
+      "tags": [
+        "cli",
+        "content-analyzer"
+      ],
+      "tools": []
+    },
+    {
+      "name": "terminalTitleGenerator",
+      "instructions": "terminal-title-generator-instructions",
+      "description": "Generate terminal window titles from conversation topics.",
+      "tags": [
+        "cli",
+        "terminal-title-generator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "summaryGenerator",
+      "instructions": "summary-generator-instructions",
+      "description": "Generate session summaries from conversation content.",
+      "tags": [
+        "cli",
+        "summary-generator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "promptHookEvaluator",
+      "instructions": "prompt-hook-evaluator-instructions",
+      "description": "Evaluates prompt hooks using LLM to determine if conditions are met",
+      "models": [
+        "lite"
+      ],
+      "tags": [
+        "cli",
+        "prompt-hook-evaluator"
+      ],
+      "tools": []
+    },
+    {
+      "name": "insightsAnalyzer",
+      "instructions": "base-agent-instructions",
+      "description": "Analyzes user usage data facets for the /insights command",
+      "tags": [
+        "cli",
+        "insights-analyzer"
+      ],
+      "tools": []
+    },
+    {
+      "name": "agentInstructions",
+      "instructions": "agent-instructions",
+      "description": "generating agent instructions",
+      "tags": [
+        "cli",
+        "agent-instructions"
+      ],
+      "tools": []
+    },
+    {
+      "name": "statusline-setup",
+      "instructions": "agent-statusline-instructions",
+      "description": "Use this agent to configure the user's Codebuddy Code status line setting.",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "ToolSearch",
+        "DeferExecuteTool"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Explore",
+      "instructions": "agent-explore-instructions",
+      "description": "Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions.",
+      "models": [
+        "lite"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "Skill",
+        "SendMessage",
+        "ToolSearch",
+        "DeferExecuteTool"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Bash",
+      "instructions": "agent-bash-instructions",
+      "description": "Command execution specialist for running bash commands. Use this for git operations, running build tools, executing tests, installing dependencies, and other terminal tasks.",
+      "color": "#5b9bd5",
+      "models": [
+        "lite"
+      ],
+      "tools": [
+        "Bash"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    },
+    {
+      "name": "Plan",
+      "instructions": "agent-plan-instructions",
+      "description": "Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions. (Tools: All tools)",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "TaskCreate",
+        "TaskGet",
+        "TaskUpdate",
+        "TaskList",
+        "WebFetch",
+        "WebSearch",
+        "Skill",
+        "ToolSearch",
+        "DeferExecuteTool",
+        "TeamCreate",
+        "TeamDelete",
+        "SendMessage"
+      ],
+      "asTool": true,
+      "tags": [
+        "cli",
+        "sub-agent"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "id": "default",
+      "credits": "x2.20 credits",
+      "name": "Default",
+      "vendor": "v",
+      "maxOutputTokens": 24000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "maxAllowedSize": 56000
+    },
+    {
+      "credits": "x0.26 credits",
+      "id": "deepseek-v3-2-volc",
+      "name": "DeepSeek-V3.2",
+      "vendor": "e",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 96000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 96000,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      }
+    },
+    {
+      "credits": "x0.20 credits",
+      "id": "glm-4.7",
+      "name": "GLM-4.7",
+      "vendor": "f",
+      "maxOutputTokens": 48000,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 200000,
+      "supportsReasoning": true,
+      "temperature": 1
+    },
+    {
+      "credits": "x0.20 credits",
+      "id": "glm-4.6",
+      "name": "GLM-4.6",
+      "vendor": "f",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 168000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 168000,
+      "supportsReasoning": true,
+      "temperature": 1
+    },
+    {
+      "credits": "x0.43 credits",
+      "id": "deepseek-v3.1",
+      "name": "DeepSeek-V3.1-Terminus",
+      "vendor": "f",
+      "maxOutputTokens": 8192,
+      "maxInputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 56000
+    },
+    {
+      "id": "hunyuan-chat",
+      "name": "Hunyuan-Turbos",
+      "vendor": "j",
+      "maxOutputTokens": 8192,
+      "maxInputTokens": 200000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true
+    },
+    {
+      "credits": "x0.57 credits",
+      "id": "deepseek-v3-0324",
+      "name": "DeepSeek-V3",
+      "vendor": "tencent",
+      "maxOutputTokens": 8192,
+      "maxInputTokens": 128000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "disabledMultimodal": true,
+      "maxAllowedSize": 56000
+    },
+    {
+      "credits": "x0.46 credits",
+      "id": "kimi-k2-thinking",
+      "name": "Kimi-K2-Thinking",
+      "vendor": "f",
+      "maxOutputTokens": 32000,
+      "maxInputTokens": 164000,
+      "supportsToolCall": true,
+      "supportsImages": false,
+      "supportsReasoning": true,
+      "onlyReasoning": true,
+      "temperature": 1,
+      "reasoning": {
+        "effort": "high",
+        "summary": "auto"
+      },
+      "maxAllowedSize": 164000
+    },
+    {
+      "id": "hunyuan-image-v3.0",
+      "name": "Hunyuan Image V3",
+      "tags": [
+        "text-to-image"
+      ]
+    }
+  ],
+  "links": {
+    "officialWebsite": "https://copilot.tencent.com/cli",
+    "helpDocument": "https://copilot.tencent.com/docs/cli",
+    "issueFeedback": "https://cnb.cool/codebuddy/codebuddy-code/-/issues",
+    "issueCreation": "https://cnb.cool/codebuddy/codebuddy-code/-/issues/new",
+    "mcpHelpDocument": "https://copilot.tencent.com/docs/cli/mcp",
+    "hooksHelpDocument": "https://copilot.tencent.com/docs/cli/hooks",
+    "sandboxHelpDocument": "https://copilot.tencent.com/docs/cli/bash-sandboxing",
+    "upgradeUrl": ""
+  },
+  "productFeatures": {
+    "BillingNotice": false,
+    "CustomModelsJSON": true,
+    "DeferToolLoading": true,
+    "ImageGen": true,
+    "ScheduledTasks": true
+  },
+  "commit": "c41d8aa1406a451bb1cdcc8ab211131f9e614985",
+  "date": "2026-04-03T06:45:03.585Z"
+}

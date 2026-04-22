@@ -1,0 +1,89 @@
+#!/usr/bin/env node
+
+// 记录真正的进程启动时间（在任何模块加载之前）
+global.__CODEBUDDY_PROCESS_START_TIME__ = Date.now();
+
+// Exit early if on an older version of Node.js (< 18.20.8)
+const PRODUCT_CLI_NAME = 'CodeBuddy Code';
+const minNode = '18.20.8';
+
+function compareVersions(current, required) {
+    // Extract numeric version parts, ignoring pre-release identifiers (e.g., '14.19.0-rc.0' -> '14.19.0')
+    const currentVersion = current.split('-')[0];
+    const currentParts = currentVersion.split('.').map(Number);
+    const requiredParts = required.split('.').map(Number);
+
+    // If version format is invalid (e.g., less than 3 parts or contains NaN), skip check
+    if (currentParts.length < 3 || currentParts.some(isNaN)) {
+        return 0; // Treat as passing the check
+    }
+
+    for (let i = 0; i < 3; i++) {
+        const curr = currentParts[i] || 0;
+        const req = requiredParts[i] || 0;
+        if (curr < req) return -1;
+        if (curr > req) return 1;
+    }
+    return 0;
+}
+
+if (compareVersions(process.versions.node, minNode) < 0) {
+    // eslint-disable-next-line no-console
+    console.error(
+        '\n' +
+        `${PRODUCT_CLI_NAME} requires Node.js v${minNode} or newer.\n` +
+        `You are running Node.js v${process.versions.node}.\n` +
+        'Please upgrade Node.js: https://nodejs.org/en/download/\n',
+    );
+    process.exit(1);
+}
+
+require('events').EventEmitter.defaultMaxListeners = 50;
+
+// Fast path for --version / -v: print version and exit before loading any bundle.
+// This avoids the full DI container initialization (~150 components), network requests,
+// and stdin reads that can cause multi-second startup delays on first install.
+{
+    const args = process.argv.slice(2);
+    const hasVersionFlag = args.includes('--version') || args.includes('-v');
+    // Only apply fast path when no positional sub-command is present
+    // (e.g. "cbc mcp add -v somevalue" should NOT be treated as a version request)
+    const hasSubCommand = args.some(a => !a.startsWith('-'));
+    if (hasVersionFlag && !hasSubCommand) {
+        try {
+            const pkg = require('../package.json');
+            const version = (pkg && pkg.publishConfig && pkg.publishConfig.customPackage && pkg.publishConfig.customPackage.version)
+                || (pkg && pkg.version)
+                || 'unknown';
+            // eslint-disable-next-line no-console
+            console.log(version);
+        } catch (_e) {
+            // eslint-disable-next-line no-console
+            console.log('unknown');
+        }
+        process.exit(0);
+    }
+}
+
+// Route to headless bundle when TUI is not needed
+const args = process.argv.slice(2);
+const isHeadless = args.includes('--print') || args.includes('-p')
+    || args.includes('--acp')
+    || args.includes('--input-format') || args.includes('--output-format')
+    || args.includes('--version') || args.includes('-v')
+    || args.includes('--help') || args.includes('-h') || args.includes('help');
+
+try {
+    if (isHeadless) {
+        require('../dist/codebuddy-headless');
+    } else {
+        require('../dist/codebuddy');
+    }
+} catch (e) {
+    // Fallback to full bundle if headless bundle is not available
+    if (isHeadless && e.code === 'MODULE_NOT_FOUND') {
+        require('../dist/codebuddy');
+    } else {
+        throw e;
+    }
+}
