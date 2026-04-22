@@ -3,6 +3,8 @@ import { parsePdataFile } from './profiler/pdata-parser'
 import { analyzeProfileData } from './profiler/profile-analyzer'
 import { ProfileData, AnalyzeOptions, ProfileAnalysisResult } from './profiler/types'
 import { analyzeWithAIStreaming, abortAnalysis, setAgentConfig, getAgentConfig } from './ai/agent-service'
+import { getFrameCallTree, treeToFlatRows } from './profiler/call-tree'
+import { detectAllSpikes } from './profiler/spike-detector'
 
 let currentProfileData: ProfileData | null = null
 let currentAnalysis: ProfileAnalysisResult | null = null
@@ -116,6 +118,36 @@ export function registerIpcHandlers(): void {
 
     fs.writeFileSync(result.filePath, csvHeader + csvRows, 'utf8')
     return { success: true, filePath: result.filePath }
+  })
+
+  // ============ Profiler: get call tree for a specific frame ============
+  ipcMain.handle('profiler:getCallTree', async (_event, frameIndex: number, threadFilter?: string) => {
+    if (!currentProfileData) {
+      return { success: false, error: 'No profile data loaded' }
+    }
+    const result = getFrameCallTree(currentProfileData, frameIndex, threadFilter)
+    if (!result) {
+      return { success: false, error: `Frame ${frameIndex} not found` }
+    }
+    return {
+      success: true,
+      data: {
+        frameIndex: result.frameIndex,
+        msFrame: result.msFrame,
+        threadName: result.threadName,
+        rows: treeToFlatRows(result.tree),
+        hotPath: result.hotPath
+      }
+    }
+  })
+
+  // ============ Profiler: detect spikes ============
+  ipcMain.handle('profiler:getSpikes', async () => {
+    if (!currentAnalysis) {
+      return { success: false, error: 'No analysis data available' }
+    }
+    const spikes = detectAllSpikes(currentAnalysis.markers)
+    return { success: true, data: spikes }
   })
 
   // ============ AI: analyze with CodeBuddy Agent SDK ============

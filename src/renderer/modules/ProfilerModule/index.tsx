@@ -173,35 +173,44 @@ const ProfilerModule: React.FC = () => {
             onChange={(e) => setNameFilter(e.target.value)} />
         </div>
 
-        {/* Data panels with loading overlay */}
-        <Spin spinning={isLoading} tip="Analyzing..." size="large"
-          style={{ maxHeight: 'none' }}
-          wrapperClassName="profiler-spin-wrapper">
+        {/* Data panels */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
-        {/* Top Markers bar */}
-        <div style={{ height: 36, flexShrink: 0, borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
-          <TopMarkers />
-        </div>
+          {/* Loading overlay */}
+          {isLoading && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(13,13,26,0.6)', backdropFilter: 'blur(2px)'
+            }}>
+              <Spin size="large" tip="Analyzing..." />
+            </div>
+          )}
 
-        {/* Bottom section: Marker Table + right panel */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <div style={{ flex: 65, overflow: 'hidden', borderRight: '1px solid rgba(124,58,237,0.15)' }}>
-            <MarkerTable />
+          {/* Top Markers bar */}
+          <div style={{ height: 36, flexShrink: 0, borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
+            <TopMarkers />
           </div>
-          <div style={{ flex: 35, minWidth: 260, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ overflow: 'auto', borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
-              <FrameSummary />
+
+          {/* Bottom section: Marker Table + right panel */}
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: 65, overflow: 'hidden', borderRight: '1px solid rgba(124,58,237,0.15)' }}>
+              <MarkerTable />
             </div>
-            <div style={{ flex: 1, overflow: 'auto', borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
-              <MarkerHistogram />
-            </div>
-            <div style={{ maxHeight: 160, overflow: 'auto' }}>
-              <ThreadSummary />
+            <div style={{ flex: 35, minWidth: 260, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ overflow: 'auto', borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
+                <FrameSummary />
+              </div>
+              <div style={{ flex: 1, overflow: 'auto', borderBottom: '1px solid rgba(124,58,237,0.15)' }}>
+                <MarkerHistogram />
+              </div>
+              <div style={{ maxHeight: 160, overflow: 'auto' }}>
+                <ThreadSummary />
+              </div>
             </div>
           </div>
-        </div>
 
-        </Spin>
+        </div>
       </div>
 
       {/* AI Analysis Drawer */}

@@ -18,7 +18,9 @@ const electronAPI = {
     loadFile: (filePath: string) => ipcRenderer.invoke('profiler:loadFile', filePath),
     reanalyze: (options: any) => ipcRenderer.invoke('profiler:reanalyze', options),
     getCurrentAnalysis: () => ipcRenderer.invoke('profiler:getCurrentAnalysis'),
-    exportCsv: () => ipcRenderer.invoke('profiler:exportCsv')
+    exportCsv: () => ipcRenderer.invoke('profiler:exportCsv'),
+    getCallTree: (frameIndex: number, threadFilter?: string) => ipcRenderer.invoke('profiler:getCallTree', frameIndex, threadFilter),
+    getSpikes: () => ipcRenderer.invoke('profiler:getSpikes')
   },
   ai: {
     analyze: (prompt: string) => ipcRenderer.invoke('ai:analyze', prompt),

@@ -53,6 +53,8 @@ export interface ElectronAPI {
     reanalyze: (options: any) => Promise<ProfilerReanalyzeResult>
     getCurrentAnalysis: () => Promise<ProfilerReanalyzeResult>
     exportCsv: () => Promise<ProfilerExportResult>
+    getCallTree: (frameIndex: number, threadFilter?: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    getSpikes: () => Promise<{ success: boolean; data?: any; error?: string }>
   }
   ai: {
     analyze: (prompt: string) => Promise<AiAnalyzeResult>
