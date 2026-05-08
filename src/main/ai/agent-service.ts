@@ -1,12 +1,67 @@
 /**
  * AI Agent Service - integrates @tencent-ai/agent-sdk for real AI analysis.
  *
- * Uses the query() API for one-shot analysis and streams results back
- * to renderer via IPC events.
+ * Phase 1.5: Uses DeepAnalysisContext for enriched prompts,
+ * injects Unity CPU knowledge as system prompt,
+ * and provides fallback report when AI fails.
  */
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { ProfileAnalysisResult } from '../profiler/types'
-import { buildAnalysisPrompt, buildFollowUpPrompt } from './prompt-builder'
+import {
+  buildAnalysisPrompt,
+  buildFollowUpPrompt,
+  buildFallbackReport,
+  DeepAnalysisContext
+} from './prompt-builder'
+
+// Load Unity CPU knowledge base from .md file (easy to edit without recompiling)
+function loadKnowledgeBase(): string {
+  try {
+    const mdPath = path.join(__dirname, 'unity-cpu-knowledge.md')
+    return fs.readFileSync(mdPath, 'utf-8')
+  } catch (e: any) {
+    console.warn(`[AI] Failed to load knowledge base md: ${e.message}, using fallback`)
+    return 'You are a Unity game performance analysis expert. Respond in Chinese. Use Markdown format.'
+  }
+}
+
+// Load Performance Analysis Skill from .claude/skills/ (standard skill location)
+function loadAnalysisSkill(): string {
+  try {
+    // Try standard skill location first
+    const skillPath = path.join(process.cwd(), '.claude', 'skills', 'unity-profiler-analysis', 'SKILL.md')
+    if (fs.existsSync(skillPath)) {
+      return fs.readFileSync(skillPath, 'utf-8')
+    }
+    // Fallback: bundled copy next to this file
+    const bundledPath = path.join(__dirname, 'performance-analysis-skill.md')
+    if (fs.existsSync(bundledPath)) {
+      return fs.readFileSync(bundledPath, 'utf-8')
+    }
+    return ''
+  } catch (e: any) {
+    console.warn(`[AI] Failed to load analysis skill: ${e.message}`)
+    return ''
+  }
+}
+
+/**
+ * Build complete system prompt by combining knowledge base + analysis skill.
+ */
+function buildSystemPrompt(): string {
+  const knowledge = loadKnowledgeBase()
+  const skill = loadAnalysisSkill()
+
+  const parts: string[] = []
+  parts.push(knowledge)
+  if (skill) {
+    parts.push('\n---\n')
+    parts.push(skill)
+  }
+  return parts.join('\n')
+}
 
 // SDK is loaded dynamically to handle cases where it may not be available
 let sdkModule: typeof import('@tencent-ai/agent-sdk') | null = null
@@ -62,141 +117,27 @@ export function abortAnalysis(): void {
 }
 
 /**
- * Run AI analysis on profiler data.
- * Streams results back to the renderer via IPC 'ai:stream' events.
+ * Run AI analysis with streaming partial messages for real-time text rendering.
+ *
+ * Phase 1.5: accepts DeepAnalysisContext for enriched prompts.
+ * Falls back to deterministic report on AI failure.
  *
  * Message format sent to renderer:
  *   { type: 'delta', content: string, done: boolean }  -- incremental text
  *   { type: 'done', content: string }                   -- final complete text
  *   { type: 'error', error: string }                    -- error occurred
  */
-export async function analyzeWithAI(
-  win: BrowserWindow,
-  analysis: ProfileAnalysisResult,
-  userPrompt?: string
-): Promise<{ success: boolean; error?: string }> {
-  const prompt = userPrompt
-    ? buildFollowUpPrompt(userPrompt, analysis)
-    : buildAnalysisPrompt(analysis)
-
-  // Abort any previous running query
-  abortAnalysis()
-
-  let sdk: typeof import('@tencent-ai/agent-sdk')
-  try {
-    sdk = await loadSdk()
-  } catch (e: any) {
-    const errorMsg = e.message || 'Failed to load Agent SDK'
-    win.webContents.send('ai:stream', { type: 'error', error: errorMsg })
-    return { success: false, error: errorMsg }
-  }
-
-  const abortController = new AbortController()
-  activeAbortController = abortController
-
-  const systemPromptAppend = agentConfig.systemPromptAppend ||
-    '你是一个Unity游戏性能分析专家。请用中文回答，使用Markdown格式。' +
-    '专注于识别性能瓶颈、分析异常帧、提供具体可操作的优化建议。'
-
-  try {
-    const q = sdk.query({
-      prompt,
-      options: {
-        abortController,
-        permissionMode: agentConfig.permissionMode || 'bypassPermissions',
-        maxTurns: agentConfig.maxTurns || 3,
-        model: agentConfig.model,
-        pathToCodebuddyCode: agentConfig.pathToCodebuddyCode,
-        systemPrompt: { append: systemPromptAppend },
-        // Disable all tools - we only need text analysis, no file operations
-        tools: [],
-        // Don't persist sessions for ephemeral analysis
-        persistSession: false
-      }
-    })
-
-    let accumulatedText = ''
-
-    for await (const message of q) {
-      // Check if aborted
-      if (abortController.signal.aborted) {
-        win.webContents.send('ai:stream', {
-          type: 'done',
-          content: accumulatedText || '(Analysis aborted)'
-        })
-        return { success: true }
-      }
-
-      if (message.type === 'assistant') {
-        // Complete assistant message
-        for (const block of message.message.content) {
-          if (block.type === 'text') {
-            accumulatedText += block.text
-            win.webContents.send('ai:stream', {
-              type: 'delta',
-              content: accumulatedText,
-              done: false
-            })
-          }
-        }
-      } else if (message.type === 'result') {
-        // Query completed
-        if (message.subtype === 'success' && message.result) {
-          // result field may contain final text
-          if (message.result && !accumulatedText) {
-            accumulatedText = message.result
-          }
-        } else if (message.is_error) {
-          const errors = 'errors' in message ? (message.errors || []) : []
-          const errorMsg = errors.join('; ') || 'AI analysis encountered an error'
-          win.webContents.send('ai:stream', { type: 'error', error: errorMsg })
-          return { success: false, error: errorMsg }
-        }
-      } else if (message.type === 'error') {
-        win.webContents.send('ai:stream', {
-          type: 'error',
-          error: message.error || 'Unknown error'
-        })
-        return { success: false, error: message.error }
-      }
-    }
-
-    // Send final done
-    win.webContents.send('ai:stream', {
-      type: 'done',
-      content: accumulatedText
-    })
-
-    return { success: true }
-  } catch (e: any) {
-    const errorMsg = e.message || 'AI analysis failed'
-    // Don't send error for intentional aborts
-    if (e.name !== 'AbortError') {
-      win.webContents.send('ai:stream', { type: 'error', error: errorMsg })
-    }
-    return { success: false, error: errorMsg }
-  } finally {
-    if (activeAbortController === abortController) {
-      activeAbortController = null
-    }
-  }
-}
-
-/**
- * Run AI analysis with streaming partial messages for real-time text rendering.
- * This provides finer-grained streaming than analyzeWithAI.
- */
 export async function analyzeWithAIStreaming(
   win: BrowserWindow,
   analysis: ProfileAnalysisResult,
+  deep?: DeepAnalysisContext,
   userPrompt?: string
 ): Promise<{ success: boolean; error?: string }> {
   const prompt = userPrompt
-    ? buildFollowUpPrompt(userPrompt, analysis)
-    : buildAnalysisPrompt(analysis)
+    ? buildFollowUpPrompt(userPrompt, analysis, deep)
+    : buildAnalysisPrompt(analysis, deep)
 
   console.log(`[AI] Prompt length: ${prompt.length} chars`)
-  console.log(`[AI] Prompt content:\n${prompt}`)
 
   abortAnalysis()
 
@@ -204,17 +145,16 @@ export async function analyzeWithAIStreaming(
   try {
     sdk = await loadSdk()
   } catch (e: any) {
-    const errorMsg = e.message || 'Failed to load Agent SDK'
-    win.webContents.send('ai:stream', { type: 'error', error: errorMsg })
-    return { success: false, error: errorMsg }
+    // SDK load failed -> fallback to deterministic report
+    console.warn(`[AI] SDK load failed, using fallback report: ${e.message}`)
+    return sendFallbackReport(win, analysis, deep, e.message)
   }
 
   const abortController = new AbortController()
   activeAbortController = abortController
 
-  const systemPromptAppend =
-    '你是一个Unity游戏性能分析专家。请用中文回答，使用Markdown格式。' +
-    '专注于识别性能瓶颈、分析异常帧、提供具体可操作的优化建议。'
+  // Use Unity CPU knowledge + Analysis Skill as system prompt, with optional user override
+  const systemPromptAppend = agentConfig.systemPromptAppend || buildSystemPrompt()
 
   try {
     const q = sdk.query({
@@ -228,7 +168,6 @@ export async function analyzeWithAIStreaming(
         systemPrompt: { append: systemPromptAppend },
         tools: [],
         persistSession: false,
-        // Enable partial messages for fine-grained streaming
         includePartialMessages: true
       }
     })
@@ -245,7 +184,6 @@ export async function analyzeWithAIStreaming(
       }
 
       if (message.type === 'stream_event') {
-        // Partial streaming message - fine-grained text deltas
         const event = message.event
         if (event.type === 'content_block_delta') {
           if (event.delta.type === 'text_delta') {
@@ -258,7 +196,6 @@ export async function analyzeWithAIStreaming(
           }
         }
       } else if (message.type === 'assistant') {
-        // Complete assistant message (fallback if partial not available)
         for (const block of message.message.content) {
           if (block.type === 'text' && !accumulatedText) {
             accumulatedText = block.text
@@ -273,25 +210,87 @@ export async function analyzeWithAIStreaming(
         if (message.is_error) {
           const errors = 'errors' in message ? (message.errors || []) : []
           const errorMsg = errors.join('; ') || 'AI analysis error'
-          win.webContents.send('ai:stream', { type: 'error', error: errorMsg })
-          return { success: false, error: errorMsg }
+          // AI returned error -> fallback
+          console.warn(`[AI] AI returned error, using fallback: ${errorMsg}`)
+          return sendFallbackReport(win, analysis, deep, errorMsg)
         }
       } else if (message.type === 'error') {
-        win.webContents.send('ai:stream', { type: 'error', error: message.error })
-        return { success: false, error: message.error }
+        console.warn(`[AI] Stream error, using fallback: ${message.error}`)
+        return sendFallbackReport(win, analysis, deep, message.error)
       }
     }
+
+    // If AI returned empty, use fallback
+    if (!accumulatedText.trim()) {
+      console.warn('[AI] Empty response, using fallback')
+      return sendFallbackReport(win, analysis, deep, 'AI returned empty response')
+    }
+
+    // Log successful analysis
+    saveAnalysisLog(prompt, accumulatedText)
 
     win.webContents.send('ai:stream', { type: 'done', content: accumulatedText })
     return { success: true }
   } catch (e: any) {
-    if (e.name !== 'AbortError') {
-      win.webContents.send('ai:stream', { type: 'error', error: e.message })
+    if (e.name === 'AbortError') {
+      return { success: true }
     }
-    return { success: false, error: e.message }
+    // Any exception -> fallback
+    console.warn(`[AI] Exception, using fallback: ${e.message}`)
+    return sendFallbackReport(win, analysis, deep, e.message)
   } finally {
     if (activeAbortController === abortController) {
       activeAbortController = null
     }
+  }
+}
+
+/**
+ * Send deterministic fallback report when AI is unavailable.
+ */
+function sendFallbackReport(
+  win: BrowserWindow,
+  analysis: ProfileAnalysisResult,
+  deep?: DeepAnalysisContext,
+  errorReason?: string
+): { success: boolean; error?: string } {
+  const report = buildFallbackReport(analysis, deep)
+  // Log fallback report
+  saveAnalysisLog('(fallback)', report, errorReason)
+  win.webContents.send('ai:stream', { type: 'done', content: report })
+  return { success: true, error: errorReason ? `Fallback used: ${errorReason}` : undefined }
+}
+
+/**
+ * Save prompt + AI response to a timestamped log file for version comparison.
+ * Logs are saved to: <project>/logs/ai-analysis/
+ */
+function saveAnalysisLog(prompt: string, response: string, error?: string): void {
+  try {
+    const logDir = path.join(path.dirname(app.getAppPath()), 'logs', 'ai-analysis')
+    fs.mkdirSync(logDir, { recursive: true })
+
+    const now = new Date()
+    const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const logFile = path.join(logDir, `${ts}.md`)
+
+    const content = `# AI Analysis Log - ${now.toLocaleString('zh-CN')}
+
+## Prompt (${prompt.length} chars)
+
+\`\`\`
+${prompt}
+\`\`\`
+
+## AI Response (${response.length} chars)
+
+${response}
+
+${error ? `## Error\n\n${error}\n` : ''}
+`
+    fs.writeFileSync(logFile, content, 'utf8')
+    console.log(`[AI] Analysis log saved: ${logFile}`)
+  } catch (e: any) {
+    console.warn(`[AI] Failed to save log: ${e.message}`)
   }
 }

@@ -3,8 +3,9 @@ import { parsePdataFile } from './profiler/pdata-parser'
 import { analyzeProfileData } from './profiler/profile-analyzer'
 import { ProfileData, AnalyzeOptions, ProfileAnalysisResult } from './profiler/types'
 import { analyzeWithAIStreaming, abortAnalysis, setAgentConfig, getAgentConfig } from './ai/agent-service'
-import { getFrameCallTree, treeToFlatRows } from './profiler/call-tree'
+import { getFrameCallTree, treeToFlatRows, formatCallTree, formatHotPath, findCallChain, formatCallChain } from './profiler/call-tree'
 import { detectAllSpikes } from './profiler/spike-detector'
+import { DeepAnalysisContext, FrameTreeContext, SpikeFrameContext, MarkerCallChainContext } from './ai/prompt-builder'
 
 let currentProfileData: ProfileData | null = null
 let currentAnalysis: ProfileAnalysisResult | null = null
@@ -151,7 +152,7 @@ export function registerIpcHandlers(): void {
   })
 
   // ============ AI: analyze with CodeBuddy Agent SDK ============
-  ipcMain.handle('ai:analyze', async (event, prompt: string) => {
+  ipcMain.handle('ai:analyze', async (event, prompt: string, targetFps?: number) => {
     if (!currentAnalysis) {
       return { success: false, error: 'No analysis data available for AI' }
     }
@@ -160,7 +161,10 @@ export function registerIpcHandlers(): void {
       return { success: false, error: 'No window found' }
     }
 
-    const result = await analyzeWithAIStreaming(win, currentAnalysis, prompt || undefined)
+    // Pre-compute DeepAnalysisContext from currentProfileData
+    const deep = buildDeepContext(currentProfileData, currentAnalysis, targetFps ?? 30)
+
+    const result = await analyzeWithAIStreaming(win, currentAnalysis, deep, prompt || undefined)
     return result
   })
 
@@ -209,4 +213,136 @@ function loadAndAnalyze(filePath: string): { success: boolean; data?: ProfileAna
   console.log(`[Profiler] Analysis complete in ${Date.now() - startTime}ms. ${analysis.markers.length} unique markers.`)
 
   return { success: true, data: analysis, fileName }
+}
+
+/**
+ * Pre-compute DeepAnalysisContext from existing in-memory data.
+ * Enhanced: builds call chains for spike frames and top markers.
+ * No extra I/O -- uses currentProfileData + currentAnalysis already loaded.
+ */
+function buildDeepContext(
+  profileData: ProfileData | null,
+  analysis: ProfileAnalysisResult,
+  targetFps: number = 30
+): DeepAnalysisContext | undefined {
+  if (!profileData) return undefined
+
+  const fs = analysis.frameSummary
+  const frameTrees: FrameTreeContext[] = []
+
+  // Helper: build tree context for a specific frame
+  const buildFrameTree = (frameIndex: number, label: string): FrameTreeContext | null => {
+    const result = getFrameCallTree(profileData, frameIndex)
+    if (!result) return null
+    return {
+      frameIndex,
+      msFrame: result.msFrame,
+      label,
+      treeText: formatCallTree(result.tree, 0, 0.5, 6),
+      hotPathText: formatHotPath(result.hotPath)
+    }
+  }
+
+  // Worst frame
+  const worstTree = buildFrameTree(fs.maxFrameIndex, 'Worst Frame')
+  if (worstTree) frameTrees.push(worstTree)
+
+  // Median frame
+  const medianTree = buildFrameTree(fs.medianFrameIndex, 'Median Frame')
+  if (medianTree) frameTrees.push(medianTree)
+
+  // Spike detection (uses already-computed marker stats)
+  const spikes = detectAllSpikes(analysis.markers, 15)
+
+  // === NEW: Build call trees for spike frames ===
+  const spikeFrames: SpikeFrameContext[] = []
+  const processedSpikeFrameIndices = new Set<number>()
+
+  for (const spike of spikes.slice(0, 10)) {
+    // Avoid duplicates (same frame may appear in spike list)
+    if (processedSpikeFrameIndices.has(spike.frameIndex)) continue
+    processedSpikeFrameIndices.add(spike.frameIndex)
+
+    const result = getFrameCallTree(profileData, spike.frameIndex)
+    if (!result) continue
+
+    spikeFrames.push({
+      frameIndex: spike.frameIndex,
+      msFrame: result.msFrame,
+      ratio: fs.msMedian > 0 ? result.msFrame / fs.msMedian : 1,
+      category: spike.category,
+      treeText: formatCallTree(result.tree, 0, 0.3, 8),
+      hotPathText: formatHotPath(result.hotPath),
+      dominantMarker: spike.markerName
+    })
+
+    // Limit to 5 spike frame trees to avoid prompt overflow
+    if (spikeFrames.length >= 5) break
+  }
+
+  // === NEW: Build call chains for top markers ===
+  const topMarkerChains: MarkerCallChainContext[] = []
+  const topMarkers = analysis.markers.slice(0, 10)
+
+  for (const marker of topMarkers) {
+    // Find the frame where this marker is at its worst to extract call chain
+    const targetFrameIndex = marker.maxFrameIndex
+    const offset = targetFrameIndex - profileData.frameIndexOffset
+    if (offset < 0 || offset >= profileData.frames.length) continue
+
+    const frame = profileData.frames[offset]
+    if (!frame) continue
+
+    // Search through threads for this marker
+    let chainText = ''
+    for (const thread of frame.threads) {
+      const chain = findCallChain(
+        thread.markers,
+        profileData.markerNames,
+        marker.name,
+        frame.msFrame
+      )
+      if (chain && chain.length > 0) {
+        chainText = formatCallChain(chain)
+        break
+      }
+    }
+
+    // Fallback: if not found in worst frame, try median frame
+    if (!chainText) {
+      const medOffset = marker.medianFrameIndex - profileData.frameIndexOffset
+      if (medOffset >= 0 && medOffset < profileData.frames.length) {
+        const medFrame = profileData.frames[medOffset]
+        if (medFrame) {
+          for (const thread of medFrame.threads) {
+            const chain = findCallChain(
+              thread.markers,
+              profileData.markerNames,
+              marker.name,
+              medFrame.msFrame
+            )
+            if (chain && chain.length > 0) {
+              chainText = formatCallChain(chain)
+              break
+            }
+          }
+        }
+      }
+    }
+
+    topMarkerChains.push({
+      markerName: marker.name,
+      msMean: marker.msMean,
+      msMedian: marker.msMedian,
+      msMax: marker.msMax,
+      count: marker.count,
+      presentOnFrameCount: marker.presentOnFrameCount,
+      percentOfFrame: fs.msMean > 0 ? (marker.msMean / fs.msMean) * 100 : 0,
+      callChainText: chainText || `(depth=${marker.minDepth}, chain not resolved)`,
+      threads: marker.threads,
+      depth: marker.minDepth
+    })
+  }
+
+  return { frameTrees, spikes, spikeFrames, topMarkerChains, targetFps }
 }

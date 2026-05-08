@@ -1,0 +1,52 @@
+{
+  "targetFps": 30,
+  "projectPath": "K://AOEYZ_AIBenchmark//AOE3D",
+  "jank": {
+    "jankMultiplier": 2,
+    "bigJankMultiplier": 3
+  },
+  "callTree": {
+    "maxDepth": 8
+  },
+  "markerSpike": {
+    "spikeRatioThreshold": 3,
+    "minSpikeFrames": 2
+  },
+  "blacklist": [
+    "Semaphore.WaitForSignal",
+    "WaitForJobGroupID",
+    "Idle",
+    "EditorIdle",
+    "Profiler.CollectGlobalStats",
+    "Profiler.FlushData"
+  ],
+  "sourceMapping": {
+    "enginePrefixes": [
+      "URP.", "Gfx.", "Shader.", "RenderLoop.", "PostLateUpdate.",
+      "PreLateUpdate.", "Update.", "EarlyUpdate.", "PreUpdate.",
+      "Animation.", "ParticleSystem.", "Default World ",
+      "PlayerLoop", "BehaviourUpdate", "LateBehaviourUpdate",
+      "ScriptRunBehaviour", "CoroutinesDelayedCalls", "PlayerEndOfFrame",
+      "SimulationSystemGroup", "PresentationSystemGroup", "InitializationSystemGroup",
+      "InputProcess", "TextureStreamingManager", "UGUI.", "UIEvents.",
+      "WaitForJobGroupID", "Semaphore.", "CullSendEvents", "CullScriptable",
+      "SceneCulling", "Instantiate", "LogStringToConsole", "ErrorLogWriter",
+      "UpdateRendererBoundingVolumes", "Profiler."
+    ],
+    "whitelistPrefixes": [
+      "CS:AOE.", "CS:AOE::", "AOE.", "Core.", "TBU",
+      "MapSignificanceMgr", "MapCameraCtrl", "MapEntity",
+      "BattleHeadMgr", "RenderManager_", "MeshUI",
+      "YzEntity", "TServer", "LuaMgr",
+      "Float_Field", "SkillMgr", "UIManager",
+      "BattleEvent", "Hud_", "ArmyEntity",
+      "PerformanceMgr", "OrientationMgr", "TimeWheel",
+      "LoaderManager", "OutSideView", "Outsideview",
+      "InfiniteZoom", "WorldTile", "TerrainVT",
+      "Lua:", "***"
+    ]
+  },
+  "filter": {
+    "minSelfTimeMs": 0.1
+  }
+}
