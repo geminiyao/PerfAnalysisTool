@@ -17,19 +17,64 @@
 unity-profiler-analysis/
 ├── SKILL.md                        (必须) AI 行为指令，触发条件和分析 SOP
 ├── README.md                       (本文件) Skill 说明和分析流程文档
+├── PROMPT_TEMPLATE.md              使用提示词模板
 ├── config.json                     可调参数（Jank 倍数、黑名单、目标帧率等）
+├── marker-source-map.json          项目级缓存：Marker → 源码位置映射（跨 pdata 复用）
 ├── scripts/
 │   ├── preprocess.ts               数据预处理（统计聚合、Jank 检测、波动检测、调用链提取）
 │   ├── query-frame.ts              按帧号查询详细调用树（AI 按需调用）
-│   └── map-source.ts               Marker → 源码位置映射
+│   └── map-source.ts               Marker → 源码位置映射脚本
 ├── references/
 │   └── unity-cpu-knowledge.md      Unity CPU 性能知识参考
-├── output/                         (自动生成) 中间产出和最终报告
-│   ├── preprocess-result.json      预处理结果
-│   ├── marker-source-map.json      Marker 与源码的缓存映射
-│   └── performance-report.md       最终性能分析报告
-└── config.json                     可调参数
+└── output/                         (自动生成) 单次分析的临时产物
+    ├── preprocess-result.json      预处理结果（换 pdata 会被覆盖）
+    └── performance-report.md       最终性能分析报告（换 pdata 会被覆盖）
 ```
+
+### 文件分层说明
+
+| 位置 | 性质 | 是否可清理 |
+|------|------|-----------|
+| 根目录（config.json, marker-source-map.json） | 项目级持久配置/缓存 | ❌ 不建议 |
+| output/ | 每次分析的临时产物 | ✅ 随时可清理，换 pdata 重新生成 |
+| references/ | 知识库 | ❌ 手动维护 |
+| scripts/ | 确定性脚本 | ❌ 不可删除 |
+
+---
+
+## marker-source-map.json 设计说明
+
+### 作用
+
+将 Profiler Marker 名称映射到项目源码位置，供 AI 分析时做代码级根因定位。
+
+### 为什么放在根目录而非 output/
+
+这个文件是**项目源码的索引缓存**，只取决于项目代码，跟具体哪个 pdata 无关。不同 pdata 分析时可直接复用，无需重新生成。
+
+### 过滤策略
+
+`map-source.ts` 对 preprocess-result.json 中的所有 marker 进行分类，**只写入有分析价值的条目**：
+
+| 类别 | 判定规则 | 是否写入文件 | 说明 |
+|------|---------|:----------:|------|
+| grep（有源码映射） | 在项目源码中 grep 到了定义 | ✅ 写入 | 唯一有分析价值的条目 |
+| engine（Unity 内部） | 匹配 enginePrefixes | ❌ 不写入 | Unity 引擎内部 marker，无用户代码 |
+| Dynamic（运行时路径） | 含 GUID、资源路径、dll! 前缀等 | ❌ 不写入 | 运行时动态生成的名称，纯噪音 |
+| Not in whitelist | 不匹配 whitelistPrefixes | ❌ 不写入 | 可能是引擎/第三方，无源码可查 |
+
+**典型数据量**：551 个 marker 中通常只有 20~30 个有源码映射，文件大小 ~27KB（若全写入则 107KB+）。
+
+### 增量更新机制
+
+- 脚本加载已有的 marker-source-map.json
+- 已缓存的 marker 跳过（`source: "grep"` 的条目）
+- 只对新出现的 marker 执行 grep 搜索
+- 合并结果写回
+
+**何时需要重跑**：
+- 项目代码有重构/重命名 → 删除文件重新生成
+- 新 pdata 出现了以前没见过的 marker → 脚本自动增量搜索
 
 ---
 
@@ -104,16 +149,15 @@ npx tsx scripts/preprocess.ts --input ./parsed-data.json --target-fps 60
 ```bash
 npx tsx scripts/map-source.ts \
   --input output/preprocess-result.json \
-  --project /path/to/unity-project \
-  --output output/marker-source-map.json
+  --project /path/to/unity-project
+# 输出: marker-source-map.json（skill 根目录，跨 pdata 复用）
 # 检查映射是否正确，手动修正错误的条目
 ```
 
 **提示词方式**:
 ```
 请只执行代码关联步骤：基于 output/preprocess-result.json 中的 marker 列表，
-在 /path/to/unity-project 中搜索源码映射，输出到 output/marker-source-map.json。
-不要做性能分析。
+在 /path/to/unity-project 中搜索源码映射。不要做性能分析。
 ```
 
 ---
@@ -159,13 +203,13 @@ npx tsx scripts/query-frame.ts --input ./parsed-pdata.json --frame 173 --depth 1
 
 **操作步骤**:
 ```bash
-# 1. 手动编辑 marker-source-map.json，修正错误的映射
+# 1. 手动编辑 marker-source-map.json（skill 根目录），修正错误的映射
 # 2. 让 AI 基于修正后的映射重新分析
 ```
 
 **提示词方式**:
 ```
-我已经修正了 output/marker-source-map.json 中的映射关系，
+我已经修正了 marker-source-map.json 中的映射关系，
 请基于修正后的数据重新生成性能报告。
 ```
 
@@ -279,8 +323,8 @@ npx tsx scripts/preprocess.ts --input ./parsed-pdata.json --target-fps 60 --fram
 │ Step 2: map-source.ts (确定性脚本)                                   │
 │                                                                     │
 │ 输入: preprocess-result.json 中的 marker 列表 + 项目源码路径         │
-│ 处理: grep 源码定位 marker 对应的代码                                │
-│ 输出: output/marker-source-map.json (有缓存则增量更新)              │
+│ 处理: grep 源码定位 marker 对应的代码（只写入有源码映射的条目）       │
+│ 输出: marker-source-map.json (skill 根目录，有缓存则增量更新)        │
 └─────────────────────────────┬───────────────────────────────────────┘
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐

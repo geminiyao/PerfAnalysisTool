@@ -71,7 +71,8 @@ function parseArgs(): { input: string; project: string; output: string } {
   }
 
   if (!output) {
-    output = path.join(path.dirname(input), 'marker-source-map.json')
+    // Default: skill root directory (alongside config.json), not output/
+    output = path.join(__dirname, '..', 'marker-source-map.json')
   }
 
   return { input, project: path.resolve(project), output }
@@ -106,7 +107,17 @@ function loadExistingMap(outputPath: string): MarkerSourceMap {
   try {
     if (fs.existsSync(outputPath)) {
       const raw = fs.readFileSync(outputPath, 'utf-8')
-      return JSON.parse(raw) as MarkerSourceMap
+      const parsed = JSON.parse(raw) as MarkerSourceMap
+      // Clean up legacy noise entries (engine/dynamic/not-in-whitelist)
+      // Only keep _meta and entries with source='grep' or source='not_found'
+      const cleaned: MarkerSourceMap = { _meta: parsed._meta || { lastUpdated: '', projectPath: '' } }
+      for (const [key, val] of Object.entries(parsed)) {
+        if (key === '_meta') continue
+        if (val && (val.source === 'grep' || val.source === 'not_found')) {
+          cleaned[key] = val
+        }
+      }
+      return cleaned
     }
   } catch (e) {
     // ignore
@@ -454,17 +465,17 @@ function main(): void {
   for (const name of markerNames) {
     if (existingMap[name]) continue // Already cached
     if (isEngineMarker(name)) {
-      existingMap[name] = { source: 'engine', note: 'Unity engine internal marker' }
+      // Do NOT write to output — no analysis value
       skippedEngine++
       continue
     }
     if (isDynamicMarker(name)) {
-      existingMap[name] = { source: 'engine', note: 'Dynamically generated marker (runtime path/GUID)' }
+      // Do NOT write to output — runtime paths/GUIDs are noise
       skippedDynamic++
       continue
     }
     if (!matchesWhitelist(name)) {
-      existingMap[name] = { source: 'engine', note: 'Not in whitelist, likely engine/third-party' }
+      // Do NOT write to output — likely engine/third-party
       skippedWhitelist++
       continue
     }
@@ -536,12 +547,8 @@ function main(): void {
     }
   }
 
-  // Mark remaining as engine/unresolved
+  // Count remaining as not found, but do NOT write them to output (noise reduction)
   for (const name of unmatchedMarkers) {
-    existingMap[name] = {
-      source: 'engine',
-      note: 'Not found in project source, likely engine internal or dynamically generated'
-    }
     notFound++
   }
 

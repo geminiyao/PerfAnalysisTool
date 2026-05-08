@@ -1,0 +1,276 @@
+{
+  "_meta": {
+    "lastUpdated": "2026-05-08T09:08:54.939Z",
+    "projectPath": "K:\\AOEYZ_AIBenchmark\\AOE3D"
+  },
+  "Core.Update": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Launcher\\GameLauncher.cs",
+        "line": 33
+      }
+    ],
+    "snippet": "        private Coroutine           m_coEndOfFrame           = null;\r\n        private WaitForEndOfFrame   m_yieldWaitForEndOfFrame = null;\r\n\r\n#if ENABLE_PROFILER\r\n        CustomSampler               m_tickSampler            = CustomSampler.Create(\"Core.Tick\");\r\n        CustomSampler               m_updateSampler          = CustomSampler.Create(\"Core.Update\");\r\n        CustomSampler               m_updateExtSampler       = CustomSampler.Create(\"GameLauncher.Update\");\r\n        CustomSampler               m_lateUpdateSampler      = CustomSampler.Create(\"Core.LateUpdate\");\r\n        CustomSampler               m_lateUpdateExtSampler   = CustomSampler.Create(\"GameLauncher.LateUpdate\");\r\n        CustomSampler               m_endofFrameSampler      = CustomSampler.Create(\"Core.EndOfFrame\");\r\n        CustomSampler               m_postEndOfFrameSampler  = CustomSampler.Create(\"Core.PostEndOfFrame\");\r"
+  },
+  "LuaMgr.OnTick&UpdateSchedule": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Mgr\\Mgr.lua",
+        "line": 269
+      }
+    ],
+    "snippet": "  self._postLateUpdateSampler = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnPostLateUpdate\")\r\n\r\n  self._lateUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnLateUpdateSchedule\")\r\n  self._lateUpdateSamplerScheduleBegin = self._lateUpdateSamplerSchedule.Begin\r\n  self._lateUpdateSamplerScheduleEnd = self._lateUpdateSamplerSchedule.End\r\n  self._tickUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnTick&UpdateSchedule\")\r\n  self._tickUpdateSamplerScheduleBegin = self._tickUpdateSamplerSchedule.Begin\r\n  self._tickUpdateSamplerScheduleEnd = self._tickUpdateSamplerSchedule.End\r\n  self._endFrameSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnEndOfFrameSchedule\")\r\n  self._endFrameSamplerScheduleBegin = self._endFrameSamplerSchedule.Begin\r\n  self._endFrameSamplerScheduleEnd = self._endFrameSamplerSchedule.End\r"
+  },
+  "MapSignificanceMgr.sampler_OnUpdate": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Core\\MapSignificanceMgr.lua",
+        "line": 452
+      }
+    ],
+    "snippet": "    return significanceTask\r\nend\r\n--endregion\r\n\r\n--#if ENABLE_PROFILER\r\nlocal sampler_OnUpdate = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.sampler_OnUpdate\")\r\n--#endif\r\n\r\n-- [AOE.AutoProfiler]\r\nfunction cls:OnUpdate()\r\n    --#if UNITY_EDITOR\r"
+  },
+  "MapSignificanceMgr.ProcessTasks": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Core\\MapSignificanceMgr.lua",
+        "line": 1208
+      }
+    ],
+    "snippet": "--     self._curCameraFocusY = y\r\n--     -- table.sort(self._taskList, taskSortMethod)\r\n-- end\r\n\r\n--#if ENABLE_PROFILER\r\nlocal sampler_ProcessTasks             = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.ProcessTasks\")\r\nlocal sampler_ProcessEntityTask        = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.EntityTask\")\r\nlocal sampler_ProcessInfiniteZoomTask  = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.InfiniteZoomTask\")\r\nlocal sampler_ProcessCommonTask        = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.CommonTask\")\r\nlocal sampler_ProcessLocalResEntity    = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.LocalResEntity\")\r\nlocal sampler_ProcessOutsideSubEntity  = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.OutsideSubEntityMgr\")\r"
+  },
+  "MapSignificanceMgr.EntityTask": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Core\\MapSignificanceMgr.lua",
+        "line": 1209
+      }
+    ],
+    "snippet": "--     -- table.sort(self._taskList, taskSortMethod)\r\n-- end\r\n\r\n--#if ENABLE_PROFILER\r\nlocal sampler_ProcessTasks             = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.ProcessTasks\")\r\nlocal sampler_ProcessEntityTask        = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.EntityTask\")\r\nlocal sampler_ProcessInfiniteZoomTask  = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.InfiniteZoomTask\")\r\nlocal sampler_ProcessCommonTask        = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.CommonTask\")\r\nlocal sampler_ProcessLocalResEntity    = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.LocalResEntity\")\r\nlocal sampler_ProcessOutsideSubEntity  = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.OutsideSubEntityMgr\")\r\nlocal sampler_ProcessFlag              = U3D.Profiling.CustomSampler.Create(\"MapSignificanceMgr.Flag\")\r"
+  },
+  "InfiniteZoomMgr.SwitchState": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\InfiniteZoomMgr.lua",
+        "line": 399
+      }
+    ],
+    "snippet": "local sampler_RefreshCameraScrollSpeed = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCameraScrollSpeed\")\r\nlocal sampler_RefreshCurModelLayerScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCurModelLayerScale\")\r\nlocal sampler_RefreshLayerLevel = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshLayerLevel\")\r\nlocal sampler_OnOutsideCameraMoveChildMgr = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.OnOutsideCameraMoveChildMgr\")\r\nlocal sampler_PostCameraMoveScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.PostCameraMoveScale\")\r\nlocal sampler_SwitchState = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.SwitchState\")\r\n--#endif\r\nfunction cls:OnOutsideCameraMove(cameraDist)\r\n  -- 在城内以及存在世界地图，不进行操作\r\n  if not self:CanWork() or self.SceneCtrl:IsSwitchingScene() then\r\n    return\r"
+  },
+  "MapCoreMgr.OnInfiniteLayerLevelChange_MapEntity": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Core\\MapCoreMgr.lua",
+        "line": 615
+      }
+    ],
+    "snippet": "-- local samplerOnInfiniteLayerLevelChange_IsDefaultLayer = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_IsDefaultLayer\")\r\nlocal samplerOnInfiniteLayerLevelChange_SubEntity = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_SubEntity\")\r\nlocal samplerOnInfiniteLayerLevelChange_MapMusicMgr = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_MapMusicMgr\")\r\nlocal samplerOnInfiniteLayerLevelChange_CreateMapEntityIcon = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_CreateMapEntityIcon\")\r\nlocal samplerOnInfiniteLayerLevelChange_MapEntityAdd = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_MapEntityAdd\")\r\nlocal samplerOnInfiniteLayerLevelChange_MapEntity = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_MapEntity\")\r\nlocal samplerOnInfiniteLayerLevelChange_MapEntityRemove = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_MapEntityRemove\")\r\nlocal samplerOnInfiniteLayerLevelChange_MapEntityDestroy = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange_MapEntityDestroy\")\r\nlocal samplerOnBattleFieldChange_MapEntity = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnBattleFieldChange_MapEntity\")\r\n--#endif\r\n\r"
+  },
+  "Core.LateUpdate": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Launcher\\GameLauncher.cs",
+        "line": 35
+      }
+    ],
+    "snippet": "\r\n#if ENABLE_PROFILER\r\n        CustomSampler               m_tickSampler            = CustomSampler.Create(\"Core.Tick\");\r\n        CustomSampler               m_updateSampler          = CustomSampler.Create(\"Core.Update\");\r\n        CustomSampler               m_updateExtSampler       = CustomSampler.Create(\"GameLauncher.Update\");\r\n        CustomSampler               m_lateUpdateSampler      = CustomSampler.Create(\"Core.LateUpdate\");\r\n        CustomSampler               m_lateUpdateExtSampler   = CustomSampler.Create(\"GameLauncher.LateUpdate\");\r\n        CustomSampler               m_endofFrameSampler      = CustomSampler.Create(\"Core.EndOfFrame\");\r\n        CustomSampler               m_postEndOfFrameSampler  = CustomSampler.Create(\"Core.PostEndOfFrame\");\r\n#endif\r\n        private void Awake()\r"
+  },
+  "Post_InfiniteZoomEvt.SwitchOutsideLayerLevel": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\InfiniteZoomMgr.lua",
+        "line": 691
+      }
+    ],
+    "snippet": "    samplers_OnOutsideCameraMove[mgrName] = sampler\r\n\r\n    return sampler\r\nend\r\n\r\nlocal sampler_Post_SwitchOutsideLayerLevel = U3D.Profiling.CustomSampler.Create(\"Post_InfiniteZoomEvt.SwitchOutsideLayerLevel\")\r\n--#endif\r\n\r\nfunction cls:GetLayerByCameraDist(cameraDist)\r\n    for i = self.maxLayerLevel, self.minLayerLevel, -1 do\r\n        local size = InfiniteZoomCfg.CameraParams[self.layerLevelKeyDict[i]]\r"
+  },
+  "Core.PostEndOfFrame": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Launcher\\GameLauncher.cs",
+        "line": 38
+      }
+    ],
+    "snippet": "        CustomSampler               m_updateSampler          = CustomSampler.Create(\"Core.Update\");\r\n        CustomSampler               m_updateExtSampler       = CustomSampler.Create(\"GameLauncher.Update\");\r\n        CustomSampler               m_lateUpdateSampler      = CustomSampler.Create(\"Core.LateUpdate\");\r\n        CustomSampler               m_lateUpdateExtSampler   = CustomSampler.Create(\"GameLauncher.LateUpdate\");\r\n        CustomSampler               m_endofFrameSampler      = CustomSampler.Create(\"Core.EndOfFrame\");\r\n        CustomSampler               m_postEndOfFrameSampler  = CustomSampler.Create(\"Core.PostEndOfFrame\");\r\n#endif\r\n        private void Awake()\r\n        {\r\n            Instance = this;\r\n#if ENABLE_PROFILER && UNITY_IOS\r"
+  },
+  "LuaMgr.OnLateUpdateSchedule": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Mgr\\Mgr.lua",
+        "line": 266
+      }
+    ],
+    "snippet": "  self._lateUpdateSampler = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnLateUpdate\")\r\n  self._tickSampler = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnTick\")\r\n  self._endFrameSampler = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnEndOfFrame\")\r\n  self._postLateUpdateSampler = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnPostLateUpdate\")\r\n\r\n  self._lateUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnLateUpdateSchedule\")\r\n  self._lateUpdateSamplerScheduleBegin = self._lateUpdateSamplerSchedule.Begin\r\n  self._lateUpdateSamplerScheduleEnd = self._lateUpdateSamplerSchedule.End\r\n  self._tickUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnTick&UpdateSchedule\")\r\n  self._tickUpdateSamplerScheduleBegin = self._tickUpdateSamplerSchedule.Begin\r\n  self._tickUpdateSamplerScheduleEnd = self._tickUpdateSamplerSchedule.End\r"
+  },
+  "TServer.ParsePacketMessages": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\NetworkCore\\Network\\TServer.cs",
+        "line": 265
+      }
+    ],
+    "snippet": "        UnityEngine.Profiling.CustomSampler m_samplerSendMessages    = UnityEngine.Profiling.CustomSampler.Create(\"TServer.SendMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerRecvMessages    = UnityEngine.Profiling.CustomSampler.Create(\"TServer.RecvMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerDecodeMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.DecodeMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerMemCopyMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.MemCopyMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerThreadMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ThreadMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerParsePacketMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ParsePacketMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerHandleMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.HandleMessages\");\r\n        Dictionary<int, Unity.Profiling.ProfilerMarker> m_tServerCallbackProfilers = new Dictionary<int, Unity.Profiling.ProfilerMarker>();\r\n \r\n\r\n#endif\r"
+  },
+  "TServer.HandleMessages": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\NetworkCore\\Network\\TServer.cs",
+        "line": 266
+      }
+    ],
+    "snippet": "        UnityEngine.Profiling.CustomSampler m_samplerRecvMessages    = UnityEngine.Profiling.CustomSampler.Create(\"TServer.RecvMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerDecodeMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.DecodeMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerMemCopyMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.MemCopyMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerThreadMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ThreadMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerParsePacketMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ParsePacketMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerHandleMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.HandleMessages\");\r\n        Dictionary<int, Unity.Profiling.ProfilerMarker> m_tServerCallbackProfilers = new Dictionary<int, Unity.Profiling.ProfilerMarker>();\r\n \r\n\r\n#endif\r\n\r"
+  },
+  "InfiniteZoomMapGoEffectCtrl.RefreshBigCityIcon": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\Ctrl\\InfiniteZoomMapGoEffectCtrl.lua",
+        "line": 339
+      }
+    ],
+    "snippet": "        for k, v in pairs(self.markDict) do\r\n            self:SetMarkDataVisible(v, v.visible)\r\n        end\r\n        ProfilerUtil.EndSample()\r\n\r\n        ProfilerUtil.BeginSample(\"InfiniteZoomMapGoEffectCtrl.RefreshBigCityIcon\")\r\n        self:RefreshBigCityIcon()\r\n        ProfilerUtil.EndSample()\r\n        -- UtilArmyProfile:End(\"SetMarkDataVisible\")\r\n\r\n        ProfilerUtil.BeginSample(\"InfiniteZoomMapGoEffectCtrl.RefreshCityLinkedLines\")\r"
+  },
+  "MapCameraCtrl.OnLateUpdate": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Visual\\MapCameraCtrl.lua",
+        "line": 555
+      }
+    ],
+    "snippet": "\r\n--#if ENABLE_PROFILER\r\nlocal sampler_OnCameraGestureMove = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraGestureMove\")\r\nlocal sampler_UpdateCameraPos = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateCameraPos\")\r\nlocal sampler_UpdateCameraHeightRatio = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateCameraHeightRatio\")\r\nlocal sampler_OnLateUpdate = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnLateUpdate\")\r\n--#endif\r\n\r\n-- [AOE.AutoProfiler]\r\nfunction cls:OnLateUpdate()\r\n    ProfilerUtil.BeginCpuSample(104)  -- 本行代码根据[AOE.AutoProfiler]自动生成\r"
+  },
+  "MapCameraCtrl.UpdateCameraPos": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Visual\\MapCameraCtrl.lua",
+        "line": 553
+      }
+    ],
+    "snippet": "    return self.cameraCtrl:GetTransformPosXYZ()\r\nend\r\n\r\n--#if ENABLE_PROFILER\r\nlocal sampler_OnCameraGestureMove = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraGestureMove\")\r\nlocal sampler_UpdateCameraPos = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateCameraPos\")\r\nlocal sampler_UpdateCameraHeightRatio = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateCameraHeightRatio\")\r\nlocal sampler_OnLateUpdate = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnLateUpdate\")\r\n--#endif\r\n\r\n-- [AOE.AutoProfiler]\r"
+  },
+  "BattleHeadMgr.OnUpdate": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Army\\UI\\BattleHead\\BattleHeadMgr.lua",
+        "line": 108
+      }
+    ],
+    "snippet": "    self.pool:RemoveAllPools()\r\n\r\n    cls.super.OnCleanUp(self)\r\nend\r\n\r\nlocal sample_OnUpdate = U3D.Profiling.CustomSampler.Create(\"BattleHeadMgr.OnUpdate\")\r\nlocal samplerRegisterHead = U3D.Profiling.CustomSampler.Create(\"BattleHeadMgr.RegisterHead\")\r\n\r\nfunction cls:OnUpdate()\r\n    --#if ENABLE_PROFILER\r\n    ProfilerUtil.SamplerBegin(sample_OnUpdate)--sherwinprofiler\r"
+  },
+  "MapCameraCtrl.OnCameraPosChanged": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Visual\\MapCameraCtrl.lua",
+        "line": 620
+      }
+    ],
+    "snippet": "    mgr.mapCore.MapViewCtrl:RefreshViewPos()\r\nend\r\n\r\n--#if ENABLE_PROFILER\r\nlocal sampler_UpdateCameraPosCalculate = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateCameraPosCalculate\")\r\nlocal sampler_OnCameraPosChanged = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraPosChanged\")\r\nlocal sampler_infiniteZoomMgr_OnOutsideCameraMove = U3D.Profiling.CustomSampler.Create(\"infiniteZoomMgr_OnOutsideCameraMove\")\r\n--#endif\r\nfunction cls:UpdateCameraPos()\r\n    --#if ENABLE_PROFILER\r\n    ProfilerUtil.SamplerBegin(sampler_UpdateCameraPosCalculate)\r"
+  },
+  "InfiniteZoomMapEntityCtrl.StaticEnableForestRenderer": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\Ctrl\\InfiniteZoomMapEntityCtrl.lua",
+        "line": 83
+      }
+    ],
+    "snippet": "--#if ENABLE_PROFILER\r\nlocal sampler_MapEntityIcon = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.MapEntityIcon\")\r\nlocal sampler_MapCore = U3D.Profiling.CustomSampler.Create(\"MapCoreMgr.OnInfiniteLayerLevelChange\")\r\nlocal sampler_SkillMgr = U3D.Profiling.CustomSampler.Create(\"SkillMgr.OnInfiniteLayerLevelChange\")\r\nlocal sampler_ToggleLocalResEntity = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.ToggleLocalResEntity\")\r\nlocal sampler_StaticEnableForestRenderer = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.StaticEnableForestRenderer\")\r\nlocal sampler_EntityIconCleanUp = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.EntityIconCleanUp\")\r\nlocal sampler_StaticSetZoomModelNum = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.StaticSetZoomModelNum\")\r\nlocal sampler_SetModelGoRenderLayer = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMapEntityCtrl.SetModelGoRenderLayer\")\r\nlocal sampler_RefreshArmiesMoveLineVisible = U3D.Profiling.CustomSampler.Create(\"RefreshArmiesMoveLineVisible\")\r\n--#endif\r"
+  },
+  "InfiniteZoomMgr.PostCameraMoveScale": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\InfiniteZoomMgr.lua",
+        "line": 398
+      }
+    ],
+    "snippet": "local sampler_RefreshOutsideCameraClipPlane = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshOutsideCameraClipPlane\")\r\nlocal sampler_RefreshCameraScrollSpeed = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCameraScrollSpeed\")\r\nlocal sampler_RefreshCurModelLayerScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCurModelLayerScale\")\r\nlocal sampler_RefreshLayerLevel = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshLayerLevel\")\r\nlocal sampler_OnOutsideCameraMoveChildMgr = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.OnOutsideCameraMoveChildMgr\")\r\nlocal sampler_PostCameraMoveScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.PostCameraMoveScale\")\r\nlocal sampler_SwitchState = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.SwitchState\")\r\n--#endif\r\nfunction cls:OnOutsideCameraMove(cameraDist)\r\n  -- 在城内以及存在世界地图，不进行操作\r\n  if not self:CanWork() or self.SceneCtrl:IsSwitchingScene() then\r"
+  },
+  "Core.EndOfFrame": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Launcher\\GameLauncher.cs",
+        "line": 37
+      }
+    ],
+    "snippet": "        CustomSampler               m_tickSampler            = CustomSampler.Create(\"Core.Tick\");\r\n        CustomSampler               m_updateSampler          = CustomSampler.Create(\"Core.Update\");\r\n        CustomSampler               m_updateExtSampler       = CustomSampler.Create(\"GameLauncher.Update\");\r\n        CustomSampler               m_lateUpdateSampler      = CustomSampler.Create(\"Core.LateUpdate\");\r\n        CustomSampler               m_lateUpdateExtSampler   = CustomSampler.Create(\"GameLauncher.LateUpdate\");\r\n        CustomSampler               m_endofFrameSampler      = CustomSampler.Create(\"Core.EndOfFrame\");\r\n        CustomSampler               m_postEndOfFrameSampler  = CustomSampler.Create(\"Core.PostEndOfFrame\");\r\n#endif\r\n        private void Awake()\r\n        {\r\n            Instance = this;\r"
+  },
+  "TServer.DecodeMesssages": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\NetworkCore\\Network\\TServer.cs",
+        "line": 262
+      }
+    ],
+    "snippet": "        private IServerExternalProperty             m_ExternalProperty { get { return GameCore.Server.ExternalProperty; } }\r\n\r\n#if ENABLE_PROFILER\r\n        UnityEngine.Profiling.CustomSampler m_samplerSendMessages    = UnityEngine.Profiling.CustomSampler.Create(\"TServer.SendMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerRecvMessages    = UnityEngine.Profiling.CustomSampler.Create(\"TServer.RecvMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerDecodeMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.DecodeMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerMemCopyMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.MemCopyMesssages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerThreadMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ThreadMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerParsePacketMessages = UnityEngine.Profiling.CustomSampler.Create(\"TServer.ParsePacketMessages\");\r\n        UnityEngine.Profiling.CustomSampler m_samplerHandleMessages  = UnityEngine.Profiling.CustomSampler.Create(\"TServer.HandleMessages\");\r\n        Dictionary<int, Unity.Profiling.ProfilerMarker> m_tServerCallbackProfilers = new Dictionary<int, Unity.Profiling.ProfilerMarker>();\r"
+  },
+  "MapCameraCtrl.OnCameraPosChanged_Event": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Visual\\MapCameraCtrl.lua",
+        "line": 467
+      }
+    ],
+    "snippet": "\r\n--#if ENABLE_PROFILER\r\nlocal samplersViewPosCallback = {}\r\nlocal sampler_OnCameraPosChanged_Callback = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.CameraPosChanged_Callback\")\r\nlocal sampler_UpdateAudioListenerPosition = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateAudioListenerPosition\")\r\nlocal sampler_OnCameraPosChanged_Event = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraPosChanged_Event\")\r\n--#endif\r\nfunction cls:OnCameraPosChanged(forceUpdate)\r\n    if ObjUtil.IsNull(self._sightCameraRoot) then\r\n        self:SwitchSightCamera(nil)\r\n    end\r"
+  },
+  "InfiniteZoomMgr.OnOutsideCameraMoveChildMgr": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Module\\InfiniteZoom\\InfiniteZoomMgr.lua",
+        "line": 397
+      }
+    ],
+    "snippet": "local sampler_OnOutsideCameraMovePre = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.OnOutsideCameraMovePre\")\r\nlocal sampler_RefreshOutsideCameraClipPlane = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshOutsideCameraClipPlane\")\r\nlocal sampler_RefreshCameraScrollSpeed = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCameraScrollSpeed\")\r\nlocal sampler_RefreshCurModelLayerScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshCurModelLayerScale\")\r\nlocal sampler_RefreshLayerLevel = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.RefreshLayerLevel\")\r\nlocal sampler_OnOutsideCameraMoveChildMgr = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.OnOutsideCameraMoveChildMgr\")\r\nlocal sampler_PostCameraMoveScale = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.PostCameraMoveScale\")\r\nlocal sampler_SwitchState = U3D.Profiling.CustomSampler.Create(\"InfiniteZoomMgr.SwitchState\")\r\n--#endif\r\nfunction cls:OnOutsideCameraMove(cameraDist)\r\n  -- 在城内以及存在世界地图，不进行操作\r"
+  },
+  "LuaMgr.OnEndOfFrameSchedule": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Mgr\\Mgr.lua",
+        "line": 272
+      }
+    ],
+    "snippet": "  self._lateUpdateSamplerScheduleBegin = self._lateUpdateSamplerSchedule.Begin\r\n  self._lateUpdateSamplerScheduleEnd = self._lateUpdateSamplerSchedule.End\r\n  self._tickUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnTick&UpdateSchedule\")\r\n  self._tickUpdateSamplerScheduleBegin = self._tickUpdateSamplerSchedule.Begin\r\n  self._tickUpdateSamplerScheduleEnd = self._tickUpdateSamplerSchedule.End\r\n  self._endFrameSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnEndOfFrameSchedule\")\r\n  self._endFrameSamplerScheduleBegin = self._endFrameSamplerSchedule.Begin\r\n  self._endFrameSamplerScheduleEnd = self._endFrameSamplerSchedule.End\r\n  self._postLateUpdateSamplerSchedule = U3D.Profiling.CustomSampler.Create(\"LuaMgr.OnPostLateUpdateSchedule\")\r\n  self._postLateUpdateSamplerScheduleBegin = self._postLateUpdateSamplerSchedule.Begin\r\n  self._postLateUpdateSamplerScheduleEnd = self._postLateUpdateSamplerSchedule.End\r"
+  },
+  "UIManager.OnUpdate": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Mgr\\UI\\UIManager.lua",
+        "line": 261
+      }
+    ],
+    "snippet": "    end\r\n\r\n    cls.super.OnLoggedOut(self, active)\r\nend\r\n\r\nlocal sample_OnUpdate = U3D.Profiling.CustomSampler.Create(\"UIManager.OnUpdate\")\r\n\r\n-- [AOE.AutoProfiler]\r\nfunction cls:OnUpdate()\r\n    --#if ENABLE_PROFILER\r\n    ProfilerUtil.SamplerBegin(sample_OnUpdate)--sherwinprofiler\r"
+  },
+  "MapCameraCtrl.CameraPosChanged_Callback": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\.Lua\\Outside\\Map\\Visual\\MapCameraCtrl.lua",
+        "line": 465
+      }
+    ],
+    "snippet": "    return self.camera\r\nend\r\n\r\n--#if ENABLE_PROFILER\r\nlocal samplersViewPosCallback = {}\r\nlocal sampler_OnCameraPosChanged_Callback = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.CameraPosChanged_Callback\")\r\nlocal sampler_UpdateAudioListenerPosition = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateAudioListenerPosition\")\r\nlocal sampler_OnCameraPosChanged_Event = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraPosChanged_Event\")\r\n--#endif\r\nfunction cls:OnCameraPosChanged(forceUpdate)\r\n    if ObjUtil.IsNull(self._sightCameraRoot) then\r"
+  }
+}

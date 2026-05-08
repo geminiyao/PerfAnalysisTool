@@ -38,16 +38,58 @@ If `config.json` has a non-empty `projectPath`, run source mapping:
 npx tsx .claude/skills/unity-profiler-analysis/scripts/map-source.ts --input .claude/skills/unity-profiler-analysis/output/preprocess-result.json --project <projectPath>
 ```
 
-Output: `.claude/skills/unity-profiler-analysis/output/marker-source-map.json`
+Output: `.claude/skills/unity-profiler-analysis/marker-source-map.json`
 
 Skip this step if `projectPath` is empty.
 
 ### Step 3: Read Data and Analyze
 
-Read the following files:
-1. `.claude/skills/unity-profiler-analysis/output/preprocess-result.json`
-2. `.claude/skills/unity-profiler-analysis/output/marker-source-map.json` (if exists)
-3. `.claude/skills/unity-profiler-analysis/references/unity-cpu-knowledge.md`
+**IMPORTANT: Do NOT read these files in full. They can be 100-500KB. Use the extraction methods below to stay within token budget.**
+
+#### 3a. Read preprocess-result.json (selective extraction)
+
+Execute a script to extract only the needed fields:
+
+```bash
+cd .claude/skills/unity-profiler-analysis/output && node -e "
+const data = require('./preprocess-result.json');
+const result = {};
+result.frameSummary = data.frameSummary;
+result.markersTop20 = data.markers.slice(0, 20).map(m => ({
+  name:m.name, msSelfMean:m.msSelfMean, msSelfMax:m.msSelfMax,
+  msTotalMean:m.msTotalMean, percentOfFrame:m.percentOfFrame,
+  count:m.count, callsPerFrame:m.callsPerFrame,
+  presentOnFrameCount:m.presentOnFrameCount, thread:m.thread,
+  callChain:m.callChain, mustReport:m.mustReport
+}));
+result.jankFrames = data.jankFrames.map(j => ({
+  frameIndex:j.frameIndex, totalMs:j.totalMs, category:j.category,
+  jankMultiplier:j.jankMultiplier, hotPath:j.hotPath, mustReport:j.mustReport
+}));
+result.markerSpikes = data.markerSpikes;
+console.log(JSON.stringify(result, null, 2));
+"
+```
+
+This outputs ~10-20KB instead of 452KB.
+
+#### 3b. Read marker-source-map.json (grep entries only)
+
+Since this file is now small (~27KB, only grep-matched entries), you can read it directly:
+- `.claude/skills/unity-profiler-analysis/marker-source-map.json`
+
+Only entries with `source: "grep"` contain useful source code mappings.
+
+This outputs only source-mapped entries (~5-15KB instead of 107KB).
+
+#### 3c. Read unity-cpu-knowledge.md
+
+This file is small (~19KB), read it in full:
+- `.claude/skills/unity-profiler-analysis/references/unity-cpu-knowledge.md`
+
+#### 3d. Read source code for hotspot markers
+
+For markers that have source mappings (from 3b), read the relevant source files to perform root-cause analysis with actual code context.
 
 Then perform analysis following the procedure below.
 
@@ -61,7 +103,9 @@ npx tsx .claude/skills/unity-profiler-analysis/scripts/query-frame.ts --input <f
 
 ### Step 5: Generate Report and Self-Check
 
-Generate the final report, then run self-check. Save to `.claude/skills/unity-profiler-analysis/output/performance-report.md`
+Generate the final report, then run self-check. Save to `.claude/skills/unity-profiler-analysis/output/performance-report_<timestamp>.md`
+
+The filename MUST include a timestamp suffix in format `YYYYMMDDHHmmss` (local time when generating the report). Example: `performance-report_20260508172030.md`
 
 ---
 
