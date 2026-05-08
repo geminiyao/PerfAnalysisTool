@@ -21,12 +21,13 @@ description: Analyzes Unity Profiler pdata files to identify CPU performance bot
 Execute the preprocessing script to generate structured analysis data:
 
 ```bash
-npx tsx .claude/skills/unity-profiler-analysis/scripts/preprocess.ts --input <file> --target-fps <fps>
+npx tsx .claude/skills/unity-profiler-analysis/scripts/preprocess.ts --input <file> --target-fps <fps> [--output-dir <dir>]
 ```
 
 - `<file>`: The .pdata or .json file the user provided
 - `<fps>`: Target FPS from config.json (default 30), or user-specified value
-- Output is saved to: `.claude/skills/unity-profiler-analysis/output/preprocess-result.json`
+- `<dir>`: (Optional) Output directory. Default: `./output/` (relative to cwd)
+- Output is saved to: `<dir>/preprocess-result.json`
 
 Wait for this to complete before proceeding.
 
@@ -35,7 +36,7 @@ Wait for this to complete before proceeding.
 If `config.json` has a non-empty `projectPath`, run source mapping:
 
 ```bash
-npx tsx .claude/skills/unity-profiler-analysis/scripts/map-source.ts --input .claude/skills/unity-profiler-analysis/output/preprocess-result.json --project <projectPath>
+npx tsx .claude/skills/unity-profiler-analysis/scripts/map-source.ts --input ./output/preprocess-result.json --project <projectPath>
 ```
 
 Output: `.claude/skills/unity-profiler-analysis/marker-source-map.json`
@@ -51,7 +52,7 @@ Skip this step if `projectPath` is empty.
 Execute a script to extract only the needed fields:
 
 ```bash
-cd .claude/skills/unity-profiler-analysis/output && node -e "
+cd ./output && node -e "
 const data = require('./preprocess-result.json');
 const result = {};
 result.frameSummary = data.frameSummary;
@@ -103,7 +104,7 @@ npx tsx .claude/skills/unity-profiler-analysis/scripts/query-frame.ts --input <f
 
 ### Step 5: Generate Report and Self-Check
 
-Generate the final report, then run self-check. Save to `.claude/skills/unity-profiler-analysis/output/performance-report_<timestamp>.md`
+Generate the final report, then run self-check. Save to the same output directory as Step 1 (default: `./output/`).
 
 The filename MUST include a timestamp suffix in format `YYYYMMDDHHmmss` (local time when generating the report). Example: `performance-report_20260508172030.md`
 

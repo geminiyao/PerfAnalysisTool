@@ -1,6 +1,7 @@
 {
   "targetFps": 30,
   "projectPath": "K://AOEYZ_AIBenchmark//AOE3D",
+  "outputDir": "",
   "jank": {
     "jankMultiplier": 2,
     "bigJankMultiplier": 3

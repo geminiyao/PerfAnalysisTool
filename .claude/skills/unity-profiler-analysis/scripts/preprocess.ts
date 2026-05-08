@@ -29,6 +29,7 @@ import { detectAllSpikes, SpikeCategory } from '../../../../src/main/profiler/sp
 interface Config {
   targetFps: number
   projectPath: string
+  outputDir?: string
   jank: { jankMultiplier: number; bigJankMultiplier: number }
   callTree: { maxDepth: number }
   markerSpike: { spikeRatioThreshold: number; minSpikeFrames: number }
@@ -511,8 +512,10 @@ function main(): void {
   const targetFps = cliTargetFps ?? config.targetFps
   const frameBudgetMs = 1000 / targetFps
 
-  // Determine output directory
-  const outputDir = cliOutputDir || path.join(scriptDir, '..', 'output')
+  // Determine output directory: CLI > config > default
+  // Relative paths are resolved relative to cwd (where the command is run)
+  const rawOutputDir = cliOutputDir || config.outputDir || './output'
+  const outputDir = path.resolve(rawOutputDir)
   fs.mkdirSync(outputDir, { recursive: true })
 
   // Load and parse data
