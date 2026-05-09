@@ -266,8 +266,36 @@ Every item in the input data with `"mustReport": true` MUST be analyzed individu
 
 ### Rule 2: Complete Call Chains
 Every performance problem mentioned in the report MUST include a complete call chain (from PlayerLoop or top-level down to the bottleneck node).
-- ❌ INVALID: "GC.Collect caused the Jank"
-- ✅ VALID: "PlayerLoop → Update → ScriptRunBehaviourUpdate → xlua.call → LuaEnv.Tick → GC.Collect"
+
+**Format requirement**: Call chains MUST use fenced code blocks with indented hierarchy. Each node MUST include timing (ms) and percentage of frame. Use `→` prefix with 2-space indent per level. Mark the bottleneck with `**BOTTLENECK**`.
+
+- ❌ INVALID (no code block, no hierarchy, no timing):
+  "GC.Collect caused the Jank"
+
+- ❌ INVALID (single-line arrow, hard to read):
+  "PlayerLoop → Update.ScriptRunBehaviourUpdate → BehaviourUpdate → ... → GC.Collect"
+
+- ✅ VALID:
+  ```
+  PlayerLoop (557.1ms, 100.0%)
+    → Update.ScriptRunBehaviourUpdate (536.7ms, 96.3%)
+      → BehaviourUpdate (536.7ms, 96.3%)
+        → AOE.dll!AOE::GameLauncher.Update() (535.9ms, 96.2%)
+          → Core.Update (535.8ms, 96.2%)
+            → CS:AOE.LuaMgr (528.0ms, 94.8%)
+              → LuaMgr.OnTick&UpdateSchedule (528.0ms, 94.8%)
+                → MapSignificanceMgr.ProcessTask_ZoomEntityAdd (524.9ms, 94.2%)
+                  → TBUResManager.GetResFileInfo (178.4ms, 32.0%) **BOTTLENECK**
+  ```
+
+- ✅ VALID (abbreviated middle layers with `→ ...`):
+  ```
+  PlayerLoop (43.7ms, 100.0%)
+    → Update.ScriptRunBehaviourUpdate (16.9ms, 38.6%)
+      → ... → CS:AOE.TServerManager (13.6ms, 31.0%)
+        → TServer.HandleMessages (11.5ms, 26.3%)
+          → YzEntityMoveLineNtf (11.3ms, 25.9%) **BOTTLENECK**
+  ```
 
 ### Rule 3: Actionable Optimization Suggestions
 Every optimization suggestion MUST include specific, executable steps.
