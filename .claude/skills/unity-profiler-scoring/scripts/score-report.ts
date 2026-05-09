@@ -104,7 +104,7 @@ interface BaselineData {
 
 interface ScoreItem {
   score: number | null;
-  maxScore: 5;
+  maxScore: 100;
   detail: string;
   autoScored: boolean;
 }
@@ -325,15 +325,15 @@ function scoreA1(
 
   const ratio = matched / total;
   let score: number;
-  if (ratio >= 0.95) score = 5;
-  else if (ratio >= 0.85) score = 4;
-  else if (ratio >= 0.6) score = 3;
-  else if (ratio >= 0.4) score = 2;
-  else score = 1;
+  if (ratio >= 1.0) score = 100;
+  else if (ratio >= 0.9) score = 75;
+  else if (ratio >= 0.6) score = 50;
+  else if (ratio >= 0.4) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `${matched}/${total} 字段正确${errors.length > 0 ? "。错误: " + errors.join("; ") : ""}`,
     autoScored: true,
   };
@@ -390,15 +390,15 @@ function scoreA3(
   const ratio = sampleSize > 0 ? matched / sampleSize : 0;
   let score: number;
   // 报告中有大量衍生值(倍数、差值、占比等)不在源数据中，40%+ 原始匹配即合理
-  if (ratio >= 0.55) score = 5;
-  else if (ratio >= 0.45) score = 4;
-  else if (ratio >= 0.35) score = 3;
-  else if (ratio >= 0.2) score = 2;
-  else score = 1;
+  if (ratio >= 0.55) score = 100;
+  else if (ratio >= 0.45) score = 75;
+  else if (ratio >= 0.35) score = 50;
+  else if (ratio >= 0.2) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `采样${sampleSize}个数值，${matched}个(${(ratio * 100).toFixed(1)}%)可追溯到源数据`,
     autoScored: true,
   };
@@ -453,15 +453,15 @@ function scoreA4(
   const ratio = total > 0 ? covered / total : 1;
 
   let score: number;
-  if (ratio >= 1.0) score = 5;
-  else if (ratio >= 0.9) score = 4;
-  else if (ratio >= 0.7) score = 3;
-  else if (ratio >= 0.5) score = 2;
-  else score = 1;
+  if (ratio >= 1.0) score = 100;
+  else if (ratio >= 0.9) score = 75;
+  else if (ratio >= 0.7) score = 50;
+  else if (ratio >= 0.5) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `${covered}/${total} mustReport 项被覆盖 (${(ratio * 100).toFixed(0)}%)${missed.length > 0 ? "。未覆盖: " + missed.slice(0, 5).join(", ") : ""}`,
     autoScored: true,
   };
@@ -472,15 +472,15 @@ function scoreB3(report: string): ScoreItem {
   const ratio = withEvidence / total;
 
   let score: number;
-  if (ratio >= 0.9) score = 5;
-  else if (ratio >= 0.75) score = 4;
-  else if (ratio >= 0.5) score = 3;
-  else if (ratio >= 0.3) score = 2;
-  else score = 1;
+  if (ratio >= 0.9) score = 100;
+  else if (ratio >= 0.75) score = 75;
+  else if (ratio >= 0.5) score = 50;
+  else if (ratio >= 0.3) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `${withEvidence}/${total} 个判定段落含具体数据证据 (${(ratio * 100).toFixed(0)}%)`,
     autoScored: true,
   };
@@ -491,22 +491,22 @@ function scoreB4(report: string): ScoreItem {
 
   let score: number;
   if (total === 0) {
-    score = 5; // 无推测性语言 = 满分
+    score = 100; // 无推测性语言 = 满分
   } else if (untagged === 0) {
-    score = 5;
+    score = 100;
   } else if (untagged <= 2) {
-    score = 4;
+    score = 75;
   } else if (untagged <= total * 0.5) {
-    score = 3;
+    score = 50;
   } else if (untagged <= total * 0.8) {
-    score = 2;
+    score = 25;
   } else {
-    score = 1;
+    score = 0;
   }
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `发现${total}处推测性表述，${untagged}处未标注[推断]${examples.length > 0 ? "。示例: " + examples[0] : ""}`,
     autoScored: true,
   };
@@ -519,8 +519,8 @@ function scoreC2(
   const p0Markers = extractP0Markers(report);
   if (p0Markers.length === 0) {
     return {
-      score: 3,
-      maxScore: 5,
+      score: 50,
+      maxScore: 100,
       detail: "未找到明确的 P0 目标 Marker 引用",
       autoScored: true,
     };
@@ -561,15 +561,15 @@ function scoreC2(
 
   const ratio = p0Markers.length > 0 ? p0Hits / p0Markers.length : 0;
   let score: number;
-  if (ratio >= 0.8) score = 5;
-  else if (ratio >= 0.6) score = 4;
-  else if (ratio >= 0.4) score = 3;
-  else if (ratio >= 0.2) score = 2;
-  else score = 1;
+  if (ratio >= 0.8) score = 100;
+  else if (ratio >= 0.6) score = 75;
+  else if (ratio >= 0.4) score = 50;
+  else if (ratio >= 0.2) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `P0 中 ${p0Hits}/${p0Markers.length} 个 marker 对应最严重问题。P0=[${p0Markers.join(",")}]`,
     autoScored: true,
   };
@@ -616,15 +616,15 @@ function scoreC3(report: string): ScoreItem {
 
   const total = requiredSections.length;
   let score: number;
-  if (found >= total) score = 5;
-  else if (found >= total - 1) score = 4;
-  else if (found >= total - 2) score = 3;
-  else if (found >= total - 3) score = 2;
-  else score = 1;
+  if (found >= total) score = 100;
+  else if (found >= total - 1) score = 75;
+  else if (found >= total - 2) score = 50;
+  else if (found >= total - 3) score = 25;
+  else score = 0;
 
   return {
     score,
-    maxScore: 5,
+    maxScore: 100,
     detail: `${found}/${total} 必须章节存在${missing.length > 0 ? "。缺少: " + missing.join(", ") : ""}`,
     autoScored: true,
   };
@@ -650,7 +650,7 @@ function main() {
     A1: scoreA1(report, baseline),
     A2: {
       score: null,
-      maxScore: 5,
+      maxScore: 100,
       detail: "需人工评审：检查调用链是否从顶层到瓶颈完整",
       autoScored: false,
     },
@@ -658,13 +658,13 @@ function main() {
     A4: scoreA4(report, baseline),
     B1: {
       score: null,
-      maxScore: 5,
+      maxScore: 100,
       detail: "需人工评审：检查瓶颈节点是否为 self-time 最高者",
       autoScored: false,
     },
     B2: {
       score: null,
-      maxScore: 5,
+      maxScore: 100,
       detail: "需人工评审：检查是否结合了项目知识库进行根因分析",
       autoScored: false,
     },
@@ -672,7 +672,7 @@ function main() {
     B4: scoreB4(report),
     C1: {
       score: null,
-      maxScore: 5,
+      maxScore: 100,
       detail: "需人工评审：检查优化建议是否包含具体可执行步骤",
       autoScored: false,
     },
@@ -716,12 +716,11 @@ function main() {
     timestamp: new Date().toISOString(),
   };
 
-  // 输出 — 文件名带报告名+时间戳，避免覆盖
+  // 输出 — 文件名为 score_<报告名>.json/.md
   fs.mkdirSync(args.output, { recursive: true });
 
   const reportBaseName = path.basename(args.report, ".md").replace(/\s+/g, "_");
-  const ts = new Date().toISOString().replace(/[:-]/g, "").replace("T", "_").slice(0, 15);
-  const filePrefix = `score_${reportBaseName}_${ts}`;
+  const filePrefix = `score_${reportBaseName}`;
 
   const jsonPath = path.join(args.output, `${filePrefix}.json`);
   fs.writeFileSync(jsonPath, JSON.stringify(result, null, 2), "utf-8");
@@ -738,62 +737,163 @@ function main() {
 
   for (const [key, item] of Object.entries(scores)) {
     const scoreText =
-      item.score !== null ? `${item.score}/5` : "待人工";
+      item.score !== null ? `${item.score}/100` : "待人工";
     const tag = item.autoScored ? "🤖" : "👤";
-    console.log(`  ${tag} ${key}: ${scoreText.padEnd(6)} ${item.detail}`);
+    console.log(`  ${tag} ${key}: ${scoreText.padEnd(8)} ${item.detail}`);
   }
 
   console.log("\n───────────────────────────────────────────");
   console.log(
-    `  A类(数据准确性): ${categoryScores.A.toFixed(2)}/5  ×0.40`
+    `  A类(数据准确性): ${categoryScores.A.toFixed(1)}/100  ×0.40`
   );
   console.log(
-    `  B类(分析质量):   ${categoryScores.B.toFixed(2)}/5  ×0.35`
+    `  B类(分析质量):   ${categoryScores.B.toFixed(1)}/100  ×0.35`
   );
   console.log(
-    `  C类(实用价值):   ${categoryScores.C.toFixed(2)}/5  ×0.25`
+    `  C类(实用价值):   ${categoryScores.C.toFixed(1)}/100  ×0.25`
   );
   console.log("───────────────────────────────────────────");
   console.log(
-    `  自动评分总分(仅含自动项): ${autoTotal.toFixed(2)}/5`
+    `  自动评分总分(仅含自动项): ${autoTotal.toFixed(1)}/100`
   );
+  console.log(`  档位: ${getGradeEmoji(autoTotal)} ${getGradeLevel(autoTotal)}`);
   console.log(`  待人工补充: ${manualItems.join(", ")}`);
   console.log("═══════════════════════════════════════════\n");
   console.log(`[score-report] JSON 输出: ${jsonPath}`);
   console.log(`[score-report] Markdown 输出: ${mdPath}`);
 }
 
+function getGradeLevel(score: number): string {
+  if (score >= 81) return "优秀";
+  if (score >= 61) return "良好";
+  if (score >= 41) return "及格";
+  if (score >= 21) return "差";
+  return "不可用";
+}
+
+function getGradeEmoji(score: number): string {
+  if (score >= 81) return "🏅";
+  if (score >= 61) return "👍";
+  if (score >= 41) return "⚠️";
+  if (score >= 21) return "❌";
+  return "💀";
+}
+
 function generateMarkdownSummary(result: ScoreResult, reportPath: string): string {
   const { scores, categoryScores, autoTotal, manualItems } = result;
 
-  let md = `# 性能报告评分结果\n\n`;
-  md += `> 评分对象: \`${reportPath}\`\n`;
-  md += `> 生成时间: ${result.timestamp}\n\n`;
+  const gradeLevel = getGradeLevel(autoTotal);
+  const gradeEmoji = getGradeEmoji(autoTotal);
 
-  md += `## 评分总览\n\n`;
-  md += `| 大类 | 得分 | 权重 | 加权 |\n`;
+  const itemNames: Record<string, string> = {
+    A1: "概览数据",
+    A2: "调用链",
+    A3: "数值引用",
+    A4: "mustReport",
+    B1: "瓶颈定位",
+    B2: "根因深度",
+    B3: "判定透明度",
+    B4: "不确定标注",
+    C1: "建议可执行",
+    C2: "优先级",
+    C3: "结构完整",
+  };
+
+  let md = `# ${gradeEmoji} 性能报告评分结果\n\n`;
+  md += `> **评分对象**: \`${reportPath}\`\n`;
+  md += `> **生成时间**: ${result.timestamp}\n`;
+  md += `> **评分制度**: 100 分制（满分 100）\n\n`;
+
+  // ── 总分 ──
+  md += `---\n\n`;
+  md += `## 🏆 总分\n\n`;
+  md += `\`\`\`\n`;
+  md += `总分 = A平均 × 0.4 + B平均 × 0.35 + C平均 × 0.25\n`;
+  md += `     = ${categoryScores.A.toFixed(2)} × 0.4 + ${categoryScores.B.toFixed(2)} × 0.35 + ${categoryScores.C.toFixed(2)} × 0.25\n`;
+  md += `     = ${(categoryScores.A * 0.4).toFixed(2)} + ${(categoryScores.B * 0.35).toFixed(2)} + ${(categoryScores.C * 0.25).toFixed(2)}\n`;
+  md += `     = ${autoTotal.toFixed(1)} / 100\n`;
+  md += `\`\`\`\n\n`;
+  md += `**总分：${autoTotal.toFixed(1)} / 100 — ${gradeEmoji} ${gradeLevel}**\n\n`;
+
+  // ── 汇总评分表 ──
+  md += `---\n\n`;
+  md += `## 📋 汇总评分表\n\n`;
+  md += `| 大类 | 子项 | 分数 | 类型 |\n`;
   md += `|------|------|------|------|\n`;
-  md += `| A 数据准确性 | ${categoryScores.A.toFixed(2)}/5 | 40% | ${(categoryScores.A * 0.4).toFixed(2)} |\n`;
-  md += `| B 分析质量 | ${categoryScores.B.toFixed(2)}/5 | 35% | ${(categoryScores.B * 0.35).toFixed(2)} |\n`;
-  md += `| C 实用价值 | ${categoryScores.C.toFixed(2)}/5 | 25% | ${(categoryScores.C * 0.25).toFixed(2)} |\n`;
-  md += `| **总分(自动项)** | | | **${autoTotal.toFixed(2)}/5** |\n\n`;
 
-  md += `## 逐项明细\n\n`;
-  md += `| 维度 | 分数 | 类型 | 说明 |\n`;
-  md += `|------|------|------|------|\n`;
+  const categories = [
+    { label: "A 数据准确性", keys: ["A1", "A2", "A3", "A4"], avg: categoryScores.A },
+    { label: "B 分析质量", keys: ["B1", "B2", "B3", "B4"], avg: categoryScores.B },
+    { label: "C 实用价值", keys: ["C1", "C2", "C3"], avg: categoryScores.C },
+  ];
 
+  for (const cat of categories) {
+    let firstRow = true;
+    for (const key of cat.keys) {
+      const item = scores[key];
+      const scoreText = item.score !== null ? `**${item.score}**/100` : "待人工";
+      const type = item.autoScored ? "🤖自动" : "👤人工";
+      const catLabel = firstRow ? `**${cat.label}**` : "";
+      md += `| ${catLabel} | ${key} ${itemNames[key]} | ${scoreText} | ${type} |\n`;
+      firstRow = false;
+    }
+    md += `| | **${cat.label.charAt(0)} 类平均** | **${cat.avg.toFixed(2)}/100** | |\n`;
+  }
+
+  // ── 分类得分 ──
+  md += `\n---\n\n`;
+  md += `## 📊 分类得分\n\n`;
+  md += `| 大类 | 得分 | 权重 | 加权得分 |\n`;
+  md += `|------|------|------|----------|\n`;
+  md += `| A 数据准确性 | ${categoryScores.A.toFixed(2)}/100 | 40% | ${(categoryScores.A * 0.4).toFixed(2)} |\n`;
+  md += `| B 分析质量 | ${categoryScores.B.toFixed(2)}/100 | 35% | ${(categoryScores.B * 0.35).toFixed(2)} |\n`;
+  md += `| C 实用价值 | ${categoryScores.C.toFixed(2)}/100 | 25% | ${(categoryScores.C * 0.25).toFixed(2)} |\n`;
+  md += `| **总分** | | | **${autoTotal.toFixed(1)}/100** |\n\n`;
+
+  // ── 扣分点总结 ──
+  const deductions: { key: string; lost: number; reason: string }[] = [];
   for (const [key, item] of Object.entries(scores)) {
-    const scoreText = item.score !== null ? `${item.score}/5` : "待人工";
-    const type = item.autoScored ? "自动" : "人工";
-    md += `| ${key} | ${scoreText} | ${type} | ${item.detail} |\n`;
+    if (item.score !== null && item.score < 100) {
+      deductions.push({ key, lost: 100 - item.score, reason: item.detail });
+    }
   }
 
-  md += `\n## 待人工补充\n\n`;
-  for (const key of manualItems) {
-    md += `- **${key}**: ${scores[key].detail}\n`;
+  if (deductions.length > 0) {
+    md += `---\n\n`;
+    md += `## ⚠️ 扣分点总结\n\n`;
+    let idx = 1;
+    for (const d of deductions) {
+      md += `${idx}. **${d.key}** (-${d.lost}): ${d.reason}\n`;
+      idx++;
+    }
+    md += `\n`;
   }
 
-  md += `\n---\n\n*评分标准详见 scoring/rubric.md*\n`;
+  // ── 待人工评审项 ──
+  if (manualItems.length > 0) {
+    md += `---\n\n`;
+    md += `## 👤 待人工评审项\n\n`;
+    md += `以下 ${manualItems.length} 项需人工/LLM 补充评分后计算最终总分：\n\n`;
+    for (const key of manualItems) {
+      const name = itemNames[key] || key;
+      md += `- **${key} ${name}**: ${scores[key].detail}\n`;
+    }
+    md += `\n`;
+  }
+
+  // ── 档位参考 ──
+  md += `---\n\n`;
+  md += `## 档位参考\n\n`;
+  md += `| 分数区间 | 档位 |\n`;
+  md += `|----------|------|\n`;
+  md += `| 81-100 | 🏅 优秀 |\n`;
+  md += `| 61-80 | 👍 良好 |\n`;
+  md += `| 41-60 | ⚠️ 及格 |\n`;
+  md += `| 21-40 | ❌ 差 |\n`;
+  md += `| 0-20 | 💀 不可用 |\n\n`;
+
+  md += `---\n\n`;
+  md += `*评分标准详见 .codebuddy/skills/unity-profiler-scoring/rubric.md*\n`;
   return md;
 }
 

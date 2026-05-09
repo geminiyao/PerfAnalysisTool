@@ -36,31 +36,35 @@ This produces (filenames include report name + timestamp to avoid overwriting):
 
 ### Step 3: Read and Present Results
 
-Read the generated `score_*.md` file, then present to the user:
+Read the generated `score_*.md` file and `score_*.json` file.
 
-1. Show the **overall score** and category breakdown (A/B/C)
-2. Show each **auto-scored item** with score and reasoning
-3. List the **manual-review items** that need human judgment
-4. Ask: "需要我帮你补充人工评审项吗？"
+### Step 4: LLM 补充评审（自动，无需人工）
 
-### Step 4: (Optional) LLM-Assisted Manual Scoring
-
-If the user says yes, read the report content and baseline data, then evaluate:
+读取报告内容和 baseline 数据，自动评估 4 个人工项：
 
 - **A2 (调用链完整性)**: For each Jank/hotspot analyzed in the report, check if there is a complete call chain from PlayerLoop/top-level down to the bottleneck node. Compare against `jankFrames[].hotPath` and `markers[].callChain` in baseline.
 - **B1 (瓶颈定位准确性)**: Check if the reported bottleneck matches `**BOTTLENECK**` markers in baseline jankFrames hotPath.
 - **B2 (根因推理深度)**: Check if the analysis references project-specific knowledge (MapSignificanceMgr known issue, AOE architecture, xLua bridging, network decode patterns, etc. from `references/unity-cpu-knowledge.md`).
 - **C1 (建议可执行性)**: For each optimization suggestion, verify it has: specific operation steps + target code path/setting + expected benefit. Mark down if vague ("优化性能", "减少开销").
 
-Score each 1-5 per the rubric, then calculate the final weighted total:
-
-```
-Final = A_avg × 0.4 + B_avg × 0.35 + C_avg × 0.25
-```
+Score each 0-100 per the rubric.
 
 ### Step 5: Output Final Score
 
-Present the complete 11-item scorecard with final weighted total.
+将自动项 + LLM 评审项合并，重新计算最终加权总分：
+
+```
+Final = A_avg × 0.4 + B_avg × 0.35 + C_avg × 0.25  (满分 100)
+```
+
+**直接覆盖** `score_*.md` 文件为完整的 11 项评分报告，包含：
+1. 🏆 总分 + 档位
+2. 📋 汇总评分表（11 项全部有分数）
+3. 📊 分类得分（含完整平均值）
+4. ⚠️ 扣分点总结（所有 <100 的项，编号列表，含扣分原因简述）
+5. 档位参考
+
+不再有"待人工"项，用户看到的就是最终结果。
 
 If scoring multiple reports, present a comparison table.
 
@@ -77,7 +81,7 @@ If scoring multiple reports, present a comparison table.
 Auto-scored: A1, A3, A4, B3, B4, C2, C3 (7 items)
 Manual/LLM: A2, B1, B2, C1 (4 items)
 
-Scale: 1(不可用) ~ 5(优秀)
+Scale: 0(不可用) ~ 100(优秀)
 
 ---
 
