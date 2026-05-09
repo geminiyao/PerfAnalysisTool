@@ -193,19 +193,7 @@ Output in **Chinese**, **Markdown** format. Follow this structure:
 
 > 2-3 sentences summarizing the most critical findings.
 
-## 三、Jank 卡顿分析
-
-### 卡顿模式总结
-(Table grouping Jank frames by category)
-
-### BigJank/Jank #N: [description]
-- 耗时 / 倍数
-- 完整调用链
-- 瓶颈节点 + self-time
-- 源码位置 (if available)
-- 根因分析
-
-## 四、热点分析
+## 三、热点分析
 
 ### 判定依据
 (Explain why you identified these markers as hotspots, citing specific numbers)
@@ -220,6 +208,18 @@ Output in **Chinese**, **Markdown** format. Follow this structure:
 
 ### 特殊 Marker 说明
 (Gfx.WaitForPresent, WaitForTargetFPS, etc.)
+
+## 四、Jank 卡顿分析
+
+### 卡顿模式总结
+(Table grouping Jank frames by category)
+
+### BigJank/Jank #N: [description]
+- 耗时 / 倍数
+- 完整调用链
+- 瓶颈节点 + self-time
+- 源码位置 (if available)
+- 根因分析
 
 ## 五、Marker 波动分析
 
@@ -327,5 +327,5 @@ User: 请分析 output/preprocess-result.json 中的性能数据
 ```
 
 ```
-User: 基于已有的预处理结果重新分析，这次重点关注 YzEntityMoveLineNtf 的波动
+User: 基于已有的预处理结果重新分析，这次重点关注 XXXManager.DoSomething 的波动
 ```
