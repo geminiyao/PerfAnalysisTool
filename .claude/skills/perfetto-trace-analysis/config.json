@@ -1,0 +1,39 @@
+{
+  "targetFps": 30,
+  "gameProcess": "com.tencent.aoeyz",
+  "jank": {
+    "jankMultiplier": 2,
+    "bigJankMultiplier": 3
+  },
+  "mainThread": {
+    "name": "UnityMain"
+  },
+  "renderThread": {
+    "name": "UnityGfxRenderS"
+  },
+  "filter": {
+    "minSliceDurMs": 0.1
+  },
+  "blacklist": [
+    "Semaphore.WaitForSignal",
+    "WaitForJobGroupID"
+  ],
+  "jobWorker": {
+    "namePatterns": ["Worker Thread", "Job.Worker"],
+    "highUtilizationThreshold": 60,
+    "lowUtilizationThreshold": 10
+  },
+  "gpu": {
+    "utilizationHighThreshold": 80,
+    "frequencyTrackNames": ["gpu_frequency", "gpufreq", "GPU Frequency"],
+    "utilizationTrackNames": ["gpu_utilization", "GPU Utilization", "gpu_busy", "GPU Busy"]
+  },
+  "timeSegment": {
+    "segmentCount": 3,
+    "thermalDegradationThreshold": 0.85,
+    "burstSpikeConcentration": 0.6,
+    "warmupThreshold": 1.15,
+    "sustainedSlowFrames": 5,
+    "sustainedSlowMultiplier": 1.5
+  }
+}
