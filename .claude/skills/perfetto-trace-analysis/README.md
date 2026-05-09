@@ -223,10 +223,27 @@ perfetto-trace-analysis/
 ├── README.md                      ← 本文件（skill 文档）
 ├── config.json                    ← 配置（进程名、线程名、阈值）
 ├── skill.md                       ← Claude 执行指令 + 报告模板
+├── requirements.txt               ← Python 依赖（perfetto>=47.0）
 ├── scripts/
 │   └── preprocess.py              ← 数据预处理脚本（Python）
 └── references/
     └── perfetto-knowledge.md      ← 分析知识库（ARM/调度/GPU/趋势）
+```
+
+---
+
+## 前置依赖
+
+```bash
+# Python 3.10+
+pip install -r .claude/skills/perfetto-trace-analysis/requirements.txt
+```
+
+唯一依赖: `perfetto` Python 包（会自动下载 trace_processor 引擎，约 30MB）。
+
+验证安装:
+```bash
+python -c "from perfetto.trace_processor import TraceProcessor; print('OK')"
 ```
 
 ---
