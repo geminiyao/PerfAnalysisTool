@@ -47,6 +47,9 @@
       "Lua:", "***"
     ]
   },
+  "mustReport": {
+    "budgetRatio": 0.3
+  },
   "filter": {
     "minSelfTimeMs": 0.1
   }

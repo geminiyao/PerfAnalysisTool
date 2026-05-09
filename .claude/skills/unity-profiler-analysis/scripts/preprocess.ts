@@ -33,6 +33,7 @@ interface Config {
   jank: { jankMultiplier: number; bigJankMultiplier: number }
   callTree: { maxDepth: number }
   markerSpike: { spikeRatioThreshold: number; minSpikeFrames: number }
+  mustReport: { budgetRatio: number }
   blacklist: string[]
   filter: { minSelfTimeMs: number }
 }
@@ -161,6 +162,7 @@ function loadConfig(scriptDir: string): Config {
       jank: { jankMultiplier: 2, bigJankMultiplier: 3 },
       callTree: { maxDepth: 8 },
       markerSpike: { spikeRatioThreshold: 3, minSpikeFrames: 2 },
+      mustReport: { budgetRatio: 0.3 },
       blacklist: ['Semaphore.WaitForSignal', 'WaitForJobGroupID', 'Idle', 'EditorIdle', 'Profiler.CollectGlobalStats', 'Profiler.FlushData'],
       filter: { minSelfTimeMs: 0.1 }
     }
@@ -465,11 +467,20 @@ function buildMarkerCallChain(
 function shouldMustReport(
   marker: MarkerSelfTimeInfo,
   percentOfFrame: number,
-  analysis: ProfileAnalysisResult
+  analysis: ProfileAnalysisResult,
+  frameBudgetMs: number,
+  config: Config
 ): { mustReport: boolean; reason: string } {
   // self-time > 20% of frame
   if (percentOfFrame > 20) {
     return { mustReport: true, reason: `self-time 占帧 ${percentOfFrame.toFixed(1)}% > 20%` }
+  }
+
+  // self-time mean > budgetRatio of frame budget
+  const budgetRatio = config.mustReport.budgetRatio
+  const budgetThreshold = frameBudgetMs * budgetRatio
+  if (marker.msSelfMean > budgetThreshold) {
+    return { mustReport: true, reason: `self-time ${marker.msSelfMean.toFixed(1)}ms > ${(budgetRatio * 100).toFixed(0)}% of budget ${frameBudgetMs.toFixed(1)}ms` }
   }
 
   // Gfx.WaitForPresent > 30%
@@ -549,7 +560,7 @@ function main(): void {
     const percentOfFrame = fs2.msMean > 0 ? (info.msSelfMean / fs2.msMean) * 100 : 0
     const callsPerFrame = info.presentOnFrameCount > 0 ? info.count / info.presentOnFrameCount : 0
     const callChain = buildMarkerCallChain(profileData, info.name, analysis)
-    const { mustReport, reason } = shouldMustReport(info, percentOfFrame, analysis)
+    const { mustReport, reason } = shouldMustReport(info, percentOfFrame, analysis, frameBudgetMs, config)
 
     return {
       name: info.name,
