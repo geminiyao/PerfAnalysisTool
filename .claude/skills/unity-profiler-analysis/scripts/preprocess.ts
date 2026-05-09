@@ -10,9 +10,9 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { parsePdataFile } from '../../../../src/main/profiler/pdata-parser'
-import { analyzeProfileData } from '../../../../src/main/profiler/profile-analyzer'
-import { ProfileData, ProfileAnalysisResult } from '../../../../src/main/profiler/types'
+import { parsePdataFile } from './lib/profiler/pdata-parser'
+import { analyzeProfileData } from './lib/profiler/profile-analyzer'
+import { ProfileData, ProfileAnalysisResult } from './lib/profiler/types'
 import {
   getFrameCallTree,
   buildCallTree,
@@ -21,8 +21,8 @@ import {
   formatCallTree,
   formatHotPath,
   formatCallChain
-} from '../../../../src/main/profiler/call-tree'
-import { detectAllSpikes, SpikeCategory } from '../../../../src/main/profiler/spike-detector'
+} from './lib/profiler/call-tree'
+import { detectAllSpikes, SpikeCategory } from './lib/profiler/spike-detector'
 
 // ============ Types ============
 

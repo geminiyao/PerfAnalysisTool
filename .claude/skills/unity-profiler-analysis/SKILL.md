@@ -29,6 +29,17 @@ npx tsx .claude/skills/unity-profiler-analysis/scripts/preprocess.ts --input <fi
 - `<dir>`: (Optional) Output directory. Default: `./output/` (relative to cwd)
 - Output is saved to: `<dir>/preprocess-result.json`
 
+**Fast re-run optimization**: If `<dir>/parsed-data.json` already exists (from a previous run on the **same** pdata file) and the user only changed `target-fps` or other config parameters, use the parsed JSON as input for a much faster re-run (~3-5s instead of 30-60s):
+
+```bash
+npx tsx .claude/skills/unity-profiler-analysis/scripts/preprocess.ts --input ./output/parsed-data.json --target-fps <fps>
+```
+
+Decision rules:
+- User provides a **new .pdata file** → always use the .pdata as input (this overwrites parsed-data.json automatically)
+- User says "re-analyze with different fps" or "change target to 60fps" on the **same** pdata → use parsed-data.json
+- User explicitly says "skip preprocessing" → skip Step 1 entirely, use existing preprocess-result.json
+
 Wait for this to complete before proceeding.
 
 ### Step 2: Run Source Mapping (if projectPath configured)

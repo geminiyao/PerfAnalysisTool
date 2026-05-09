@@ -7,13 +7,13 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { parsePdataFile } from '../../../../src/main/profiler/pdata-parser'
-import { ProfileData } from '../../../../src/main/profiler/types'
+import { parsePdataFile } from './lib/profiler/pdata-parser'
+import { ProfileData } from './lib/profiler/types'
 import {
   getFrameCallTree,
   formatCallTree,
   formatHotPath
-} from '../../../../src/main/profiler/call-tree'
+} from './lib/profiler/call-tree'
 
 // ============ CLI Argument Parsing ============
 
