@@ -316,29 +316,48 @@ interface MarkerSelfTimeInfo {
   threads: string[]
   // Per-frame self-time data for spike detection
   frameSelfTimes: number[]
+  // Average total frame time for frames where this marker is present.
+  // Used as denominator for percentOfFrame so that markers appearing in only
+  // a subset of frames get a correct ratio (not diluted by frames where they're absent).
+  msFrameMeanPresent: number
 }
 
 function computeMarkerSelfTimes(
-  analysis: ProfileAnalysisResult,
+  selfAnalysis: ProfileAnalysisResult,
+  totalAnalysis: ProfileAnalysisResult,
+  profileData: ProfileData,
   config: Config
 ): MarkerSelfTimeInfo[] {
   const blacklistSet = new Set(config.blacklist.map(b => b.toLowerCase()))
 
+  // Build total-time lookup from totalAnalysis
+  const totalMap = new Map<string, number>()
+  for (const marker of totalAnalysis.markers) {
+    totalMap.set(marker.name, marker.msMean)
+  }
+
+  // Build frameIndex → msFrame lookup for computing per-marker frame average
+  const frameTimeMap = new Map<number, number>()
+  for (const frame of profileData.frames) {
+    frameTimeMap.set(frame.msStartTime !== undefined
+      ? profileData.frameIndexOffset + profileData.frames.indexOf(frame)
+      : 0, frame.msFrame)
+  }
+  // More reliable: use offset-based indexing
+  frameTimeMap.clear()
+  for (let i = 0; i < profileData.frames.length; i++) {
+    frameTimeMap.set(profileData.frameIndexOffset + i, profileData.frames[i].msFrame)
+  }
+
   const results: MarkerSelfTimeInfo[] = []
 
-  for (const marker of analysis.markers) {
+  for (const marker of selfAnalysis.markers) {
     // Skip blacklisted markers
     if (blacklistSet.has(marker.name.toLowerCase())) continue
-    // Skip very low impact markers
+    // Skip very low impact markers (use self-time for filtering)
     if (marker.msMean < config.filter.minSelfTimeMs && marker.msMedian < config.filter.minSelfTimeMs) continue
 
-    // Approximate self-time: msTotal - msChildren is already calculated per marker
-    // In the existing system, self-time = msMarkerTotal - msChildren at marker level
-    // But in the analysis result, we have aggregated frame-level stats
-    // For now, use the available data: markers already sorted by msAtMedian
-    // The "self time" concept is approximated from the profiler data
-
-    // Collect per-frame times for spike detection
+    // marker.frames[].ms is now true self-time (selfTimes: true)
     const frameSelfTimes = marker.frames.map(f => f.ms)
 
     // Calculate percentiles
@@ -347,17 +366,30 @@ function computeMarkerSelfTimes(
     const max = sorted.length > 0 ? sorted[sorted.length - 1] : 0
     const mean = sorted.length > 0 ? sorted.reduce((a, b) => a + b, 0) / sorted.length : 0
 
+    // Calculate average frame time for frames where this marker is present
+    let msFrameSum = 0
+    let msFrameCount = 0
+    for (const f of marker.frames) {
+      const msFrame = frameTimeMap.get(f.frameIndex)
+      if (msFrame !== undefined) {
+        msFrameSum += msFrame
+        msFrameCount++
+      }
+    }
+    const msFrameMeanPresent = msFrameCount > 0 ? msFrameSum / msFrameCount : 0
+
     results.push({
       name: marker.name,
       msSelfMean: mean,
       msSelfMedian: median,
       msSelfMax: max,
-      msTotalMean: marker.msMean,
+      msTotalMean: totalMap.get(marker.name) ?? marker.msMean,
       count: marker.count,
       presentOnFrameCount: marker.presentOnFrameCount,
       depth: marker.minDepth,
       threads: marker.threads,
-      frameSelfTimes
+      frameSelfTimes,
+      msFrameMeanPresent
     })
   }
 
@@ -533,18 +565,26 @@ function main(): void {
   const profileData = loadProfileData(path.resolve(input), outputDir)
   console.error(`[preprocess] Loaded ${profileData.frames.length} frames, ${profileData.markerNames.length} markers`)
 
-  // Run statistical analysis
+  // Run statistical analysis (total time, for call chains and frame summary)
   const analysis = analyzeProfileData(profileData)
   if (!analysis) {
     console.error('[preprocess] Error: analysis produced no results')
     process.exit(1)
   }
 
+  // Run self-time analysis (for marker ranking and mustReport)
+  const selfAnalysis = analyzeProfileData(profileData, { selfTimes: true })
+  if (!selfAnalysis) {
+    console.error('[preprocess] Error: self-time analysis produced no results')
+    process.exit(1)
+  }
+
   const fs2 = analysis.frameSummary
   const actualFps = fs2.msMean > 0 ? 1000 / fs2.msMean : 0
 
-  // Compute marker self-times and sort
-  const markerInfos = computeMarkerSelfTimes(analysis, config)
+  // Compute marker self-times using selfAnalysis (true self-time = total - children)
+  // and totalAnalysis (for msTotalMean)
+  const markerInfos = computeMarkerSelfTimes(selfAnalysis, analysis, profileData, config)
   console.error(`[preprocess] ${markerInfos.length} markers after filtering`)
 
   // Detect Jank frames
@@ -557,7 +597,11 @@ function main(): void {
 
   // Build marker output with call chains and must-report
   const markersOutput: MarkerOutput[] = markerInfos.map(info => {
-    const percentOfFrame = fs2.msMean > 0 ? (info.msSelfMean / fs2.msMean) * 100 : 0
+    // percentOfFrame: use the average frame time of frames where this marker is present
+    // This correctly handles markers that only appear in a subset of frames
+    // (e.g. RenderManager_Shadow appearing in 100 of 600 frames)
+    const denominator = info.msFrameMeanPresent > 0 ? info.msFrameMeanPresent : fs2.msMean
+    const percentOfFrame = denominator > 0 ? (info.msSelfMean / denominator) * 100 : 0
     const callsPerFrame = info.presentOnFrameCount > 0 ? info.count / info.presentOnFrameCount : 0
     const callChain = buildMarkerCallChain(profileData, info.name, analysis)
     const { mustReport, reason } = shouldMustReport(info, percentOfFrame, analysis, frameBudgetMs, config)
@@ -653,14 +697,81 @@ function main(): void {
     threads: threadsOutput
   }
 
-  // Write output file
+  // Write full output file (for web frontend, query-frame, etc.)
   const outputPath = path.join(outputDir, 'preprocess-result.json')
   const jsonOutput = JSON.stringify(result, null, 2)
   fs.writeFileSync(outputPath, jsonOutput, 'utf-8')
-  console.error(`[preprocess] Output saved to: ${outputPath}`)
+  console.error(`[preprocess] Full output saved to: ${outputPath} (${(jsonOutput.length / 1024).toFixed(0)}KB)`)
 
-  // Also print to stdout for AI consumption
-  console.log(jsonOutput)
+  // Write summary file (for AI consumption — small, ~15-20KB)
+  // AI MUST read this file instead of preprocess-result.json to avoid 100K+ token waste
+  const mustReportMarkers = markersOutput.filter(m => m.mustReport)
+  const top20Markers = markersOutput.slice(0, 20)
+  // Merge: top20 + any mustReport markers not already in top20
+  const top20Names = new Set(top20Markers.map(m => m.name))
+  const extraMustReport = mustReportMarkers.filter(m => !top20Names.has(m.name))
+  const summaryMarkers = [...top20Markers, ...extraMustReport]
+
+  const summary = {
+    config: result.config,
+    frameSummary: result.frameSummary,
+    markers: summaryMarkers.map(m => ({
+      name: m.name,
+      msSelfMean: m.msSelfMean,
+      msSelfMedian: m.msSelfMedian,
+      msSelfMax: m.msSelfMax,
+      msTotalMean: m.msTotalMean,
+      percentOfFrame: m.percentOfFrame,
+      count: m.count,
+      presentOnFrameCount: m.presentOnFrameCount,
+      callsPerFrame: m.callsPerFrame,
+      depth: m.depth,
+      thread: m.thread,
+      callChain: m.callChain,
+      spikeRatio: m.spikeRatio,
+      mustReport: m.mustReport,
+      mustReportReason: m.mustReportReason
+    })),
+    markerSpikes: markerSpikes.slice(0, 20).map(s => ({
+      name: s.name,
+      msSelfMean: s.msSelfMean,
+      msSelfMedian: s.msSelfMedian,
+      msSelfMax: s.msSelfMax,
+      msSelfP95: s.msSelfP95,
+      spikeRatio: s.spikeRatio,
+      spikeFrameCount: s.spikeFrameCount,
+      totalFrameCount: s.totalFrameCount
+    })),
+    jankFrames: jankResult.jankFrames.map(j => ({
+      frameIndex: j.frameIndex,
+      msFrame: j.msFrame,
+      prevThreeAvg: j.prevThreeAvg,
+      ratio: j.ratio,
+      jankLevel: j.jankLevel,
+      category: j.category,
+      dominantMarker: j.dominantMarker,
+      hotPath: j.hotPath,
+      mustReport: j.mustReport,
+      mustReportReason: j.mustReportReason
+      // callTreeSummary omitted — use query-frame for full tree
+    })),
+    frameTrees: result.frameTrees,
+    threads: result.threads,
+    _meta: {
+      fullResultFile: 'preprocess-result.json',
+      totalMarkerCount: markersOutput.length,
+      totalSpikeCount: markerSpikes.length,
+      note: 'This is a summary for AI consumption. Use query-frame.ts for detailed per-frame analysis. Full data in preprocess-result.json.'
+    }
+  }
+
+  const summaryPath = path.join(outputDir, 'preprocess-summary.json')
+  const summaryJson = JSON.stringify(summary, null, 2)
+  fs.writeFileSync(summaryPath, summaryJson, 'utf-8')
+  console.error(`[preprocess] Summary saved to: ${summaryPath} (${(summaryJson.length / 1024).toFixed(0)}KB)`)
+
+  // Print summary to stdout for AI consumption (NOT the full result)
+  console.log(summaryJson)
 }
 
 main()

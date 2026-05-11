@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Card, Upload as AntUpload, Form, Input, Button, Progress, Steps, message, Space, Alert, Select, Tooltip,
+  Card, Upload as AntUpload, Form, Input, InputNumber, Button, Progress, Steps, message, Space, Alert, Select, Tooltip, Collapse,
 } from 'antd';
 import { InboxOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { uploadFile, startAnalysis, subscribeProgress } from '../services/api';
+import { uploadFile, startAnalysis, subscribeProgress, type AnalysisParams } from '../services/api';
 import { CLI_PROVIDERS, type ProgressEvent, type CliProvider } from '../../shared/types';
 
 const { Dragger } = AntUpload;
@@ -62,8 +62,14 @@ const Upload: React.FC = () => {
       setSessionId(resultId);
       setCurrentStep(2);
 
-      // 触发分析
-      await startAnalysis(resultId, cliProvider);
+      // 触发分析（带分析参数）
+      const analysisParams: AnalysisParams = {
+        targetFps: meta.targetFps || 30,
+        jankMultiplier: meta.jankMultiplier || 2,
+        bigJankMultiplier: meta.bigJankMultiplier || 3,
+        budgetRatio: meta.budgetRatio || 0.3,
+      };
+      await startAnalysis(resultId, cliProvider, analysisParams);
       setCurrentStep(3);
 
       // 监听进度
@@ -205,6 +211,67 @@ const Upload: React.FC = () => {
           <Form.Item label="备注" name="notes">
             <Input.TextArea rows={2} placeholder="任何补充说明..." />
           </Form.Item>
+
+          {/* 分析参数 */}
+          <Collapse
+            size="small"
+            style={{ marginBottom: 0 }}
+            items={[{
+              key: 'params',
+              label: <span style={{ color: '#888', fontSize: 13 }}>分析参数 (可选调整)</span>,
+              children: (
+                <div>
+                  <Space style={{ width: '100%' }} size={16}>
+                    <Form.Item label="目标帧率" name="targetFps" initialValue={30} style={{ flex: 1 }}>
+                      <InputNumber min={15} max={120} addonAfter="FPS" style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item
+                      label={
+                        <Space>
+                          帧预算
+                          <Tooltip title="= 1000 / 目标帧率，自动计算">
+                            <QuestionCircleOutlined style={{ color: '#888' }} />
+                          </Tooltip>
+                        </Space>
+                      }
+                      style={{ flex: 1 }}
+                    >
+                      <Input
+                        disabled
+                        value={`${(1000 / (form.getFieldValue('targetFps') || 30)).toFixed(1)} ms`}
+                        style={{ color: '#aaa' }}
+                      />
+                    </Form.Item>
+                  </Space>
+                  <Space style={{ width: '100%' }} size={16}>
+                    <Form.Item
+                      label={<Tooltip title="帧耗时 ≥ 中位帧 × 此倍数 → 判定为 Jank"><span>Jank 倍数</span></Tooltip>}
+                      name="jankMultiplier"
+                      initialValue={2}
+                      style={{ flex: 1 }}
+                    >
+                      <InputNumber min={1.5} max={5} step={0.5} addonAfter="x" style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item
+                      label={<Tooltip title="帧耗时 ≥ 中位帧 × 此倍数 → 判定为 BigJank"><span>BigJank 倍数</span></Tooltip>}
+                      name="bigJankMultiplier"
+                      initialValue={3}
+                      style={{ flex: 1 }}
+                    >
+                      <InputNumber min={2} max={10} step={0.5} addonAfter="x" style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Space>
+                  <Form.Item
+                    label={<Tooltip title="self-time > 帧预算 × 此比例 → 标记为必须报告的热点"><span>mustReport 阈值</span></Tooltip>}
+                    name="budgetRatio"
+                    initialValue={0.3}
+                  >
+                    <InputNumber min={0.1} max={1} step={0.05} addonAfter="× 帧预算" style={{ width: 200 }} />
+                  </Form.Item>
+                </div>
+              ),
+            }]}
+          />
         </Form>
       </Card>
 

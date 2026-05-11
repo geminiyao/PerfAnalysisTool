@@ -1,4 +1,4 @@
-import type { Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, TrendPoint, CliProvider } from '../../shared/types';
+import type { Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, DiffResult, TrendPoint, CliProvider } from '../../shared/types';
 
 const BASE_URL = '/api';
 
@@ -31,11 +31,19 @@ export async function uploadFile(file: File, meta: Record<string, string>): Prom
   return res.json();
 }
 
+/** 分析参数 */
+export interface AnalysisParams {
+  targetFps?: number;
+  jankMultiplier?: number;
+  bigJankMultiplier?: number;
+  budgetRatio?: number;
+}
+
 /** 触发分析 */
-export async function startAnalysis(sessionId: string, cliProvider: CliProvider = 'codebuddy') {
+export async function startAnalysis(sessionId: string, cliProvider: CliProvider = 'codebuddy', params?: AnalysisParams) {
   return request<{ sessionId: string; status: string; queuePosition: number }>('/analysis/start', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, cliProvider }),
+    body: JSON.stringify({ sessionId, cliProvider, params }),
   });
 }
 
@@ -97,6 +105,14 @@ export async function compareAnalyses(sessionIds: string[]) {
   return request<CompareResult>('/compare', {
     method: 'POST',
     body: JSON.stringify({ sessionIds }),
+  });
+}
+
+/** Marker 级深度对比 */
+export async function compareDiff(baselineId: string, currentId: string) {
+  return request<DiffResult>('/compare/diff', {
+    method: 'POST',
+    body: JSON.stringify({ baselineId, currentId }),
   });
 }
 

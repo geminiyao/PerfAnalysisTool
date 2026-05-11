@@ -10,6 +10,12 @@ export interface AnalysisJob {
   pdataPath: string;
   outputDir: string;
   cliProvider: CliProvider;
+  params?: {
+    targetFps?: number;
+    jankMultiplier?: number;
+    bigJankMultiplier?: number;
+    budgetRatio?: number;
+  };
 }
 
 interface CliProviderConfig {
@@ -70,7 +76,7 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
     return executeMock(job, config);
   }
 
-  const prompt = buildPrompt(job.pdataPath, job.outputDir);
+  const prompt = buildPrompt(job.pdataPath, job.outputDir, job.params?.targetFps);
   const provider = CLI_PROVIDERS[job.cliProvider] || CLI_PROVIDERS.codebuddy;
   const cliCommand = getCliCommand(job.cliProvider);
   const args = provider.buildArgs(prompt);
@@ -299,16 +305,18 @@ function handleStreamEvent(
 // Prompt 构建 - 全部使用绝对路径
 // ============================================================
 
-function buildPrompt(pdataPath: string, outputDir: string): string {
+function buildPrompt(pdataPath: string, outputDir: string, targetFps?: number): string {
   const config = getConfig();
   const skillPath = path.resolve(config.skillProjectPath, '.claude/skills/unity-profiler-analysis').replace(/\\/g, '/');
   const normalizedPdata = path.resolve(pdataPath).replace(/\\/g, '/');
   const normalizedOutput = path.resolve(outputDir).replace(/\\/g, '/');
+  const fps = targetFps || 30;
 
   // 用空格拼接而非 \n — Windows cmd.exe 的 shell: true 模式下
   // 真实换行符会被截断导致 CLI 只收到第一行 prompt
   return [
     `请使用 ${skillPath} skill 分析这个 pdata 文件: ${normalizedPdata}`,
+    `目标帧率: ${fps} FPS。`,
     `输出目录: ${normalizedOutput}`,
     `请将 preprocess-result.json 和 performance-report.md 保存到输出目录。报告用中文。`,
     `重要：如果无法识别上述 skill，请直接回复"SKILL_NOT_FOUND"并停止，不要尝试自行分析。`,

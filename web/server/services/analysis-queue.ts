@@ -9,9 +9,17 @@ import { extractMetrics } from './metrics-extractor.js';
 import { emitProgress } from '../routes/analysis.js';
 import type { CliProvider } from '../../shared/types.js';
 
+export interface AnalysisParams {
+  targetFps?: number;
+  jankMultiplier?: number;
+  bigJankMultiplier?: number;
+  budgetRatio?: number;
+}
+
 interface QueueItem {
   sessionId: string;
   cliProvider: CliProvider;
+  params?: AnalysisParams;
   addedAt: number;
 }
 
@@ -27,8 +35,8 @@ class AnalysisQueue {
   private totalProcessed = 0;
 
   /** 将分析任务加入队列，返回队列位置 */
-  enqueue(sessionId: string, cliProvider: CliProvider = 'codebuddy'): number {
-    this.queue.push({ sessionId, cliProvider, addedAt: Date.now() });
+  enqueue(sessionId: string, cliProvider: CliProvider = 'codebuddy', params?: AnalysisParams): number {
+    this.queue.push({ sessionId, cliProvider, params, addedAt: Date.now() });
     const position = this.queue.length;
 
     // 如果没有正在运行的任务，立即开始处理
@@ -63,7 +71,7 @@ class AnalysisQueue {
     this.running = item.sessionId;
 
     try {
-      await this.executeJob(item.sessionId, item.cliProvider);
+      await this.executeJob(item.sessionId, item.cliProvider, item.params);
     } catch (err: any) {
       console.error(`Analysis failed for ${item.sessionId}:`, err);
     } finally {
@@ -75,7 +83,7 @@ class AnalysisQueue {
   }
 
   /** 执行单个分析任务 */
-  private async executeJob(sessionId: string, cliProvider: CliProvider): Promise<void> {
+  private async executeJob(sessionId: string, cliProvider: CliProvider, params?: AnalysisParams): Promise<void> {
     const config = getConfig();
     const db = getDb();
 
@@ -118,6 +126,7 @@ class AnalysisQueue {
       pdataPath: session.filePath,
       outputDir,
       cliProvider,
+      params,
     };
 
     const result = await executeCli(job);

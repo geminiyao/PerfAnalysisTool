@@ -133,6 +133,46 @@ export interface TrendQuery {
   dateTo?: number;
 }
 
+// ============================================================
+// Diff 对比类型
+// ============================================================
+
+/** 单个 Marker 的 diff */
+export interface MarkerDiff {
+  name: string;
+  thread: string;
+  baseline: { selfMean: number; selfMax: number; percentOfFrame: number; callsPerFrame: number } | null;
+  current: { selfMean: number; selfMax: number; percentOfFrame: number; callsPerFrame: number } | null;
+  delta: { selfMean: number; selfMax: number; percentOfFrame: number };
+  deltaPercent: { selfMean: number; percentOfFrame: number };
+  status: 'improved' | 'degraded' | 'new' | 'removed' | 'unchanged';
+  mustReport: boolean;
+}
+
+/** Jank 对比摘要 */
+export interface JankComparison {
+  baseline: { count: number; bigJankCount: number; totalFrames: number };
+  current: { count: number; bigJankCount: number; totalFrames: number };
+}
+
+/** 帧汇总对比 */
+export interface FrameSummaryDiff {
+  metric: string;
+  label: string;
+  baseline: number;
+  current: number;
+  delta: number;
+  deltaPercent: number;
+  improved: boolean;
+}
+
+/** Diff 完整结果 */
+export interface DiffResult {
+  frameSummaryDiffs: FrameSummaryDiff[];
+  markerDiffs: MarkerDiff[];
+  jankComparison: JankComparison;
+}
+
 /** 服务器配置 */
 export interface ServerConfig {
   port: number;

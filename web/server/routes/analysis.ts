@@ -27,7 +27,11 @@ export async function analysisRoutes(app: FastifyInstance) {
    * 触发分析（将任务加入队列）
    */
   app.post('/analysis/start', async (request, reply) => {
-    const { sessionId, cliProvider = 'codebuddy' } = request.body as { sessionId: string; cliProvider?: CliProvider };
+    const { sessionId, cliProvider = 'codebuddy', params } = request.body as {
+      sessionId: string;
+      cliProvider?: CliProvider;
+      params?: { targetFps?: number; jankMultiplier?: number; bigJankMultiplier?: number; budgetRatio?: number };
+    };
 
     if (!sessionId) {
       return reply.status(400).send({ error: '缺少 sessionId' });
@@ -44,8 +48,8 @@ export async function analysisRoutes(app: FastifyInstance) {
       return reply.status(409).send({ error: `会话状态为 ${session.status}，不能重新触发` });
     }
 
-    // 加入分析队列（传递 CLI 提供者）
-    const position = analysisQueue.enqueue(sessionId, cliProvider);
+    // 加入分析队列（传递 CLI 提供者和分析参数）
+    const position = analysisQueue.enqueue(sessionId, cliProvider, params);
 
     // 更新状态
     await db.update(sessions).set({ status: 'queued' }).where(eq(sessions.id, sessionId));

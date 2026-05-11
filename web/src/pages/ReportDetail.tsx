@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Spin, Button, Tag, Descriptions, Tabs, Collapse, Alert, message } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Button, Tag, Tabs, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -75,80 +75,83 @@ const ReportDetail: React.FC = () => {
   const coreSummary = extractCoreSummary(report);
 
   return (
-    <div>
-      {/* 顶部导航 */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
-        <h1 style={{ color: '#fff', margin: 0, flex: 1 }}>{session.fileName}</h1>
-        <Tag color={session.status === 'completed' ? 'success' : 'error'}>{session.status}</Tag>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', overflow: 'hidden' }}>
+      {/* 顶部栏：导航 + 元信息 + 指标，紧凑一行 */}
+      <div style={{ flexShrink: 0, padding: '8px 0' }}>
+        {/* 第一行：文件名 + 元信息 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+          <Button size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
+          <h2 style={{ color: '#fff', margin: 0, fontSize: 16 }}>{session.fileName}</h2>
+          <Tag color={session.status === 'completed' ? 'success' : 'error'} style={{ margin: 0 }}>{session.status}</Tag>
+          <div style={{ flex: 1 }} />
+          <span style={{ color: '#666', fontSize: 12 }}>
+            {session.projectName || '-'} · {session.version || '-'} · {session.device || '-'} · {session.scene || '-'} · {session.createdBy || '-'} · {dayjs(session.createdAt).format('MM-DD HH:mm')} · {session.duration ? `${Math.round(session.duration / 1000)}s` : '-'}
+          </span>
+        </div>
+
+        {/* 第二行：指标 inline + 分析参数 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+          {metrics && (
+            <div style={{ display: 'flex', gap: 16, flexShrink: 0 }}>
+              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
+                <span style={{ color: '#888' }}>FPS</span> <b>{metrics.fps?.toFixed(1)}</b>
+              </span>
+              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
+                <span style={{ color: '#888' }}>帧时间</span> <b>{metrics.avgFrameMs?.toFixed(1)}ms</b>
+              </span>
+              <span style={{ color: metrics.jankRate > 10 ? '#ff4d4f' : '#52c41a', fontSize: 13 }}>
+                <span style={{ color: '#888' }}>Jank率</span> <b>{metrics.jankRate?.toFixed(1)}%</b>
+              </span>
+              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
+                <span style={{ color: '#888' }}>帧数</span> <b>{metrics.totalFrames}</b>
+              </span>
+              {fs && (
+                <>
+                  <span style={{ color: fs.bigJankCount > 0 ? '#ff4d4f' : '#52c41a', fontSize: 13 }}>
+                    <span style={{ color: '#888' }}>BigJank</span> <b>{fs.bigJankCount}</b>
+                  </span>
+                  <span style={{ color: '#d4d4d4', fontSize: 13 }}>
+                    <span style={{ color: '#888' }}>中位帧</span> <b>{fs.median?.toFixed(1)}ms</b>
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+          {/* 分析参数标签 */}
+          {preprocess?.config && (
+            <>
+              <div style={{ width: 1, height: 14, background: '#333', flexShrink: 0 }} />
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <span style={{ color: '#666', fontSize: 11 }}>
+                  目标 <b style={{ color: '#888' }}>{preprocess.config.targetFps}FPS</b>
+                </span>
+                <span style={{ color: '#666', fontSize: 11 }}>
+                  帧预算 <b style={{ color: '#888' }}>{preprocess.config.frameBudgetMs?.toFixed(1)}ms</b>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 第三行：核心结论 */}
+        {coreSummary && (
+          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#999', fontSize: 12, cursor: 'help' }} title={coreSummary}>
+            💡 {coreSummary.slice(0, 150)}{coreSummary.length > 150 ? '...' : ''}
+          </div>
+        )}
       </div>
 
-      {/* 元信息 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Descriptions size="small" column={4}>
-          <Descriptions.Item label="项目">{session.projectName || '-'}</Descriptions.Item>
-          <Descriptions.Item label="版本">{session.version || '-'}</Descriptions.Item>
-          <Descriptions.Item label="设备">{session.device || '-'}</Descriptions.Item>
-          <Descriptions.Item label="场景">{session.scene || '-'}</Descriptions.Item>
-          <Descriptions.Item label="提交人">{session.createdBy || '-'}</Descriptions.Item>
-          <Descriptions.Item label="时间">{dayjs(session.createdAt).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
-          <Descriptions.Item label="耗时">{session.duration ? `${Math.round(session.duration / 1000)}s` : '-'}</Descriptions.Item>
-          <Descriptions.Item label="备注">{session.notes || '-'}</Descriptions.Item>
-        </Descriptions>
-      </Card>
-
-      {/* 顶部摘要区 */}
-      {coreSummary && (
-        <Alert
-          type="info"
-          showIcon={false}
-          style={{ marginBottom: 16, background: '#111827', border: '1px solid #1a1a2e' }}
-          message={<span style={{ color: '#d4d4d4', fontWeight: 600 }}>核心结论</span>}
-          description={<span style={{ color: '#b5b5b5', fontSize: 13, lineHeight: 1.6 }}>{coreSummary}</span>}
-        />
-      )}
-
-      {/* 关键指标卡片 */}
-      {metrics && (
-        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic title="平均 FPS" value={metrics.fps?.toFixed(1)} suffix="fps" />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic title="平均帧时间" value={metrics.avgFrameMs?.toFixed(1)} suffix="ms" />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="Jank 率"
-                value={metrics.jankRate?.toFixed(1)}
-                suffix="%"
-                valueStyle={{ color: metrics.jankRate > 10 ? '#ff4d4f' : '#52c41a' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic title="总帧数" value={metrics.totalFrames} />
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* Tab 面板 */}
+      {/* Tab 面板：占满剩余空间 */}
       <Tabs
         defaultActiveKey={preprocess ? 'issues' : 'report'}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         items={[
           // 概览 Tab
           fs ? {
             key: 'overview',
             label: '概览',
             children: (
-              <div>
+              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
                 {/* 帧时间线 / 分布图 */}
                 <Card size="small" title="帧耗时分布" style={{ marginBottom: 16 }}>
                   <FrameDistChart
@@ -191,11 +194,11 @@ const ReportDetail: React.FC = () => {
             key: 'issues',
             label: `问题列表 (${preprocess.markers.filter(m => m.mustReport).length + preprocess.jankFrames.length})`,
             children: (
-              <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 420px)', minHeight: 500 }}>
+              <div style={{ display: 'flex', gap: 0, flex: 1, overflow: 'hidden' }}>
                 {/* 左侧问题列表 */}
                 <div
                   style={{
-                    width: 360,
+                    width: 340,
                     flexShrink: 0,
                     borderRight: '1px solid #1a1a2e',
                     background: '#0d1117',
@@ -232,17 +235,19 @@ const ReportDetail: React.FC = () => {
             key: 'report',
             label: 'AI 报告',
             children: (
-              <Card>
-                {report ? (
-                  <div className="markdown-body" style={{ color: '#d4d4d4' }}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
-                    暂无报告内容
-                  </div>
-                )}
-              </Card>
+              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
+                <Card>
+                  {report ? (
+                    <div className="markdown-body" style={{ color: '#d4d4d4' }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
+                      暂无报告内容
+                    </div>
+                  )}
+                </Card>
+              </div>
             ),
           },
 
@@ -251,40 +256,42 @@ const ReportDetail: React.FC = () => {
             key: 'logs',
             label: '分析日志',
             children: (
-              <Card>
-                <div
-                  style={{
-                    background: '#0a0a1a',
-                    borderRadius: 6,
-                    padding: '12px 16px',
-                    maxHeight: 500,
-                    overflowY: 'auto',
-                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                    fontSize: 12,
-                    lineHeight: 1.6,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {logs.split('\n').map((line, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        color: line.startsWith('[stderr]') || line.startsWith('[错误]') || line.startsWith('[工具错误]')
-                          ? '#ff7875'
-                          : line.startsWith('[完成]')
-                            ? '#52c41a'
-                            : '#b5b5b5',
-                        borderBottom: '1px solid #1a1a2e',
-                        paddingBottom: 2,
-                        marginBottom: 2,
-                      }}
-                    >
-                      {line}
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
+                <Card>
+                  <div
+                    style={{
+                      background: '#0a0a1a',
+                      borderRadius: 6,
+                      padding: '12px 16px',
+                      maxHeight: 600,
+                      overflowY: 'auto',
+                      fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {logs.split('\n').map((line, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          color: line.startsWith('[stderr]') || line.startsWith('[错误]') || line.startsWith('[工具错误]')
+                            ? '#ff7875'
+                            : line.startsWith('[完成]')
+                              ? '#52c41a'
+                              : '#b5b5b5',
+                          borderBottom: '1px solid #1a1a2e',
+                          paddingBottom: 2,
+                          marginBottom: 2,
+                        }}
+                      >
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             ),
           } : null,
         ].filter(Boolean) as any[]}

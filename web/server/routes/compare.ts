@@ -2,12 +2,13 @@ import { FastifyInstance } from 'fastify';
 import { inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { sessions, metrics } from '../db/schema.js';
+import { diffPreprocess } from '../services/preprocess-differ.js';
 import type { MetricDiff } from '../../shared/types.js';
 
 export async function compareRoutes(app: FastifyInstance) {
   /**
    * POST /api/compare
-   * 对比多个分析结果
+   * 对比多个分析结果（汇总指标）
    * body: { sessionIds: [id1, id2] }
    */
   app.post('/compare', async (request, reply) => {
@@ -49,6 +50,30 @@ export async function compareRoutes(app: FastifyInstance) {
       metrics: metricsList,
       diffs,
     });
+  });
+
+  /**
+   * POST /api/compare/diff
+   * Marker 级深度对比（基于 preprocess-result.json）
+   * body: { baselineId: string, currentId: string }
+   */
+  app.post('/compare/diff', async (request, reply) => {
+    const { baselineId, currentId } = request.body as { baselineId: string; currentId: string };
+
+    if (!baselineId || !currentId) {
+      return reply.status(400).send({ error: '需要提供 baselineId 和 currentId' });
+    }
+
+    if (baselineId === currentId) {
+      return reply.status(400).send({ error: '不能与自身对比' });
+    }
+
+    try {
+      const result = diffPreprocess(baselineId, currentId);
+      return reply.send(result);
+    } catch (err: any) {
+      return reply.status(404).send({ error: err.message });
+    }
   });
 }
 
