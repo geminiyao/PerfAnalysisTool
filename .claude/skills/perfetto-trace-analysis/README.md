@@ -49,125 +49,55 @@
 
 ### C. CPU 频率与降频
 
-**核心问题**: `频率下降 ≠ 热降频`。正常的 DVFS 省电降频与 Thermal Throttling 强制降频需要区分，否则会误判。
+**降频判定两级体系**:
 
-#### 频率下降的原因分类
+| 级别 | 证据来源 | 判定方式 | 可信度 |
+|------|---------|---------|:------:|
+| **确认** | sysfs (采集脚本) | `scaling_max_freq < cpuinfo_max_freq` | ⭐⭐⭐ |
+| **确认** | sysfs (采集脚本) | `cooling_device state > 0` | ⭐⭐⭐ |
+| **推测** | Perfetto cpufreq | 频率可达性/负载背离/全核同步/持续低频 | ⭐~⭐⭐ |
 
-| 原因 | 说明 | 影响 |
-|------|------|------|
-| Governor 正常 DVFS | 负载低时主动降频省电 | 无影响（正常行为） |
-| Thermal 热限制 | 温度超阈值后强制压频 | 帧率下降（需要关注） |
-| Power Budget 限制 | 功耗墙（如 PD_THROTTLE） | 与 thermal 类似 |
-| 厂商定制策略 | 如 vivo 省电模式/cpufreq policy | 可能误伤性能 |
+**规则**: 没有 sysfs 数据只给推测结论，标注 [推测]。有 sysfs 以硬件为准。
 
-#### 四种科学判定方法
+**推测级方法简述**（无 sysfs 时使用，详见 [thermal-throttling-reference.md](references/thermal-throttling-reference.md)）:
 
-##### 方法 1: 负载-频率背离检测 (权重 +3)
+| 方法 | 原理 | 权重 |
+|------|------|:----:|
+| 负载-频率背离 | CPU 忙碌（>70%）但频率反降 → 被外力限制 | +3 |
+| 频率可达性 | trace 期间频率从未达到理论 max 的 95% → 被限制 | +3 |
+| 全核同步降频 | 同 cluster 所有大核降到同一低频 → cluster-level thermal cap | +2 |
+| 频率上限锁定 | 各时间窗口 max 频率递减 → 天花板被压低 | +2 |
+| 持续低频占比 | >30% 时间运行在 <80% max → 长时间被压频 | +2 |
+| Thermal Zone | 温度 > 42°C → 设备过热 | +3 |
 
-**原理**: 正常 DVFS 中，负载低→频率降是合理的；如果负载高（CPU 忙碌）但频率仍在降→说明被外力限制=热降频
+综合评分 `thermalScore`: 0-2 正常 DVFS / 3-4 中等热影响 / ≥5 确认热降频
 
-```
-正常 DVFS: 负载↓ → 频率↓ (合理，省电)
-热降频:    负载↑ → 频率↓ (背离，被 thermal 限制)
-```
-
-**实现方式**:
-- 在每个降频事件时刻 ±50ms 窗口内，检查该核心的 `sched_slice` 占用率
-- 占用率 > 70% 且频率在下降 → 负载-频率背离 → 热降频证据
-- 占用率 < 30% 且频率下降 → 负载确实低 → 正常 DVFS
-
-**数据来源**: `sched_slice` (CPU 占用) + `cpufreq counter` (频率)
-
-##### 方法 2: 频率上限锁定检测 (权重 +2)
-
-**原理**: 正常 DVFS 下频率会随负载上下波动，能恢复到 max；热降频会把频率"天花板"压低，即使负载高也上不去
-
-```
-正常:  [1800]→[1200]→[1800]→[1500]→[1800]  (max 始终可达)
-热限:  [1800]→[1800]→[1400]→[1400]→[1400]  (天花板被压到 1400)
-```
-
-**实现方式**:
-- 将 trace 时间线分为 5 个等宽窗口
-- 计算每个窗口内频率的最大值 (window_max)
-- 如果后续窗口的 window_max < 首个窗口的 85% → 频率天花板在下降 → thermal cap
-
-**判定标准**: 末窗口 maxFreq < 首窗口 maxFreq × 0.85
-
-##### 方法 3: Thermal Zone 温度数据 (权重 +3)
-
-**原理**: 最直接的证据——设备温度高就是热降频的原因
-
-**实现方式**:
-- 查询 Perfetto 中的 thermal_zone / temperature counter
-- 温度值可能是毫度 (45000) 或度 (45)，需规范化
-- 温度 > 42°C + 频率同步下降 → 确定热降频
-
-**注意**: 并非所有 trace 都包含温度数据（取决于 trace config 是否开启 `linux.sys_stats`），不可用时需要跳过
-
-**数据来源**: `counter_track` (name LIKE '%thermal%' OR '%temp%')
-
-##### 方法 4: 全核同步降频检测 (权重 +2)
-
-**原理**: 热降频通常作用于整个 cluster（所有大核同时被限到同一频率）；正常 DVFS 各核可独立调节
-
-```
-正常 DVFS: core6=1800MHz, core7=1200MHz (各核独立)
-热降频:    core6=1400MHz, core7=1400MHz (统一被 cap)
-```
-
-**实现方式**:
-- 在降频事件时刻，检查同一 cluster 所有大核的频率
-- 如果所有核心频率差异 < 5% 且均低于 max 的 85% → cluster-level thermal cap
-- 如果各核频率差异大 → 各核独立调节 → 正常 DVFS
-
-**数据来源**: 所有大核的 `cpufreq counter` 同一时刻对比
-
-#### thermalScore 综合评分
-
-将四种方法的证据加权汇总为 `thermalScore`：
-
-| 证据 | 加分 | 说明 |
-|------|------|------|
-| 负载-频率背离存在 | +3 | 最实用的间接证据 |
-| 温度 > 42°C | +3 | 最权威的直接证据 |
-| 频率上限锁定 | +2 | 时间维度的 thermal cap 证据 |
-| 全核同步降频 | +2 | cluster 维度的 thermal 证据 |
-
-**综合判定**:
-
-| thermalScore | 判定 | 报告中表述 |
-|:------------:|------|-----------|
-| 0-2 | 不太可能热降频 | "频率变化属于正常 DVFS 节能调节" |
-| 3-4 | 中等热影响 | "存在部分热降频证据，建议关注设备温度" |
-| ≥ 5 | 确认热降频 | "确认热降频，多维度证据交叉验证" |
-
-#### 输出数据结构
-
+**输出数据结构**:
 ```json
 {
+  "throttleVerdict": {
+    "level": "confirmed | suspected | none",
+    "source": "sysfs | perfetto_inference",
+    "confidence": "high | medium | low"
+  },
   "cpuFrequency": {
-    "bigCoreAvgMhz": 1785,
-    "littleCoreAvgMhz": 1317,
-    "throttleEvents": [...],
-    "frequencyTimeline": [...],
     "throttleClassification": {
-      "thermalThrottle": true,
-      "normalDvfs": false,
-      "thermalScore": 7,
-      "evidence": [
-        "负载-频率背离: 8次高负载(>85%)时降频",
-        "频率上限锁定: 频率天花板从1804MHz降至1400MHz (降22.4%)",
-        "温度数据: 最高47.2°C, 均值44.1°C"
-      ],
-      "loadFreqDivergence": [{...}],
-      "ceilingLock": {"detected": true, "windows": [...]},
-      "thermalZone": {"available": true, "maxTemp": 47.2, ...},
-      "clusterSyncDrops": [{...}]
+      "thermalScore": 5,
+      "evidence": ["负载-频率背离: 20次高负载时降频", "全核同步降频: 12次"],
+      "freqReachability": {"reachable": true, "observedMaxMhz": 2035, "theoreticalMaxMhz": 2035},
+      "sustainedLow": {"detected": false, "lowFreqPercent": 0.7}
     }
+  },
+  "thermalSysfs": {
+    "available": true,
+    "verdict": "confirmed",
+    "limitedCpus": [{"cpu": "cpu6", "scaling_max": 1536000, "cpuinfo_max": 2035000}],
+    "maxTempC": 45.3
   }
 }
 ```
+
+降频采集工具: [降频观测指南](降频观测指南.md)
 
 ### D. 线程调度效率
 
@@ -220,14 +150,15 @@
 
 ```
 perfetto-trace-analysis/
-├── README.md                      ← 本文件（skill 文档）
+├── README.md                      ← 本文件
 ├── config.json                    ← 配置（进程名、线程名、阈值）
 ├── skill.md                       ← Claude 执行指令 + 报告模板
 ├── requirements.txt               ← Python 依赖（perfetto>=47.0）
 ├── scripts/
 │   └── preprocess.py              ← 数据预处理脚本（Python）
 └── references/
-    └── perfetto-knowledge.md      ← 分析知识库（ARM/调度/GPU/趋势）
+    ├── perfetto-knowledge.md      ← 分析知识库（ARM/调度/GPU/趋势）
+    └── thermal-throttling-reference.md  ← 降频科学参考资料
 ```
 
 ---
@@ -286,16 +217,40 @@ python .claude/skills/perfetto-trace-analysis/scripts/preprocess.py \
 
 | 章节 | 内容 |
 |------|------|
-| 一、概览 | 基础指标表格（时长/帧数/FPS/Jank/设备） |
-| 二、核心结论 | 2-3句话总结瓶颈 |
-| 三、CPU 调度分析 | 大小核/Runnable/唤醒延迟/抢占 |
-| 四、CPU 频率分析 | 频率均值/降频检测/热压力 |
-| 五、多线程协作分析 | Main-Render 并行/瓶颈判定/Job Worker |
-| 六、系统干扰分析 | TOP5 干扰进程/严重度 |
-| 七、GPU 负载分析 | 频率/利用率/GPU-bound 判定 |
-| 八、时间段分析 | 前中后段对比/趋势模式 |
-| 九、优化建议 | P0/P1/P2 分级建议 |
-| 十、补充说明 | 数据局限性/下一步建议 |
+| 一、概览 | 基础指标（时长/帧数/FPS/Jank/设备） |
+| 二、核心结论 | 2-3 句话总结瓶颈 |
+| **三、帧耗时归因** | **PlayerLoop 6 阶段分层 + TOP 函数** |
+| 四、CPU 调度分析 | 大小核/Runnable/唤醒延迟/抢占 |
+| **五、CPU 频率与降频** | **确认级/推测级两级判定** |
+| 六、多线程协作 | Main-Render 并行/瓶颈判定/Job Worker |
+| 七、系统干扰 | TOP5 干扰进程/严重度 |
+| 八、GPU 负载 | 频率/利用率/GPU-bound 判定 |
+| 九、时间段分析 | 前中后段对比/趋势模式 |
+| 十、优化建议 | P0/P1/P2 分级 |
+| 十一、补充说明 | 数据局限/下一步 |
+
+### 帧耗时归因示例
+
+```
+Rendering CPU    12.36ms  30.1%  ████████████
+  └─ URP.Render                         923ms
+Lua Logic        10.21ms  24.8%  █████████
+  └─ CS:AOE.LuaMgr                      369ms
+ECS/Job           4.69ms  11.4%  ████
+UGUI              3.96ms   9.6%  ███
+C# Logic          2.55ms   6.2%  ██
+Wait/Sync         1.43ms   3.5%  █
+```
+
+### 降频判定
+
+```
+confirmed → "确认降频"（有 sysfs 硬件证据）
+suspected → "疑似降频 [推测]"（仅 Perfetto 推断）
+none      → "未检测到降频"
+```
+
+搭配 `record_tmaoe_thermal.bat` 采集可获得确认级判定。
 
 ---
 

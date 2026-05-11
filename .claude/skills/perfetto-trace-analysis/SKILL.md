@@ -84,21 +84,15 @@ The filename MUST include a timestamp: `perfetto-report_YYYYMMDDHHmmss.md`
 ### C. CPU Frequency & Throttling
 
 1. Report average frequency for big/little clusters
-2. Detect throttle events (frequency drop > 20% from max)
-3. **Classify throttle type using throttleClassification data:**
-   - Check `thermalThrottle` flag — if true, this is confirmed thermal throttling
-   - Check `normalDvfs` flag — if true, frequency drops are normal power-saving
-   - Review `evidence` array for specific diagnostic signals:
-     - Load-frequency divergence: high CPU load + freq drop = thermal
-     - Frequency ceiling lock: max-achievable freq decreasing over time = thermal cap
-     - Thermal zone temperature: device temp > 42°C = overheating
-     - Cluster-wide sync drop: all big cores locked to same low freq = thermal limit
-   - Use `thermalScore` (0-10) as confidence indicator
-4. Correlate throttle timing with frame time spikes
-5. Assess thermal pressure severity:
-   - thermalScore ≥ 5: severe thermal throttling, device overheating
-   - thermalScore 3-4: moderate thermal impact
-   - thermalScore 0-2: unlikely thermal, probably normal DVFS or other cause
+2. **Use `throttleVerdict` for the primary conclusion:**
+   - `level: confirmed` + `source: sysfs` → 报告中写"**确认降频**"（有硬件证据）
+   - `level: suspected` + `source: perfetto_inference` → 报告中写"**疑似降频 [推测]**"
+   - `level: none` → 报告中写"未检测到降频"
+3. If confirmed: report which CPUs are limited (`thermalSysfs.limitedCpus`), temperature, cooling state
+4. If suspected: list `throttleClassification.evidence` as推测依据，明确标注 [推测]
+5. Report `freqReachability`: can CPU reach theoretical max during trace?
+6. Correlate throttle timing with frame time spikes
+7. **Never state "确认降频" without sysfs evidence. When only Perfetto data available, always use "疑似" + [推测]**
 
 ### D. Thread Scheduling Efficiency
 
@@ -180,7 +174,24 @@ Output in **Chinese**, **Markdown** format:
 
 > 2-3 sentences: frame rate status, primary bottleneck (CPU/GPU/scheduling/thermal), key finding
 
-## 三、CPU 调度分析
+## 三、帧耗时归因
+
+### 分层概况
+(Use playerLoopBreakdown.categories, show as table with ASCII bar chart)
+
+| 阶段 | 每帧 (ms) | 占比 | |
+|------|-----------|------|---|
+| Rendering CPU | X.X | XX% | ████████ |
+| Lua Logic | X.X | XX% | ██████ |
+| C# Logic | X.X | XX% | ████ |
+| ECS/Job | X.X | XX% | ███ |
+| UGUI | X.X | XX% | ███ |
+| Wait/Sync | X.X | XX% | █ |
+
+### TOP 耗时函数
+(For each category, list topFunctions with name + avgMs)
+
+## 四、CPU 调度分析
 
 ### 大小核使用
 (Table: thread → big core %, little core %, migrations)
@@ -197,25 +208,25 @@ Output in **Chinese**, **Markdown** format:
 ### 调度问题判定
 (Is scheduling optimal? What's wrong?)
 
-## 四、CPU 频率分析
+## 五、CPU 频率与降频分析
+
+### 降频判定
+(Use throttleVerdict — state conclusion level clearly:)
+- `confirmed` → "**确认降频**: scaling_max_freq=X < cpuinfo_max_freq=Y, 降幅Z%"
+- `suspected` → "**疑似降频 [推测]**: 基于Perfetto频率数据推断，推测依据: ..."
+- `none` → "未检测到降频迹象"
 
 ### 频率概况
-(avg freq per cluster, % of max)
+(avg freq per cluster, % of max, freqReachability)
 
-### 降频检测
-(throttle events count, timing, correlation with frames)
+### 降频详情（如有）
+(If confirmed: limitedCpus, temperature, cooling state)
+(If suspected: evidence list, 每条标注 [推测])
 
-### 降频分类判定
-(热降频 vs 正常 DVFS — based on throttleClassification evidence:
- - 负载-频率背离: 高负载时降频 → 热限制
- - 频率天花板锁定: max 频率随时间递减 → thermal cap
- - 温度数据: 设备温度 > 42°C → 过热
- - 全核同步降频: cluster 集体降到相同低频 → thermal limit)
+### 建议
+(如未采集sysfs数据，建议使用增强版采集脚本 record_tmaoe_thermal.bat 获取确认级降频判定)
 
-### 热压力风险评估
-(thermalScore severity + sustained throttling assessment)
-
-## 五、多线程协作分析
+## 六、多线程协作分析
 
 ### Main-Render 并行度
 (overlap %, who waits for whom, bottleneck determination)
@@ -226,7 +237,7 @@ Output in **Chinese**, **Markdown** format:
 ### Job Worker 利用率
 (Worker count, total CPU time, big/little core distribution, utilization %)
 
-## 六、系统干扰分析
+## 七、系统干扰分析
 
 ### 干扰进程 TOP 5
 (Table: process, count, total ms, % of frame budget)
@@ -234,7 +245,7 @@ Output in **Chinese**, **Markdown** format:
 ### 干扰严重度评估
 (Normal / Mild / Severe)
 
-## 七、GPU 负载分析
+## 八、GPU 负载分析
 
 ### GPU 数据可用性
 (本 trace 是否包含 GPU 数据？如 gpuAnalysis.available = false，注明"本 trace 未采集 GPU 数据")
@@ -245,7 +256,7 @@ Output in **Chinese**, **Markdown** format:
 ### GPU-bound 判定
 (是否 GPU-bound + confidence level + supporting evidence)
 
-## 八、时间段分析
+## 九、时间段分析
 
 ### 分段概况
 | 指标 | 前段 | 中段 | 后段 |
@@ -259,14 +270,14 @@ Output in **Chinese**, **Markdown** format:
 ### 性能趋势判定
 (Detected patterns + evidence from patterns.description)
 
-## 九、优化建议
+## 十、优化建议
 
 ### P0/P1/P2 suggestions
 - 目标问题
 - 具体方案
 - 预期收益
 
-## 十、补充说明
+## 十一、补充说明
 - 数据局限性
 - 建议下一步
 ```
@@ -296,12 +307,12 @@ Must clearly state: is the problem CPU-bound, GPU-bound, scheduling-bound, or th
 
 After generating the report, verify:
 
-- [ ] All scheduling data referenced correctly (including wakeup latency and preemption)?
-- [ ] Throttling events analyzed and correlated with frame timing?
+- [ ] PlayerLoop 归因有分层表格 + TOP 函数？
+- [ ] 降频判定使用了 throttleVerdict.level？confirmed 有硬件证据？suspected 标了 [推测]？
 - [ ] Clear bottleneck determination (CPU/GPU/scheduling/thermal)?
-- [ ] Optimization suggestions are actionable?
 - [ ] All cited numbers match preprocess-result.json?
-- [ ] Uncertain conclusions marked [推断]?
+- [ ] Optimization suggestions are actionable?
+- [ ] Uncertain conclusions marked [推测]?
 - [ ] GPU section: if data unavailable, stated clearly (not fabricated)?
 - [ ] Time segment analysis: pattern detection backed by data evidence?
 
