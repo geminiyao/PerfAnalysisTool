@@ -11,21 +11,21 @@ const DEFAULT_CONFIG: ServerConfig = {
   cliPaths: {}, // 不配则使用 PATH 中的命令名
 };
 
-let config: ServerConfig | null = null;
+let _config: ServerConfig | null = null;
 
 export function getConfig(): ServerConfig {
-  if (!config) {
-    config = { ...DEFAULT_CONFIG };
+  if (!_config) {
+    const cfg: ServerConfig = { ...DEFAULT_CONFIG };
 
     // 尝试读取配置文件
     const configPath = path.resolve(import.meta.dirname, '../../config.json');
     if (fs.existsSync(configPath)) {
       try {
         const userConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        config = { ...config, ...userConfig };
+        Object.assign(cfg, userConfig);
         // 合并 cliPaths（深合并）
         if (userConfig.cliPaths) {
-          config.cliPaths = { ...DEFAULT_CONFIG.cliPaths, ...userConfig.cliPaths };
+          cfg.cliPaths = { ...DEFAULT_CONFIG.cliPaths, ...userConfig.cliPaths };
         }
       } catch {
         console.warn('Failed to parse config.json, using defaults');
@@ -33,17 +33,19 @@ export function getConfig(): ServerConfig {
     }
 
     // 环境变量覆盖
-    if (process.env.PERF_DATA_DIR) config.dataDir = process.env.PERF_DATA_DIR;
-    if (process.env.PERF_PORT) config.port = Number(process.env.PERF_PORT);
-    if (process.env.CODEBUDDY_PATH) config.cliPaths.codebuddy = process.env.CODEBUDDY_PATH;
-    if (process.env.CLAUDE_CLI_PATH) config.cliPaths.claude = process.env.CLAUDE_CLI_PATH;
+    if (process.env.PERF_DATA_DIR) cfg.dataDir = process.env.PERF_DATA_DIR;
+    if (process.env.PERF_PORT) cfg.port = Number(process.env.PERF_PORT);
+    if (process.env.CODEBUDDY_PATH) cfg.cliPaths.codebuddy = process.env.CODEBUDDY_PATH;
+    if (process.env.CLAUDE_CLI_PATH) cfg.cliPaths.claude = process.env.CLAUDE_CLI_PATH;
 
     // 确保数据目录存在
-    ensureDir(config.dataDir);
-    ensureDir(path.join(config.dataDir, 'uploads'));
-    ensureDir(path.join(config.dataDir, 'results'));
+    ensureDir(cfg.dataDir);
+    ensureDir(path.join(cfg.dataDir, 'uploads'));
+    ensureDir(path.join(cfg.dataDir, 'results'));
+
+    _config = cfg;
   }
-  return config;
+  return _config;
 }
 
 function ensureDir(dir: string) {

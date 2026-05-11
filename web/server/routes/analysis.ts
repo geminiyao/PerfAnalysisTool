@@ -184,6 +184,24 @@ export async function analysisRoutes(app: FastifyInstance) {
   });
 
   /**
+   * GET /api/report/:id/preprocess
+   * 获取预处理结构化数据 (preprocess-result.json)
+   */
+  app.get('/report/:id/preprocess', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const config = getConfig();
+    const preprocessPath = path.join(config.dataDir, 'results', id, 'preprocess-result.json');
+
+    if (!fs.existsSync(preprocessPath)) {
+      return reply.status(404).send({ error: '无预处理数据' });
+    }
+
+    const content = fs.readFileSync(preprocessPath, 'utf-8');
+    reply.header('Content-Type', 'application/json; charset=utf-8');
+    return reply.send(content);
+  });
+
+  /**
    * DELETE /api/analysis/:id
    * 删除分析记录
    */

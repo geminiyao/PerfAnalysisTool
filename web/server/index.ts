@@ -74,8 +74,7 @@ async function start() {
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`\n🚀 Perf Dashboard Server running at http://localhost:${config.port}`);
-    console.log(`   Data directory: ${config.dataDir}`);
-    console.log(`   Claude CLI: ${config.claudeCliPath}\n`);
+    console.log(`   Data directory: ${config.dataDir}\n`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
