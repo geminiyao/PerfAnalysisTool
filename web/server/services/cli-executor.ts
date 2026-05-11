@@ -110,8 +110,8 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
     const child: ChildProcess = spawn(cliCommand, args, {
       cwd: config.skillProjectPath,
       env: { ...process.env },
-      stdio: ['pipe', 'pipe', 'pipe'],,
-      maxBuffer: 10 * 1024 * 1024
+      shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     let jsonBuffer = '';
