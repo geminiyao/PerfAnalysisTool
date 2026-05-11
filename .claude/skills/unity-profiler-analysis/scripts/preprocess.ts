@@ -623,6 +623,11 @@ function main(): void {
       msMax: parseFloat(t.msMax.toFixed(2))
     }))
 
+  // Build per-frame timings array for timeline visualization
+  const frameTimings: number[] = profileData.frames.map(f =>
+    parseFloat(f.msFrame.toFixed(2))
+  )
+
   // Assemble final output
   const result: PreprocessResult = {
     config: { targetFps, frameBudgetMs: parseFloat(frameBudgetMs.toFixed(2)) },
@@ -644,6 +649,7 @@ function main(): void {
     markerSpikes,
     jankFrames: jankResult.jankFrames,
     frameTrees,
+    frameTimings,
     threads: threadsOutput
   }
 

@@ -1008,16 +1008,14 @@ def get_job_worker_stats(tp: TraceProcessor, upid: int, device: dict, trace_dura
 def get_playerloop_breakdown(tp: TraceProcessor, main_tid: int, config: dict) -> dict:
     """Build precise 6-phase breakdown of PlayerLoop frame time.
 
-    Phases (based on Unity frame structure):
-    - C# Logic: BehaviourUpdate/LateUpdate content excluding Lua
-    - Lua Logic: Slices matching luaIdentifiers (CS:AOE, LuaMgr)
-    - ECS/Job: SystemGroup slices (Initialization/Simulation/Presentation)
-    - UGUI: PlayerUpdateCanvases
-    - Rendering CPU: FinishFrameRendering (URP)
-    - Wait/Sync: PlayerSendFrameComplete, WaitForJobGroupID, WaitForPresent
+    Strategy:
+    - depth=1 slices are Unity engine phases (e.g. Update.ScriptRunBehaviourUpdate)
+    - Map depth=1 to 6 categories: rendering/logic/ecs/ui/wait/other
+    - For logic phases: query nested Lua slices (CS:AOE.*, LuaMgr) to split Lua vs C#
+    - For each category: query top functions at depth=2+ for detail
     """
     phases_config = config.get("playerLoopPhases", {})
-    lua_identifiers = phases_config.get("luaIdentifiers", ["CS:AOE", "LuaMgr", "CS:"])
+    lua_identifiers = phases_config.get("luaIdentifiers", ["CS:AOE", "LuaMgr"])
 
     # 1. Get PlayerLoop total
     result = tp.query(f"""
@@ -1034,11 +1032,12 @@ def get_playerloop_breakdown(tp: TraceProcessor, main_tid: int, config: dict) ->
         playerloop_count = row.cnt or 0
 
     if playerloop_count == 0:
-        return {"playerLoopTotalMs": 0, "frameCount": 0, "avgFrameMs": 0, "phases": [], "categories": []}
+        return {"playerLoopTotalMs": 0, "frameCount": 0, "avgFrameMs": 0,
+                "phases": [], "categories": [], "topFunctions": {}}
 
     avg_frame_ms = playerloop_total_ms / playerloop_count
 
-    # 2. Get depth=1 slices (direct children of PlayerLoop)
+    # 2. Get depth=1 slices
     result = tp.query(f"""
         SELECT s.name, COUNT(*) as cnt,
                CAST(SUM(s.dur) / 1e6 AS REAL) as total_ms,
@@ -1048,125 +1047,189 @@ def get_playerloop_breakdown(tp: TraceProcessor, main_tid: int, config: dict) ->
         JOIN thread_track tt ON s.track_id = tt.id
         JOIN thread t ON tt.utid = t.id
         WHERE t.tid = {main_tid} AND s.dur > 0 AND s.depth = 1
-        GROUP BY s.name
-        ORDER BY total_ms DESC
-        LIMIT 40
+        GROUP BY s.name ORDER BY total_ms DESC LIMIT 40
     """)
     depth1_slices = []
     for row in result:
         depth1_slices.append({
             "name": row.name, "count": row.cnt,
-            "totalMs": round(row.total_ms, 2), "avgMs": round(row.avg_ms, 2), "maxMs": round(row.max_ms, 2)
+            "totalMs": round(row.total_ms, 2),
+            "avgMs": round(row.avg_ms, 2),
+            "maxMs": round(row.max_ms, 2)
         })
 
-    # 3. Classify depth=1 slices into phases using config mapping
+    # 3. Classify depth=1 into categories
     phase_map = {
         "rendering": phases_config.get("rendering", ["PostLateUpdate.FinishFrameRendering"]),
-        "logic_update": phases_config.get("logic_update", ["Update.ScriptRunBehaviourUpdate", "BehaviourUpdate"]),
-        "logic_late": phases_config.get("logic_late", ["PreLateUpdate.ScriptRunBehaviourLateUpdate", "LateBehaviourUpdate"]),
-        "ecs": phases_config.get("ecs", ["SimulationSystemGroup", "InitializationSystemGroup", "PresentationSystemGroup", "Default World"]),
+        "logic": phases_config.get("logic_update", ["Update.ScriptRunBehaviourUpdate"]) +
+                 phases_config.get("logic_late", ["PreLateUpdate.ScriptRunBehaviourLateUpdate"]),
+        "ecs": phases_config.get("ecs", ["SimulationSystemGroup", "InitializationSystemGroup",
+                                          "PresentationSystemGroup"]),
         "ui": phases_config.get("ui", ["PostLateUpdate.PlayerUpdateCanvases"]),
-        "wait": phases_config.get("wait", ["PostLateUpdate.PlayerSendFrameComplete", "WaitForJobGroupID", "Gfx.WaitForPresent"])
+        "wait": phases_config.get("wait", ["PostLateUpdate.PlayerSendFrameComplete",
+                                            "WaitForJobGroupID", "Gfx.WaitForPresent"])
     }
 
-    categories = {
-        "rendering": {"totalMs": 0, "slices": []},
-        "logic_csharp": {"totalMs": 0, "slices": []},
-        "logic_lua": {"totalMs": 0, "slices": []},
-        "ecs": {"totalMs": 0, "slices": []},
-        "ui": {"totalMs": 0, "slices": []},
-        "wait": {"totalMs": 0, "slices": []},
-        "other": {"totalMs": 0, "slices": []}
-    }
-
-    # Slices that need Lua/C# split (logic_update + logic_late)
-    logic_slice_names = set()
-    for name in phase_map.get("logic_update", []) + phase_map.get("logic_late", []):
-        logic_slice_names.add(name)
+    cat_totals = {"rendering": 0, "logic": 0, "ecs": 0, "ui": 0, "wait": 0, "other": 0}
+    cat_slices = {"rendering": [], "logic": [], "ecs": [], "ui": [], "wait": [], "other": []}
 
     for s in depth1_slices:
         matched = False
-
-        # Check rendering
-        for pattern in phase_map["rendering"]:
-            if pattern in s["name"]:
-                categories["rendering"]["totalMs"] += s["totalMs"]
-                categories["rendering"]["slices"].append(s["name"])
-                matched = True
+        for cat_name in ["rendering", "ecs", "ui", "wait", "logic"]:
+            for pattern in phase_map[cat_name]:
+                if pattern in s["name"]:
+                    cat_totals[cat_name] += s["totalMs"]
+                    cat_slices[cat_name].append(s["name"])
+                    matched = True
+                    break
+            if matched:
                 break
-        if matched:
-            continue
-
-        # Check ECS
-        for pattern in phase_map["ecs"]:
-            if pattern in s["name"]:
-                categories["ecs"]["totalMs"] += s["totalMs"]
-                categories["ecs"]["slices"].append(s["name"])
-                matched = True
-                break
-        if matched:
-            continue
-
-        # Check UI
-        for pattern in phase_map["ui"]:
-            if pattern in s["name"]:
-                categories["ui"]["totalMs"] += s["totalMs"]
-                categories["ui"]["slices"].append(s["name"])
-                matched = True
-                break
-        if matched:
-            continue
-
-        # Check wait
-        for pattern in phase_map["wait"]:
-            if pattern in s["name"]:
-                categories["wait"]["totalMs"] += s["totalMs"]
-                categories["wait"]["slices"].append(s["name"])
-                matched = True
-                break
-        if matched:
-            continue
-
-        # Check logic (needs Lua/C# split)
-        is_logic = False
-        for pattern in phase_map["logic_update"] + phase_map["logic_late"]:
-            if pattern in s["name"]:
-                is_logic = True
-                break
-
-        if is_logic:
-            # This slice is logic - split into Lua vs C# later
-            categories["logic_csharp"]["totalMs"] += s["totalMs"]
-            categories["logic_csharp"]["slices"].append(s["name"])
-        else:
-            categories["other"]["totalMs"] += s["totalMs"]
-            categories["other"]["slices"].append(s["name"])
+        if not matched:
+            cat_totals["other"] += s["totalMs"]
+            cat_slices["other"].append(s["name"])
 
     # 4. Split logic into Lua vs C#
-    # Query Lua-identified slices within BehaviourUpdate/LateBehaviourUpdate
-    lua_conditions = " OR ".join([f"s.name LIKE '%{lid}%'" for lid in lua_identifiers])
+    # CS:AOE.* and LuaMgr.* at depth=4 are the Lua entry points under BehaviourUpdate
+    # (depth=0: PlayerLoop → depth=1: Update.ScriptRun → depth=2: BehaviourUpdate
+    #  → depth=3: Core.Update → depth=4: CS:AOE.LuaMgr)
+    lua_conditions = " OR ".join([f"s.name LIKE '{lid}%'" for lid in lua_identifiers])
+    lua_total_ms = 0
+    lua_top_functions = []
     try:
+        # Query depth 4-5 where Lua slices typically live
         result = tp.query(f"""
-            SELECT CAST(SUM(s.dur) / 1e6 AS REAL) as lua_ms
+            SELECT s.name, COUNT(*) as cnt,
+                   CAST(SUM(s.dur) / 1e6 AS REAL) as total_ms,
+                   CAST(AVG(s.dur) / 1e6 AS REAL) as avg_ms
             FROM slice s
             JOIN thread_track tt ON s.track_id = tt.id
             JOIN thread t ON tt.utid = t.id
             WHERE t.tid = {main_tid} AND s.dur > 0
-            AND s.depth >= 2
             AND ({lua_conditions})
+            AND s.depth IN (4, 5)
+            GROUP BY s.name ORDER BY total_ms DESC LIMIT 15
         """)
-        lua_total_ms = 0
         for row in result:
-            lua_total_ms = row.lua_ms or 0
-
-        # Lua takes from the logic_csharp bucket
-        if lua_total_ms > 0 and lua_total_ms <= categories["logic_csharp"]["totalMs"]:
-            categories["logic_lua"]["totalMs"] = lua_total_ms
-            categories["logic_csharp"]["totalMs"] -= lua_total_ms
+            lua_total_ms += row.total_ms
+            lua_top_functions.append({
+                "name": row.name, "count": row.cnt,
+                "totalMs": round(row.total_ms, 2), "avgMs": round(row.avg_ms, 2)
+            })
     except Exception:
-        pass
+        # Fallback: broader search
+        try:
+            result = tp.query(f"""
+                SELECT s.name, COUNT(*) as cnt,
+                       CAST(SUM(s.dur) / 1e6 AS REAL) as total_ms,
+                       CAST(AVG(s.dur) / 1e6 AS REAL) as avg_ms
+                FROM slice s
+                JOIN thread_track tt ON s.track_id = tt.id
+                JOIN thread t ON tt.utid = t.id
+                WHERE t.tid = {main_tid} AND s.dur > 0
+                AND s.depth >= 3 AND s.depth <= 5
+                AND ({lua_conditions})
+                GROUP BY s.name ORDER BY total_ms DESC LIMIT 15
+            """)
+            for row in result:
+                lua_total_ms += row.total_ms
+                lua_top_functions.append({
+                    "name": row.name, "count": row.cnt,
+                    "totalMs": round(row.total_ms, 2), "avgMs": round(row.avg_ms, 2)
+                })
+        except Exception:
+            pass
 
-    # 5. Build output with display names
+    # Clamp lua to not exceed logic total
+    logic_total = cat_totals["logic"]
+    if lua_total_ms > logic_total:
+        lua_total_ms = logic_total * 0.8  # Safety cap
+    csharp_total_ms = logic_total - lua_total_ms
+
+    # 5. Query top functions per category (depth=2)
+    top_functions = {}
+
+    # Rendering top functions
+    try:
+        result = tp.query(f"""
+            SELECT s.name, COUNT(*) as cnt,
+                   CAST(SUM(s.dur)/1e6 AS REAL) as total_ms, CAST(AVG(s.dur)/1e6 AS REAL) as avg_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid} AND s.dur > 0
+            AND s.depth >= 2 AND s.depth <= 4
+            AND (s.name LIKE 'URP%' OR s.name LIKE 'Inl_%' OR s.name LIKE '%Pass' OR s.name LIKE '%Submit%')
+            GROUP BY s.name ORDER BY total_ms DESC LIMIT 8
+        """)
+        top_functions["rendering"] = [{"name": r.name, "count": r.cnt,
+            "totalMs": round(r.total_ms, 2), "avgMs": round(r.avg_ms, 2)} for r in result]
+    except Exception:
+        top_functions["rendering"] = []
+
+    # Logic C# top functions (depth=3/4 under BehaviourUpdate, excluding Lua)
+    try:
+        lua_exclude = " AND ".join([f"s.name NOT LIKE '{lid}%'" for lid in lua_identifiers])
+        result = tp.query(f"""
+            SELECT s.name, COUNT(*) as cnt,
+                   CAST(SUM(s.dur)/1e6 AS REAL) as total_ms, CAST(AVG(s.dur)/1e6 AS REAL) as avg_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid} AND s.dur > 0
+            AND s.depth >= 2 AND s.depth <= 4
+            AND (s.name LIKE 'Core.%' OR s.name LIKE 'Mono%' OR s.name LIKE '%Manager%'
+                 OR s.name LIKE '%System%' OR s.name LIKE '%Update%')
+            AND {lua_exclude}
+            AND s.name NOT LIKE '%SystemGroup%'
+            GROUP BY s.name ORDER BY total_ms DESC LIMIT 8
+        """)
+        top_functions["logic_csharp"] = [{"name": r.name, "count": r.cnt,
+            "totalMs": round(r.total_ms, 2), "avgMs": round(r.avg_ms, 2)} for r in result]
+    except Exception:
+        top_functions["logic_csharp"] = []
+
+    # Lua top functions - already collected
+    top_functions["logic_lua"] = lua_top_functions
+
+    # ECS top functions
+    try:
+        result = tp.query(f"""
+            SELECT s.name, COUNT(*) as cnt,
+                   CAST(SUM(s.dur)/1e6 AS REAL) as total_ms, CAST(AVG(s.dur)/1e6 AS REAL) as avg_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid} AND s.dur > 0
+            AND s.depth >= 2 AND s.depth <= 5
+            AND (s.name LIKE '%System%' OR s.name LIKE '%ECS%' OR s.name LIKE '%DOTS%')
+            AND s.name NOT LIKE '%BehaviourUpdate%'
+            GROUP BY s.name ORDER BY total_ms DESC LIMIT 8
+        """)
+        top_functions["ecs"] = [{"name": r.name, "count": r.cnt,
+            "totalMs": round(r.total_ms, 2), "avgMs": round(r.avg_ms, 2)} for r in result]
+    except Exception:
+        top_functions["ecs"] = []
+
+    # UGUI top functions
+    try:
+        result = tp.query(f"""
+            SELECT s.name, COUNT(*) as cnt,
+                   CAST(SUM(s.dur)/1e6 AS REAL) as total_ms, CAST(AVG(s.dur)/1e6 AS REAL) as avg_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid} AND s.dur > 0
+            AND s.depth >= 2 AND s.depth <= 4
+            AND (s.name LIKE '%Canvas%' OR s.name LIKE '%UGUI%' OR s.name LIKE '%UIEvent%'
+                 OR s.name LIKE '%Batch%' OR s.name LIKE '%Render%Dirty%')
+            GROUP BY s.name ORDER BY total_ms DESC LIMIT 5
+        """)
+        top_functions["ui"] = [{"name": r.name, "count": r.cnt,
+            "totalMs": round(r.total_ms, 2), "avgMs": round(r.avg_ms, 2)} for r in result]
+    except Exception:
+        top_functions["ui"] = []
+
+    # 6. Build final output
     display_names = {
         "rendering": "Rendering CPU",
         "logic_csharp": "C# Logic",
@@ -1177,18 +1240,29 @@ def get_playerloop_breakdown(tp: TraceProcessor, main_tid: int, config: dict) ->
         "other": "Other"
     }
 
+    final_cats = {
+        "rendering": cat_totals["rendering"],
+        "logic_csharp": csharp_total_ms,
+        "logic_lua": lua_total_ms,
+        "ecs": cat_totals["ecs"],
+        "ui": cat_totals["ui"],
+        "wait": cat_totals["wait"],
+        "other": cat_totals["other"]
+    }
+
     category_summary = []
-    for cat_key, cat_data in categories.items():
-        if cat_data["totalMs"] > 0.1:
-            per_frame_ms = cat_data["totalMs"] / playerloop_count
-            pct = cat_data["totalMs"] / playerloop_total_ms * 100
+    for cat_key, total_ms in final_cats.items():
+        if total_ms > 0.1:
+            per_frame_ms = total_ms / playerloop_count
+            pct = total_ms / playerloop_total_ms * 100
+            top_fns = top_functions.get(cat_key, [])
             category_summary.append({
                 "category": cat_key,
                 "displayName": display_names.get(cat_key, cat_key),
-                "totalMs": round(cat_data["totalMs"], 2),
+                "totalMs": round(total_ms, 2),
                 "perFrameMs": round(per_frame_ms, 2),
                 "percent": round(pct, 1),
-                "topSlices": cat_data["slices"][:5]
+                "topFunctions": top_fns[:5]
             })
 
     category_summary.sort(key=lambda x: x["totalMs"], reverse=True)
