@@ -21,7 +21,7 @@ description: Analyzes Perfetto .pftrace files for Android Unity games to diagnos
 Verify the `perfetto` Python package is installed:
 
 ```bash
-python -c "from perfetto.trace_processor import TraceProcessor; print('perfetto OK')"
+PYTHONUTF8=1 python -c "from perfetto.trace_processor import TraceProcessor; print('perfetto OK')"
 ```
 
 If it fails, install dependencies:
@@ -33,7 +33,7 @@ pip install -r .claude/skills/perfetto-trace-analysis/requirements.txt
 ### Step 1: Run Preprocessing Script
 
 ```bash
-python .claude/skills/perfetto-trace-analysis/scripts/preprocess.py --input <file.pftrace> --target-fps <fps> --output-dir ./output/perfetto
+PYTHONUTF8=1 python .claude/skills/perfetto-trace-analysis/scripts/preprocess.py --input <file.pftrace> --target-fps <fps> --output-dir ./output/perfetto
 ```
 
 - `<file>`: The .pftrace file the user provided

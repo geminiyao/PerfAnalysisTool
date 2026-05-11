@@ -19,7 +19,8 @@
     "WaitForJobGroupID"
   ],
   "jobWorker": {
-    "namePatterns": ["Worker Thread", "Job.Worker"],
+    "namePatterns": ["Worker Thread", "Job.Worker", "Job Worker"],
+    "threadIdPatterns": ["Thread-"],
     "highUtilizationThreshold": 60,
     "lowUtilizationThreshold": 10
   },
@@ -35,5 +36,14 @@
     "warmupThreshold": 1.15,
     "sustainedSlowFrames": 5,
     "sustainedSlowMultiplier": 1.5
+  },
+  "playerLoopPhases": {
+    "rendering": ["PostLateUpdate.FinishFrameRendering"],
+    "logic_update": ["Update.ScriptRunBehaviourUpdate", "BehaviourUpdate"],
+    "logic_late": ["PreLateUpdate.ScriptRunBehaviourLateUpdate", "LateBehaviourUpdate"],
+    "ecs": ["SimulationSystemGroup", "InitializationSystemGroup", "PresentationSystemGroup", "Default World"],
+    "ui": ["PostLateUpdate.PlayerUpdateCanvases"],
+    "wait": ["PostLateUpdate.PlayerSendFrameComplete", "WaitForJobGroupID", "Gfx.WaitForPresent"],
+    "luaIdentifiers": ["CS:AOE", "LuaMgr", "CS:"]
   }
 }

@@ -20,6 +20,15 @@ import os
 import sys
 import statistics
 from pathlib import Path
+
+# Force UTF-8 mode on Windows to handle Chinese characters correctly
+if sys.platform == 'win32':
+    os.environ.setdefault('PYTHONUTF8', '1')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+
 from perfetto.trace_processor import TraceProcessor
 
 
@@ -429,10 +438,30 @@ def get_cpu_frequency_analysis(tp: TraceProcessor, device: dict, trace_start: in
     # === Method 2: Frequency Ceiling Lock Detection ===
     # Split timeline into windows and check if max-achievable frequency decreases over time
     ceiling_lock = {"detected": False, "windows": []}
+    freq_reachability = {"reachable": True, "observedMaxMhz": 0, "theoreticalMaxMhz": 0, "ratio": 1.0}
     if per_core_freq:
         sample_core = big_cores[0]
         core_data = per_core_freq.get(sample_core, [])
+        theoretical_max = next((c["maxMhz"] for c in device["cpuCores"] if c["id"] == sample_core), 0)
+
         if core_data:
+            # === Frequency Reachability Analysis ===
+            # Can the CPU actually reach its theoretical max during this trace?
+            observed_max = max(mhz for _, mhz in core_data)
+            reachability_ratio = observed_max / theoretical_max if theoretical_max > 0 else 1.0
+
+            freq_reachability = {
+                "reachable": observed_max >= theoretical_max * 0.95,
+                "observedMaxMhz": observed_max,
+                "theoreticalMaxMhz": theoretical_max,
+                "ratio": round(reachability_ratio, 3)
+            }
+
+            if not freq_reachability["reachable"]:
+                thermal_score += 3
+                evidence.append(f"频率可达性受限: 实际最高{observed_max}MHz < 理论最高{theoretical_max}MHz的95% (达到率{round(reachability_ratio*100,1)}%)")
+
+            # Ceiling lock detection (existing logic)
             trace_dur_ns = trace_end - trace_start
             window_count = 5  # Split into 5 time windows
             window_dur = trace_dur_ns / window_count
@@ -552,6 +581,69 @@ def get_cpu_frequency_analysis(tp: TraceProcessor, device: dict, trace_start: in
         thermal_score += 2
         evidence.append(f"全核同步降频: {len(cluster_sync_drops)}次大核集体降至{cluster_sync_drops[0]['unifiedFreqMhz']}MHz")
 
+    # === Method 5: Sustained Low Frequency Duration ===
+    # Calculate how long big cores stay below threshold (for long traces)
+    sustained_low = {"detected": False, "lowFreqPercent": 0, "totalLowMs": 0}
+    if per_core_freq and big_cores:
+        sample_core = big_cores[0]
+        core_data = per_core_freq.get(sample_core, [])
+        max_freq = next((c["maxMhz"] for c in device["cpuCores"] if c["id"] == sample_core), 0)
+        low_threshold = max_freq * 0.8
+        trace_dur_ms = (trace_end - trace_start) / 1e6
+
+        if len(core_data) >= 2 and trace_dur_ms > 0:
+            total_low_ns = 0
+            for i in range(len(core_data) - 1):
+                ts_curr, mhz_curr = core_data[i]
+                ts_next, _ = core_data[i + 1]
+                if mhz_curr <= low_threshold:
+                    total_low_ns += (ts_next - ts_curr)
+
+            total_low_ms = total_low_ns / 1e6
+            low_pct = total_low_ms / trace_dur_ms * 100
+
+            sustained_low = {
+                "detected": low_pct > 15,
+                "lowFreqPercent": round(low_pct, 1),
+                "totalLowMs": round(total_low_ms, 1),
+                "threshold": f"<{int(low_threshold)}MHz"
+            }
+
+            if low_pct > 30:
+                thermal_score += 2
+                evidence.append(f"持续低频: 大核{round(low_pct, 1)}%时间运行在<{int(low_threshold)}MHz")
+            elif low_pct > 15:
+                thermal_score += 1
+                evidence.append(f"部分低频: 大核{round(low_pct, 1)}%时间运行在<{int(low_threshold)}MHz")
+
+    # === Method 6: Cooling Device State (if available) ===
+    cdev_data = {"available": False, "events": []}
+    try:
+        result = tp.query("""
+            SELECT t.name, c.ts, CAST(c.value AS INT) as state
+            FROM counter c
+            JOIN counter_track t ON c.track_id = t.id
+            WHERE t.name LIKE '%cdev%' OR t.name LIKE '%cooling%' OR t.name LIKE '%cpu_budget%'
+            ORDER BY c.ts
+            LIMIT 200
+        """)
+        cdev_events = []
+        for row in result:
+            cdev_events.append({
+                "name": row.name,
+                "tsMs": round((row.ts - trace_start) / 1e6, 1),
+                "state": row.state
+            })
+        if cdev_events:
+            cdev_data = {"available": True, "events": cdev_events[:50]}
+            thermal_score += 3
+            evidence.append(f"系统级降频信号: 检测到{len(cdev_events)}个cooling device状态变化")
+    except Exception:
+        pass
+
+    # === Throttle Impact: correlate freq drops with frame time ===
+    throttle_impact = {"avgFrameTimeInThrottle": 0, "avgFrameTimeNormal": 0, "impactMs": 0}
+
     if thermal_score >= 3:
         is_thermal = True
     elif throttle_events and thermal_score == 0:
@@ -582,8 +674,11 @@ def get_cpu_frequency_analysis(tp: TraceProcessor, device: dict, trace_start: in
             "evidence": evidence,
             "loadFreqDivergence": load_freq_divergence[:10],
             "ceilingLock": ceiling_lock,
+            "freqReachability": freq_reachability,
             "thermalZone": thermal_data,
-            "clusterSyncDrops": cluster_sync_drops[:10]
+            "clusterSyncDrops": cluster_sync_drops[:10],
+            "sustainedLow": sustained_low,
+            "coolingDevice": cdev_data
         }
     }
 
@@ -694,12 +789,18 @@ def get_top_slices(tp: TraceProcessor, tid: int, limit: int = 20) -> list:
 
 
 def get_job_worker_stats(tp: TraceProcessor, upid: int, device: dict, trace_duration_ms: float, config: dict) -> dict:
-    """Get Job Worker thread utilization stats."""
+    """Get Job Worker thread utilization stats.
+
+    Tries multiple detection strategies:
+    1. Named patterns (Job.Worker, Worker Thread)
+    2. Thread-N patterns (Unity default naming on some Android versions)
+    """
     big_cores = device.get("bigCores", [])
     little_cores = device.get("littleCores", [])
-    name_patterns = config.get("jobWorker", {}).get("namePatterns", ["Worker Thread", "Job.Worker"])
+    name_patterns = config.get("jobWorker", {}).get("namePatterns", ["Worker Thread", "Job.Worker", "Job Worker"])
+    thread_id_patterns = config.get("jobWorker", {}).get("threadIdPatterns", ["Thread-"])
 
-    # Find all worker threads in the game process
+    # Strategy 1: Find by explicit name patterns
     conditions = " OR ".join([f"t.name LIKE '%{p}%'" for p in name_patterns])
     result = tp.query(f"""
         SELECT t.tid, t.name
@@ -711,6 +812,29 @@ def get_job_worker_stats(tp: TraceProcessor, upid: int, device: dict, trace_dura
     for row in result:
         worker_tids.append({"tid": row.tid, "name": row.name})
 
+    # Strategy 2: If no named workers found, try Thread-N pattern
+    # These are likely Job Workers if they have short burst slices (not IO/network threads)
+    if not worker_tids and thread_id_patterns:
+        tid_conditions = " OR ".join([f"t.name LIKE '{p}%'" for p in thread_id_patterns])
+        result = tp.query(f"""
+            SELECT t.tid, t.name,
+                   CAST(SUM(ss.dur) AS REAL) / 1e6 as run_ms,
+                   COUNT(ss.id) as slice_count
+            FROM thread t
+            LEFT JOIN sched_slice ss ON ss.utid = t.id AND ss.dur > 0
+            WHERE t.upid = {upid} AND ({tid_conditions})
+            GROUP BY t.tid, t.name
+            HAVING run_ms > 1
+            ORDER BY run_ms DESC
+            LIMIT 20
+        """)
+        for row in result:
+            # Heuristic: Job Workers tend to have many short slices (burst pattern)
+            if row.slice_count > 5 and row.run_ms > 5:
+                worker_tids.append({"tid": row.tid, "name": row.name})
+
+    detection_method = "named" if any("Job" in w["name"] or "Worker" in w["name"] for w in worker_tids) else "thread_id_heuristic"
+
     if not worker_tids:
         return {
             "count": 0,
@@ -718,7 +842,9 @@ def get_job_worker_stats(tp: TraceProcessor, upid: int, device: dict, trace_dura
             "avgUtilizationPercent": 0,
             "onBigCorePercent": 0,
             "onLittleCorePercent": 0,
-            "topWorkerMs": 0
+            "topWorkerMs": 0,
+            "detectionMethod": "none",
+            "workers": []
         }
 
     # Aggregate scheduling data for all workers
@@ -758,8 +884,257 @@ def get_job_worker_stats(tp: TraceProcessor, upid: int, device: dict, trace_dura
         "avgUtilizationPercent": avg_utilization,
         "onBigCorePercent": on_big_pct,
         "onLittleCorePercent": on_little_pct,
-        "topWorkerMs": round(top_worker_ms, 2)
+        "topWorkerMs": round(top_worker_ms, 2),
+        "detectionMethod": detection_method,
+        "workers": [{"tid": w["tid"], "name": w["name"]} for w in worker_tids[:10]]
     }
+
+
+def get_playerloop_breakdown(tp: TraceProcessor, main_tid: int, config: dict) -> dict:
+    """Build precise 6-phase breakdown of PlayerLoop frame time.
+
+    Phases (based on Unity frame structure):
+    - C# Logic: BehaviourUpdate/LateUpdate content excluding Lua
+    - Lua Logic: Slices matching luaIdentifiers (CS:AOE, LuaMgr)
+    - ECS/Job: SystemGroup slices (Initialization/Simulation/Presentation)
+    - UGUI: PlayerUpdateCanvases
+    - Rendering CPU: FinishFrameRendering (URP)
+    - Wait/Sync: PlayerSendFrameComplete, WaitForJobGroupID, WaitForPresent
+    """
+    phases_config = config.get("playerLoopPhases", {})
+    lua_identifiers = phases_config.get("luaIdentifiers", ["CS:AOE", "LuaMgr", "CS:"])
+
+    # 1. Get PlayerLoop total
+    result = tp.query(f"""
+        SELECT CAST(SUM(dur) / 1e6 AS REAL) as total_ms, COUNT(*) as cnt
+        FROM slice s
+        JOIN thread_track tt ON s.track_id = tt.id
+        JOIN thread t ON tt.utid = t.id
+        WHERE t.tid = {main_tid} AND s.name = 'PlayerLoop' AND s.dur > 0
+    """)
+    playerloop_total_ms = 0
+    playerloop_count = 0
+    for row in result:
+        playerloop_total_ms = row.total_ms or 0
+        playerloop_count = row.cnt or 0
+
+    if playerloop_count == 0:
+        return {"playerLoopTotalMs": 0, "frameCount": 0, "avgFrameMs": 0, "phases": [], "categories": []}
+
+    avg_frame_ms = playerloop_total_ms / playerloop_count
+
+    # 2. Get depth=1 slices (direct children of PlayerLoop)
+    result = tp.query(f"""
+        SELECT s.name, COUNT(*) as cnt,
+               CAST(SUM(s.dur) / 1e6 AS REAL) as total_ms,
+               CAST(AVG(s.dur) / 1e6 AS REAL) as avg_ms,
+               CAST(MAX(s.dur) / 1e6 AS REAL) as max_ms
+        FROM slice s
+        JOIN thread_track tt ON s.track_id = tt.id
+        JOIN thread t ON tt.utid = t.id
+        WHERE t.tid = {main_tid} AND s.dur > 0 AND s.depth = 1
+        GROUP BY s.name
+        ORDER BY total_ms DESC
+        LIMIT 40
+    """)
+    depth1_slices = []
+    for row in result:
+        depth1_slices.append({
+            "name": row.name, "count": row.cnt,
+            "totalMs": round(row.total_ms, 2), "avgMs": round(row.avg_ms, 2), "maxMs": round(row.max_ms, 2)
+        })
+
+    # 3. Classify depth=1 slices into phases using config mapping
+    phase_map = {
+        "rendering": phases_config.get("rendering", ["PostLateUpdate.FinishFrameRendering"]),
+        "logic_update": phases_config.get("logic_update", ["Update.ScriptRunBehaviourUpdate", "BehaviourUpdate"]),
+        "logic_late": phases_config.get("logic_late", ["PreLateUpdate.ScriptRunBehaviourLateUpdate", "LateBehaviourUpdate"]),
+        "ecs": phases_config.get("ecs", ["SimulationSystemGroup", "InitializationSystemGroup", "PresentationSystemGroup", "Default World"]),
+        "ui": phases_config.get("ui", ["PostLateUpdate.PlayerUpdateCanvases"]),
+        "wait": phases_config.get("wait", ["PostLateUpdate.PlayerSendFrameComplete", "WaitForJobGroupID", "Gfx.WaitForPresent"])
+    }
+
+    categories = {
+        "rendering": {"totalMs": 0, "slices": []},
+        "logic_csharp": {"totalMs": 0, "slices": []},
+        "logic_lua": {"totalMs": 0, "slices": []},
+        "ecs": {"totalMs": 0, "slices": []},
+        "ui": {"totalMs": 0, "slices": []},
+        "wait": {"totalMs": 0, "slices": []},
+        "other": {"totalMs": 0, "slices": []}
+    }
+
+    # Slices that need Lua/C# split (logic_update + logic_late)
+    logic_slice_names = set()
+    for name in phase_map.get("logic_update", []) + phase_map.get("logic_late", []):
+        logic_slice_names.add(name)
+
+    for s in depth1_slices:
+        matched = False
+
+        # Check rendering
+        for pattern in phase_map["rendering"]:
+            if pattern in s["name"]:
+                categories["rendering"]["totalMs"] += s["totalMs"]
+                categories["rendering"]["slices"].append(s["name"])
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check ECS
+        for pattern in phase_map["ecs"]:
+            if pattern in s["name"]:
+                categories["ecs"]["totalMs"] += s["totalMs"]
+                categories["ecs"]["slices"].append(s["name"])
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check UI
+        for pattern in phase_map["ui"]:
+            if pattern in s["name"]:
+                categories["ui"]["totalMs"] += s["totalMs"]
+                categories["ui"]["slices"].append(s["name"])
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check wait
+        for pattern in phase_map["wait"]:
+            if pattern in s["name"]:
+                categories["wait"]["totalMs"] += s["totalMs"]
+                categories["wait"]["slices"].append(s["name"])
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check logic (needs Lua/C# split)
+        is_logic = False
+        for pattern in phase_map["logic_update"] + phase_map["logic_late"]:
+            if pattern in s["name"]:
+                is_logic = True
+                break
+
+        if is_logic:
+            # This slice is logic - split into Lua vs C# later
+            categories["logic_csharp"]["totalMs"] += s["totalMs"]
+            categories["logic_csharp"]["slices"].append(s["name"])
+        else:
+            categories["other"]["totalMs"] += s["totalMs"]
+            categories["other"]["slices"].append(s["name"])
+
+    # 4. Split logic into Lua vs C#
+    # Query Lua-identified slices within BehaviourUpdate/LateBehaviourUpdate
+    lua_conditions = " OR ".join([f"s.name LIKE '%{lid}%'" for lid in lua_identifiers])
+    try:
+        result = tp.query(f"""
+            SELECT CAST(SUM(s.dur) / 1e6 AS REAL) as lua_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid} AND s.dur > 0
+            AND s.depth >= 2
+            AND ({lua_conditions})
+        """)
+        lua_total_ms = 0
+        for row in result:
+            lua_total_ms = row.lua_ms or 0
+
+        # Lua takes from the logic_csharp bucket
+        if lua_total_ms > 0 and lua_total_ms <= categories["logic_csharp"]["totalMs"]:
+            categories["logic_lua"]["totalMs"] = lua_total_ms
+            categories["logic_csharp"]["totalMs"] -= lua_total_ms
+    except Exception:
+        pass
+
+    # 5. Build output with display names
+    display_names = {
+        "rendering": "Rendering CPU",
+        "logic_csharp": "C# Logic",
+        "logic_lua": "Lua Logic",
+        "ecs": "ECS/Job",
+        "ui": "UGUI",
+        "wait": "Wait/Sync",
+        "other": "Other"
+    }
+
+    category_summary = []
+    for cat_key, cat_data in categories.items():
+        if cat_data["totalMs"] > 0.1:
+            per_frame_ms = cat_data["totalMs"] / playerloop_count
+            pct = cat_data["totalMs"] / playerloop_total_ms * 100
+            category_summary.append({
+                "category": cat_key,
+                "displayName": display_names.get(cat_key, cat_key),
+                "totalMs": round(cat_data["totalMs"], 2),
+                "perFrameMs": round(per_frame_ms, 2),
+                "percent": round(pct, 1),
+                "topSlices": cat_data["slices"][:5]
+            })
+
+    category_summary.sort(key=lambda x: x["totalMs"], reverse=True)
+
+    return {
+        "playerLoopTotalMs": round(playerloop_total_ms, 2),
+        "frameCount": playerloop_count,
+        "avgFrameMs": round(avg_frame_ms, 2),
+        "phases": depth1_slices[:20],
+        "categories": category_summary
+    }
+
+
+def get_gpu_completion_analysis(tp: TraceProcessor, trace_start: int, main_tid: int) -> dict:
+    """Analyze GPU completion fence data if available."""
+    # Check for GPU completion tracks
+    try:
+        result = tp.query("""
+            SELECT t.id as track_id, t.name, COUNT(c.id) as sample_count
+            FROM counter c
+            JOIN counter_track t ON c.track_id = t.id
+            WHERE t.name LIKE '%GPU%' OR t.name LIKE '%gpu%'
+            GROUP BY t.id, t.name
+            ORDER BY sample_count DESC
+        """)
+        gpu_tracks = []
+        for row in result:
+            gpu_tracks.append({"trackId": row.track_id, "name": row.name, "samples": row.sample_count})
+
+        if not gpu_tracks:
+            return {"available": False, "tracks": []}
+
+        # Check for Gfx.WaitForPresent in main thread (GPU wait indicator)
+        result = tp.query(f"""
+            SELECT COUNT(*) as cnt,
+                   CAST(SUM(s.dur) / 1e6 AS REAL) as total_ms,
+                   CAST(AVG(s.dur) / 1e6 AS REAL) as avg_ms,
+                   CAST(MAX(s.dur) / 1e6 AS REAL) as max_ms
+            FROM slice s
+            JOIN thread_track tt ON s.track_id = tt.id
+            JOIN thread t ON tt.utid = t.id
+            WHERE t.tid = {main_tid}
+            AND (s.name LIKE '%WaitForPresent%' OR s.name LIKE '%Gfx.Present%')
+            AND s.dur > 0
+        """)
+        gpu_wait = {"count": 0, "totalMs": 0, "avgMs": 0, "maxMs": 0}
+        for row in result:
+            gpu_wait = {
+                "count": row.cnt or 0,
+                "totalMs": round(row.total_ms or 0, 2),
+                "avgMs": round(row.avg_ms or 0, 2),
+                "maxMs": round(row.max_ms or 0, 2)
+            }
+
+        return {
+            "available": True,
+            "tracks": gpu_tracks[:5],
+            "gpuWaitOnMainThread": gpu_wait
+        }
+    except Exception:
+        return {"available": False, "tracks": []}
 
 
 def get_gpu_analysis(tp: TraceProcessor, trace_start: int, trace_end: int, config: dict) -> dict:
@@ -1087,11 +1462,17 @@ def main():
     main_top_slices = get_top_slices(tp, main_tid, 25)
     render_top_slices = get_top_slices(tp, render_tid, 15) if render_tid else []
 
+    print(f"[preprocess] Extracting PlayerLoop breakdown...", file=sys.stderr)
+    playerloop_breakdown = get_playerloop_breakdown(tp, main_tid, config)
+
     print(f"[preprocess] Extracting Job Worker stats...", file=sys.stderr)
     job_workers = get_job_worker_stats(tp, upid, device, trace_duration_ms, config)
 
     print(f"[preprocess] Extracting GPU analysis...", file=sys.stderr)
     gpu_analysis = get_gpu_analysis(tp, trace_start, trace_end, config)
+
+    print(f"[preprocess] Extracting GPU completion data...", file=sys.stderr)
+    gpu_completion = get_gpu_completion_analysis(tp, trace_start, main_tid)
 
     print(f"[preprocess] Computing time segment analysis...", file=sys.stderr)
     time_segments = get_time_segment_analysis(
@@ -1135,7 +1516,9 @@ def main():
             "mainThread": main_top_slices,
             "renderThread": render_top_slices
         },
+        "playerLoopBreakdown": playerloop_breakdown,
         "gpuAnalysis": gpu_analysis,
+        "gpuCompletion": gpu_completion,
         "timeSegmentAnalysis": time_segments,
         "perFrameTimeline": frame_data["frames"]
     }
