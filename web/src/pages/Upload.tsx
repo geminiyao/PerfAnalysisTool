@@ -79,12 +79,35 @@ const Upload: React.FC = () => {
           setCurrentStep(4);
           message.success('分析完成!');
           unsub();
-          // 3秒后跳转到报告页
-          setTimeout(() => navigate(`/report/${resultId}`), 2000);
+
+          // 轮询确认报告已写入 DB 再跳转（最多 3 次，间隔 1 秒）
+          let retries = 0;
+          const checkAndNavigate = async () => {
+            try {
+              const res = await fetch(`/api/report/${resultId}/content`);
+              if (res.ok) {
+                const text = await res.text();
+                if (text && text.length > 0) {
+                  navigate(`/report/${resultId}`);
+                  return;
+                }
+              }
+            } catch { /* ignore */ }
+
+            retries++;
+            if (retries < 3) {
+              setTimeout(checkAndNavigate, 1000);
+            } else {
+              message.warning('报告可能尚未就绪，正在跳转...');
+              navigate(`/report/${resultId}`);
+            }
+          };
+          setTimeout(checkAndNavigate, 500);
         } else if (event.stage === 'failed') {
           setError(event.message);
           setUploading(false);
           unsub();
+          // 失败时停留在当前页面，不跳转
         }
       });
 

@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { sessions } from '../db/schema.js';
@@ -86,6 +87,13 @@ class AnalysisQueue {
         error: '会话不存在或文件路径为空',
         completedAt: Date.now(),
       }).where(eq(sessions.id, sessionId));
+      emitProgress({
+        sessionId,
+        stage: 'failed',
+        progress: 0,
+        message: '会话不存在或文件路径为空',
+        timestamp: Date.now(),
+      });
       return;
     }
 
@@ -117,19 +125,62 @@ class AnalysisQueue {
     const endTime = Date.now();
     const duration = endTime - startTime;
 
+    // 保存日志到文件（无论成功失败都保存）
+    if (result.logs && result.logs.length > 0) {
+      try {
+        fs.mkdirSync(outputDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(outputDir, 'analysis.log'),
+          result.logs.join('\n'),
+          'utf-8',
+        );
+        console.log(`[Queue] Logs saved to ${path.join(outputDir, 'analysis.log')} (${result.logs.length} lines)`);
+      } catch (err: any) {
+        console.warn(`[Queue] Failed to save logs: ${err.message}`);
+      }
+    }
+
     if (result.success) {
       // 提取指标存入数据库
       try {
         await extractMetrics(sessionId, outputDir);
-      } catch (err: any) {
-        console.warn(`Metrics extraction warning for ${sessionId}:`, err.message);
-      }
 
-      await db.update(sessions).set({
-        status: 'completed',
-        completedAt: endTime,
-        duration,
-      }).where(eq(sessions.id, sessionId));
+        // 全部成功 → completed
+        await db.update(sessions).set({
+          status: 'completed',
+          completedAt: endTime,
+          duration,
+        }).where(eq(sessions.id, sessionId));
+
+        emitProgress({
+          sessionId,
+          stage: 'completed',
+          progress: 100,
+          message: '分析完成，报告已保存',
+          timestamp: Date.now(),
+          log: '[完成] 指标和报告已写入数据库',
+        });
+      } catch (err: any) {
+        // extractMetrics 失败 → 标记为 failed
+        const errMsg = `数据提取失败: ${err.message}`;
+        console.error(`[Queue] ${errMsg}`);
+
+        await db.update(sessions).set({
+          status: 'failed',
+          error: errMsg.slice(0, 1000),
+          completedAt: endTime,
+          duration,
+        }).where(eq(sessions.id, sessionId));
+
+        emitProgress({
+          sessionId,
+          stage: 'failed',
+          progress: 0,
+          message: errMsg,
+          timestamp: Date.now(),
+          log: `[错误] ${errMsg}`,
+        });
+      }
     } else {
       await db.update(sessions).set({
         status: 'failed',
@@ -137,6 +188,15 @@ class AnalysisQueue {
         completedAt: endTime,
         duration,
       }).where(eq(sessions.id, sessionId));
+
+      emitProgress({
+        sessionId,
+        stage: 'failed',
+        progress: 0,
+        message: result.error || '分析失败',
+        timestamp: Date.now(),
+        log: `[错误] ${result.error || '未知错误'}`,
+      });
     }
   }
 }

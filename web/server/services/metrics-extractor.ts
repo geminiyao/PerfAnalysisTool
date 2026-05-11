@@ -16,9 +16,13 @@ import { metrics, reports } from '../db/schema.js';
 export async function extractMetrics(sessionId: string, resultDir: string): Promise<void> {
   const db = getDb();
 
-  // 读取 preprocess-result.json
+  // 读取 preprocess-result.json（必须存在）
   const preprocessPath = path.join(resultDir, 'preprocess-result.json');
-  if (fs.existsSync(preprocessPath)) {
+  if (!fs.existsSync(preprocessPath)) {
+    throw new Error(`preprocess-result.json 不存在: ${preprocessPath}`);
+  }
+
+  try {
     const raw = fs.readFileSync(preprocessPath, 'utf-8');
     const data = JSON.parse(raw);
 
@@ -55,11 +59,18 @@ export async function extractMetrics(sessionId: string, resultDir: string): Prom
       topMarkerTotalMs: markers.reduce((sum: number, m: any) => sum + (m.msSelfMean || 0), 0),
       spikeCount: spikes.length,
     });
+    console.log(`[extractMetrics] Metrics inserted for ${sessionId}`);
+  } catch (err: any) {
+    throw new Error(`提取指标失败: ${err.message}`);
   }
 
-  // 读取并存储报告
+  // 读取并存储报告（必须存在）
   const reportPath = path.join(resultDir, 'performance-report.md');
-  if (fs.existsSync(reportPath)) {
+  if (!fs.existsSync(reportPath)) {
+    throw new Error(`performance-report.md 不存在: ${reportPath}`);
+  }
+
+  try {
     const content = fs.readFileSync(reportPath, 'utf-8');
 
     await db.insert(reports).values({
@@ -68,5 +79,8 @@ export async function extractMetrics(sessionId: string, resultDir: string): Prom
       content,
       createdAt: Date.now(),
     });
+    console.log(`[extractMetrics] Report inserted for ${sessionId}`);
+  } catch (err: any) {
+    throw new Error(`存储报告失败: ${err.message}`);
   }
 }

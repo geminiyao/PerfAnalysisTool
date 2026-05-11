@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Spin, Button, Tag, Descriptions, message } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Button, Tag, Descriptions, Collapse, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +14,7 @@ const ReportDetail: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [report, setReport] = useState<string>('');
   const [metrics, setMetrics] = useState<any>(null);
+  const [logs, setLogs] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,13 +27,15 @@ const ReportDetail: React.FC = () => {
       const sessionData = await getAnalysis(sessionId);
       setSession(sessionData);
 
-      // 加载报告内容和指标（通过扩展 API）
-      const [reportRes, metricsRes] = await Promise.all([
+      // 加载报告内容、指标和日志
+      const [reportRes, metricsRes, logsRes] = await Promise.all([
         fetch(`/api/report/${sessionId}/content`).then(r => r.ok ? r.text() : ''),
         fetch(`/api/report/${sessionId}/metrics`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/report/${sessionId}/logs`).then(r => r.ok ? r.text() : ''),
       ]);
       setReport(reportRes);
       setMetrics(metricsRes);
+      setLogs(logsRes);
     } catch (err: any) {
       message.error(err.message);
     } finally {
@@ -103,7 +106,7 @@ const ReportDetail: React.FC = () => {
       )}
 
       {/* AI 分析报告 */}
-      <Card title="AI 分析报告">
+      <Card title="AI 分析报告" style={{ marginBottom: 16 }}>
         {report ? (
           <div className="markdown-body" style={{ color: '#d4d4d4' }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
@@ -114,6 +117,51 @@ const ReportDetail: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* 分析日志 */}
+      {logs && (
+        <Collapse
+          style={{ marginBottom: 16 }}
+          items={[{
+            key: 'logs',
+            label: <span style={{ color: '#d4d4d4' }}>分析日志</span>,
+            children: (
+              <div
+                style={{
+                  background: '#0a0a1a',
+                  borderRadius: 6,
+                  padding: '12px 16px',
+                  maxHeight: 400,
+                  overflowY: 'auto',
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {logs.split('\n').map((line, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      color: line.startsWith('[stderr]') || line.startsWith('[错误]') || line.startsWith('[工具错误]')
+                        ? '#ff7875'
+                        : line.startsWith('[完成]')
+                          ? '#52c41a'
+                          : '#b5b5b5',
+                      borderBottom: '1px solid #1a1a2e',
+                      paddingBottom: 2,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {line}
+                  </div>
+                ))}
+              </div>
+            ),
+          }]}
+        />
+      )}
     </div>
   );
 };

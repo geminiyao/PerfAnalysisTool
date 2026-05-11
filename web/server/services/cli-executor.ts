@@ -62,7 +62,7 @@ interface ExecutionState {
 // 主执行入口
 // ============================================================
 
-export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; error?: string }> {
+export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; error?: string; logs: string[] }> {
   const config = getConfig();
   fs.mkdirSync(job.outputDir, { recursive: true });
 
@@ -75,6 +75,9 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
   const cliCommand = getCliCommand(job.cliProvider);
   const args = provider.buildArgs(prompt);
 
+  // 收集全部日志行
+  const logLines: string[] = [];
+
   // 共享状态对象（引用传递，不会有值拷贝问题）
   const state: ExecutionState = {
     skillVerified: false,
@@ -84,6 +87,9 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
 
   return new Promise((resolve) => {
     const emit = (stage: ProgressEvent['stage'], progress: number, message: string, log?: string) => {
+      if (log) logLines.push(log);
+      // cli-executor 不再发 completed/failed 事件（交由 queue 控制最终状态）
+      if (stage === 'completed' || stage === 'failed') return;
       emitProgress({
         sessionId: job.sessionId,
         stage,
@@ -97,7 +103,7 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
     const doResolve = (result: { success: boolean; error?: string }) => {
       if (!state.resolved) {
         state.resolved = true;
-        resolve(result);
+        resolve({ ...result, logs: logLines });
       }
     };
 
@@ -155,10 +161,26 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
           const hasReport = fs.existsSync(path.join(job.outputDir, 'performance-report.md'));
           const hasPreprocess = fs.existsSync(path.join(job.outputDir, 'preprocess-result.json'));
           const fileStatus = `preprocess: ${hasPreprocess ? '✅' : '❌'}, report: ${hasReport ? '✅' : '❌'}`;
-          emit('completed', 100, `分析完成 (${fileStatus})`, `[完成] tool 调用: ${state.toolCallCount}次, ${fileStatus}`);
-          doResolve({ success: true });
+
+          if (!hasReport || !hasPreprocess) {
+            // CLI 退出码正常但输出文件缺失 → 视为失败
+            const errMsg = `CLI 执行完毕但输出文件缺失 (${fileStatus})`;
+            logLines.push(`[错误] ${errMsg}`);
+            doResolve({ success: false, error: errMsg });
+          } else {
+            logLines.push(`[完成] tool 调用: ${state.toolCallCount}次, ${fileStatus}`);
+            emitProgress({
+              sessionId: job.sessionId,
+              stage: 'analyzing',
+              progress: 95,
+              message: `AI 分析完成，正在保存结果... (${fileStatus})`,
+              timestamp: Date.now(),
+              log: `[完成] tool 调用: ${state.toolCallCount}次, ${fileStatus}`,
+            });
+            doResolve({ success: true });
+          }
         } else {
-          emit('failed', 0, `CLI 退出码: ${code}`);
+          logLines.push(`[错误] CLI 退出码: ${code}`);
           doResolve({ success: false, error: `CLI 退出码: ${code}` });
         }
       }
@@ -263,7 +285,8 @@ function handleStreamEvent(
       if (event.subtype === 'success') {
         const cost = event.total_cost_usd ? `$${event.total_cost_usd.toFixed(4)}` : '';
         const duration = event.duration_ms ? `${Math.round(event.duration_ms / 1000)}s` : '';
-        emit('completed', 100, '分析完成', `[结果] 耗时: ${duration}, 费用: ${cost}, turns: ${event.num_turns}`);
+        // 不发 completed — 由 queue 在 extractMetrics 之后统一发
+        emit('analyzing', 95, 'AI 分析完成，正在保存结果...', `[结果] 耗时: ${duration}, 费用: ${cost}, turns: ${event.num_turns}`);
       } else {
         emit('failed', 0, '分析失败', `[结果] ${event.result || '未知错误'}`);
       }
@@ -282,14 +305,14 @@ function buildPrompt(pdataPath: string, outputDir: string): string {
   const normalizedPdata = path.resolve(pdataPath).replace(/\\/g, '/');
   const normalizedOutput = path.resolve(outputDir).replace(/\\/g, '/');
 
+  // 用空格拼接而非 \n — Windows cmd.exe 的 shell: true 模式下
+  // 真实换行符会被截断导致 CLI 只收到第一行 prompt
   return [
     `请使用 ${skillPath} skill 分析这个 pdata 文件: ${normalizedPdata}`,
-    ``,
     `输出目录: ${normalizedOutput}`,
     `请将 preprocess-result.json 和 performance-report.md 保存到输出目录。报告用中文。`,
-    ``,
     `重要：如果无法识别上述 skill，请直接回复"SKILL_NOT_FOUND"并停止，不要尝试自行分析。`,
-  ].join('\n');
+  ].join(' ');
 }
 
 // ============================================================
@@ -299,8 +322,10 @@ function buildPrompt(pdataPath: string, outputDir: string): string {
 async function executeMock(
   job: AnalysisJob,
   config: ReturnType<typeof getConfig>,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; logs: string[] }> {
+  const logLines: string[] = [];
   const emit = (stage: ProgressEvent['stage'], progress: number, message: string, log?: string) => {
+    if (log) logLines.push(log);
     emitProgress({
       sessionId: job.sessionId,
       stage,
@@ -325,7 +350,7 @@ async function executeMock(
     emit('preprocessing', 50, '[Mock] 预处理数据已复制', `[Mock] ${srcPreprocess}`);
   } else {
     emit('failed', 30, '[Mock] 未找到 output/preprocess-result.json', '[Mock] 请先手动执行一次 skill 生成数据');
-    return { success: false, error: '未找到 output/preprocess-result.json' };
+    return { success: false, error: '未找到 output/preprocess-result.json', logs: logLines };
   }
 
   await sleep(500);
@@ -348,7 +373,7 @@ async function executeMock(
   await sleep(300);
   emit('completed', 100, '[Mock] 模拟分析完成');
 
-  return { success: true };
+  return { success: true, logs: logLines };
 }
 
 function sleep(ms: number): Promise<void> {
