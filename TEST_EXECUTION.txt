@@ -1,0 +1,236 @@
+================================================================================
+TEST PLAN FOR P0 FIXES
+================================================================================
+
+Date: 2026-05-09
+Purpose: Verify all critical fixes resolve data loss issue
+
+================================================================================
+TEST SCENARIO 1: Small File - Complete Data Path
+================================================================================
+
+Objective: Verify preprocessing logs and complete results appear
+
+Steps:
+  1. Open http://localhost:3000 in browser
+  2. Upload a small pdata file (5-10 MB)
+  3. IMMEDIATELY click "View Progress" (test race condition fix)
+  4. Observe the progress stream
+
+Expected Results:
+  ✓ See "正在启动 CodeBuddy CLI..." at start
+  ✓ Tool execution logs visible
+  ✓ Status shows: preprocess: ✅, report: ✅
+  ✓ No console errors on backend
+
+If Failed:
+  - Check if maxBuffer was added correctly
+  - Verify shell: true was removed
+  - Check SSE error logs
+
+================================================================================
+TEST SCENARIO 2: Medium File - Backpressure Test
+================================================================================
+
+Objective: Verify large outputs don't get truncated
+
+Steps:
+  1. Upload medium pdata file (20-50 MB)
+  2. Open progress stream immediately
+  3. Watch backend console for warnings
+  4. Let run to completion
+  5. Check report file size:
+     ls -lh web/data/results/[sessionId]/performance-report.md
+
+Expected Results:
+  ✓ No "Backpressure detected" warnings (or handled)
+  ✓ Report file is substantial (100KB+)
+  ✓ Markdown structure is valid
+  ✓ No truncated data
+
+If Failed:
+  - Increase maxBuffer if needed
+  - Verify 'close' event is being used
+  - Check SSE backpressure handling
+
+================================================================================
+TEST SCENARIO 3: Process Lifecycle
+================================================================================
+
+Objective: Verify no data loss at process completion
+
+Steps:
+  1. Add debug log in cli-executor.ts
+  2. Upload a file and monitor backend console
+  3. Watch for process close event
+  4. Verify final statistics are complete
+
+Expected Results:
+  ✓ Process closes with code 0
+  ✓ Final emit shows complete statistics
+  ✓ No buffered data remaining
+
+If Failed:
+  - Verify child.on('close', ...) is in place
+  - Check if data appears partially
+  - Review stderr logs
+
+================================================================================
+TEST SCENARIO 4: Shell Removal - Parameter Passing
+================================================================================
+
+Objective: Verify parameters are passed correctly without shell
+
+Steps:
+  1. Upload a file
+  2. Check console logs for parameter formatting
+  3. Verify CLI executes (exit code 0)
+  4. Check for shell-related errors
+
+Expected Results:
+  ✓ Command parameters correctly formatted
+  ✓ CLI executes successfully
+  ✓ No shell escaping errors
+
+If Failed (Windows):
+  - Check CODEBUDDY_PATH environment variable
+  - Verify config.cliPaths configuration
+  - Check if cliCommand is in PATH
+
+================================================================================
+TEST SCENARIO 5: SSE Error Resilience
+================================================================================
+
+Objective: Verify SSE connections stay open
+
+Steps:
+  1. Monitor SSE stream: curl -N http://localhost:3000/api/analysis/[id]/progress
+  2. Upload large file
+  3. Watch for errors or backpressure warnings
+  4. Verify stream stays open
+
+Expected Results:
+  ✓ SSE stream shows data throughout
+  ✓ No connection drop errors
+  ✓ All progress events received
+  ✓ Can handle multiple concurrent streams
+
+If Failed:
+  - Check analysis.ts send() function try-catch
+  - Verify reply.raw.writable check
+  - Monitor browser network tab
+
+================================================================================
+TEST SCENARIO 6: Queue Management - Parallel Analysis
+================================================================================
+
+Objective: Verify queue handles multiple uploads
+
+Steps:
+  1. Upload 2-3 pdata files in quick succession
+  2. Open SSE streams for each
+  3. Monitor backend console
+  4. Verify each completes successfully
+
+Expected Results:
+  ✓ Queue processes one at a time (sequential)
+  ✓ Each gets complete results
+  ✓ No data cross-contamination
+  ✓ Reports in separate directories
+
+If Failed:
+  - Check analysis-queue.ts processNext() logic
+  - Verify session isolation
+  - Review output directories
+
+================================================================================
+SUCCESS CRITERIA - ALL MUST PASS
+================================================================================
+
+Compile & Setup:
+  [ ] npm run build - no errors
+  [ ] npm run start - app loads
+  [ ] http://localhost:3000 accessible
+
+Test Scenarios:
+  [ ] Scenario 1: Small file, complete logs
+  [ ] Scenario 2: Medium file, no truncation
+  [ ] Scenario 3: Process lifecycle clean
+  [ ] Scenario 4: Shell removal works
+  [ ] Scenario 5: SSE robust
+  [ ] Scenario 6: Queue management
+
+Code Quality:
+  [ ] No TypeScript errors
+  [ ] No console errors
+  [ ] All result files created
+
+================================================================================
+QUICK VERIFICATION COMMANDS
+================================================================================
+
+Check fixes applied:
+  grep "maxBuffer" web/server/services/cli-executor.ts
+  grep "\.on('close'" web/server/services/cli-executor.ts
+  ! grep "shell: true" web/server/services/cli-executor.ts
+  grep "try {" web/server/routes/analysis.ts
+
+Start application:
+  npm run start
+
+Monitor results:
+  ls -la web/data/results/
+  cd web/data/results/[sessionId]
+  ls -la
+  cat performance-report.md | head
+
+Monitor backend logs:
+  tail -f logs/backend.log
+
+Test SSE stream:
+  curl -N http://localhost:3000/api/analysis/[sessionId]/progress
+
+================================================================================
+NEXT PHASE: P1 FIXES (if all P0 tests pass)
+================================================================================
+
+After confirming all P0 fixes work, proceed to P1 improvements:
+
+1. Event caching for early emit race conditions
+   - Prevents preprocessing logs from being lost if SSE connects late
+
+2. Path validation and error handling
+   - Better error messages for missing files/paths
+   - Validation of output directories
+
+3. SIGKILL fallback after SIGTERM timeout
+   - Process cleanup if SIGTERM doesn't work
+   - Prevents zombie processes
+
+See CRITICAL_ISSUES.txt for implementation details.
+
+================================================================================
+TESTING NOTES
+================================================================================
+
+Test File Selection:
+  - Use same pdata file that worked before fixes
+  - Enables before/after comparison
+  - Known to produce valid output
+
+Platform Testing:
+  - Test on Windows if applicable (shell:true removal critical)
+  - Test on Linux/Mac (shell not used)
+  - Verify parameter passing consistency
+
+Performance:
+  - Small file (5MB): expect 30-60 seconds
+  - Medium file (25MB): expect 120-300 seconds
+  - Large file (100MB+): may take several minutes
+
+Memory:
+  - +10MB per active analysis (from increased maxBuffer)
+  - Generally acceptable for web server
+  - Monitor if handling many parallel analyses
+
+================================================================================

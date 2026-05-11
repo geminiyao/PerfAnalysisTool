@@ -32,6 +32,121 @@ if sys.platform == 'win32':
 from perfetto.trace_processor import TraceProcessor
 
 
+def parse_thermal_sysfs(output_dir: str) -> dict:
+    """Parse thermal_before/after txt files from the enhanced capture script.
+
+    Returns sysfs-based thermal status for confirmed throttle detection.
+    Looks for thermal_before_*.txt and thermal_after_*.txt in output_dir.
+    """
+    result = {"available": False, "before": {}, "after": {}, "verdict": "no_data"}
+
+    def _parse_thermal_file(filepath):
+        data = {"scaling_max": {}, "cpuinfo_max": {}, "thermal_temps": [], "cooling_states": []}
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                section = ""
+                cpu_idx = 0
+                for line in f:
+                    line = line.strip()
+                    if "scaling_max_freq" in line and "---" in line:
+                        section = "scaling"
+                        cpu_idx = 0
+                    elif "cpuinfo_max_freq" in line and "---" in line:
+                        section = "cpuinfo"
+                        cpu_idx = 0
+                    elif "thermal_zone" in line and "---" in line:
+                        section = "thermal"
+                    elif "cooling_device" in line and "---" in line:
+                        section = "cooling"
+                    elif line.isdigit():
+                        val = int(line)
+                        if section == "scaling":
+                            data["scaling_max"][f"cpu{cpu_idx}"] = val
+                            cpu_idx += 1
+                        elif section == "cpuinfo":
+                            data["cpuinfo_max"][f"cpu{cpu_idx}"] = val
+                            cpu_idx += 1
+                    elif section == "thermal" and ":" in line:
+                        try:
+                            parts = line.split(":")
+                            temp = int(parts[-1].strip())
+                            data["thermal_temps"].append(temp)
+                        except (ValueError, IndexError):
+                            pass
+                    elif section == "cooling" and "state=" in line:
+                        try:
+                            state_str = line.split("state=")[-1].strip()
+                            state = int(state_str)
+                            data["cooling_states"].append(state)
+                        except (ValueError, IndexError):
+                            pass
+        except Exception:
+            return None
+        return data
+
+    # Find thermal files
+    import glob
+    before_files = sorted(glob.glob(os.path.join(output_dir, "thermal_before_*.txt")))
+    after_files = sorted(glob.glob(os.path.join(output_dir, "thermal_after_*.txt")))
+
+    if not before_files and not after_files:
+        return result
+
+    before_data = _parse_thermal_file(before_files[-1]) if before_files else None
+    after_data = _parse_thermal_file(after_files[-1]) if after_files else None
+
+    if not before_data and not after_data:
+        return result
+
+    result["available"] = True
+    if before_data:
+        result["before"] = before_data
+    if after_data:
+        result["after"] = after_data
+
+    # Determine verdict from sysfs data
+    check_data = after_data or before_data
+    is_limited = False
+    limited_cpus = []
+
+    if check_data and check_data["scaling_max"] and check_data["cpuinfo_max"]:
+        for cpu_key in check_data["scaling_max"]:
+            scaling = check_data["scaling_max"].get(cpu_key, 0)
+            cpuinfo = check_data["cpuinfo_max"].get(cpu_key, 0)
+            if cpuinfo > 0 and scaling < cpuinfo:
+                is_limited = True
+                limited_cpus.append({
+                    "cpu": cpu_key,
+                    "scaling_max": scaling,
+                    "cpuinfo_max": cpuinfo,
+                    "limitPercent": round((1 - scaling / cpuinfo) * 100, 1)
+                })
+
+    cooling_active = False
+    if check_data and check_data.get("cooling_states"):
+        cooling_active = any(s > 0 for s in check_data["cooling_states"])
+
+    # Temperature check
+    max_temp = 0
+    if check_data and check_data.get("thermal_temps"):
+        max_temp = max(check_data["thermal_temps"])
+        if max_temp > 1000:  # millidegrees
+            max_temp = max_temp / 1000.0
+
+    if is_limited or cooling_active:
+        result["verdict"] = "confirmed"
+    elif max_temp > 42:
+        result["verdict"] = "likely"
+    else:
+        result["verdict"] = "none"
+
+    result["limitedCpus"] = limited_cpus
+    result["coolingActive"] = cooling_active
+    result["maxTempC"] = round(max_temp, 1)
+
+    return result
+
+
 def check_table_exists(tp: TraceProcessor, table_name: str) -> bool:
     """Check if a table exists in the Perfetto trace database."""
     try:
@@ -1479,6 +1594,9 @@ def main():
         frame_data["frames"], cpu_freq, frame_data["jankFrames"], config
     )
 
+    print(f"[preprocess] Checking sysfs thermal data...", file=sys.stderr)
+    thermal_sysfs = parse_thermal_sysfs(args.output_dir)
+
     # === Build output ===
     output = {
         "config": {
@@ -1520,6 +1638,17 @@ def main():
         "gpuAnalysis": gpu_analysis,
         "gpuCompletion": gpu_completion,
         "timeSegmentAnalysis": time_segments,
+        "thermalSysfs": thermal_sysfs,
+        "throttleVerdict": {
+            "level": thermal_sysfs["verdict"] if thermal_sysfs["available"] else (
+                "suspected" if cpu_freq["throttleClassification"]["thermalThrottle"] else "none"
+            ),
+            "source": "sysfs" if thermal_sysfs["available"] else "perfetto_inference",
+            "confidence": "high" if thermal_sysfs["available"] else (
+                "medium" if cpu_freq["throttleClassification"]["thermalScore"] >= 5 else "low"
+            ),
+            "summary": ""
+        },
         "perFrameTimeline": frame_data["frames"]
     }
 

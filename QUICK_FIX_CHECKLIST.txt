@@ -1,0 +1,216 @@
+================================================================================
+快速修复检查清单 - 15分钟内必须修复的问题
+================================================================================
+
+【P0 - 立即修复】
+
+□ FIX-1: 添加 maxBuffer 到 spawn 选项
+  文件: web/server/services/cli-executor.ts
+  位置: L110-115
+  改动:
+    const child: ChildProcess = spawn(cliCommand, args, {
+      cwd: config.skillProjectPath,
+      env: { ...process.env },
+      shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      maxBuffer: 10 * 1024 * 1024,  ← 添加这行
+    });
+  
+  验证: spawn 选项是否包含 maxBuffer
+
+
+□ FIX-2: 改为监听 'close' 事件
+  文件: web/server/services/cli-executor.ts
+  位置: L147-165
+  改动:
+    // 改这个：
+    child.on('exit', (code) => { ... });
+    
+    // 改为这个：
+    child.on('close', (code, signal) => {
+      if (!state.resolved) {
+        if (code === 0) {
+          const hasReport = fs.existsSync(path.join(job.outputDir, 'performance-report.md'));
+          const hasPreprocess = fs.existsSync(path.join(job.outputDir, 'preprocess-result.json'));
+          const fileStatus = `preprocess: ${hasPreprocess ? '✅' : '❌'}, report: ${hasReport ? '✅' : '❌'}`;
+          emit('completed', 100, `分析完成 (${fileStatus})`, `[完成] tool 调用: ${state.toolCallCount}次`);
+          doResolve({ success: true });
+        } else {
+          emit('failed', 0, `CLI 退出码: ${code}`);
+          doResolve({ success: false, error: `CLI 退出码: ${code}` });
+        }
+      }
+    });
+  
+  验证: 看到 'close' 而非 'exit'
+
+
+□ FIX-3: 移除 shell: true 或改为 PowerShell
+  文件: web/server/services/cli-executor.ts
+  位置: L110-115
+  
+  方案 A (简单，推荐):
+    const child: ChildProcess = spawn(cliCommand, args, {
+      cwd: config.skillProjectPath,
+      env: { ...process.env },
+      // 删除这一行：shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      maxBuffer: 10 * 1024 * 1024,
+    });
+  
+  方案 B (针对 Windows):
+    const child: ChildProcess = spawn(cliCommand, args, {
+      cwd: config.skillProjectPath,
+      env: { ...process.env },
+      shell: process.platform === 'win32' ? 'powershell.exe' : true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      maxBuffer: 10 * 1024 * 1024,
+    });
+  
+  验证: spawn 没有 shell: true（或有平台检测）
+
+
+□ FIX-4: SSE write() 添加错误处理
+  文件: web/server/routes/analysis.ts
+  位置: L92-93
+  改动:
+    // 改这个：
+    const send = (event: ProgressEvent) => {
+      reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+    
+    // 改为这个：
+    const send = (event: ProgressEvent) => {
+      try {
+        if (!reply.raw.writable) {
+          console.warn(`SSE connection closed for ${id}`);
+          return;
+        }
+        
+        const canContinue = reply.raw.write(
+          `data: ${JSON.stringify(event)}\n\n`
+        );
+        
+        if (!canContinue) {
+          console.log(`SSE backpressure for ${id}`);
+          // 可选：暂停 CLI 输出
+        }
+      } catch (err) {
+        console.error(`SSE write error for ${id}:`, err);
+        // 移除该客户端
+        const clients = sseClients.get(id);
+        if (clients) {
+          clients.delete(send);
+        }
+      }
+    };
+  
+  验证: send 函数有 try-catch 和检查
+
+
+================================================================================
+【P1 - 应该修复】(30分钟)
+
+□ FIX-5: 缓存初期 emit 事件
+  文件: web/server/services/cli-executor.ts
+  改动: 在 executeCli 中，将所有 emit 事件缓存
+  或在 analysis.ts 中，保存最近 100 条事件
+  建议: 这个需要重构，可以后做
+
+
+□ FIX-6: 验证文件路径
+  文件: web/server/services/cli-executor.ts
+  位置: buildPrompt() 函数
+  改动:
+    if (!fs.existsSync(pdataPath)) {
+      throw new Error(`pdata 文件不存在: ${pdataPath}`);
+    }
+    if (!fs.existsSync(skillPath)) {
+      throw new Error(`Skill 目录不存在: ${skillPath}`);
+    }
+
+
+□ FIX-7: kill 命令改为 SIGTERM + SIGKILL
+  文件: web/server/services/cli-executor.ts
+  位置: L167-174
+  改动:
+    setTimeout(() => {
+      if (child.exitCode === null) {
+        console.warn('Timeout, sending SIGTERM');
+        child.kill('SIGTERM');
+        
+        const forceKillTimer = setTimeout(() => {
+          if (child.exitCode === null) {
+            console.warn('Still running, sending SIGKILL');
+            child.kill('SIGKILL');
+          }
+        }, 5000);
+        
+        child.once('exit', () => {
+          clearTimeout(forceKillTimer);
+        });
+        
+        emit('failed', 0, '分析超时 (10分钟)');
+        doResolve({ success: false, error: '分析超时' });
+      }
+    }, 10 * 60 * 1000);
+
+
+================================================================================
+【P2 - 优化】(20分钟)
+
+□ FIX-8: 改进 JSON 错误日志
+  文件: web/server/services/cli-executor.ts
+  位置: L125-137
+  改动: 记录 JSON 解析错误的原因
+
+
+□ FIX-9: 队列递归调用添加 await
+  文件: web/server/services/analysis-queue.ts
+  位置: L72
+  改动:
+    this.processNext().catch(err => {
+      console.error('Error in processNext:', err);
+    });
+
+
+================================================================================
+测试步骤
+================================================================================
+
+修复后验证:
+
+1. 检查 spawn 选项:
+   grep -n "maxBuffer\|shell:" web/server/services/cli-executor.ts
+
+2. 检查事件监听:
+   grep -n "\.on('close'" web/server/services/cli-executor.ts
+
+3. 检查 SSE 错误处理:
+   grep -n "try\|catch" web/server/routes/analysis.ts
+
+4. 功能测试:
+   - 上传一个 pdata 文件
+   - 触发分析
+   - 立即打开前端网页的 SSE 进度
+   - 观察是否收到完整的日志信息
+   - 检查是否有错误日志
+
+
+================================================================================
+预期结果
+================================================================================
+
+修复后：
+  ✓ 前端能够看到完整的分析过程
+  ✓ 初期的 preprocessing 日志不再丢失
+  ✓ 大型输出不再被截断
+  ✓ CLI 参数解析在 Windows 上正确
+  ✓ SSE 连接无错误崩溃
+
+
+当前症状消失：
+  ✓ "83秒执行完毕但前端收不到数据" 解决
+  ✓ "初期没有日志" 解决
+  ✓ "最后数据可能丢失" 解决
+

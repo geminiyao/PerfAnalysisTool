@@ -1,0 +1,1629 @@
+{
+  "config": {
+    "targetFps": 30,
+    "frameBudgetMs": 33.33,
+    "gameProcess": "com.tencent.aoeyz"
+  },
+  "traceInfo": {
+    "durationMs": 3562.0,
+    "inputFile": "2026-05-09_11-49-8b7dad.pftrace"
+  },
+  "device": {
+    "cpuCores": [
+      {
+        "id": 0,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 1,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 2,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 3,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 4,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 5,
+        "minMhz": 710,
+        "maxMhz": 1804,
+        "cluster": "little"
+      },
+      {
+        "id": 6,
+        "minMhz": 1536,
+        "maxMhz": 2035,
+        "cluster": "big"
+      },
+      {
+        "id": 7,
+        "minMhz": 1536,
+        "maxMhz": 2035,
+        "cluster": "big"
+      }
+    ],
+    "coreCount": 8,
+    "bigCores": [
+      6,
+      7
+    ],
+    "littleCores": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "frameSummary": {
+    "count": 85,
+    "actualFps": 24.3,
+    "mean": 41.14,
+    "median": 40.69,
+    "min": 20.51,
+    "max": 52.19,
+    "q1": 38.66,
+    "q3": 43.25,
+    "jankCount": 0,
+    "bigJankCount": 0
+  },
+  "jankFrames": [],
+  "scheduling": {
+    "mainThread": {
+      "tid": 17607,
+      "label": "UnityMain",
+      "totalRunMs": 3102.52,
+      "onBigCorePercent": 100.0,
+      "onLittleCorePercent": 0.0,
+      "perCpu": {
+        "7": {
+          "totalMs": 1632.0,
+          "slices": 498
+        },
+        "6": {
+          "totalMs": 1470.52,
+          "slices": 356
+        }
+      },
+      "coreMigrations": 89,
+      "runnableCount": 198,
+      "avgRunnableMs": 0.088,
+      "maxRunnableMs": 1.638,
+      "p95RunnableMs": 0.394,
+      "totalRunnableMs": 17.33,
+      "preemptionCount": 197,
+      "avgWakeupLatencyMs": 0.088,
+      "maxWakeupLatencyMs": 1.638,
+      "p95WakeupLatencyMs": 0.394
+    },
+    "renderThread": {
+      "tid": 17768,
+      "label": "UnityGfxRenderS",
+      "totalRunMs": 1526.63,
+      "onBigCorePercent": 18.6,
+      "onLittleCorePercent": 81.4,
+      "perCpu": {
+        "0": {
+          "totalMs": 415.17,
+          "slices": 335
+        },
+        "3": {
+          "totalMs": 333.01,
+          "slices": 202
+        },
+        "1": {
+          "totalMs": 325.69,
+          "slices": 234
+        },
+        "6": {
+          "totalMs": 283.34,
+          "slices": 414
+        },
+        "5": {
+          "totalMs": 89.39,
+          "slices": 32
+        },
+        "4": {
+          "totalMs": 80.03,
+          "slices": 31
+        }
+      },
+      "coreMigrations": 475,
+      "runnableCount": 305,
+      "avgRunnableMs": 0.262,
+      "maxRunnableMs": 4.692,
+      "p95RunnableMs": 1.004,
+      "totalRunnableMs": 80.04,
+      "preemptionCount": 305,
+      "avgWakeupLatencyMs": 0.262,
+      "maxWakeupLatencyMs": 4.692,
+      "p95WakeupLatencyMs": 1.004
+    },
+    "jobWorkers": {
+      "count": 8,
+      "totalRunMs": 3554.46,
+      "avgUtilizationPercent": 12.5,
+      "onBigCorePercent": 58.6,
+      "onLittleCorePercent": 41.4,
+      "topWorkerMs": 1736.54,
+      "detectionMethod": "thread_id_heuristic",
+      "workers": [
+        {
+          "tid": 17767,
+          "name": "Thread-102"
+        },
+        {
+          "tid": 17757,
+          "name": "Thread-134"
+        },
+        {
+          "tid": 17758,
+          "name": "Thread-136"
+        },
+        {
+          "tid": 17617,
+          "name": "Thread-10"
+        },
+        {
+          "tid": 17910,
+          "name": "Thread-708"
+        },
+        {
+          "tid": 18234,
+          "name": "Thread-236"
+        },
+        {
+          "tid": 17911,
+          "name": "Thread-686"
+        },
+        {
+          "tid": 18242,
+          "name": "Thread-609"
+        }
+      ]
+    }
+  },
+  "cpuFrequency": {
+    "bigCoreAvgMhz": 1785,
+    "littleCoreAvgMhz": 1317,
+    "throttleEvents": [
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 1196.5
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3072.7
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3076.7
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3076.9
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.1
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.3
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.6
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3078.5
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3079.0
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3083.3
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3083.7
+      },
+      {
+        "coreId": 6,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3085.9
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 1196.5
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3072.7
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3076.7
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3076.9
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.1
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.3
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3077.6
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3078.5
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3079.0
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3083.4
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3083.7
+      },
+      {
+        "coreId": 7,
+        "fromMhz": 1651,
+        "toMhz": 1536,
+        "tsMs": 3085.9
+      }
+    ],
+    "frequencyTimeline": [
+      {
+        "tsMs": 82.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 169.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 433.0,
+        "mhz": 1651
+      },
+      {
+        "tsMs": 487.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 573.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 1150.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 1210.0,
+        "mhz": 2035
+      },
+      {
+        "tsMs": 2456.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 2843.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 3070.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 3134.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 3336.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 3410.0,
+        "mhz": 1804
+      },
+      {
+        "tsMs": 3482.0,
+        "mhz": 1804
+      }
+    ],
+    "throttleClassification": {
+      "thermalThrottle": true,
+      "normalDvfs": false,
+      "thermalScore": 5,
+      "evidence": [
+        "负载-频率背离: 20次高负载(>98%)时降频",
+        "全核同步降频: 12次大核集体降至1536MHz"
+      ],
+      "loadFreqDivergence": [
+        {
+          "tsMs": 1196.5,
+          "coreId": 6,
+          "utilization": 98.4,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3072.7,
+          "coreId": 6,
+          "utilization": 104.0,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3076.7,
+          "coreId": 6,
+          "utilization": 97.6,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3076.9,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3077.1,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3077.3,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3077.6,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3078.5,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3079.0,
+          "coreId": 6,
+          "utilization": 103.7,
+          "freqMhz": 1536
+        },
+        {
+          "tsMs": 3083.3,
+          "coreId": 6,
+          "utilization": 99.9,
+          "freqMhz": 1536
+        }
+      ],
+      "ceilingLock": {
+        "detected": false,
+        "windows": [
+          {
+            "window": 1,
+            "maxMhz": 2035,
+            "avgMhz": 1870
+          },
+          {
+            "window": 2,
+            "maxMhz": 2035,
+            "avgMhz": 1812
+          },
+          {
+            "window": 4,
+            "maxMhz": 2035,
+            "avgMhz": 1903
+          },
+          {
+            "window": 5,
+            "maxMhz": 2035,
+            "avgMhz": 1717
+          }
+        ]
+      },
+      "freqReachability": {
+        "reachable": true,
+        "observedMaxMhz": 2035,
+        "theoreticalMaxMhz": 2035,
+        "ratio": 1.0
+      },
+      "thermalZone": {
+        "available": false,
+        "maxTemp": 0,
+        "avgTemp": 0,
+        "timeline": []
+      },
+      "clusterSyncDrops": [
+        {
+          "tsMs": 1196.5,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3072.7,
+          "unifiedFreqMhz": 1651,
+          "coreFreqs": {
+            "6": 1651,
+            "7": 1651
+          }
+        },
+        {
+          "tsMs": 3076.7,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3076.9,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3077.1,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3077.3,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3077.6,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3078.5,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 3079.0,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        },
+        {
+          "tsMs": 1196.5,
+          "unifiedFreqMhz": 1536,
+          "coreFreqs": {
+            "6": 1536,
+            "7": 1536
+          }
+        }
+      ],
+      "sustainedLow": {
+        "detected": false,
+        "lowFreqPercent": 0.7,
+        "totalLowMs": 23.3,
+        "threshold": "<1628MHz"
+      },
+      "coolingDevice": {
+        "available": false,
+        "events": []
+      }
+    }
+  },
+  "threadOverlap": {
+    "mainTotalRunMs": 3102.52,
+    "renderTotalRunMs": 1526.63,
+    "renderWaitingMs": 1787.27,
+    "renderActiveMs": 1526.63
+  },
+  "systemInterference": {
+    "topInterferingProcesses": [
+      {
+        "process": "com.android.bluetooth",
+        "count": 85,
+        "totalMs": 92.39
+      },
+      {
+        "process": "/system/bin/surfaceflinger",
+        "count": 165,
+        "totalMs": 31.77
+      },
+      {
+        "process": "sh",
+        "count": 26,
+        "totalMs": 15.76
+      },
+      {
+        "process": "com.vivo.pem",
+        "count": 19,
+        "totalMs": 15.47
+      },
+      {
+        "process": "system_server",
+        "count": 39,
+        "totalMs": 8.41
+      },
+      {
+        "process": "/vendor/bin/hw/vendor.qti.hardware.display.composer-service",
+        "count": 1,
+        "totalMs": 0.56
+      },
+      {
+        "process": "/system/bin/audioserver",
+        "count": 3,
+        "totalMs": 0.52
+      },
+      {
+        "process": "/vendor/bin/hw/android.hardware.audio.service",
+        "count": 3,
+        "totalMs": 0.37
+      },
+      {
+        "process": "kworker/6:1",
+        "count": 2,
+        "totalMs": 0.29
+      },
+      {
+        "process": "/vendor/bin/hw/android.hardware.bluetooth@1.0-service-qti",
+        "count": 1,
+        "totalMs": 0.27
+      },
+      {
+        "process": "/vendor/bin/hw/android.hardware.usb@1.2-service-qti",
+        "count": 1,
+        "totalMs": 0.17
+      }
+    ]
+  },
+  "topSlices": {
+    "mainThread": [
+      {
+        "name": "PlayerLoop",
+        "count": 85,
+        "totalMs": 3497.07,
+        "maxMs": 52.19,
+        "avgMs": 41.14
+      },
+      {
+        "name": "PostLateUpdate.FinishFrameRendering",
+        "count": 84,
+        "totalMs": 1062.28,
+        "maxMs": 23.87,
+        "avgMs": 12.65
+      },
+      {
+        "name": "URP.Render",
+        "count": 84,
+        "totalMs": 933.02,
+        "maxMs": 22.52,
+        "avgMs": 11.11
+      },
+      {
+        "name": "URP.RenderCameraStack",
+        "count": 170,
+        "totalMs": 918.52,
+        "maxMs": 21.19,
+        "avgMs": 5.4
+      },
+      {
+        "name": "URP.RenderSingleCamera",
+        "count": 170,
+        "totalMs": 877.65,
+        "maxMs": 21.04,
+        "avgMs": 5.16
+      },
+      {
+        "name": "Update.ScriptRunBehaviourUpdate",
+        "count": 86,
+        "totalMs": 558.28,
+        "maxMs": 14.84,
+        "avgMs": 6.49
+      },
+      {
+        "name": "BehaviourUpdate",
+        "count": 86,
+        "totalMs": 557.33,
+        "maxMs": 14.83,
+        "avgMs": 6.48
+      },
+      {
+        "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+        "count": 85,
+        "totalMs": 526.45,
+        "maxMs": 28.68,
+        "avgMs": 6.19
+      },
+      {
+        "name": "LateBehaviourUpdate",
+        "count": 85,
+        "totalMs": 525.06,
+        "maxMs": 28.16,
+        "avgMs": 6.18
+      },
+      {
+        "name": "URP.MainRenderingTransparent",
+        "count": 170,
+        "totalMs": 455.28,
+        "maxMs": 11.11,
+        "avgMs": 2.68
+      },
+      {
+        "name": "Core.Update",
+        "count": 86,
+        "totalMs": 445.11,
+        "maxMs": 13.42,
+        "avgMs": 5.18
+      },
+      {
+        "name": "CS:AOE.LuaMgr",
+        "count": 476,
+        "totalMs": 370.04,
+        "maxMs": 10.72,
+        "avgMs": 0.78
+      },
+      {
+        "name": "PostLateUpdate.PlayerUpdateCanvases",
+        "count": 85,
+        "totalMs": 340.3,
+        "maxMs": 5.91,
+        "avgMs": 4.0
+      },
+      {
+        "name": "UIEvents.WillRenderCanvases",
+        "count": 85,
+        "totalMs": 338.96,
+        "maxMs": 5.89,
+        "avgMs": 3.99
+      },
+      {
+        "name": "UGUI.Rendering.UpdateBatches",
+        "count": 85,
+        "totalMs": 338.37,
+        "maxMs": 5.89,
+        "avgMs": 3.98
+      },
+      {
+        "name": "LuaMgr.OnTick&UpdateSchedule",
+        "count": 86,
+        "totalMs": 245.12,
+        "maxMs": 10.64,
+        "avgMs": 2.85
+      },
+      {
+        "name": "SimulationSystemGroup",
+        "count": 86,
+        "totalMs": 236.36,
+        "maxMs": 8.4,
+        "avgMs": 2.75
+      },
+      {
+        "name": "Default World Unity.Entities.SimulationSystemGroup",
+        "count": 86,
+        "totalMs": 231.01,
+        "maxMs": 8.38,
+        "avgMs": 2.69
+      },
+      {
+        "name": "CS:AOE.Outside.MapManager",
+        "count": 476,
+        "totalMs": 218.93,
+        "maxMs": 6.19,
+        "avgMs": 0.46
+      },
+      {
+        "name": "Core.LateUpdate",
+        "count": 85,
+        "totalMs": 214.88,
+        "maxMs": 5.93,
+        "avgMs": 2.53
+      },
+      {
+        "name": "Inl_OpaquePass",
+        "count": 86,
+        "totalMs": 183.39,
+        "maxMs": 2.44,
+        "avgMs": 2.13
+      },
+      {
+        "name": "URP.Submit",
+        "count": 772,
+        "totalMs": 146.94,
+        "maxMs": 6.62,
+        "avgMs": 0.19
+      },
+      {
+        "name": "WaitForJobGroupID",
+        "count": 1038,
+        "totalMs": 135.46,
+        "maxMs": 7.15,
+        "avgMs": 0.13
+      },
+      {
+        "name": "Canvas.UpdateDirtyRenderers",
+        "count": 3145,
+        "totalMs": 132.01,
+        "maxMs": 1.92,
+        "avgMs": 0.04
+      },
+      {
+        "name": "PostLateUpdate.PlayerSendFrameComplete",
+        "count": 85,
+        "totalMs": 124.26,
+        "maxMs": 6.12,
+        "avgMs": 1.46
+      }
+    ],
+    "renderThread": [
+      {
+        "name": "Gfx.RenderSlaver.ThreadRun",
+        "count": 857,
+        "totalMs": 3442.74,
+        "maxMs": 29.35,
+        "avgMs": 4.02
+      },
+      {
+        "name": "Semaphore.WaitForSignal",
+        "count": 973,
+        "totalMs": 1787.27,
+        "maxMs": 5.53,
+        "avgMs": 1.84
+      },
+      {
+        "name": "RenderLoop.Draw",
+        "count": 840,
+        "totalMs": 727.02,
+        "maxMs": 10.6,
+        "avgMs": 0.87
+      },
+      {
+        "name": "StdRender.ApplyShader",
+        "count": 7644,
+        "totalMs": 280.59,
+        "maxMs": 7.97,
+        "avgMs": 0.04
+      },
+      {
+        "name": "BatchRenderer.Flush",
+        "count": 5460,
+        "totalMs": 233.95,
+        "maxMs": 4.47,
+        "avgMs": 0.04
+      },
+      {
+        "name": "UI Pass",
+        "count": 252,
+        "totalMs": 228.55,
+        "maxMs": 10.8,
+        "avgMs": 0.91
+      },
+      {
+        "name": "PreDecalPass",
+        "count": 420,
+        "totalMs": 220.06,
+        "maxMs": 7.86,
+        "avgMs": 0.52
+      },
+      {
+        "name": "OpaquePass",
+        "count": 588,
+        "totalMs": 215.15,
+        "maxMs": 6.66,
+        "avgMs": 0.37
+      },
+      {
+        "name": "Batch.DrawInstanced",
+        "count": 2772,
+        "totalMs": 147.94,
+        "maxMs": 1.65,
+        "avgMs": 0.05
+      },
+      {
+        "name": "ForwardRenderPass",
+        "count": 336,
+        "totalMs": 134.88,
+        "maxMs": 3.1,
+        "avgMs": 0.4
+      },
+      {
+        "name": "TerrainPass",
+        "count": 588,
+        "totalMs": 120.27,
+        "maxMs": 4.04,
+        "avgMs": 0.2
+      },
+      {
+        "name": "MeshUIPass",
+        "count": 252,
+        "totalMs": 118.88,
+        "maxMs": 5.49,
+        "avgMs": 0.47
+      },
+      {
+        "name": "Gfx.RenderSlaver.RenderDelete",
+        "count": 859,
+        "totalMs": 90.28,
+        "maxMs": 2.83,
+        "avgMs": 0.11
+      },
+      {
+        "name": "TerrainDecalPass",
+        "count": 420,
+        "totalMs": 77.18,
+        "maxMs": 2.69,
+        "avgMs": 0.18
+      },
+      {
+        "name": "AfterPostTransparentPass",
+        "count": 252,
+        "totalMs": 69.36,
+        "maxMs": 3.38,
+        "avgMs": 0.28
+      }
+    ]
+  },
+  "playerLoopBreakdown": {
+    "playerLoopTotalMs": 3497.07,
+    "frameCount": 85,
+    "avgFrameMs": 41.14,
+    "phases": [
+      {
+        "name": "PostLateUpdate.FinishFrameRendering",
+        "count": 83,
+        "totalMs": 1050.92,
+        "avgMs": 12.66,
+        "maxMs": 23.87
+      },
+      {
+        "name": "Update.ScriptRunBehaviourUpdate",
+        "count": 86,
+        "totalMs": 558.28,
+        "avgMs": 6.49,
+        "maxMs": 14.84
+      },
+      {
+        "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+        "count": 85,
+        "totalMs": 526.45,
+        "avgMs": 6.19,
+        "maxMs": 28.68
+      },
+      {
+        "name": "PostLateUpdate.PlayerUpdateCanvases",
+        "count": 84,
+        "totalMs": 336.99,
+        "avgMs": 4.01,
+        "maxMs": 5.91
+      },
+      {
+        "name": "SimulationSystemGroup",
+        "count": 86,
+        "totalMs": 236.36,
+        "avgMs": 2.75,
+        "maxMs": 8.4
+      },
+      {
+        "name": "PostLateUpdate.PlayerSendFrameComplete",
+        "count": 83,
+        "totalMs": 121.44,
+        "avgMs": 1.46,
+        "maxMs": 6.12
+      },
+      {
+        "name": "InitializationSystemGroup",
+        "count": 83,
+        "totalMs": 98.56,
+        "avgMs": 1.19,
+        "maxMs": 8.57
+      },
+      {
+        "name": "PresentationSystemGroup",
+        "count": 84,
+        "totalMs": 60.76,
+        "avgMs": 0.72,
+        "maxMs": 1.06
+      },
+      {
+        "name": "PostLateUpdate.UpdateAllRenderers",
+        "count": 84,
+        "totalMs": 46.52,
+        "avgMs": 0.55,
+        "maxMs": 2.56
+      },
+      {
+        "name": "EarlyUpdate.UpdateTextureStreamingManager",
+        "count": 86,
+        "totalMs": 40.94,
+        "avgMs": 0.48,
+        "maxMs": 4.68
+      },
+      {
+        "name": "PostLateUpdate.PlayerEmitCanvasGeometry",
+        "count": 84,
+        "totalMs": 38.45,
+        "avgMs": 0.46,
+        "maxMs": 0.61
+      },
+      {
+        "name": "PreLateUpdate.LegacyAnimationUpdate",
+        "count": 86,
+        "totalMs": 38.0,
+        "avgMs": 0.44,
+        "maxMs": 8.25
+      },
+      {
+        "name": "TimeStubTemplate`1",
+        "count": 2368,
+        "totalMs": 37.95,
+        "avgMs": 0.02,
+        "maxMs": 6.85
+      },
+      {
+        "name": "EarlyUpdate.PollPlayerConnection",
+        "count": 83,
+        "totalMs": 19.97,
+        "avgMs": 0.24,
+        "maxMs": 0.41
+      },
+      {
+        "name": "PreLateUpdate.ParticleSystemBeginUpdateAll",
+        "count": 85,
+        "totalMs": 19.83,
+        "avgMs": 0.23,
+        "maxMs": 1.5
+      },
+      {
+        "name": "PreUpdate.SendMouseEvents",
+        "count": 86,
+        "totalMs": 17.59,
+        "avgMs": 0.2,
+        "maxMs": 1.42
+      },
+      {
+        "name": "PostLateUpdate.UpdateRectTransform",
+        "count": 84,
+        "totalMs": 15.05,
+        "avgMs": 0.18,
+        "maxMs": 1.38
+      },
+      {
+        "name": "PostLateUpdate.ParticleSystemEndUpdateAll",
+        "count": 84,
+        "totalMs": 13.69,
+        "avgMs": 0.16,
+        "maxMs": 0.38
+      },
+      {
+        "name": "FixedUpdate.Physics2DFixedUpdate",
+        "count": 119,
+        "totalMs": 11.75,
+        "avgMs": 0.1,
+        "maxMs": 6.67
+      },
+      {
+        "name": "Update.ScriptRunDelayedDynamicFrameRate",
+        "count": 86,
+        "totalMs": 10.88,
+        "avgMs": 0.13,
+        "maxMs": 8.13
+      }
+    ],
+    "categories": [
+      {
+        "category": "logic_csharp",
+        "displayName": "C# Logic",
+        "totalMs": 1084.73,
+        "perFrameMs": 12.76,
+        "percent": 31.0,
+        "topSlices": [
+          "Update.ScriptRunBehaviourUpdate",
+          "PreLateUpdate.ScriptRunBehaviourLateUpdate"
+        ]
+      },
+      {
+        "category": "rendering",
+        "displayName": "Rendering CPU",
+        "totalMs": 1050.92,
+        "perFrameMs": 12.36,
+        "percent": 30.1,
+        "topSlices": [
+          "PostLateUpdate.FinishFrameRendering"
+        ]
+      },
+      {
+        "category": "other",
+        "displayName": "Other",
+        "totalMs": 409.45,
+        "perFrameMs": 4.82,
+        "percent": 11.7,
+        "topSlices": [
+          "PostLateUpdate.UpdateAllRenderers",
+          "EarlyUpdate.UpdateTextureStreamingManager",
+          "PostLateUpdate.PlayerEmitCanvasGeometry",
+          "PreLateUpdate.LegacyAnimationUpdate",
+          "TimeStubTemplate`1"
+        ]
+      },
+      {
+        "category": "ecs",
+        "displayName": "ECS/Job",
+        "totalMs": 398.9,
+        "perFrameMs": 4.69,
+        "percent": 11.4,
+        "topSlices": [
+          "SimulationSystemGroup",
+          "InitializationSystemGroup",
+          "PresentationSystemGroup",
+          "Default World Unity.Entities.InitializationSystemGroup"
+        ]
+      },
+      {
+        "category": "ui",
+        "displayName": "UGUI",
+        "totalMs": 336.99,
+        "perFrameMs": 3.96,
+        "percent": 9.6,
+        "topSlices": [
+          "PostLateUpdate.PlayerUpdateCanvases"
+        ]
+      },
+      {
+        "category": "wait",
+        "displayName": "Wait/Sync",
+        "totalMs": 121.44,
+        "perFrameMs": 1.43,
+        "percent": 3.5,
+        "topSlices": [
+          "PostLateUpdate.PlayerSendFrameComplete"
+        ]
+      }
+    ]
+  },
+  "gpuAnalysis": {
+    "available": false,
+    "dataSource": "none",
+    "frequency": null,
+    "utilization": null,
+    "gpuBound": {
+      "likely": false,
+      "confidence": "low",
+      "evidence": "GPU tables exist but no relevant data found"
+    }
+  },
+  "gpuCompletion": {
+    "available": true,
+    "tracks": [
+      {
+        "trackId": 18,
+        "name": "GPU completion",
+        "samples": 171
+      },
+      {
+        "trackId": 41,
+        "name": "PrevGpuFrameMissed",
+        "samples": 83
+      }
+    ],
+    "gpuWaitOnMainThread": {
+      "count": 857,
+      "totalMs": 57.85,
+      "avgMs": 0.07,
+      "maxMs": 6.28
+    }
+  },
+  "timeSegmentAnalysis": {
+    "segmentCount": 3,
+    "segments": [
+      {
+        "label": "前段",
+        "frameRange": [
+          0,
+          27
+        ],
+        "timeRangeMs": [
+          0,
+          1162.0
+        ],
+        "frameCount": 28,
+        "avgFps": 24.1,
+        "avgFrameTimeMs": 41.49,
+        "jankCount": 0,
+        "bigCoreAvgMhz": 1778,
+        "throttleEventCount": 0
+      },
+      {
+        "label": "中段",
+        "frameRange": [
+          28,
+          55
+        ],
+        "timeRangeMs": [
+          1162.0,
+          2295.0
+        ],
+        "frameCount": 28,
+        "avgFps": 24.7,
+        "avgFrameTimeMs": 40.49,
+        "jankCount": 0,
+        "bigCoreAvgMhz": 2035,
+        "throttleEventCount": 2
+      },
+      {
+        "label": "后段",
+        "frameRange": [
+          56,
+          84
+        ],
+        "timeRangeMs": [
+          2295.0,
+          3497.0
+        ],
+        "frameCount": 29,
+        "avgFps": 24.1,
+        "avgFrameTimeMs": 41.44,
+        "jankCount": 0,
+        "bigCoreAvgMhz": 1804,
+        "throttleEventCount": 22
+      }
+    ],
+    "patterns": {
+      "thermalDegradation": false,
+      "burstSpike": false,
+      "warmup": false,
+      "sustainedSlow": false,
+      "description": "未检测到明显性能趋势模式"
+    }
+  },
+  "thermalSysfs": {
+    "available": false,
+    "before": {},
+    "after": {},
+    "verdict": "no_data"
+  },
+  "throttleVerdict": {
+    "level": "suspected",
+    "source": "perfetto_inference",
+    "confidence": "medium",
+    "summary": ""
+  },
+  "perFrameTimeline": [
+    {
+      "index": 0,
+      "durMs": 38.82
+    },
+    {
+      "index": 1,
+      "durMs": 20.51
+    },
+    {
+      "index": 2,
+      "durMs": 38.36
+    },
+    {
+      "index": 3,
+      "durMs": 42.2
+    },
+    {
+      "index": 4,
+      "durMs": 38.34
+    },
+    {
+      "index": 5,
+      "durMs": 38.57
+    },
+    {
+      "index": 6,
+      "durMs": 40.95
+    },
+    {
+      "index": 7,
+      "durMs": 40.69
+    },
+    {
+      "index": 8,
+      "durMs": 42.33
+    },
+    {
+      "index": 9,
+      "durMs": 45.68
+    },
+    {
+      "index": 10,
+      "durMs": 46.42
+    },
+    {
+      "index": 11,
+      "durMs": 47.65
+    },
+    {
+      "index": 12,
+      "durMs": 36.87
+    },
+    {
+      "index": 13,
+      "durMs": 49.88
+    },
+    {
+      "index": 14,
+      "durMs": 38.17
+    },
+    {
+      "index": 15,
+      "durMs": 39.68
+    },
+    {
+      "index": 16,
+      "durMs": 47.33
+    },
+    {
+      "index": 17,
+      "durMs": 46.26
+    },
+    {
+      "index": 18,
+      "durMs": 42.06
+    },
+    {
+      "index": 19,
+      "durMs": 38.96
+    },
+    {
+      "index": 20,
+      "durMs": 46.15
+    },
+    {
+      "index": 21,
+      "durMs": 47.83
+    },
+    {
+      "index": 22,
+      "durMs": 39.18
+    },
+    {
+      "index": 23,
+      "durMs": 41.2
+    },
+    {
+      "index": 24,
+      "durMs": 38.43
+    },
+    {
+      "index": 25,
+      "durMs": 37.99
+    },
+    {
+      "index": 26,
+      "durMs": 42.85
+    },
+    {
+      "index": 27,
+      "durMs": 48.43
+    },
+    {
+      "index": 28,
+      "durMs": 39.29
+    },
+    {
+      "index": 29,
+      "durMs": 40.95
+    },
+    {
+      "index": 30,
+      "durMs": 40.35
+    },
+    {
+      "index": 31,
+      "durMs": 37.36
+    },
+    {
+      "index": 32,
+      "durMs": 46.63
+    },
+    {
+      "index": 33,
+      "durMs": 37.04
+    },
+    {
+      "index": 34,
+      "durMs": 39.04
+    },
+    {
+      "index": 35,
+      "durMs": 38.66
+    },
+    {
+      "index": 36,
+      "durMs": 39.44
+    },
+    {
+      "index": 37,
+      "durMs": 41.34
+    },
+    {
+      "index": 38,
+      "durMs": 35.64
+    },
+    {
+      "index": 39,
+      "durMs": 43.25
+    },
+    {
+      "index": 40,
+      "durMs": 39.58
+    },
+    {
+      "index": 41,
+      "durMs": 43.72
+    },
+    {
+      "index": 42,
+      "durMs": 43.35
+    },
+    {
+      "index": 43,
+      "durMs": 38.32
+    },
+    {
+      "index": 44,
+      "durMs": 40.94
+    },
+    {
+      "index": 45,
+      "durMs": 46.66
+    },
+    {
+      "index": 46,
+      "durMs": 37.82
+    },
+    {
+      "index": 47,
+      "durMs": 41.39
+    },
+    {
+      "index": 48,
+      "durMs": 36.87
+    },
+    {
+      "index": 49,
+      "durMs": 42.13
+    },
+    {
+      "index": 50,
+      "durMs": 42.37
+    },
+    {
+      "index": 51,
+      "durMs": 39.46
+    },
+    {
+      "index": 52,
+      "durMs": 38.97
+    },
+    {
+      "index": 53,
+      "durMs": 41.36
+    },
+    {
+      "index": 54,
+      "durMs": 42.78
+    },
+    {
+      "index": 55,
+      "durMs": 38.89
+    },
+    {
+      "index": 56,
+      "durMs": 40.29
+    },
+    {
+      "index": 57,
+      "durMs": 40.21
+    },
+    {
+      "index": 58,
+      "durMs": 37.89
+    },
+    {
+      "index": 59,
+      "durMs": 40.86
+    },
+    {
+      "index": 60,
+      "durMs": 44.28
+    },
+    {
+      "index": 61,
+      "durMs": 36.54
+    },
+    {
+      "index": 62,
+      "durMs": 39.88
+    },
+    {
+      "index": 63,
+      "durMs": 43.4
+    },
+    {
+      "index": 64,
+      "durMs": 38.02
+    },
+    {
+      "index": 65,
+      "durMs": 39.02
+    },
+    {
+      "index": 66,
+      "durMs": 37.96
+    },
+    {
+      "index": 67,
+      "durMs": 41.69
+    },
+    {
+      "index": 68,
+      "durMs": 42.44
+    },
+    {
+      "index": 69,
+      "durMs": 42.96
+    },
+    {
+      "index": 70,
+      "durMs": 48.3
+    },
+    {
+      "index": 71,
+      "durMs": 37.69
+    },
+    {
+      "index": 72,
+      "durMs": 46.37
+    },
+    {
+      "index": 73,
+      "durMs": 52.19
+    },
+    {
+      "index": 74,
+      "durMs": 44.09
+    },
+    {
+      "index": 75,
+      "durMs": 41.83
+    },
+    {
+      "index": 76,
+      "durMs": 40.65
+    },
+    {
+      "index": 77,
+      "durMs": 40.62
+    },
+    {
+      "index": 78,
+      "durMs": 35.91
+    },
+    {
+      "index": 79,
+      "durMs": 38.55
+    },
+    {
+      "index": 80,
+      "durMs": 44.05
+    },
+    {
+      "index": 81,
+      "durMs": 39.95
+    },
+    {
+      "index": 82,
+      "durMs": 41.86
+    },
+    {
+      "index": 83,
+      "durMs": 45.2
+    },
+    {
+      "index": 84,
+      "durMs": 38.97
+    }
+  ]
+}
