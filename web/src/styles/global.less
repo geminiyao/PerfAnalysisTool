@@ -27,6 +27,32 @@ body {
   color: #e0e0e0 !important;
 }
 
+/* Fix Tabs flex layout so inner panels can scroll */
+.ant-tabs {
+  &.ant-tabs-top {
+    > .ant-tabs-content-holder {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+
+      > .ant-tabs-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        > .ant-tabs-tabpane-active {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+      }
+    }
+  }
+}
+
 /* Markdown 报告样式 */
 .markdown-body {
   line-height: 1.8;

@@ -151,7 +151,7 @@ const ReportDetail: React.FC = () => {
             key: 'overview',
             label: '概览',
             children: (
-              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 16px' }}>
                 {/* 帧时间线 / 分布图 */}
                 <Card size="small" title="帧耗时分布" style={{ marginBottom: 16 }}>
                   <FrameDistChart
@@ -235,7 +235,7 @@ const ReportDetail: React.FC = () => {
             key: 'report',
             label: 'AI 报告',
             children: (
-              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 16px' }}>
                 <Card>
                   {report ? (
                     <div className="markdown-body" style={{ color: '#d4d4d4' }}>
@@ -256,7 +256,7 @@ const ReportDetail: React.FC = () => {
             key: 'logs',
             label: '分析日志',
             children: (
-              <div style={{ overflowY: 'auto', padding: '0 0 16px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 16px' }}>
                 <Card>
                   <div
                     style={{
