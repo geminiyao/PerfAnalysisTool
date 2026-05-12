@@ -182,4 +182,47 @@ export interface ServerConfig {
   skillProjectPath: string;
   /** 各 CLI 工具的可执行路径，不配则使用 PATH 中的命令名 */
   cliPaths: Partial<Record<CliProvider, string>>;
+  /** Unity 工程源码根目录（服务端本地路径），用于源码定位和优化建议 */
+  sourceProjectPath?: string;
+}
+
+// ============================================================
+// 优化建议相关类型
+// ============================================================
+
+/** 源码路径配置状态 */
+export interface SourcePathStatus {
+  configured: boolean;
+  path?: string;
+  hasAssets?: boolean;
+}
+
+/** 优化建议请求 */
+export interface OptimizeSuggestRequest {
+  sessionId: string;
+  issueType: 'hotspot' | 'jank' | 'spike';
+  markerName: string;
+  callChain?: string;
+  hotPath?: string;
+  /** 性能数据上下文 */
+  perfContext: {
+    msSelfMean?: number;
+    msSelfMax?: number;
+    percentOfFrame?: number;
+    msFrame?: number;
+    ratio?: number;
+    dominantMarker?: string;
+    thread?: string;
+  };
+}
+
+/** 优化建议 SSE 事件 */
+export interface OptimizeSuggestEvent {
+  type: 'source_found' | 'analyzing' | 'chunk' | 'done' | 'error';
+  /** source_found: 源码定位结果 */
+  sourceFiles?: { path: string; line: number; snippet?: string }[];
+  /** chunk: AI 输出的文本片段 */
+  text?: string;
+  /** error: 错误信息 */
+  error?: string;
 }

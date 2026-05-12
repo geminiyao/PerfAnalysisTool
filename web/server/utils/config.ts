@@ -37,6 +37,7 @@ export function getConfig(): ServerConfig {
     if (process.env.PERF_PORT) cfg.port = Number(process.env.PERF_PORT);
     if (process.env.CODEBUDDY_PATH) cfg.cliPaths.codebuddy = process.env.CODEBUDDY_PATH;
     if (process.env.CLAUDE_CLI_PATH) cfg.cliPaths.claude = process.env.CLAUDE_CLI_PATH;
+    if (process.env.UNITY_PROJECT_PATH) cfg.sourceProjectPath = process.env.UNITY_PROJECT_PATH;
 
     // 确保数据目录存在
     ensureDir(cfg.dataDir);
@@ -46,6 +47,25 @@ export function getConfig(): ServerConfig {
     _config = cfg;
   }
   return _config;
+}
+
+/**
+ * 动态更新配置并持久化到 config.json。
+ * 只合并传入的字段，其余保持不变。
+ */
+export function updateConfig(partial: Partial<ServerConfig>): ServerConfig {
+  const cfg = getConfig();
+  Object.assign(cfg, partial);
+
+  const configPath = path.resolve(import.meta.dirname, '../../config.json');
+  let persisted: Record<string, any> = {};
+  if (fs.existsSync(configPath)) {
+    try { persisted = JSON.parse(fs.readFileSync(configPath, 'utf-8')); } catch { /* ignore */ }
+  }
+  Object.assign(persisted, partial);
+  fs.writeFileSync(configPath, JSON.stringify(persisted, null, 2), 'utf-8');
+
+  return cfg;
 }
 
 function ensureDir(dir: string) {

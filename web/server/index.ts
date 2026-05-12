@@ -10,6 +10,7 @@ import { analysisRoutes } from './routes/analysis.js';
 import { historyRoutes } from './routes/history.js';
 import { compareRoutes } from './routes/compare.js';
 import { trendsRoutes } from './routes/trends.js';
+import { optimizeRoutes } from './routes/optimize.js';
 
 const config = getConfig();
 
@@ -42,6 +43,7 @@ async function start() {
   await app.register(historyRoutes, { prefix: '/api' });
   await app.register(compareRoutes, { prefix: '/api' });
   await app.register(trendsRoutes, { prefix: '/api' });
+  await app.register(optimizeRoutes, { prefix: '/api' });
 
   // 生产模式下提供静态前端文件
   const clientDist = path.resolve(import.meta.dirname, '../dist/client');

@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Statistic, Spin, Button, Tag, Tabs, message } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined, ProjectOutlined, MobileOutlined,
+  EnvironmentOutlined, UserOutlined, CalendarOutlined,
+  ClockCircleOutlined, BranchesOutlined, BulbOutlined,
+  TagOutlined,
+} from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getAnalysis } from '../services/api';
@@ -76,67 +81,137 @@ const ReportDetail: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', overflow: 'hidden' }}>
-      {/* 顶部栏：导航 + 元信息 + 指标，紧凑一行 */}
-      <div style={{ flexShrink: 0, padding: '8px 0' }}>
-        {/* 第一行：文件名 + 元信息 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <Button size="small" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button>
-          <h2 style={{ color: '#fff', margin: 0, fontSize: 16 }}>{session.fileName}</h2>
-          <Tag color={session.status === 'completed' ? 'success' : 'error'} style={{ margin: 0 }}>{session.status}</Tag>
+      {/* 顶部栏 */}
+      <div style={{ flexShrink: 0, padding: '8px 0 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* 第一行：标题 + 结构化元信息 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <Button
+            size="small"
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(-1)}
+            style={{ color: '#888' }}
+          />
+          <h2 style={{ color: '#f0f0f0', margin: 0, fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>{session.fileName}</h2>
+          <Tag
+            color={session.status === 'completed' ? 'success' : 'error'}
+            style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}
+          >
+            {session.status === 'completed' ? '完成' : session.status}
+          </Tag>
           <div style={{ flex: 1 }} />
-          <span style={{ color: '#666', fontSize: 12 }}>
-            {session.projectName || '-'} · {session.version || '-'} · {session.device || '-'} · {session.scene || '-'} · {session.createdBy || '-'} · {dayjs(session.createdAt).format('MM-DD HH:mm')} · {session.duration ? `${Math.round(session.duration / 1000)}s` : '-'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+            {session.projectName && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <ProjectOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.projectName}</span>
+              </span>
+            )}
+            {session.device && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <MobileOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.device}</span>
+              </span>
+            )}
+            {session.scene && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <EnvironmentOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.scene}</span>
+              </span>
+            )}
+            {session.version && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <TagOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.version}</span>
+              </span>
+            )}
+            {session.branch && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <BranchesOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.branch}</span>
+              </span>
+            )}
+            {session.createdBy && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <UserOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{session.createdBy}</span>
+              </span>
+            )}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <CalendarOutlined style={{ color: '#555' }} />
+              <span style={{ color: '#b0b0b0' }}>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
+            </span>
+            {session.duration && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <ClockCircleOutlined style={{ color: '#555' }} />
+                <span style={{ color: '#b0b0b0' }}>{Math.round(session.duration / 1000)}s</span>
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* 第二行：指标 inline + 分析参数 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+        {/* 第二行：指标胶囊 + 分析参数 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: coreSummary ? 5 : 0 }}>
           {metrics && (
-            <div style={{ display: 'flex', gap: 16, flexShrink: 0 }}>
-              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
-                <span style={{ color: '#888' }}>FPS</span> <b>{metrics.fps?.toFixed(1)}</b>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
+                <span style={{ color: '#666', marginRight: 4 }}>FPS</span><b>{metrics.fps?.toFixed(1)}</b>
               </span>
-              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
-                <span style={{ color: '#888' }}>帧时间</span> <b>{metrics.avgFrameMs?.toFixed(1)}ms</b>
+              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
+                <span style={{ color: '#666', marginRight: 4 }}>帧均值</span><b>{metrics.avgFrameMs?.toFixed(1)}ms</b>
               </span>
-              <span style={{ color: metrics.jankRate > 10 ? '#ff4d4f' : '#52c41a', fontSize: 13 }}>
-                <span style={{ color: '#888' }}>Jank率</span> <b>{metrics.jankRate?.toFixed(1)}%</b>
+              <span style={{
+                background: metrics.jankRate > 5 ? 'rgba(255,77,79,0.1)' : 'rgba(82,196,26,0.08)',
+                borderRadius: 4, padding: '1px 8px', fontSize: 13,
+                color: metrics.jankRate > 10 ? '#ff4d4f' : metrics.jankRate > 5 ? '#faad14' : '#52c41a',
+              }}>
+                <span style={{ color: '#666', marginRight: 4 }}>Jank率</span><b>{metrics.jankRate?.toFixed(1)}%</b>
               </span>
-              <span style={{ color: '#d4d4d4', fontSize: 13 }}>
-                <span style={{ color: '#888' }}>帧数</span> <b>{metrics.totalFrames}</b>
+              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
+                <span style={{ color: '#666', marginRight: 4 }}>帧数</span><b>{metrics.totalFrames}</b>
               </span>
               {fs && (
                 <>
-                  <span style={{ color: fs.bigJankCount > 0 ? '#ff4d4f' : '#52c41a', fontSize: 13 }}>
-                    <span style={{ color: '#888' }}>BigJank</span> <b>{fs.bigJankCount}</b>
+                  <span style={{
+                    background: fs.bigJankCount > 0 ? 'rgba(255,77,79,0.1)' : 'rgba(82,196,26,0.08)',
+                    borderRadius: 4, padding: '1px 8px', fontSize: 13,
+                    color: fs.bigJankCount > 0 ? '#ff4d4f' : '#52c41a',
+                  }}>
+                    <span style={{ color: '#666', marginRight: 4 }}>BigJank</span><b>{fs.bigJankCount}</b>
                   </span>
-                  <span style={{ color: '#d4d4d4', fontSize: 13 }}>
-                    <span style={{ color: '#888' }}>中位帧</span> <b>{fs.median?.toFixed(1)}ms</b>
+                  <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
+                    <span style={{ color: '#666', marginRight: 4 }}>中位帧</span><b>{fs.median?.toFixed(1)}ms</b>
                   </span>
                 </>
               )}
             </div>
           )}
-          {/* 分析参数标签 */}
           {preprocess?.config && (
             <>
-              <div style={{ width: 1, height: 14, background: '#333', flexShrink: 0 }} />
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <span style={{ color: '#666', fontSize: 11 }}>
-                  目标 <b style={{ color: '#888' }}>{preprocess.config.targetFps}FPS</b>
-                </span>
-                <span style={{ color: '#666', fontSize: 11 }}>
-                  帧预算 <b style={{ color: '#888' }}>{preprocess.config.frameBudgetMs?.toFixed(1)}ms</b>
-                </span>
-              </div>
+              <div style={{ width: 1, height: 14, background: '#2a2a3a', flexShrink: 0, marginLeft: 4 }} />
+              <span style={{ color: '#555', fontSize: 11, flexShrink: 0 }}>
+                目标 <b style={{ color: '#777' }}>{preprocess.config.targetFps}FPS</b>
+                <span style={{ margin: '0 6px', color: '#333' }}>|</span>
+                帧预算 <b style={{ color: '#777' }}>{preprocess.config.frameBudgetMs?.toFixed(1)}ms</b>
+              </span>
             </>
           )}
         </div>
 
         {/* 第三行：核心结论 */}
         {coreSummary && (
-          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#999', fontSize: 12, cursor: 'help' }} title={coreSummary}>
-            💡 {coreSummary.slice(0, 150)}{coreSummary.length > 150 ? '...' : ''}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              color: '#888', fontSize: 12, cursor: 'help',
+            }}
+            title={coreSummary}
+          >
+            <BulbOutlined style={{ color: '#faad14', fontSize: 12, flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {coreSummary.slice(0, 150)}{coreSummary.length > 150 ? '...' : ''}
+            </span>
           </div>
         )}
       </div>
@@ -224,7 +299,7 @@ const ReportDetail: React.FC = () => {
                     borderRadius: '0 6px 6px 0',
                   }}
                 >
-                  <IssueDetail issue={selectedIssue} reportMarkdown={report} />
+                  <IssueDetail issue={selectedIssue} reportMarkdown={report} sessionId={id!} />
                 </div>
               </div>
             ),

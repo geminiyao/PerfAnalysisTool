@@ -133,3 +133,100 @@ export async function getTrendMetrics() {
 export async function deleteAnalysis(sessionId: string) {
   return request<{ success: boolean }>(`/analysis/${sessionId}`, { method: 'DELETE' });
 }
+
+// ============================================================
+// 优化建议 API
+// ============================================================
+
+import type { SourcePathStatus, OptimizeSuggestRequest } from '../../shared/types';
+
+/** 获取源码路径配置 */
+export async function getSourcePathConfig() {
+  return request<SourcePathStatus>('/config/source-path');
+}
+
+/** 设置源码路径 */
+export async function setSourcePath(srcPath: string) {
+  return request<SourcePathStatus>('/config/source-path', {
+    method: 'POST',
+    body: JSON.stringify({ path: srcPath }),
+  });
+}
+
+/** 触发源码映射 */
+export async function triggerMapSource(sessionId: string) {
+  return request<{ cached: boolean; map: any }>('/optimize/map-source', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+/** 启动 AI 优化建议任务，返回 taskId + sourceFiles，然后用 EventSource 订阅进度 */
+export function requestOptimizeSuggest(
+  body: OptimizeSuggestRequest,
+  onEvent: (event: any) => void,
+  onDone: () => void,
+  onError: (err: string) => void,
+): () => void {
+  let eventSource: EventSource | null = null;
+  let cancelled = false;
+  let taskId: string | null = null;
+
+  // Step 1: POST to start the task
+  fetch(`${BASE_URL}/optimize/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (res) => {
+    if (cancelled) return;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      onError(err.error || `请求失败: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    taskId = data.taskId;
+
+    if (data.sourceFiles?.length) {
+      onEvent({ type: 'source_found', sourceFiles: data.sourceFiles });
+    }
+
+    if (cancelled) return;
+
+    // Step 2: Subscribe to SSE via EventSource (GET) — same pattern as subscribeProgress
+    eventSource = new EventSource(`${BASE_URL}/optimize/progress/${taskId}`);
+
+    eventSource.onmessage = (msg) => {
+      try {
+        const event = JSON.parse(msg.data);
+        if (event.type === 'connected') return;
+        onEvent(event);
+        if (event.type === 'done' || event.type === 'error') {
+          eventSource?.close();
+          onDone();
+        }
+      } catch { /* skip */ }
+    };
+
+    eventSource.onerror = () => {
+      eventSource?.close();
+      if (!cancelled) {
+        onDone();
+      }
+    };
+  }).catch((err) => {
+    if (!cancelled) {
+      onError(err.message);
+    }
+  });
+
+  // Return cancel function
+  return () => {
+    cancelled = true;
+    eventSource?.close();
+    if (taskId) {
+      fetch(`${BASE_URL}/optimize/cancel/${taskId}`, { method: 'POST' }).catch(() => {});
+    }
+  };
+}
