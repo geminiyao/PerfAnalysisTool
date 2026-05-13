@@ -34,7 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         },
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter basename="/cpu">
         <App />
       </BrowserRouter>
     </ConfigProvider>

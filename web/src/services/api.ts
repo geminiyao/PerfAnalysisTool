@@ -1,6 +1,6 @@
 import type { Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, DiffResult, TrendPoint, CliProvider } from '../../shared/types';
 
-const BASE_URL = '/api';
+const BASE_URL = '/cpu/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {

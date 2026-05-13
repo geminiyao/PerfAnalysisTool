@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
+  base: '/cpu/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -11,11 +12,14 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['aoeyz-perf.devcloud.woa.com'],
     proxy: {
-      '/api': {
+      '/cpu/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/cpu/, ''),
       },
     },
   },
