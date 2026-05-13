@@ -16,7 +16,7 @@ const App: React.FC = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <AppSider />
       <Layout>
-        <Content style={{ padding: 24, overflow: 'auto' }}>
+        <Content style={{ padding: '16px 20px', overflow: 'auto' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/upload" element={<Upload />} />

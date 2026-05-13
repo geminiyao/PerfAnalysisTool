@@ -1,25 +1,37 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useContext, useEffect, useRef, useState } from 'react';
 import { Card, Descriptions, Tag, Empty, Button, Tooltip, message } from 'antd';
-import { ThunderboltOutlined, SettingOutlined, LoadingOutlined, LinkOutlined } from '@ant-design/icons';
+import { ThunderboltOutlined, SettingOutlined, LoadingOutlined, LinkOutlined, CheckOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import CallChainTree from './CallChainTree';
 import SourcePathSetting from './SourcePathSetting';
-import { getSourcePathConfig, triggerMapSource, requestOptimizeSuggest } from '../services/api';
+import { applyPatch } from '../services/api';
+import { OptimizeContext } from '../pages/ReportDetail';
 import type { Issue } from './IssueList';
-import type { OptimizeSuggestRequest, OptimizeSuggestEvent } from '../../shared/types';
+import type { OptimizeSuggestRequest } from '../../shared/types';
 
 interface IssueDetailProps {
   issue: Issue | null;
-  /** 完整的 AI 报告 markdown */
   reportMarkdown: string;
   sessionId: string;
 }
 
-/**
- * 从 markdown 报告中提取与指定 marker 或帧号相关的段落
- * 匹配 "### 热点 #N：MarkerName" 或 "### BigJank #N：帧 #frameIndex" 等
- */
+// ============================================================
+// issueKey 生成
+// ============================================================
+
+function getIssueKey(issue: Issue): string {
+  switch (issue.type) {
+    case 'hotspot': return `hotspot:${issue.data.name}`;
+    case 'jank': return `jank:${issue.data.frameIndex}`;
+    case 'spike': return `spike:${issue.data.name}`;
+  }
+}
+
+// ============================================================
+// 从 markdown 报告中提取与指定 marker 或帧号相关的段落
+// ============================================================
+
 function extractReportSections(markdown: string, keywords: string[]): string {
   if (!markdown || keywords.length === 0) return '';
 
@@ -29,23 +41,15 @@ function extractReportSections(markdown: string, keywords: string[]): string {
   let currentSection: string[] = [];
 
   for (const line of lines) {
-    // 匹配 ### 标题行
     if (line.match(/^###\s/)) {
-      // 结束上一个捕获
       if (capturing && currentSection.length > 0) {
         sections.push(currentSection.join('\n'));
         currentSection = [];
       }
-
-      // 检查这个标题是否包含关键词
       const titleLower = line.toLowerCase();
       capturing = keywords.some(kw => titleLower.includes(kw.toLowerCase()));
-
-      if (capturing) {
-        currentSection.push(line);
-      }
+      if (capturing) currentSection.push(line);
     } else if (line.match(/^##\s/)) {
-      // 遇到 ## 级标题，结束捕获
       if (capturing && currentSection.length > 0) {
         sections.push(currentSection.join('\n'));
         currentSection = [];
@@ -56,7 +60,6 @@ function extractReportSections(markdown: string, keywords: string[]): string {
     }
   }
 
-  // 最后一段
   if (capturing && currentSection.length > 0) {
     sections.push(currentSection.join('\n'));
   }
@@ -110,6 +113,89 @@ function parseOptimizeResult(markdown: string): ParsedOptimizeResult {
 // 代码对比展示组件
 // ============================================================
 
+const DiffBlock: React.FC<{ block: { filePath: string; before: string; after: string } }> = ({ block }) => {
+  const [applied, setApplied] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const handleApply = async () => {
+    if (!block.filePath || !block.before || !block.after) return;
+    setApplying(true);
+    try {
+      await applyPatch(block.filePath, block.before, block.after);
+      setApplied(true);
+      message.success(`已应用修改: ${block.filePath}`);
+    } catch (err: any) {
+      message.error(err.message || '应用失败');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        {block.filePath && (
+          <div style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>
+            <LinkOutlined style={{ marginRight: 4 }} />{block.filePath}
+          </div>
+        )}
+        {block.filePath && block.before && block.after && (
+          <Button
+            size="small"
+            type={applied ? 'default' : 'primary'}
+            icon={applied ? <CheckOutlined /> : undefined}
+            loading={applying}
+            disabled={applied}
+            onClick={handleApply}
+            style={{
+              fontSize: 11,
+              ...(applied ? { color: '#52c41a', borderColor: '#52c41a' } : {}),
+            }}
+          >
+            {applied ? '已应用' : '应用修改'}
+          </Button>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div>
+          <div style={{
+            fontSize: 11, color: '#ff7875', fontWeight: 600,
+            padding: '4px 10px', background: 'rgba(255,77,79,0.08)',
+            borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(255,77,79,0.15)',
+          }}>
+            修改前
+          </div>
+          <pre style={{
+            margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
+            background: '#1a1020', borderRadius: '0 0 6px 6px',
+            overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
+            border: '1px solid rgba(255,77,79,0.1)', borderTop: 'none',
+          }}>
+            {block.before || '(无)'}
+          </pre>
+        </div>
+        <div>
+          <div style={{
+            fontSize: 11, color: '#52c41a', fontWeight: 600,
+            padding: '4px 10px', background: 'rgba(82,196,26,0.08)',
+            borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(82,196,26,0.15)',
+          }}>
+            修改后
+          </div>
+          <pre style={{
+            margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
+            background: '#101a20', borderRadius: '0 0 6px 6px',
+            overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
+            border: '1px solid rgba(82,196,26,0.1)', borderTop: 'none',
+          }}>
+            {block.after || '(无)'}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CodeDiffView: React.FC<{ markdown: string }> = ({ markdown }) => {
   const blocks = useMemo(() => {
     const result: { filePath: string; before: string; after: string }[] = [];
@@ -127,7 +213,6 @@ const CodeDiffView: React.FC<{ markdown: string }> = ({ markdown }) => {
         });
       }
     }
-    // 如果无法解析出结构化的 diff，回退到原始 markdown
     return result;
   }, [markdown]);
 
@@ -142,49 +227,7 @@ const CodeDiffView: React.FC<{ markdown: string }> = ({ markdown }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {blocks.map((block, idx) => (
-        <div key={idx}>
-          {block.filePath && (
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 6, fontFamily: 'monospace' }}>
-              <LinkOutlined style={{ marginRight: 4 }} />{block.filePath}
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div>
-              <div style={{
-                fontSize: 11, color: '#ff7875', fontWeight: 600,
-                padding: '4px 10px', background: 'rgba(255,77,79,0.08)',
-                borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(255,77,79,0.15)',
-              }}>
-                修改前
-              </div>
-              <pre style={{
-                margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
-                background: '#1a1020', borderRadius: '0 0 6px 6px',
-                overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
-                border: '1px solid rgba(255,77,79,0.1)', borderTop: 'none',
-              }}>
-                {block.before || '(无)'}
-              </pre>
-            </div>
-            <div>
-              <div style={{
-                fontSize: 11, color: '#52c41a', fontWeight: 600,
-                padding: '4px 10px', background: 'rgba(82,196,26,0.08)',
-                borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(82,196,26,0.15)',
-              }}>
-                修改后
-              </div>
-              <pre style={{
-                margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
-                background: '#101a20', borderRadius: '0 0 6px 6px',
-                overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
-                border: '1px solid rgba(82,196,26,0.1)', borderTop: 'none',
-              }}>
-                {block.after || '(无)'}
-              </pre>
-            </div>
-          </div>
-        </div>
+        <DiffBlock key={idx} block={block} />
       ))}
     </div>
   );
@@ -229,7 +272,6 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
           </div>
         </div>
       )}
-
       {parsed.suggestions && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
@@ -240,7 +282,6 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
           </div>
         </div>
       )}
-
       {parsed.codeDiff && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
@@ -249,7 +290,6 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
           <CodeDiffView markdown={parsed.codeDiff} />
         </div>
       )}
-
       {parsed.extra && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
@@ -260,7 +300,6 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
           </div>
         </div>
       )}
-
       {loading && (
         <div style={{ textAlign: 'center', padding: 4 }}>
           <span style={{ color: '#faad14' }}>▊ 生成中...</span>
@@ -271,77 +310,89 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
 };
 
 // ============================================================
-// AI 优化建议面板
+// 实时日志面板
+// ============================================================
+
+const LogPanel: React.FC<{ logs: string[] }> = ({ logs }) => {
+  const logEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        background: '#0a0a1a',
+        borderRadius: 6,
+        padding: '8px 12px',
+        maxHeight: 200,
+        overflowY: 'auto',
+        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+        fontSize: 11,
+        lineHeight: 1.5,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        marginTop: 8,
+      }}
+    >
+      {logs.map((line, i) => (
+        <div
+          key={i}
+          style={{
+            color: line.startsWith('[stderr]') || line.startsWith('[工具错误]')
+              ? '#ff7875'
+              : line.startsWith('[完成]')
+                ? '#52c41a'
+                : line.startsWith('[思考]')
+                  ? '#8b8bcd'
+                  : line.startsWith('[工具]')
+                    ? '#7ec8e3'
+                    : '#888',
+            borderBottom: '1px solid #1a1a2e',
+            paddingBottom: 1,
+            marginBottom: 1,
+          }}
+        >
+          {line}
+        </div>
+      ))}
+      <div ref={logEndRef} />
+    </div>
+  );
+};
+
+// ============================================================
+// AI 优化面板 — 接入 OptimizeContext
 // ============================================================
 
 function useOptimize(props: {
   sessionId: string;
+  issueKey: string;
   issueType: 'hotspot' | 'jank' | 'spike';
   markerName: string;
   callChain?: string;
   hotPath?: string;
   perfContext: OptimizeSuggestRequest['perfContext'];
 }) {
-  const { sessionId, issueType, markerName, callChain, hotPath, perfContext } = props;
-  const [showSetting, setShowSetting] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mapping, setMapping] = useState(false);
-  const [result, setResult] = useState('');
-  const [sourceFiles, setSourceFiles] = useState<{ path: string; line: number }[]>([]);
-  const [error, setError] = useState('');
-  const cancelRef = useRef<(() => void) | null>(null);
+  const { sessionId, issueKey, issueType, markerName, callChain, hotPath, perfContext } = props;
+  const ctx = useContext(OptimizeContext);
+  const state = ctx.getState(issueKey);
 
-  const handleOptimize = useCallback(async () => {
-    setError('');
-    setResult('');
-    setSourceFiles([]);
-
-    let config;
-    try {
-      config = await getSourcePathConfig();
-    } catch (e: any) {
-      setError(e.message);
-      return;
-    }
-
-    if (!config.configured) {
-      setShowSetting(true);
-      return;
-    }
-
-    setMapping(true);
-    try {
-      await triggerMapSource(sessionId);
-    } catch { /* proceed without map */ }
-    setMapping(false);
-
-    setLoading(true);
-    const body: OptimizeSuggestRequest = {
+  const handleOptimize = () => {
+    ctx.startOptimize(issueKey, {
       sessionId, issueType, markerName, callChain, hotPath, perfContext,
-    };
+    });
+  };
 
-    cancelRef.current = requestOptimizeSuggest(
-      body,
-      (event: OptimizeSuggestEvent) => {
-        if (event.type === 'source_found' && event.sourceFiles) {
-          setSourceFiles(event.sourceFiles);
-        } else if (event.type === 'chunk' && event.text) {
-          setResult(prev => prev + event.text);
-        } else if (event.type === 'error') {
-          setError(event.error || '未知错误');
-        }
-      },
-      () => setLoading(false),
-      (err) => { setError(err); setLoading(false); },
-    );
-  }, [sessionId, issueType, markerName, callChain, hotPath, perfContext]);
+  const handleCancel = () => {
+    ctx.cancelOptimize(issueKey);
+  };
 
-  const handleCancel = useCallback(() => {
-    cancelRef.current?.();
-    setLoading(false);
-  }, []);
+  const { loading, mapping, result, error, sourceFiles, logs } = state;
 
-  /** 标题栏按钮（放在 Card extra） */
   const triggerButton = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       {error && (
@@ -352,7 +403,7 @@ function useOptimize(props: {
         </Tooltip>
       )}
       <Tooltip title="设置源码路径">
-        <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => setShowSetting(true)} style={{ color: '#555' }} />
+        <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => ctx.setShowSetting(true)} style={{ color: '#555' }} />
       </Tooltip>
       {loading ? (
         <Button size="small" type="text" onClick={handleCancel} style={{ color: '#888', fontSize: 12 }}>
@@ -377,20 +428,29 @@ function useOptimize(props: {
     </div>
   );
 
-  /** 结果内容区（放在 Card 内容底部） */
   const resultContent = (
     <>
-      {error && (
+      {error && !loading && (
         <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '8px 0 0' }}>
           <div style={{ color: '#ff4d4f', fontSize: 12, marginBottom: 6 }}>{error}</div>
           <Button size="small" onClick={handleOptimize}>重试</Button>
         </div>
       )}
 
-      {loading && !result && (
+      {loading && !result && logs.length === 0 && (
         <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '10px 0 0', textAlign: 'center', color: '#888' }}>
           <LoadingOutlined style={{ fontSize: 16, marginBottom: 6 }} />
           <div style={{ fontSize: 12 }}>AI 正在分析源码并生成优化方案...</div>
+        </div>
+      )}
+
+      {loading && logs.length > 0 && !result && (
+        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '4px 0 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <LoadingOutlined style={{ fontSize: 12, color: '#faad14' }} />
+            <span style={{ fontSize: 11, color: '#888' }}>CLI 实时输出 ({logs.length} 行)</span>
+          </div>
+          <LogPanel logs={logs} />
         </div>
       )}
 
@@ -412,13 +472,14 @@ function useOptimize(props: {
       {result && (
         <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '8px 0 0' }}>
           <StructuredResult result={result} loading={loading} />
+          {loading && logs.length > 0 && <LogPanel logs={logs} />}
         </div>
       )}
 
       <SourcePathSetting
-        open={showSetting}
+        open={ctx.showSetting}
         onClose={(configured) => {
-          setShowSetting(false);
+          ctx.setShowSetting(false);
           if (configured && !result && !loading) {
             handleOptimize();
           }
@@ -434,15 +495,16 @@ function useOptimize(props: {
 // 问题详情子组件
 // ============================================================
 
-/** 热点 Marker 详情 */
 const HotspotDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: string }> = ({ data, reportMarkdown, sessionId }) => {
   const aiSection = useMemo(
     () => extractReportSections(reportMarkdown, [data.name]),
     [reportMarkdown, data.name],
   );
 
+  const issueKey = `hotspot:${data.name}`;
   const { triggerButton, resultContent } = useOptimize({
     sessionId,
+    issueKey,
     issueType: 'hotspot',
     markerName: data.name,
     callChain: data.callChain,
@@ -496,7 +558,6 @@ const HotspotDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: st
   );
 };
 
-/** Jank 帧详情 */
 const JankDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: string }> = ({ data, reportMarkdown, sessionId }) => {
   const aiSection = useMemo(() => {
     const keywords = [
@@ -507,8 +568,10 @@ const JankDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: strin
     return extractReportSections(reportMarkdown, keywords);
   }, [reportMarkdown, data.frameIndex, data.dominantMarker]);
 
+  const issueKey = `jank:${data.frameIndex}`;
   const { triggerButton, resultContent } = useOptimize({
     sessionId,
+    issueKey,
     issueType: 'jank',
     markerName: data.dominantMarker || `帧#${data.frameIndex}`,
     hotPath: data.hotPath,
@@ -567,7 +630,6 @@ const JankDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: strin
   );
 };
 
-/** 波动 Marker 详情 */
 const SpikeDetail: React.FC<{ data: any; reportMarkdown: string }> = ({ data, reportMarkdown }) => {
   const aiSection = useMemo(
     () => extractReportSections(reportMarkdown, [data.name]),
@@ -598,7 +660,6 @@ const SpikeDetail: React.FC<{ data: any; reportMarkdown: string }> = ({ data, re
   );
 };
 
-/** 问题详情面板 */
 const IssueDetail: React.FC<IssueDetailProps> = ({ issue, reportMarkdown, sessionId }) => {
   if (!issue) {
     return (

@@ -89,6 +89,19 @@ function initTables(sqlite: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_metrics_session_id ON metrics(session_id);
     CREATE INDEX IF NOT EXISTS idx_tags_session_id ON tags(session_id);
     CREATE INDEX IF NOT EXISTS idx_reports_session_id ON reports(session_id);
+
+    CREATE TABLE IF NOT EXISTS optimize_results (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      issue_key TEXT NOT NULL,
+      issue_type TEXT NOT NULL,
+      result TEXT,
+      source_files TEXT,
+      created_at INTEGER NOT NULL,
+      UNIQUE(session_id, issue_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_optimize_results_session_id ON optimize_results(session_id);
   `);
 }
 

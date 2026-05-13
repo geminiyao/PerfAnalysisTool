@@ -161,9 +161,22 @@ export async function triggerMapSource(sessionId: string) {
   });
 }
 
+/** 一键应用代码修改 */
+export async function applyPatch(filePath: string, before: string, after: string) {
+  return request<{ success: boolean; file: string }>('/optimize/apply-patch', {
+    method: 'POST',
+    body: JSON.stringify({ filePath, before, after }),
+  });
+}
+
+/** 批量查询已有优化方案 */
+export async function getOptimizeResults(sessionId: string) {
+  return request<Record<string, { result: string; sourceFiles: any[]; createdAt: number }>>(`/optimize/results/${sessionId}`);
+}
+
 /** 启动 AI 优化建议任务，返回 taskId + sourceFiles，然后用 EventSource 订阅进度 */
 export function requestOptimizeSuggest(
-  body: OptimizeSuggestRequest,
+  body: OptimizeSuggestRequest & { issueKey: string },
   onEvent: (event: any) => void,
   onDone: () => void,
   onError: (err: string) => void,
@@ -172,7 +185,6 @@ export function requestOptimizeSuggest(
   let cancelled = false;
   let taskId: string | null = null;
 
-  // Step 1: POST to start the task
   fetch(`${BASE_URL}/optimize/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -194,7 +206,6 @@ export function requestOptimizeSuggest(
 
     if (cancelled) return;
 
-    // Step 2: Subscribe to SSE via EventSource (GET) — same pattern as subscribeProgress
     eventSource = new EventSource(`${BASE_URL}/optimize/progress/${taskId}`);
 
     eventSource.onmessage = (msg) => {
@@ -221,7 +232,6 @@ export function requestOptimizeSuggest(
     }
   });
 
-  // Return cancel function
   return () => {
     cancelled = true;
     eventSource?.close();

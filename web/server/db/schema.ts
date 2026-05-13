@@ -54,3 +54,14 @@ export const reports = sqliteTable('reports', {
   score: real('score'),
   createdAt: integer('created_at').notNull(),
 });
+
+/** 优化方案表 - 每条 issue 的 AI 优化建议 */
+export const optimizeResults = sqliteTable('optimize_results', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull().references(() => sessions.id, { onDelete: 'cascade' }),
+  issueKey: text('issue_key').notNull(),
+  issueType: text('issue_type').notNull(),
+  result: text('result'),
+  sourceFiles: text('source_files'),
+  createdAt: integer('created_at').notNull(),
+});

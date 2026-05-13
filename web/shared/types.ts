@@ -218,11 +218,24 @@ export interface OptimizeSuggestRequest {
 
 /** 优化建议 SSE 事件 */
 export interface OptimizeSuggestEvent {
-  type: 'source_found' | 'analyzing' | 'chunk' | 'done' | 'error';
+  type: 'source_found' | 'analyzing' | 'chunk' | 'log' | 'done' | 'error';
   /** source_found: 源码定位结果 */
   sourceFiles?: { path: string; line: number; snippet?: string }[];
   /** chunk: AI 输出的文本片段 */
   text?: string;
+  /** log: CLI 实时日志行（thinking、tool_use 等中间过程） */
+  log?: string;
   /** error: 错误信息 */
   error?: string;
+}
+
+/** 优化方案 DB 行（查询返回值） */
+export interface OptimizeResultRow {
+  id: string;
+  sessionId: string;
+  issueKey: string;
+  issueType: string;
+  result: string;
+  sourceFiles: { path: string; line: number }[];
+  createdAt: number;
 }

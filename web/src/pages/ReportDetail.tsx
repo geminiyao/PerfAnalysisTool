@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback, createContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Statistic, Spin, Button, Tag, Tabs, message } from 'antd';
 import {
@@ -9,12 +9,45 @@ import {
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { getAnalysis } from '../services/api';
-import type { Session } from '../../shared/types';
+import { getAnalysis, getOptimizeResults, triggerMapSource, getSourcePathConfig, requestOptimizeSuggest } from '../services/api';
+import type { Session, OptimizeSuggestRequest, OptimizeSuggestEvent } from '../../shared/types';
 import dayjs from 'dayjs';
 import FrameDistChart from '../components/FrameDistChart';
 import IssueList, { type Issue } from '../components/IssueList';
 import IssueDetail from '../components/IssueDetail';
+
+// ============================================================
+// Per-issue optimize state (lifted to ReportDetail)
+// ============================================================
+
+export interface OptimizeIssueState {
+  result: string;
+  loading: boolean;
+  mapping: boolean;
+  logs: string[];
+  error: string;
+  sourceFiles: { path: string; line: number }[];
+}
+
+export interface OptimizeContextValue {
+  getState: (issueKey: string) => OptimizeIssueState;
+  startOptimize: (issueKey: string, params: OptimizeSuggestRequest) => void;
+  cancelOptimize: (issueKey: string) => void;
+  showSetting: boolean;
+  setShowSetting: (v: boolean) => void;
+}
+
+const defaultIssueState: OptimizeIssueState = {
+  result: '', loading: false, mapping: false, logs: [], error: '', sourceFiles: [],
+};
+
+export const OptimizeContext = createContext<OptimizeContextValue>({
+  getState: () => defaultIssueState,
+  startOptimize: () => {},
+  cancelOptimize: () => {},
+  showSetting: false,
+  setShowSetting: () => {},
+});
 
 interface PreprocessData {
   config: { targetFps: number; frameBudgetMs: number };
@@ -38,6 +71,82 @@ const ReportDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
+  // Per-issue optimize state management
+  const [optimizeStates, setOptimizeStates] = useState<Record<string, OptimizeIssueState>>({});
+  const [showSetting, setShowSetting] = useState(false);
+  const cancelRefs = useRef<Record<string, (() => void)>>({});
+
+  const getState = useCallback((issueKey: string): OptimizeIssueState => {
+    return optimizeStates[issueKey] || defaultIssueState;
+  }, [optimizeStates]);
+
+  const updateIssueState = useCallback((issueKey: string, patch: Partial<OptimizeIssueState>) => {
+    setOptimizeStates(prev => ({
+      ...prev,
+      [issueKey]: { ...(prev[issueKey] || defaultIssueState), ...patch },
+    }));
+  }, []);
+
+  const startOptimize = useCallback(async (issueKey: string, params: OptimizeSuggestRequest) => {
+    updateIssueState(issueKey, { error: '', result: '', sourceFiles: [], logs: [], mapping: true });
+
+    let config;
+    try {
+      config = await getSourcePathConfig();
+    } catch (e: any) {
+      updateIssueState(issueKey, { error: e.message, mapping: false });
+      return;
+    }
+
+    if (!config.configured) {
+      updateIssueState(issueKey, { mapping: false });
+      setShowSetting(true);
+      return;
+    }
+
+    try {
+      await triggerMapSource(params.sessionId);
+    } catch { /* proceed without map */ }
+
+    updateIssueState(issueKey, { mapping: false, loading: true });
+
+    const cancel = requestOptimizeSuggest(
+      { ...params, issueKey },
+      (event: OptimizeSuggestEvent) => {
+        setOptimizeStates(prev => {
+          const cur = prev[issueKey] || defaultIssueState;
+          const next = { ...cur };
+          if (event.type === 'source_found' && event.sourceFiles) {
+            next.sourceFiles = event.sourceFiles;
+          } else if (event.type === 'chunk' && event.text) {
+            next.result = cur.result + event.text;
+          } else if (event.type === 'log' && event.log) {
+            next.logs = [...cur.logs.slice(-200), event.log];
+          } else if (event.type === 'error') {
+            next.error = event.error || '未知错误';
+          }
+          return { ...prev, [issueKey]: next };
+        });
+      },
+      () => {
+        updateIssueState(issueKey, { loading: false });
+        delete cancelRefs.current[issueKey];
+      },
+      (err) => {
+        updateIssueState(issueKey, { error: err, loading: false });
+        delete cancelRefs.current[issueKey];
+      },
+    );
+
+    cancelRefs.current[issueKey] = cancel;
+  }, [updateIssueState]);
+
+  const cancelOptimize = useCallback((issueKey: string) => {
+    cancelRefs.current[issueKey]?.();
+    delete cancelRefs.current[issueKey];
+    updateIssueState(issueKey, { loading: false });
+  }, [updateIssueState]);
+
   useEffect(() => {
     if (id) loadReport(id);
   }, [id]);
@@ -48,17 +157,28 @@ const ReportDetail: React.FC = () => {
       const sessionData = await getAnalysis(sessionId);
       setSession(sessionData);
 
-      // 并行加载所有数据
-      const [reportRes, metricsRes, preprocessRes, logsRes] = await Promise.all([
+      const [reportRes, metricsRes, preprocessRes, logsRes, optimizeRes] = await Promise.all([
         fetch(`/api/report/${sessionId}/content`).then(r => r.ok ? r.text() : ''),
         fetch(`/api/report/${sessionId}/metrics`).then(r => r.ok ? r.json() : null),
         fetch(`/api/report/${sessionId}/preprocess`).then(r => r.ok ? r.json() : null),
         fetch(`/api/report/${sessionId}/logs`).then(r => r.ok ? r.text() : ''),
+        getOptimizeResults(sessionId).catch(() => ({})),
       ]);
       setReport(reportRes);
       setMetrics(metricsRes);
       setPreprocess(preprocessRes);
       setLogs(logsRes);
+
+      // Initialize per-issue states from DB
+      const initial: Record<string, OptimizeIssueState> = {};
+      for (const [key, val] of Object.entries(optimizeRes as Record<string, any>)) {
+        initial[key] = {
+          ...defaultIssueState,
+          result: val.result || '',
+          sourceFiles: val.sourceFiles || [],
+        };
+      }
+      setOptimizeStates(initial);
     } catch (err: any) {
       message.error(err.message);
     } finally {
@@ -277,7 +397,7 @@ const ReportDetail: React.FC = () => {
                     flexShrink: 0,
                     borderRight: '1px solid #1a1a2e',
                     background: '#0d1117',
-                    borderRadius: '6px 0 0 6px',
+                    borderRadius: '4px 0 0 4px',
                     overflow: 'hidden',
                   }}
                 >
@@ -296,10 +416,12 @@ const ReportDetail: React.FC = () => {
                     padding: 16,
                     overflowY: 'auto',
                     background: '#0a0a1a',
-                    borderRadius: '0 6px 6px 0',
+                    borderRadius: '0 4px 4px 0',
                   }}
                 >
+                  <OptimizeContext.Provider value={{ getState, startOptimize, cancelOptimize, showSetting, setShowSetting }}>
                   <IssueDetail issue={selectedIssue} reportMarkdown={report} sessionId={id!} />
+                </OptimizeContext.Provider>
                 </div>
               </div>
             ),
@@ -336,7 +458,7 @@ const ReportDetail: React.FC = () => {
                   <div
                     style={{
                       background: '#0a0a1a',
-                      borderRadius: 6,
+                      borderRadius: 4,
                       padding: '12px 16px',
                       maxHeight: 600,
                       overflowY: 'auto',
