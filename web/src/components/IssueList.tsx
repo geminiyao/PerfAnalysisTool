@@ -121,13 +121,13 @@ const IssueList: React.FC<IssueListProps> = ({
       style={{
         padding: '10px 12px',
         cursor: 'pointer',
-        borderLeft: isSelected(issue) ? '3px solid #1890ff' : '3px solid transparent',
-        background: isSelected(issue) ? 'rgba(24,144,255,0.08)' : 'transparent',
-        borderBottom: '1px solid #1a1a2e',
+        borderLeft: isSelected(issue) ? '3px solid var(--color-primary)' : '3px solid transparent',
+        background: isSelected(issue) ? 'var(--bg-active)' : 'transparent',
+        borderBottom: '1px solid var(--border-primary)',
         transition: 'all 0.15s',
       }}
       onMouseEnter={e => {
-        if (!isSelected(issue)) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)';
+        if (!isSelected(issue)) (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-hover)';
       }}
       onMouseLeave={e => {
         if (!isSelected(issue)) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
@@ -137,51 +137,64 @@ const IssueList: React.FC<IssueListProps> = ({
     </div>
   );
 
+  const groupHeaderStyle: React.CSSProperties = {
+    padding: '12px 12px 4px',
+    color: 'var(--text-tertiary)',
+    fontSize: 11,
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  };
+
+  const monoStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 搜索 */}
-      <div style={{ padding: '8px 12px', borderBottom: '1px solid #1a1a2e' }}>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-primary)' }}>
         <Input
           size="small"
           placeholder="搜索 marker 名称..."
-          prefix={<SearchOutlined style={{ color: '#555' }} />}
+          prefix={<SearchOutlined style={{ color: 'var(--text-tertiary)' }} />}
           value={search}
           onChange={e => setSearch(e.target.value)}
           allowClear
-          style={{ background: '#0d1117', borderColor: '#333' }}
+          style={{ background: 'var(--bg-card-inner)', borderColor: 'var(--border-primary)' }}
         />
       </div>
 
       {/* 列表内容 */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {/* 热点 Marker 分组 */}
-        <div style={{ padding: '8px 12px 4px', color: '#888', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
-          🔴 热点 Marker ({mustReportMarkers.filter(m => filterName(m.name)).length})
+        <div style={{ ...groupHeaderStyle, paddingTop: 8 }}>
+          热点 Marker ({mustReportMarkers.filter(m => filterName(m.name)).length})
         </div>
         {mustReportMarkers.filter(m => filterName(m.name)).map(m => (
           <ItemRow key={`hotspot-${m.name}`} issue={{ type: 'hotspot', data: m }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#d4d4d4', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {m.name}
               </span>
               <Tag color="red" style={{ fontSize: 11, margin: 0, lineHeight: '18px' }}>
-                {m.percentOfFrame.toFixed(0)}%
+                <span style={monoStyle}>{m.percentOfFrame.toFixed(0)}</span>%
               </Tag>
             </div>
-            <div style={{ color: '#888', fontSize: 12, marginTop: 3 }}>
-              self: {m.msSelfMean.toFixed(1)}ms · max: {m.msSelfMax.toFixed(1)}ms · {m.thread}
+            <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 3 }}>
+              self: <span style={monoStyle}>{m.msSelfMean.toFixed(1)}</span>ms · max: <span style={monoStyle}>{m.msSelfMax.toFixed(1)}</span>ms · {m.thread}
             </div>
           </ItemRow>
         ))}
 
         {/* Jank 帧分组 */}
-        <div style={{ padding: '12px 12px 4px', color: '#888', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
-          🟡 卡顿帧 ({sortedJanks.length})
+        <div style={groupHeaderStyle}>
+          卡顿帧 ({sortedJanks.length})
         </div>
         {sortedJanks.filter(j => filterName(j.dominantMarker || `帧#${j.frameIndex}`)).map(j => (
           <ItemRow key={`jank-${j.frameIndex}`} issue={{ type: 'jank', data: j }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#d4d4d4', fontSize: 14 }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: 14 }}>
                 帧 #{j.frameIndex}
               </span>
               <Tag
@@ -190,11 +203,11 @@ const IssueList: React.FC<IssueListProps> = ({
               >
                 {j.jankLevel}
               </Tag>
-              <span style={{ color: '#888', fontSize: 12, marginLeft: 'auto' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12, marginLeft: 'auto', ...monoStyle }}>
                 {j.msFrame.toFixed(0)}ms ({j.ratio.toFixed(1)}x)
               </span>
             </div>
-            <div style={{ color: '#888', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {j.category} · {j.dominantMarker}
             </div>
           </ItemRow>
@@ -203,16 +216,16 @@ const IssueList: React.FC<IssueListProps> = ({
         {/* 展开后：额外 markers */}
         {showMore && extraMarkers.filter(m => filterName(m.name)).length > 0 && (
           <>
-            <div style={{ padding: '12px 12px 4px', color: '#888', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
-              ⚪ 其他 Marker ({extraMarkers.filter(m => filterName(m.name)).length})
+            <div style={groupHeaderStyle}>
+              其他 Marker ({extraMarkers.filter(m => filterName(m.name)).length})
             </div>
             {extraMarkers.filter(m => filterName(m.name)).map(m => (
               <ItemRow key={`extra-${m.name}`} issue={{ type: 'hotspot', data: m }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#b5b5b5', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: 'var(--text-primary)', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {m.name}
                   </span>
-                  <span style={{ color: '#888', fontSize: 12 }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 12, ...monoStyle }}>
                     {m.msSelfMean.toFixed(1)}ms
                   </span>
                 </div>
@@ -224,21 +237,21 @@ const IssueList: React.FC<IssueListProps> = ({
         {/* 展开后：波动 Markers */}
         {showMore && filteredSpikes.filter(s => filterName(s.name)).length > 0 && (
           <>
-            <div style={{ padding: '12px 12px 4px', color: '#888', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
-              🟠 波动 Marker ({filteredSpikes.filter(s => filterName(s.name)).length})
+            <div style={groupHeaderStyle}>
+              波动 Marker ({filteredSpikes.filter(s => filterName(s.name)).length})
             </div>
             {filteredSpikes.filter(s => filterName(s.name)).map(s => (
               <ItemRow key={`spike-${s.name}`} issue={{ type: 'spike', data: s }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#b5b5b5', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: 'var(--text-primary)', fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.name}
                   </span>
                   <Tag color="volcano" style={{ fontSize: 11, margin: 0, lineHeight: '18px' }}>
-                    {s.spikeRatio.toFixed(0)}x
+                    <span style={monoStyle}>{s.spikeRatio.toFixed(0)}</span>x
                   </Tag>
                 </div>
-                <div style={{ color: '#888', fontSize: 12, marginTop: 3 }}>
-                  mean: {s.msSelfMean.toFixed(1)}ms · max: {s.msSelfMax.toFixed(1)}ms · {s.spikeFrameCount}帧触发
+                <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 3 }}>
+                  mean: <span style={monoStyle}>{s.msSelfMean.toFixed(1)}</span>ms · max: <span style={monoStyle}>{s.msSelfMax.toFixed(1)}</span>ms · {s.spikeFrameCount}帧触发
                 </div>
               </ItemRow>
             ))}
@@ -247,16 +260,16 @@ const IssueList: React.FC<IssueListProps> = ({
       </div>
 
       {/* 底部筛选控件 */}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid #1a1a2e' }}>
+      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border-primary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: showMore ? 8 : 0 }}>
-          <FilterOutlined style={{ color: '#888', fontSize: 12 }} />
-          <span style={{ color: '#888', fontSize: 12 }}>显示更多</span>
+          <FilterOutlined style={{ color: 'var(--text-secondary)', fontSize: 12 }} />
+          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>显示更多</span>
           <Switch size="small" checked={showMore} onChange={setShowMore} />
         </div>
         {showMore && (
           <Space direction="vertical" size={4} style={{ width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#888', fontSize: 11, whiteSpace: 'nowrap' }}>selfMean ≥</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, whiteSpace: 'nowrap' }}>selfMean ≥</span>
               <Slider
                 min={0.1}
                 max={10}
@@ -266,10 +279,10 @@ const IssueList: React.FC<IssueListProps> = ({
                 tooltip={{ formatter: v => `${v}ms` }}
                 style={{ flex: 1 }}
               />
-              <span style={{ color: '#aaa', fontSize: 11, minWidth: 40 }}>{selfMeanThreshold}ms</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, minWidth: 40, ...monoStyle }}>{selfMeanThreshold}ms</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#888', fontSize: 11, whiteSpace: 'nowrap' }}>spike ≥</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, whiteSpace: 'nowrap' }}>spike ≥</span>
               <Slider
                 min={2}
                 max={50}
@@ -279,7 +292,7 @@ const IssueList: React.FC<IssueListProps> = ({
                 tooltip={{ formatter: v => `${v}x` }}
                 style={{ flex: 1 }}
               />
-              <span style={{ color: '#aaa', fontSize: 11, minWidth: 40 }}>{spikeThreshold}x</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, minWidth: 40, ...monoStyle }}>{spikeThreshold}x</span>
             </div>
           </Space>
         )}

@@ -135,7 +135,7 @@ const DiffBlock: React.FC<{ block: { filePath: string; before: string; after: st
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         {block.filePath && (
-          <div style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
             <LinkOutlined style={{ marginRight: 4 }} />{block.filePath}
           </div>
         )}
@@ -149,7 +149,7 @@ const DiffBlock: React.FC<{ block: { filePath: string; before: string; after: st
             onClick={handleApply}
             style={{
               fontSize: 11,
-              ...(applied ? { color: '#52c41a', borderColor: '#52c41a' } : {}),
+              ...(applied ? { color: 'var(--color-success)', borderColor: 'var(--color-success)' } : {}),
             }}
           >
             {applied ? '已应用' : '应用修改'}
@@ -159,34 +159,34 @@ const DiffBlock: React.FC<{ block: { filePath: string; before: string; after: st
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div>
           <div style={{
-            fontSize: 11, color: '#ff7875', fontWeight: 600,
-            padding: '4px 10px', background: 'rgba(255,77,79,0.08)',
-            borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(255,77,79,0.15)',
+            fontSize: 11, color: 'var(--color-error)', fontWeight: 600,
+            padding: '4px 10px', background: 'rgba(218,54,51,0.06)',
+            borderRadius: 'var(--radius) var(--radius) 0 0', borderBottom: '1px solid rgba(218,54,51,0.15)',
           }}>
             修改前
           </div>
           <pre style={{
             margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
-            background: '#1a1020', borderRadius: '0 0 6px 6px',
-            overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
-            border: '1px solid rgba(255,77,79,0.1)', borderTop: 'none',
+            background: 'var(--bg-root)', borderRadius: '0 0 var(--radius) var(--radius)',
+            overflow: 'auto', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)',
+            border: '1px solid rgba(218,54,51,0.1)', borderTop: 'none',
           }}>
             {block.before || '(无)'}
           </pre>
         </div>
         <div>
           <div style={{
-            fontSize: 11, color: '#52c41a', fontWeight: 600,
-            padding: '4px 10px', background: 'rgba(82,196,26,0.08)',
-            borderRadius: '6px 6px 0 0', borderBottom: '1px solid rgba(82,196,26,0.15)',
+            fontSize: 11, color: 'var(--color-success)', fontWeight: 600,
+            padding: '4px 10px', background: 'rgba(46,160,67,0.06)',
+            borderRadius: 'var(--radius) var(--radius) 0 0', borderBottom: '1px solid rgba(46,160,67,0.15)',
           }}>
             修改后
           </div>
           <pre style={{
             margin: 0, padding: '10px 12px', fontSize: 12, lineHeight: 1.6,
-            background: '#101a20', borderRadius: '0 0 6px 6px',
-            overflow: 'auto', color: '#d4d4d4', fontFamily: 'Consolas, Monaco, monospace',
-            border: '1px solid rgba(82,196,26,0.1)', borderTop: 'none',
+            background: 'var(--bg-root)', borderRadius: '0 0 var(--radius) var(--radius)',
+            overflow: 'auto', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)',
+            border: '1px solid rgba(46,160,67,0.1)', borderTop: 'none',
           }}>
             {block.after || '(无)'}
           </pre>
@@ -218,7 +218,7 @@ const CodeDiffView: React.FC<{ markdown: string }> = ({ markdown }) => {
 
   if (blocks.length === 0) {
     return (
-      <div className="markdown-body" style={{ color: '#d4d4d4', fontSize: 13 }}>
+      <div className="markdown-body" style={{ color: 'var(--text-primary)', fontSize: 13 }}>
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
       </div>
     );
@@ -238,12 +238,12 @@ const CodeDiffView: React.FC<{ markdown: string }> = ({ markdown }) => {
 // ============================================================
 
 const sectionCardStyle: React.CSSProperties = {
-  background: '#0d1117', borderRadius: 6,
-  border: '1px solid #1a1a2e', padding: '10px 14px', marginBottom: 8,
+  background: 'var(--bg-root)', borderRadius: 'var(--radius)',
+  border: '1px solid var(--border-primary)', padding: '10px 14px', marginBottom: 8,
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 600, color: '#d4d4d4', marginBottom: 8,
+  fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8,
   display: 'flex', alignItems: 'center', gap: 6,
 };
 
@@ -253,9 +253,9 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
 
   if (!hasStructure) {
     return (
-      <div className="markdown-body" style={{ color: '#d4d4d4', fontSize: 13 }}>
+      <div className="markdown-body" style={{ color: 'var(--text-primary)', fontSize: 13 }}>
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{result}</ReactMarkdown>
-        {loading && <span style={{ color: '#faad14' }}>▊</span>}
+        {loading && <span style={{ color: 'var(--color-warning)' }}>▊</span>}
       </div>
     );
   }
@@ -265,9 +265,9 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
       {parsed.rootCause && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
-            <span style={{ color: '#ff4d4f' }}>●</span> 根因分析
+            <span style={{ color: 'var(--color-error)' }}>●</span> 根因分析
           </div>
-          <div className="markdown-body" style={{ color: '#b5b5b5', fontSize: 13 }}>
+          <div className="markdown-body" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.rootCause}</ReactMarkdown>
           </div>
         </div>
@@ -275,9 +275,9 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
       {parsed.suggestions && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
-            <span style={{ color: '#faad14' }}>●</span> 优化建议
+            <span style={{ color: 'var(--color-warning)' }}>●</span> 优化建议
           </div>
-          <div className="markdown-body" style={{ color: '#b5b5b5', fontSize: 13 }}>
+          <div className="markdown-body" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.suggestions}</ReactMarkdown>
           </div>
         </div>
@@ -285,7 +285,7 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
       {parsed.codeDiff && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
-            <span style={{ color: '#52c41a' }}>●</span> 代码对比
+            <span style={{ color: 'var(--color-success)' }}>●</span> 代码对比
           </div>
           <CodeDiffView markdown={parsed.codeDiff} />
         </div>
@@ -293,16 +293,16 @@ const StructuredResult: React.FC<{ result: string; loading: boolean }> = ({ resu
       {parsed.extra && (
         <div style={sectionCardStyle}>
           <div style={sectionTitleStyle}>
-            <span style={{ color: '#1890ff' }}>●</span> 补充说明
+            <span style={{ color: 'var(--color-primary)' }}>●</span> 补充说明
           </div>
-          <div className="markdown-body" style={{ color: '#888', fontSize: 12 }}>
+          <div className="markdown-body" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.extra}</ReactMarkdown>
           </div>
         </div>
       )}
       {loading && (
         <div style={{ textAlign: 'center', padding: 4 }}>
-          <span style={{ color: '#faad14' }}>▊ 生成中...</span>
+          <span style={{ color: 'var(--color-warning)' }}>▊ 生成中...</span>
         </div>
       )}
     </div>
@@ -325,12 +325,13 @@ const LogPanel: React.FC<{ logs: string[] }> = ({ logs }) => {
   return (
     <div
       style={{
-        background: '#0a0a1a',
-        borderRadius: 6,
+        background: 'var(--bg-root)',
+        borderRadius: 'var(--radius)',
+        border: '1px solid var(--border-primary)',
         padding: '8px 12px',
         maxHeight: 200,
         overflowY: 'auto',
-        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+        fontFamily: 'var(--font-mono)',
         fontSize: 11,
         lineHeight: 1.5,
         whiteSpace: 'pre-wrap',
@@ -343,15 +344,15 @@ const LogPanel: React.FC<{ logs: string[] }> = ({ logs }) => {
           key={i}
           style={{
             color: line.startsWith('[stderr]') || line.startsWith('[工具错误]')
-              ? '#ff7875'
+              ? 'var(--color-error)'
               : line.startsWith('[完成]')
-                ? '#52c41a'
+                ? 'var(--color-success)'
                 : line.startsWith('[思考]')
-                  ? '#8b8bcd'
+                  ? 'var(--text-secondary)'
                   : line.startsWith('[工具]')
-                    ? '#7ec8e3'
-                    : '#888',
-            borderBottom: '1px solid #1a1a2e',
+                    ? 'var(--color-primary)'
+                    : 'var(--text-tertiary)',
+            borderBottom: '1px solid var(--border-primary)',
             paddingBottom: 1,
             marginBottom: 1,
           }}
@@ -397,16 +398,16 @@ function useOptimize(props: {
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       {error && (
         <Tooltip title={error}>
-          <span style={{ color: '#ff4d4f', fontSize: 11, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
+          <span style={{ color: 'var(--color-error)', fontSize: 11, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
             {error.length > 30 ? error.slice(0, 30) + '...' : error}
           </span>
         </Tooltip>
       )}
       <Tooltip title="设置源码路径">
-        <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => ctx.setShowSetting(true)} style={{ color: '#555' }} />
+        <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => ctx.setShowSetting(true)} style={{ color: 'var(--text-tertiary)' }} />
       </Tooltip>
       {loading ? (
-        <Button size="small" type="text" onClick={handleCancel} style={{ color: '#888', fontSize: 12 }}>
+        <Button size="small" type="text" onClick={handleCancel} style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
           <LoadingOutlined style={{ marginRight: 4 }} />取消
         </Button>
       ) : (
@@ -416,8 +417,8 @@ function useOptimize(props: {
           loading={mapping}
           onClick={handleOptimize}
           style={{
-            borderColor: error ? '#ff4d4f' : '#faad14',
-            color: error ? '#ff4d4f' : '#faad14',
+            borderColor: error ? 'var(--color-error)' : 'var(--color-warning)',
+            color: error ? 'var(--color-error)' : 'var(--color-warning)',
             background: 'transparent',
             fontSize: 12,
           }}
@@ -431,37 +432,37 @@ function useOptimize(props: {
   const resultContent = (
     <>
       {error && !loading && (
-        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '8px 0 0' }}>
-          <div style={{ color: '#ff4d4f', fontSize: 12, marginBottom: 6 }}>{error}</div>
+        <div style={{ borderTop: '1px solid var(--border-primary)', margin: '12px 0 0', padding: '8px 0 0' }}>
+          <div style={{ color: 'var(--color-error)', fontSize: 12, marginBottom: 6 }}>{error}</div>
           <Button size="small" onClick={handleOptimize}>重试</Button>
         </div>
       )}
 
       {loading && !result && logs.length === 0 && (
-        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '10px 0 0', textAlign: 'center', color: '#888' }}>
+        <div style={{ borderTop: '1px solid var(--border-primary)', margin: '12px 0 0', padding: '10px 0 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <LoadingOutlined style={{ fontSize: 16, marginBottom: 6 }} />
           <div style={{ fontSize: 12 }}>AI 正在分析源码并生成优化方案...</div>
         </div>
       )}
 
       {loading && logs.length > 0 && !result && (
-        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '4px 0 0' }}>
+        <div style={{ borderTop: '1px solid var(--border-primary)', margin: '12px 0 0', padding: '4px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <LoadingOutlined style={{ fontSize: 12, color: '#faad14' }} />
-            <span style={{ fontSize: 11, color: '#888' }}>CLI 实时输出 ({logs.length} 行)</span>
+            <LoadingOutlined style={{ fontSize: 12, color: 'var(--color-warning)' }} />
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>CLI 实时输出 ({logs.length} 行)</span>
           </div>
           <LogPanel logs={logs} />
         </div>
       )}
 
       {sourceFiles.length > 0 && (
-        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '8px 0 0' }}>
-          <div style={{ padding: '5px 8px', background: 'rgba(82,196,26,0.06)', borderRadius: 4, border: '1px solid rgba(82,196,26,0.1)' }}>
-            <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>
+        <div style={{ borderTop: '1px solid var(--border-primary)', margin: '12px 0 0', padding: '8px 0 0' }}>
+          <div style={{ padding: '5px 8px', background: 'var(--color-success-bg)', borderRadius: 4, border: '1px solid rgba(46,160,67,0.1)' }}>
+            <div style={{ fontSize: 11, color: 'var(--color-success)', marginBottom: 2 }}>
               <LinkOutlined /> 已定位 {sourceFiles.length} 个源码文件
             </div>
             {sourceFiles.slice(0, 5).map((f, i) => (
-              <div key={i} style={{ fontSize: 11, color: '#888', fontFamily: 'Consolas, monospace' }}>
+              <div key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                 {f.path}:{f.line}
               </div>
             ))}
@@ -470,7 +471,7 @@ function useOptimize(props: {
       )}
 
       {result && (
-        <div style={{ borderTop: '1px solid #1a1a2e', margin: '12px 0 0', padding: '8px 0 0' }}>
+        <div style={{ borderTop: '1px solid var(--border-primary)', margin: '12px 0 0', padding: '8px 0 0' }}>
           <StructuredResult result={result} loading={loading} />
           {loading && logs.length > 0 && <LogPanel logs={logs} />}
         </div>
@@ -518,8 +519,8 @@ const HotspotDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: st
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Card size="small" title={<span style={{ color: '#d4d4d4' }}>{data.name}</span>} extra={<Tag color="red">热点</Tag>}>
-        <Descriptions size="small" column={3} labelStyle={{ color: '#888' }} contentStyle={{ color: '#d4d4d4' }}>
+      <Card size="small" title={<span style={{ color: 'var(--text-primary)' }}>{data.name}</span>} extra={<Tag color="red">热点</Tag>}>
+        <Descriptions size="small" column={3} labelStyle={{ color: 'var(--text-secondary)' }} contentStyle={{ color: 'var(--text-primary)' }}>
           <Descriptions.Item label="self 均值">{data.msSelfMean.toFixed(2)}ms</Descriptions.Item>
           <Descriptions.Item label="self 最大">{data.msSelfMax.toFixed(2)}ms</Descriptions.Item>
           <Descriptions.Item label="占帧比例">{data.percentOfFrame.toFixed(1)}%</Descriptions.Item>
@@ -528,29 +529,29 @@ const HotspotDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: st
           <Descriptions.Item label="线程">{data.thread}</Descriptions.Item>
         </Descriptions>
         {data.mustReportReason && (
-          <div style={{ marginTop: 8, padding: '4px 8px', background: 'rgba(255,77,79,0.06)', borderRadius: 4, fontSize: 11, color: '#ff7875' }}>
+          <div style={{ marginTop: 8, padding: '4px 8px', background: 'var(--color-error-bg)', borderRadius: 4, fontSize: 11, color: 'var(--color-error)' }}>
             判定依据: {data.mustReportReason}
           </div>
         )}
       </Card>
 
       {data.callChain && !data.callChain.startsWith('(depth=') && (
-        <Card size="small" title={<span style={{ color: '#888', fontSize: 13 }}>调用链</span>}>
+        <Card size="small" title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>调用链</span>}>
           <CallChainTree callChain={data.callChain} />
         </Card>
       )}
 
       <Card
         size="small"
-        title={<span style={{ color: '#888', fontSize: 13 }}>AI 分析</span>}
+        title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>AI 分析</span>}
         extra={triggerButton}
       >
         {aiSection ? (
-          <div className="markdown-body" style={{ color: '#d4d4d4', fontSize: 13 }}>
+          <div className="markdown-body" style={{ color: 'var(--text-primary)', fontSize: 13 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiSection}</ReactMarkdown>
           </div>
         ) : (
-          <div style={{ color: '#666', fontSize: 13, padding: '4px 0' }}>暂无 AI 分析内容</div>
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 13, padding: '4px 0' }}>暂无 AI 分析内容</div>
         )}
         {resultContent}
       </Card>
@@ -586,43 +587,43 @@ const JankDetail: React.FC<{ data: any; reportMarkdown: string; sessionId: strin
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Card
         size="small"
-        title={<span style={{ color: '#d4d4d4' }}>帧 #{data.frameIndex}</span>}
+        title={<span style={{ color: 'var(--text-primary)' }}>帧 #{data.frameIndex}</span>}
         extra={<Tag color={data.jankLevel === 'BigJank' ? 'red' : 'orange'}>{data.jankLevel}</Tag>}
       >
-        <Descriptions size="small" column={3} labelStyle={{ color: '#888' }} contentStyle={{ color: '#d4d4d4' }}>
+        <Descriptions size="small" column={3} labelStyle={{ color: 'var(--text-secondary)' }} contentStyle={{ color: 'var(--text-primary)' }}>
           <Descriptions.Item label="帧耗时">{data.msFrame.toFixed(1)}ms</Descriptions.Item>
           <Descriptions.Item label="倍数">{data.ratio.toFixed(2)}x median</Descriptions.Item>
           <Descriptions.Item label="前三帧均值">{data.prevThreeAvg?.toFixed(1) || '-'}ms</Descriptions.Item>
           <Descriptions.Item label="分类">{data.category || '-'}</Descriptions.Item>
           <Descriptions.Item label="主导 Marker" span={2}>
-            <span style={{ color: '#ff7875' }}>{data.dominantMarker || '-'}</span>
+            <span style={{ color: 'var(--color-error)' }}>{data.dominantMarker || '-'}</span>
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
       {data.hotPath && (
-        <Card size="small" title={<span style={{ color: '#888', fontSize: 13 }}>热路径 (Hot Path)</span>}>
+        <Card size="small" title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>热路径 (Hot Path)</span>}>
           <CallChainTree callChain={data.hotPath} />
         </Card>
       )}
 
       {data.callTreeSummary && (
-        <Card size="small" title={<span style={{ color: '#888', fontSize: 13 }}>调用树</span>}>
+        <Card size="small" title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>调用树</span>}>
           <CallChainTree treeSummary={data.callTreeSummary} maxDepth={8} />
         </Card>
       )}
 
       <Card
         size="small"
-        title={<span style={{ color: '#888', fontSize: 13 }}>AI 分析</span>}
+        title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>AI 分析</span>}
         extra={triggerButton}
       >
         {aiSection ? (
-          <div className="markdown-body" style={{ color: '#d4d4d4', fontSize: 13 }}>
+          <div className="markdown-body" style={{ color: 'var(--text-primary)', fontSize: 13 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiSection}</ReactMarkdown>
           </div>
         ) : (
-          <div style={{ color: '#666', fontSize: 13, padding: '4px 0' }}>暂无 AI 分析内容</div>
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 13, padding: '4px 0' }}>暂无 AI 分析内容</div>
         )}
         {resultContent}
       </Card>
@@ -638,8 +639,8 @@ const SpikeDetail: React.FC<{ data: any; reportMarkdown: string }> = ({ data, re
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Card size="small" title={<span style={{ color: '#d4d4d4' }}>{data.name}</span>} extra={<Tag color="volcano">波动 {data.spikeRatio.toFixed(0)}x</Tag>}>
-        <Descriptions size="small" column={3} labelStyle={{ color: '#888' }} contentStyle={{ color: '#d4d4d4' }}>
+      <Card size="small" title={<span style={{ color: 'var(--text-primary)' }}>{data.name}</span>} extra={<Tag color="volcano">波动 {data.spikeRatio.toFixed(0)}x</Tag>}>
+        <Descriptions size="small" column={3} labelStyle={{ color: 'var(--text-secondary)' }} contentStyle={{ color: 'var(--text-primary)' }}>
           <Descriptions.Item label="self 均值">{data.msSelfMean.toFixed(2)}ms</Descriptions.Item>
           <Descriptions.Item label="self 中位">{data.msSelfMedian.toFixed(3)}ms</Descriptions.Item>
           <Descriptions.Item label="self 最大">{data.msSelfMax.toFixed(2)}ms</Descriptions.Item>
@@ -650,8 +651,8 @@ const SpikeDetail: React.FC<{ data: any; reportMarkdown: string }> = ({ data, re
       </Card>
 
       {aiSection && (
-        <Card size="small" title={<span style={{ color: '#888', fontSize: 13 }}>AI 分析</span>}>
-          <div className="markdown-body" style={{ color: '#d4d4d4', fontSize: 13 }}>
+        <Card size="small" title={<span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>AI 分析</span>}>
+          <div className="markdown-body" style={{ color: 'var(--text-primary)', fontSize: 13 }}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiSection}</ReactMarkdown>
           </div>
         </Card>
@@ -664,7 +665,7 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue, reportMarkdown, sessio
   if (!issue) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <Empty description={<span style={{ color: '#888' }}>选择左侧问题查看详情</span>} />
+        <Empty description={<span style={{ color: 'var(--text-secondary)' }}>选择左侧问题查看详情</span>} />
       </div>
     );
   }

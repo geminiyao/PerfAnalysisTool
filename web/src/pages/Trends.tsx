@@ -52,6 +52,9 @@ const Trends: React.FC = () => {
   const chartOption = {
     tooltip: {
       trigger: 'axis',
+      backgroundColor: 'var(--bg-card)',
+      borderColor: 'var(--border-primary)',
+      textStyle: { color: 'var(--text-primary)' },
       formatter: (params: any) => {
         const p = params[0];
         const point = points[p.dataIndex];
@@ -64,13 +67,14 @@ const Trends: React.FC = () => {
     xAxis: {
       type: 'category',
       data: points.map(p => p.version || dayjs(p.date).format('MM-DD')),
-      axisLabel: { rotate: 30, color: '#aaa' },
+      axisLabel: { rotate: 30, color: '#8b949e' },
     },
     yAxis: {
       type: 'value',
       name: currentMetric?.label || '',
-      axisLabel: { color: '#aaa' },
-      splitLine: { lineStyle: { color: '#333' } },
+      nameTextStyle: { color: '#8b949e' },
+      axisLabel: { color: '#8b949e' },
+      splitLine: { lineStyle: { color: '#1f2328' } },
     },
     series: [
       {
@@ -78,12 +82,13 @@ const Trends: React.FC = () => {
         data: points.map(p => p.value),
         smooth: true,
         symbolSize: 8,
-        lineStyle: { width: 2 },
-        areaStyle: { opacity: 0.1 },
+        itemStyle: { color: '#1677ff' },
+        lineStyle: { width: 2, color: '#1677ff' },
+        areaStyle: { opacity: 0.08, color: '#1677ff' },
         markLine: currentMetric?.lowerIsBetter ? {
           silent: true,
           data: [{ type: 'average', name: '平均值' }],
-          lineStyle: { color: '#faad14', type: 'dashed' },
+          lineStyle: { color: '#d29922', type: 'dashed' },
         } : undefined,
       },
     ],
@@ -93,10 +98,17 @@ const Trends: React.FC = () => {
 
   return (
     <div>
-      <h1 style={{ color: '#fff', marginBottom: 24 }}>性能趋势</h1>
+      <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 24 }}>性能趋势</h1>
 
       {/* 控制栏 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <Card
+        size="small"
+        style={{
+          marginBottom: 16,
+          background: 'var(--bg-card)',
+          borderColor: 'var(--border-primary)',
+        }}
+      >
         <Space size={16}>
           <Select
             placeholder="选择项目"
@@ -116,7 +128,12 @@ const Trends: React.FC = () => {
       </Card>
 
       {/* 趋势图 */}
-      <Card>
+      <Card
+        style={{
+          background: 'var(--bg-card)',
+          borderColor: 'var(--border-primary)',
+        }}
+      >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80 }}><Spin /></div>
         ) : points.length === 0 ? (

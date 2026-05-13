@@ -25,19 +25,39 @@ const AppSider: React.FC = () => {
 
   return (
     <Sider
-      width={200}
-      style={{ background: '#141414' }}
+      width={180}
+      style={{
+        background: 'var(--bg-sider)',
+        borderRight: '1px solid var(--border-primary)',
+      }}
       breakpoint="lg"
-      collapsedWidth={60}
+      collapsedWidth={56}
     >
       <div style={{
-        height: 64,
+        height: 48,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        borderBottom: '1px solid #303030',
+        borderBottom: '1px solid var(--border-primary)',
       }}>
-        <h2 style={{ color: '#fff', margin: 0, fontSize: 16 }}>Perf Dashboard</h2>
+        <span style={{
+          color: 'var(--color-primary)',
+          margin: 0,
+          fontSize: 13,
+          fontWeight: 600,
+          letterSpacing: '0.5px',
+          fontFamily: 'var(--font-mono)',
+        }}>
+          PERF
+        </span>
+        <span style={{
+          color: 'var(--text-secondary)',
+          fontSize: 13,
+          fontWeight: 400,
+          marginLeft: 4,
+        }}>
+          Monitor
+        </span>
       </div>
       <Menu
         theme="dark"
@@ -45,7 +65,12 @@ const AppSider: React.FC = () => {
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => navigate(key)}
-        style={{ borderRight: 0 }}
+        style={{
+          borderRight: 0,
+          background: 'transparent',
+          fontSize: 13,
+          marginTop: 4,
+        }}
       />
     </Sider>
   );

@@ -14,7 +14,23 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         algorithm: theme.darkAlgorithm,
         token: {
           colorPrimary: '#1677ff',
+          colorBgContainer: '#141619',
+          colorBgElevated: '#1a1d21',
+          colorBgLayout: '#0f1214',
+          colorBorder: '#1f2328',
+          colorBorderSecondary: '#2a2e33',
+          colorText: '#e6eaf0',
+          colorTextSecondary: '#8b949e',
+          colorTextTertiary: '#5a6068',
           borderRadius: 6,
+          fontSize: 13,
+          colorSuccess: '#2ea043',
+          colorError: '#da3633',
+          colorWarning: '#d29922',
+        },
+        components: {
+          Card: { paddingLG: 16 },
+          Table: { headerBg: '#1a1d21', rowHoverBg: 'rgba(255,255,255,0.04)' },
         },
       }}
     >

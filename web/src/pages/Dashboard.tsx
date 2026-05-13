@@ -51,15 +51,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, color: '#fff' }}>Performance Dashboard</h1>
-        <Button type="primary" icon={<UploadOutlined />} size="large" onClick={() => navigate('/upload')}>
+      {/* Header */}
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{
+          margin: 0,
+          color: 'var(--text-primary)',
+          fontSize: 16,
+          fontWeight: 600,
+        }}>
+          Performance Dashboard
+        </h1>
+        <Button type="primary" icon={<UploadOutlined />} onClick={() => navigate('/upload')}>
           上传分析
         </Button>
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={12} sm={6}>
           <Card>
             <Statistic title="总分析次数" value={stats?.total || 0} />
@@ -67,12 +75,12 @@ const Dashboard: React.FC = () => {
         </Col>
         <Col xs={12} sm={6}>
           <Card>
-            <Statistic title="成功" value={stats?.completed || 0} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="成功" value={stats?.completed || 0} valueStyle={{ color: 'var(--color-success)' }} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
           <Card>
-            <Statistic title="失败" value={stats?.failed || 0} valueStyle={{ color: '#ff4d4f' }} />
+            <Statistic title="失败" value={stats?.failed || 0} valueStyle={{ color: 'var(--color-error)' }} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
@@ -88,7 +96,7 @@ const Dashboard: React.FC = () => {
 
       {/* 队列状态 */}
       {queue && (queue.running || queue.queued.length > 0) && (
-        <Card title="分析队列" style={{ marginBottom: 24 }} size="small">
+        <Card title="分析队列" style={{ marginBottom: 16 }} size="small">
           {queue.running && (
             <Tag color="processing" icon={<PlayCircleOutlined />}>
               正在分析: {queue.running.slice(0, 8)}...
@@ -101,7 +109,17 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* 最近分析 */}
-      <Card title="最近分析" extra={<a onClick={() => navigate('/history')}>查看全部</a>}>
+      <Card
+        title={<span style={{ fontSize: 13, fontWeight: 500 }}>最近分析</span>}
+        extra={
+          <a
+            onClick={() => navigate('/history')}
+            style={{ fontSize: 12, color: 'var(--text-link)' }}
+          >
+            查看全部
+          </a>
+        }
+      >
         {recentSessions.length === 0 && !loading ? (
           <Empty description="暂无分析记录" />
         ) : (
@@ -112,25 +130,34 @@ const Dashboard: React.FC = () => {
               const tag = statusTagMap[session.status] || statusTagMap.pending;
               return (
                 <List.Item
+                  style={{ borderBottom: '1px solid var(--border-primary)', padding: '10px 0' }}
                   actions={[
                     session.status === 'completed' && (
-                      <a key="view" onClick={() => navigate(`/report/${session.id}`)}>查看报告</a>
+                      <a
+                        key="view"
+                        onClick={() => navigate(`/report/${session.id}`)}
+                        style={{ fontSize: 12, color: 'var(--text-link)' }}
+                      >
+                        查看报告
+                      </a>
                     ),
                   ].filter(Boolean)}
                 >
                   <List.Item.Meta
                     title={
-                      <Space>
-                        <span>{session.fileName}</span>
-                        <Tag color={tag.color} icon={tag.icon}>{session.status}</Tag>
+                      <Space size={8}>
+                        <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{session.fileName}</span>
+                        <Tag color={tag.color} icon={tag.icon} style={{ fontSize: 11, lineHeight: '18px' }}>
+                          {session.status}
+                        </Tag>
                       </Space>
                     }
                     description={
-                      <Space split="|" size={4}>
-                        {session.projectName && <span>{session.projectName}</span>}
-                        {session.version && <span>{session.version}</span>}
-                        <span>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
-                        {session.createdBy && <span>{session.createdBy}</span>}
+                      <Space split={<span style={{ color: 'var(--text-tertiary)' }}>·</span>} size={6}>
+                        {session.projectName && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{session.projectName}</span>}
+                        {session.version && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{session.version}</span>}
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
+                        {session.createdBy && <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{session.createdBy}</span>}
                       </Space>
                     }
                   />

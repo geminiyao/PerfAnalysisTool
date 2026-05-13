@@ -65,13 +65,13 @@ const SourcePathSetting: React.FC<Props> = ({ open, onClose }) => {
         <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Text type="secondary" style={{ fontSize: 13 }}>
+          <Text style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
             请输入服务器上 Unity 工程的根目录绝对路径。AI 优化建议功能需要读取源码来生成具体的代码修改方案。
           </Text>
 
           <Input
             size="large"
-            prefix={<FolderOpenOutlined style={{ color: '#888' }} />}
+            prefix={<FolderOpenOutlined style={{ color: 'var(--text-tertiary)' }} />}
             placeholder="例如: D:\Projects\MyGame 或 /home/user/MyGame"
             value={inputPath}
             onChange={(e) => setInputPath(e.target.value)}

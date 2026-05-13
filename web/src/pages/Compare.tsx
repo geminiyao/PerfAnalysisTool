@@ -60,16 +60,26 @@ const Compare: React.FC = () => {
       title: `${s.version || s.fileName} (${idx === 0 ? '基准' : '对比'})`,
       key: `val_${idx}`,
       width: 120,
-      render: (_: any, record: MetricDiff) => record.values[idx]?.toFixed(2),
+      render: (_: any, record: MetricDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{record.values[idx]?.toFixed(2)}</span>
+      ),
     }))),
     {
       title: '变化',
       key: 'delta',
       width: 120,
       render: (_: any, record: MetricDiff) => {
-        const color = record.improved ? '#52c41a' : record.delta === 0 ? '#888' : '#ff4d4f';
+        const color = record.improved
+          ? 'var(--color-success)'
+          : record.delta === 0
+            ? 'var(--text-tertiary)'
+            : 'var(--color-error)';
         const prefix = record.delta > 0 ? '+' : '';
-        return <span style={{ color }}>{prefix}{record.delta.toFixed(2)} ({prefix}{record.deltaPercent}%)</span>;
+        return (
+          <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+            {prefix}{record.delta.toFixed(2)} ({prefix}{record.deltaPercent}%)
+          </span>
+        );
       },
     },
     {
@@ -125,7 +135,7 @@ const Compare: React.FC = () => {
       ellipsis: true,
       render: (name: string, record: MarkerDiff) => (
         <div>
-          <span style={{ color: record.mustReport ? '#d4d4d4' : '#888' }}>{name}</span>
+          <span style={{ color: record.mustReport ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13 }}>{name}</span>
           {record.mustReport && <Tag color="red" style={{ marginLeft: 4, fontSize: 10, lineHeight: '16px' }}>关键</Tag>}
         </div>
       ),
@@ -136,21 +146,29 @@ const Compare: React.FC = () => {
       key: 'thread',
       width: 120,
       ellipsis: true,
-      render: (t: string) => <span style={{ color: '#888', fontSize: 12 }}>{t}</span>,
+      render: (t: string) => <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{t}</span>,
     },
     {
       title: '基准 selfMean',
       key: 'baseSelf',
       width: 110,
       sorter: (a: MarkerDiff, b: MarkerDiff) => (a.baseline?.selfMean ?? 0) - (b.baseline?.selfMean ?? 0),
-      render: (_: any, r: MarkerDiff) => r.baseline ? `${r.baseline.selfMean.toFixed(2)}ms` : '-',
+      render: (_: any, r: MarkerDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          {r.baseline ? `${r.baseline.selfMean.toFixed(2)}ms` : '-'}
+        </span>
+      ),
     },
     {
       title: '当前 selfMean',
       key: 'curSelf',
       width: 110,
       sorter: (a: MarkerDiff, b: MarkerDiff) => (a.current?.selfMean ?? 0) - (b.current?.selfMean ?? 0),
-      render: (_: any, r: MarkerDiff) => r.current ? `${r.current.selfMean.toFixed(2)}ms` : '-',
+      render: (_: any, r: MarkerDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          {r.current ? `${r.current.selfMean.toFixed(2)}ms` : '-'}
+        </span>
+      ),
     },
     {
       title: '变化',
@@ -161,39 +179,69 @@ const Compare: React.FC = () => {
       render: (_: any, r: MarkerDiff) => {
         const d = r.delta.selfMean;
         const dp = r.deltaPercent.selfMean;
-        if (r.status === 'new' || r.status === 'removed') return '-';
-        const color = d < -0.1 ? '#52c41a' : d > 0.1 ? '#ff4d4f' : '#888';
+        if (r.status === 'new' || r.status === 'removed') return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
+        const color = d < -0.1 ? 'var(--color-success)' : d > 0.1 ? 'var(--color-error)' : 'var(--text-tertiary)';
         const prefix = d > 0 ? '+' : '';
-        return <span style={{ color }}>{prefix}{d.toFixed(2)}ms ({prefix}{dp}%)</span>;
+        return (
+          <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+            {prefix}{d.toFixed(2)}ms ({prefix}{dp}%)
+          </span>
+        );
       },
     },
     {
       title: '基准占帧',
       key: 'basePOF',
       width: 90,
-      render: (_: any, r: MarkerDiff) => r.baseline ? `${r.baseline.percentOfFrame.toFixed(1)}%` : '-',
+      render: (_: any, r: MarkerDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          {r.baseline ? `${r.baseline.percentOfFrame.toFixed(1)}%` : '-'}
+        </span>
+      ),
     },
     {
       title: '当前占帧',
       key: 'curPOF',
       width: 90,
-      render: (_: any, r: MarkerDiff) => r.current ? `${r.current.percentOfFrame.toFixed(1)}%` : '-',
+      render: (_: any, r: MarkerDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          {r.current ? `${r.current.percentOfFrame.toFixed(1)}%` : '-'}
+        </span>
+      ),
     },
   ];
 
   // 帧汇总 diff 表格列
   const frameSummaryColumns = [
     { title: '指标', dataIndex: 'label', key: 'label', width: 160 },
-    { title: '基准', key: 'baseline', width: 100, render: (_: any, r: FrameSummaryDiff) => r.baseline.toFixed(2) },
-    { title: '当前', key: 'current', width: 100, render: (_: any, r: FrameSummaryDiff) => r.current.toFixed(2) },
+    {
+      title: '基准', key: 'baseline', width: 100,
+      render: (_: any, r: FrameSummaryDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{r.baseline.toFixed(2)}</span>
+      ),
+    },
+    {
+      title: '当前', key: 'current', width: 100,
+      render: (_: any, r: FrameSummaryDiff) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{r.current.toFixed(2)}</span>
+      ),
+    },
     {
       title: '变化',
       key: 'delta',
       width: 130,
       render: (_: any, r: FrameSummaryDiff) => {
-        const color = r.improved ? '#52c41a' : r.delta === 0 ? '#888' : '#ff4d4f';
+        const color = r.improved
+          ? 'var(--color-success)'
+          : r.delta === 0
+            ? 'var(--text-tertiary)'
+            : 'var(--color-error)';
         const prefix = r.delta > 0 ? '+' : '';
-        return <span style={{ color }}>{prefix}{r.delta.toFixed(2)} ({prefix}{r.deltaPercent}%)</span>;
+        return (
+          <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+            {prefix}{r.delta.toFixed(2)} ({prefix}{r.deltaPercent}%)
+          </span>
+        );
       },
     },
     {
@@ -209,12 +257,14 @@ const Compare: React.FC = () => {
 
   const jc = diffResult?.jankComparison;
 
+  const monoValue: React.CSSProperties = { fontFamily: 'var(--font-mono)' };
+
   return (
     <div>
-      <h1 style={{ color: '#fff', marginBottom: 24 }}>对比分析</h1>
+      <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 24 }}>对比分析</h1>
 
       {/* 选择器 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <Card size="small" style={{ marginBottom: 16, background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Select
             mode="multiple"
@@ -249,7 +299,7 @@ const Compare: React.FC = () => {
               key: 'summary',
               label: '汇总指标',
               children: (
-                <Card>
+                <Card style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                   <Table
                     rowKey="metric"
                     columns={summaryColumns}
@@ -266,18 +316,18 @@ const Compare: React.FC = () => {
               key: 'markers',
               label: `Marker 对比 (${filteredMarkers.length})`,
               children: (
-                <Card>
+                <Card style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                   {/* 筛选控件 */}
                   <div style={{ marginBottom: 12, display: 'flex', gap: 16, alignItems: 'center' }}>
                     <Space>
-                      <span style={{ color: '#888', fontSize: 12 }}>只看关键 Marker</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>只看关键 Marker</span>
                       <Switch size="small" checked={onlyMustReport} onChange={setOnlyMustReport} />
                     </Space>
                     <Space>
-                      <span style={{ color: '#888', fontSize: 12 }}>隐藏持平</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>隐藏持平</span>
                       <Switch size="small" checked={hideUnchanged} onChange={setHideUnchanged} />
                     </Space>
-                    <span style={{ color: '#555', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
                       共 {diffResult.markerDiffs.length} 个 Marker，显示 {filteredMarkers.length} 个
                     </span>
                   </div>
@@ -304,14 +354,21 @@ const Compare: React.FC = () => {
                 <div>
                   <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                     <Col span={8}>
-                      <Card size="small" title="Jank 次数">
+                      <Card size="small" title="Jank 次数" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-                          <Statistic title="基准" value={jc.baseline.count} />
-                          <span style={{ fontSize: 20, color: '#555' }}>→</span>
+                          <Statistic title="基准" value={jc.baseline.count} valueStyle={monoValue} />
+                          <span style={{ fontSize: 20, color: 'var(--text-tertiary)' }}>→</span>
                           <Statistic
                             title="当前"
                             value={jc.current.count}
-                            valueStyle={{ color: jc.current.count < jc.baseline.count ? '#52c41a' : jc.current.count > jc.baseline.count ? '#ff4d4f' : undefined }}
+                            valueStyle={{
+                              ...monoValue,
+                              color: jc.current.count < jc.baseline.count
+                                ? 'var(--color-success)'
+                                : jc.current.count > jc.baseline.count
+                                  ? 'var(--color-error)'
+                                  : undefined,
+                            }}
                           />
                           <Tag color={jc.current.count <= jc.baseline.count ? 'success' : 'error'}>
                             {jc.current.count - jc.baseline.count > 0 ? '+' : ''}{jc.current.count - jc.baseline.count}
@@ -320,14 +377,21 @@ const Compare: React.FC = () => {
                       </Card>
                     </Col>
                     <Col span={8}>
-                      <Card size="small" title="BigJank 次数">
+                      <Card size="small" title="BigJank 次数" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-                          <Statistic title="基准" value={jc.baseline.bigJankCount} />
-                          <span style={{ fontSize: 20, color: '#555' }}>→</span>
+                          <Statistic title="基准" value={jc.baseline.bigJankCount} valueStyle={monoValue} />
+                          <span style={{ fontSize: 20, color: 'var(--text-tertiary)' }}>→</span>
                           <Statistic
                             title="当前"
                             value={jc.current.bigJankCount}
-                            valueStyle={{ color: jc.current.bigJankCount < jc.baseline.bigJankCount ? '#52c41a' : jc.current.bigJankCount > jc.baseline.bigJankCount ? '#ff4d4f' : undefined }}
+                            valueStyle={{
+                              ...monoValue,
+                              color: jc.current.bigJankCount < jc.baseline.bigJankCount
+                                ? 'var(--color-success)'
+                                : jc.current.bigJankCount > jc.baseline.bigJankCount
+                                  ? 'var(--color-error)'
+                                  : undefined,
+                            }}
                           />
                           <Tag color={jc.current.bigJankCount <= jc.baseline.bigJankCount ? 'success' : 'error'}>
                             {jc.current.bigJankCount - jc.baseline.bigJankCount > 0 ? '+' : ''}{jc.current.bigJankCount - jc.baseline.bigJankCount}
@@ -336,11 +400,11 @@ const Compare: React.FC = () => {
                       </Card>
                     </Col>
                     <Col span={8}>
-                      <Card size="small" title="总帧数">
+                      <Card size="small" title="总帧数" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-                          <Statistic title="基准" value={jc.baseline.totalFrames} />
-                          <span style={{ fontSize: 20, color: '#555' }}>→</span>
-                          <Statistic title="当前" value={jc.current.totalFrames} />
+                          <Statistic title="基准" value={jc.baseline.totalFrames} valueStyle={monoValue} />
+                          <span style={{ fontSize: 20, color: 'var(--text-tertiary)' }}>→</span>
+                          <Statistic title="当前" value={jc.current.totalFrames} valueStyle={monoValue} />
                         </div>
                       </Card>
                     </Col>
@@ -348,7 +412,7 @@ const Compare: React.FC = () => {
 
                   {/* 帧汇总 diff */}
                   {diffResult?.frameSummaryDiffs && (
-                    <Card size="small" title="帧汇总指标对比">
+                    <Card size="small" title="帧汇总指标对比" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
                       <Table
                         rowKey="metric"
                         columns={frameSummaryColumns}
@@ -364,7 +428,7 @@ const Compare: React.FC = () => {
           ].filter(Boolean) as any[]}
         />
       ) : (
-        <Card>
+        <Card style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)', borderRadius: 'var(--radius)' }}>
           <Empty description="选择至少两个分析结果进行对比" />
         </Card>
       )}

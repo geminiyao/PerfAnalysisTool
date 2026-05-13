@@ -58,47 +58,47 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'axis' as const,
-        backgroundColor: '#1a1a2e',
-        borderColor: '#333',
-        textStyle: { color: '#d4d4d4', fontSize: 12 },
+        backgroundColor: '#141619',
+        borderColor: '#1f2328',
+        textStyle: { color: '#e6eaf0', fontSize: 12 },
         formatter: (params: any) => {
           const data = Array.isArray(params) ? params.find((p: any) => p.value != null) : params;
           if (!data) return '';
           const frameIdx = data.dataIndex + frameIndexOffset;
           const ms = data.value;
           const isJank = jankSet.has(data.dataIndex);
-          return `帧 #${frameIdx}<br/>耗时: <b>${ms.toFixed(1)}ms</b>${isJank ? '<br/><span style="color:#ff4d4f">⚠ Jank</span>' : ''}`;
+          return `帧 #${frameIdx}<br/>耗时: <b>${ms.toFixed(1)}ms</b>${isJank ? '<br/><span style="color:#da3633">⚠ Jank</span>' : ''}`;
         },
       },
       grid: { left: 50, right: 20, top: 30, bottom: 30 },
       xAxis: {
         type: 'category' as const,
         data: frameTimings.map((_, i) => i + frameIndexOffset),
-        axisLabel: { color: '#888', fontSize: 10 },
-        axisLine: { lineStyle: { color: '#333' } },
+        axisLabel: { color: '#8b949e', fontSize: 10 },
+        axisLine: { lineStyle: { color: '#1f2328' } },
         name: '帧序号',
-        nameTextStyle: { color: '#888', fontSize: 11 },
+        nameTextStyle: { color: '#8b949e', fontSize: 11 },
       },
       yAxis: {
         type: 'value' as const,
         max: yMax,
-        axisLabel: { color: '#888', fontSize: 10, formatter: '{value}ms' },
-        axisLine: { lineStyle: { color: '#333' } },
-        splitLine: { lineStyle: { color: '#1a1a2e' } },
+        axisLabel: { color: '#8b949e', fontSize: 10, formatter: '{value}ms' },
+        axisLine: { lineStyle: { color: '#1f2328' } },
+        splitLine: { lineStyle: { color: '#1a1d21' } },
       },
       series: [
         {
           name: '正常帧',
           type: 'bar',
           data: normalData,
-          itemStyle: { color: '#1890ff', borderRadius: [1, 1, 0, 0] },
+          itemStyle: { color: '#1677ff', borderRadius: [1, 1, 0, 0] },
           barMaxWidth: 4,
         },
         {
           name: 'Jank 帧',
           type: 'bar',
           data: jankData,
-          itemStyle: { color: '#ff4d4f', borderRadius: [1, 1, 0, 0] },
+          itemStyle: { color: '#da3633', borderRadius: [1, 1, 0, 0] },
           barMaxWidth: 4,
         },
         {
@@ -107,8 +107,8 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
           markLine: {
             silent: true,
             symbol: 'none',
-            lineStyle: { color: '#52c41a', type: 'dashed' as const, width: 1 },
-            data: [{ yAxis: budgetMs, label: { formatter: `目标 ${budgetMs.toFixed(0)}ms`, color: '#52c41a', fontSize: 10 } }],
+            lineStyle: { color: '#2ea043', type: 'dashed' as const, width: 1 },
+            data: [{ yAxis: budgetMs, label: { formatter: `目标 ${budgetMs.toFixed(0)}ms`, color: '#2ea043', fontSize: 10 } }],
           },
           data: [],
         },
@@ -125,10 +125,10 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
           xAxisIndex: 0,
           height: 16,
           bottom: 5,
-          borderColor: '#333',
-          backgroundColor: '#0d1117',
-          fillerColor: 'rgba(24,144,255,0.15)',
-          textStyle: { color: '#888', fontSize: 10 },
+          borderColor: '#1f2328',
+          backgroundColor: '#0b0e11',
+          fillerColor: 'rgba(22,119,255,0.12)',
+          textStyle: { color: '#8b949e', fontSize: 10 },
         },
       ],
     };
@@ -141,29 +141,29 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item' as const,
-        backgroundColor: '#1a1a2e',
-        borderColor: '#333',
-        textStyle: { color: '#d4d4d4', fontSize: 12 },
+        backgroundColor: '#141619',
+        borderColor: '#1f2328',
+        textStyle: { color: '#e6eaf0', fontSize: 12 },
       },
       grid: { left: 60, right: 40, top: 20, bottom: 30 },
       xAxis: {
         type: 'category' as const,
         data: ['帧耗时分布'],
-        axisLabel: { color: '#888' },
-        axisLine: { lineStyle: { color: '#333' } },
+        axisLabel: { color: '#8b949e' },
+        axisLine: { lineStyle: { color: '#1f2328' } },
       },
       yAxis: {
         type: 'value' as const,
-        axisLabel: { color: '#888', fontSize: 10, formatter: '{value}ms' },
-        axisLine: { lineStyle: { color: '#333' } },
-        splitLine: { lineStyle: { color: '#1a1a2e' } },
+        axisLabel: { color: '#8b949e', fontSize: 10, formatter: '{value}ms' },
+        axisLine: { lineStyle: { color: '#1f2328' } },
+        splitLine: { lineStyle: { color: '#1a1d21' } },
       },
       series: [
         {
           name: '帧耗时',
           type: 'boxplot',
           data: [[min, q1, median, q3, max]],
-          itemStyle: { color: '#1890ff', borderColor: '#1890ff' },
+          itemStyle: { color: '#1677ff', borderColor: '#1677ff' },
         },
         {
           // 均值标记
@@ -171,7 +171,7 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
           data: [[0, mean]],
           symbol: 'diamond',
           symbolSize: 10,
-          itemStyle: { color: '#fadb14' },
+          itemStyle: { color: '#d29922' },
           tooltip: { formatter: () => `均值: ${mean.toFixed(1)}ms` },
         },
         {
@@ -180,8 +180,8 @@ const FrameDistChart: React.FC<FrameDistChartProps> = ({
           markLine: {
             silent: true,
             symbol: 'none',
-            lineStyle: { color: '#52c41a', type: 'dashed' as const },
-            data: [{ yAxis: budgetMs, label: { formatter: `目标 ${budgetMs.toFixed(0)}ms`, color: '#52c41a', fontSize: 10 } }],
+            lineStyle: { color: '#2ea043', type: 'dashed' as const },
+            data: [{ yAxis: budgetMs, label: { formatter: `目标 ${budgetMs.toFixed(0)}ms`, color: '#2ea043', fontSize: 10 } }],
           },
           data: [],
         },

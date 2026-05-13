@@ -60,6 +60,20 @@ interface PreprocessData {
   threads: any[];
 }
 
+const metaItemStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
+};
+
+const metricPillStyle: React.CSSProperties = {
+  background: 'var(--bg-card-inner)',
+  border: '1px solid var(--border-primary)',
+  borderRadius: 4,
+  padding: '2px 8px',
+  fontSize: 12,
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-primary)',
+};
+
 const ReportDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -191,116 +205,117 @@ const ReportDetail: React.FC = () => {
   }
 
   if (!session) {
-    return <div>分析会话不存在</div>;
+    return <div style={{ color: 'var(--text-secondary)' }}>分析会话不存在</div>;
   }
 
   const fs = preprocess?.frameSummary;
 
-  // 核心结论摘要（从报告中提取"核心结论"段落）
   const coreSummary = extractCoreSummary(report);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', overflow: 'hidden' }}>
       {/* 顶部栏 */}
-      <div style={{ flexShrink: 0, padding: '8px 0 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ flexShrink: 0, padding: '6px 0', borderBottom: '1px solid var(--border-primary)' }}>
         {/* 第一行：标题 + 结构化元信息 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
           <Button
             size="small"
             type="text"
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
-            style={{ color: '#888' }}
+            style={{ color: 'var(--text-tertiary)' }}
           />
-          <h2 style={{ color: '#f0f0f0', margin: 0, fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>{session.fileName}</h2>
+          <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{session.fileName}</h2>
           <Tag
             color={session.status === 'completed' ? 'success' : 'error'}
-            style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}
+            style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}
           >
             {session.status === 'completed' ? '完成' : session.status}
           </Tag>
           <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             {session.projectName && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <ProjectOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.projectName}</span>
+              <span style={metaItemStyle}>
+                <ProjectOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.projectName}</span>
               </span>
             )}
             {session.device && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <MobileOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.device}</span>
+              <span style={metaItemStyle}>
+                <MobileOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.device}</span>
               </span>
             )}
             {session.scene && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <EnvironmentOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.scene}</span>
+              <span style={metaItemStyle}>
+                <EnvironmentOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.scene}</span>
               </span>
             )}
             {session.version && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <TagOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.version}</span>
+              <span style={metaItemStyle}>
+                <TagOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.version}</span>
               </span>
             )}
             {session.branch && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <BranchesOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.branch}</span>
+              <span style={metaItemStyle}>
+                <BranchesOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.branch}</span>
               </span>
             )}
             {session.createdBy && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <UserOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{session.createdBy}</span>
+              <span style={metaItemStyle}>
+                <UserOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{session.createdBy}</span>
               </span>
             )}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <CalendarOutlined style={{ color: '#555' }} />
-              <span style={{ color: '#b0b0b0' }}>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
+            <span style={metaItemStyle}>
+              <CalendarOutlined style={{ color: 'var(--text-tertiary)' }} />
+              <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
             </span>
             {session.duration && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <ClockCircleOutlined style={{ color: '#555' }} />
-                <span style={{ color: '#b0b0b0' }}>{Math.round(session.duration / 1000)}s</span>
+              <span style={metaItemStyle}>
+                <ClockCircleOutlined style={{ color: 'var(--text-tertiary)' }} />
+                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{Math.round(session.duration / 1000)}s</span>
               </span>
             )}
           </div>
         </div>
 
         {/* 第二行：指标胶囊 + 分析参数 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: coreSummary ? 5 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: coreSummary ? 4 : 0 }}>
           {metrics && (
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
-                <span style={{ color: '#666', marginRight: 4 }}>FPS</span><b>{metrics.fps?.toFixed(1)}</b>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+              <span style={metricPillStyle}>
+                <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>FPS</span><b>{metrics.fps?.toFixed(1)}</b>
               </span>
-              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
-                <span style={{ color: '#666', marginRight: 4 }}>帧均值</span><b>{metrics.avgFrameMs?.toFixed(1)}ms</b>
+              <span style={metricPillStyle}>
+                <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>帧均值</span><b>{metrics.avgFrameMs?.toFixed(1)}ms</b>
               </span>
               <span style={{
-                background: metrics.jankRate > 5 ? 'rgba(255,77,79,0.1)' : 'rgba(82,196,26,0.08)',
-                borderRadius: 4, padding: '1px 8px', fontSize: 13,
-                color: metrics.jankRate > 10 ? '#ff4d4f' : metrics.jankRate > 5 ? '#faad14' : '#52c41a',
+                ...metricPillStyle,
+                background: metrics.jankRate > 5 ? 'var(--color-error-bg)' : 'var(--color-success-bg)',
+                borderColor: metrics.jankRate > 5 ? 'rgba(218,54,51,0.2)' : 'rgba(46,160,67,0.2)',
+                color: metrics.jankRate > 10 ? 'var(--color-error)' : metrics.jankRate > 5 ? 'var(--color-warning)' : 'var(--color-success)',
               }}>
-                <span style={{ color: '#666', marginRight: 4 }}>Jank率</span><b>{metrics.jankRate?.toFixed(1)}%</b>
+                <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>Jank率</span><b>{metrics.jankRate?.toFixed(1)}%</b>
               </span>
-              <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
-                <span style={{ color: '#666', marginRight: 4 }}>帧数</span><b>{metrics.totalFrames}</b>
+              <span style={metricPillStyle}>
+                <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>帧数</span><b>{metrics.totalFrames}</b>
               </span>
               {fs && (
                 <>
                   <span style={{
-                    background: fs.bigJankCount > 0 ? 'rgba(255,77,79,0.1)' : 'rgba(82,196,26,0.08)',
-                    borderRadius: 4, padding: '1px 8px', fontSize: 13,
-                    color: fs.bigJankCount > 0 ? '#ff4d4f' : '#52c41a',
+                    ...metricPillStyle,
+                    background: fs.bigJankCount > 0 ? 'var(--color-error-bg)' : 'var(--color-success-bg)',
+                    borderColor: fs.bigJankCount > 0 ? 'rgba(218,54,51,0.2)' : 'rgba(46,160,67,0.2)',
+                    color: fs.bigJankCount > 0 ? 'var(--color-error)' : 'var(--color-success)',
                   }}>
-                    <span style={{ color: '#666', marginRight: 4 }}>BigJank</span><b>{fs.bigJankCount}</b>
+                    <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>BigJank</span><b>{fs.bigJankCount}</b>
                   </span>
-                  <span style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, padding: '1px 8px', fontSize: 13, color: '#d4d4d4' }}>
-                    <span style={{ color: '#666', marginRight: 4 }}>中位帧</span><b>{fs.median?.toFixed(1)}ms</b>
+                  <span style={metricPillStyle}>
+                    <span style={{ color: 'var(--text-tertiary)', marginRight: 3, fontFamily: 'var(--font-body)' }}>中位帧</span><b>{fs.median?.toFixed(1)}ms</b>
                   </span>
                 </>
               )}
@@ -308,11 +323,11 @@ const ReportDetail: React.FC = () => {
           )}
           {preprocess?.config && (
             <>
-              <div style={{ width: 1, height: 14, background: '#2a2a3a', flexShrink: 0, marginLeft: 4 }} />
-              <span style={{ color: '#555', fontSize: 11, flexShrink: 0 }}>
-                目标 <b style={{ color: '#777' }}>{preprocess.config.targetFps}FPS</b>
-                <span style={{ margin: '0 6px', color: '#333' }}>|</span>
-                帧预算 <b style={{ color: '#777' }}>{preprocess.config.frameBudgetMs?.toFixed(1)}ms</b>
+              <div style={{ width: 1, height: 12, background: 'var(--border-secondary)', flexShrink: 0, marginLeft: 2 }} />
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 11, flexShrink: 0 }}>
+                目标 <b style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{preprocess.config.targetFps}FPS</b>
+                <span style={{ margin: '0 4px', color: 'var(--border-secondary)' }}>|</span>
+                帧预算 <b style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{preprocess.config.frameBudgetMs?.toFixed(1)}ms</b>
               </span>
             </>
           )}
@@ -322,13 +337,13 @@ const ReportDetail: React.FC = () => {
         {coreSummary && (
           <div
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 5,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              color: '#888', fontSize: 12, cursor: 'help',
+              color: 'var(--text-secondary)', fontSize: 11, cursor: 'help',
             }}
             title={coreSummary}
           >
-            <BulbOutlined style={{ color: '#faad14', fontSize: 12, flexShrink: 0 }} />
+            <BulbOutlined style={{ color: 'var(--color-warning)', fontSize: 11, flexShrink: 0 }} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {coreSummary.slice(0, 150)}{coreSummary.length > 150 ? '...' : ''}
             </span>
@@ -347,8 +362,7 @@ const ReportDetail: React.FC = () => {
             label: '概览',
             children: (
               <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 16px' }}>
-                {/* 帧时间线 / 分布图 */}
-                <Card size="small" title="帧耗时分布" style={{ marginBottom: 16 }}>
+                <Card size="small" title={<span style={{ fontSize: 13 }}>帧耗时分布</span>} style={{ marginBottom: 12 }}>
                   <FrameDistChart
                     frameSummary={fs}
                     config={preprocess?.config}
@@ -357,8 +371,7 @@ const ReportDetail: React.FC = () => {
                   />
                 </Card>
 
-                {/* 额外指标 */}
-                <Row gutter={[12, 12]}>
+                <Row gutter={[10, 10]}>
                   <Col xs={12} sm={6}>
                     <Card size="small">
                       <Statistic title="中位帧时间" value={fs.median?.toFixed(1)} suffix="ms" />
@@ -366,12 +379,12 @@ const ReportDetail: React.FC = () => {
                   </Col>
                   <Col xs={12} sm={6}>
                     <Card size="small">
-                      <Statistic title="最大帧时间" value={fs.max?.toFixed(1)} suffix="ms" valueStyle={{ color: fs.max > 100 ? '#ff4d4f' : undefined }} />
+                      <Statistic title="最大帧时间" value={fs.max?.toFixed(1)} suffix="ms" valueStyle={{ color: fs.max > 100 ? 'var(--color-error)' : undefined }} />
                     </Card>
                   </Col>
                   <Col xs={12} sm={6}>
                     <Card size="small">
-                      <Statistic title="BigJank 次数" value={fs.bigJankCount} valueStyle={{ color: fs.bigJankCount > 0 ? '#ff4d4f' : '#52c41a' }} />
+                      <Statistic title="BigJank 次数" value={fs.bigJankCount} valueStyle={{ color: fs.bigJankCount > 0 ? 'var(--color-error)' : 'var(--color-success)' }} />
                     </Card>
                   </Col>
                   <Col xs={12} sm={6}>
@@ -393,11 +406,10 @@ const ReportDetail: React.FC = () => {
                 {/* 左侧问题列表 */}
                 <div
                   style={{
-                    width: 340,
+                    width: 320,
                     flexShrink: 0,
-                    borderRight: '1px solid #1a1a2e',
-                    background: '#0d1117',
-                    borderRadius: '4px 0 0 4px',
+                    borderRight: '1px solid var(--border-primary)',
+                    background: 'var(--bg-root)',
                     overflow: 'hidden',
                   }}
                 >
@@ -413,15 +425,14 @@ const ReportDetail: React.FC = () => {
                 <div
                   style={{
                     flex: 1,
-                    padding: 16,
+                    padding: 14,
                     overflowY: 'auto',
-                    background: '#0a0a1a',
-                    borderRadius: '0 4px 4px 0',
+                    background: 'var(--bg-layout)',
                   }}
                 >
                   <OptimizeContext.Provider value={{ getState, startOptimize, cancelOptimize, showSetting, setShowSetting }}>
-                  <IssueDetail issue={selectedIssue} reportMarkdown={report} sessionId={id!} />
-                </OptimizeContext.Provider>
+                    <IssueDetail issue={selectedIssue} reportMarkdown={report} sessionId={id!} />
+                  </OptimizeContext.Provider>
                 </div>
               </div>
             ),
@@ -435,11 +446,11 @@ const ReportDetail: React.FC = () => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 16px' }}>
                 <Card>
                   {report ? (
-                    <div className="markdown-body" style={{ color: '#d4d4d4' }}>
+                    <div className="markdown-body" style={{ color: 'var(--text-secondary)' }}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
                     </div>
                   ) : (
-                    <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
+                    <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 40, fontSize: 13 }}>
                       暂无报告内容
                     </div>
                   )}
@@ -457,13 +468,14 @@ const ReportDetail: React.FC = () => {
                 <Card>
                   <div
                     style={{
-                      background: '#0a0a1a',
-                      borderRadius: 4,
-                      padding: '12px 16px',
+                      background: 'var(--bg-root)',
+                      borderRadius: 'var(--radius)',
+                      border: '1px solid var(--border-primary)',
+                      padding: '10px 14px',
                       maxHeight: 600,
                       overflowY: 'auto',
-                      fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                      fontSize: 12,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 11,
                       lineHeight: 1.6,
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-all',
@@ -474,13 +486,13 @@ const ReportDetail: React.FC = () => {
                         key={i}
                         style={{
                           color: line.startsWith('[stderr]') || line.startsWith('[错误]') || line.startsWith('[工具错误]')
-                            ? '#ff7875'
+                            ? 'var(--color-error)'
                             : line.startsWith('[完成]')
-                              ? '#52c41a'
-                              : '#b5b5b5',
-                          borderBottom: '1px solid #1a1a2e',
-                          paddingBottom: 2,
-                          marginBottom: 2,
+                              ? 'var(--color-success)'
+                              : 'var(--text-secondary)',
+                          borderBottom: '1px solid var(--border-primary)',
+                          paddingBottom: 1,
+                          marginBottom: 1,
                         }}
                       >
                         {line}
@@ -497,10 +509,6 @@ const ReportDetail: React.FC = () => {
   );
 };
 
-/**
- * 从报告 Markdown 中提取"核心结论"段落
- * 匹配 "## 二、核心结论" 到下一个 "##" 之间的内容
- */
 function extractCoreSummary(markdown: string): string {
   if (!markdown) return '';
 
@@ -518,7 +526,6 @@ function extractCoreSummary(markdown: string): string {
     }
     if (capturing) {
       const trimmed = line.trim();
-      // 跳过引用前缀和空行
       if (trimmed && trimmed !== '>' && trimmed !== '---') {
         result.push(trimmed.replace(/^>\s*/, ''));
       }

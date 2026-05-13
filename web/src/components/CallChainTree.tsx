@@ -110,21 +110,21 @@ const ChainNode: React.FC<{
 }> = ({ node, depth, maxPercent }) => {
   const barWidth = maxPercent > 0 ? Math.max(2, (node.percent / maxPercent) * 100) : 0;
   const barColor = node.isBottleneck
-    ? '#ff4d4f'
+    ? '#da3633'
     : node.percent > 50
-      ? '#fa8c16'
+      ? '#d29922'
       : node.percent > 20
-        ? '#fadb14'
-        : '#52c41a';
+        ? 'rgba(210,153,34,0.65)'
+        : '#2ea043';
 
   return (
     <Tooltip
       title={
-        <div style={{ fontSize: 12 }}>
+        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono, Consolas, Monaco, "Courier New", monospace)' }}>
           <div><b>{node.name}</b></div>
           <div>耗时: {node.timeMs.toFixed(1)}ms ({node.percent.toFixed(1)}%)</div>
           {node.selfMs !== undefined && <div>self: {node.selfMs.toFixed(1)}ms</div>}
-          {node.isBottleneck && <div style={{ color: '#ff7875' }}>⚠ BOTTLENECK</div>}
+          {node.isBottleneck && <div style={{ color: '#da3633' }}>⚠ BOTTLENECK</div>}
         </div>
       }
       placement="right"
@@ -136,17 +136,17 @@ const ChainNode: React.FC<{
           alignItems: 'center',
           gap: 8,
           padding: '3px 0 3px ' + (depth * 20) + 'px',
-          borderRadius: 4,
+          borderRadius: 'var(--radius, 6px)',
           cursor: 'default',
-          background: node.isBottleneck ? 'rgba(255, 77, 79, 0.08)' : 'transparent',
+          background: node.isBottleneck ? 'rgba(218, 54, 51, 0.08)' : 'transparent',
         }}
       >
         {depth > 0 && (
-          <span style={{ color: '#555', fontSize: 10, flexShrink: 0 }}>→</span>
+          <span style={{ color: '#5a6068', fontSize: 10, flexShrink: 0 }}>→</span>
         )}
         <span
           style={{
-            color: node.isBottleneck ? '#ff7875' : '#d4d4d4',
+            color: node.isBottleneck ? '#da3633' : '#e6eaf0',
             fontWeight: node.isBottleneck ? 600 : 400,
             fontSize: 12,
             flexShrink: 0,
@@ -163,7 +163,7 @@ const ChainNode: React.FC<{
           style={{
             flex: 1,
             height: 6,
-            background: '#1a1a2e',
+            background: '#1a1d21',
             borderRadius: 3,
             minWidth: 40,
             position: 'relative',
@@ -180,7 +180,7 @@ const ChainNode: React.FC<{
             }}
           />
         </div>
-        <span style={{ color: '#888', fontSize: 11, flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
+        <span style={{ color: '#8b949e', fontSize: 11, flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
           {node.timeMs.toFixed(1)}ms ({node.percent.toFixed(1)}%)
         </span>
       </div>
@@ -232,10 +232,11 @@ const CallChainTree: React.FC<CallChainTreeProps> = ({ callChain, treeSummary, m
     return (
       <div
         style={{
-          background: '#0d1117',
-          borderRadius: 6,
+          background: 'var(--bg-root, #0b0e11)',
+          border: '1px solid var(--border-primary, #1f2328)',
+          borderRadius: 'var(--radius, 6px)',
           padding: '8px 12px',
-          fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+          fontFamily: 'var(--font-mono, Consolas, Monaco, "Courier New", monospace)',
           fontSize: 12,
           overflowX: 'auto',
         }}
@@ -252,10 +253,11 @@ const CallChainTree: React.FC<CallChainTreeProps> = ({ callChain, treeSummary, m
     return (
       <div
         style={{
-          background: '#0d1117',
-          borderRadius: 6,
+          background: 'var(--bg-root, #0b0e11)',
+          border: '1px solid var(--border-primary, #1f2328)',
+          borderRadius: 'var(--radius, 6px)',
           padding: '8px 12px',
-          fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+          fontFamily: 'var(--font-mono, Consolas, Monaco, "Courier New", monospace)',
           fontSize: 12,
           overflowX: 'auto',
         }}
@@ -273,12 +275,13 @@ const CallChainTree: React.FC<CallChainTreeProps> = ({ callChain, treeSummary, m
     return (
       <div
         style={{
-          background: '#0d1117',
-          borderRadius: 6,
+          background: 'var(--bg-root, #0b0e11)',
+          border: '1px solid var(--border-primary, #1f2328)',
+          borderRadius: 'var(--radius, 6px)',
           padding: '8px 12px',
-          fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+          fontFamily: 'var(--font-mono, Consolas, Monaco, "Courier New", monospace)',
           fontSize: 12,
-          color: '#888',
+          color: '#8b949e',
           whiteSpace: 'pre-wrap',
         }}
       >

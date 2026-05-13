@@ -24,7 +24,6 @@ const Upload: React.FC = () => {
   const unsubRef = useRef<(() => void) | null>(null);
   const logEndRef = useRef<HTMLDivElement | null>(null);
 
-  // 日志自动滚动到底部
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
@@ -47,13 +46,11 @@ const Upload: React.FC = () => {
       let resultId: string;
 
       if (isMock) {
-        // Mock 模式：用占位文件名上传一个空壳记录
         const mockBlob = new File([new ArrayBuffer(0)], 'mock-data.pdata', { type: 'application/octet-stream' });
         const result = await uploadFile(mockBlob, { ...meta, projectName: meta.projectName || 'MockProject' });
         resultId = result.id;
         message.success('Mock 会话已创建');
       } else {
-        // 正常上传
         const result = await uploadFile(file!, meta);
         resultId = result.id;
         message.success('文件上传成功');
@@ -62,7 +59,6 @@ const Upload: React.FC = () => {
       setSessionId(resultId);
       setCurrentStep(2);
 
-      // 触发分析（带分析参数）
       const analysisParams: AnalysisParams = {
         targetFps: meta.targetFps || 30,
         jankMultiplier: meta.jankMultiplier || 2,
@@ -72,13 +68,11 @@ const Upload: React.FC = () => {
       await startAnalysis(resultId, cliProvider, analysisParams);
       setCurrentStep(3);
 
-      // 监听进度
       const unsub = subscribeProgress(resultId, (event: ProgressEvent) => {
         setProgress(event);
 
-        // 收集日志
         if (event.log) {
-          setLogs(prev => [...prev.slice(-200), event.log!]); // 保留最近 200 行
+          setLogs(prev => [...prev.slice(-200), event.log!]);
         }
 
         if (event.stage === 'completed') {
@@ -86,7 +80,6 @@ const Upload: React.FC = () => {
           message.success('分析完成!');
           unsub();
 
-          // 轮询确认报告已写入 DB 再跳转（最多 3 次，间隔 1 秒）
           let retries = 0;
           const checkAndNavigate = async () => {
             try {
@@ -113,7 +106,6 @@ const Upload: React.FC = () => {
           setError(event.message);
           setUploading(false);
           unsub();
-          // 失败时停留在当前页面，不跳转
         }
       });
 
@@ -126,11 +118,11 @@ const Upload: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h1 style={{ color: '#fff', marginBottom: 24 }}>上传 & 分析</h1>
+    <div style={{ maxWidth: 780, margin: '0 auto' }}>
+      <h1 style={{ color: 'var(--text-primary)', marginBottom: 16, fontSize: 16, fontWeight: 600 }}>上传 & 分析</h1>
 
       {/* 进度步骤 */}
-      <Steps current={currentStep} style={{ marginBottom: 32 }} size="small">
+      <Steps current={currentStep} style={{ marginBottom: 20 }} size="small">
         <Step title="选择文件" />
         <Step title="上传" />
         <Step title="排队" />
@@ -139,14 +131,14 @@ const Upload: React.FC = () => {
       </Steps>
 
       {/* 文件上传区域 */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 12 }}>
         <Dragger
           accept=".pdata"
           multiple={false}
           maxCount={1}
           beforeUpload={(f) => {
             setFile(f);
-            return false; // 阻止自动上传
+            return false;
           }}
           onRemove={() => setFile(null)}
           disabled={uploading}
@@ -154,21 +146,20 @@ const Upload: React.FC = () => {
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
-          <p className="ant-upload-text">点击或拖拽 .pdata 文件到此区域</p>
-          <p className="ant-upload-hint">支持 Unity Profile Analyzer 导出的 .pdata 格式，单文件最大 200MB</p>
+          <p className="ant-upload-text" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>点击或拖拽 .pdata 文件到此区域</p>
+          <p className="ant-upload-hint" style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>支持 Unity Profile Analyzer 导出的 .pdata 格式，单文件最大 200MB</p>
         </Dragger>
       </Card>
 
       {/* 元数据表单 */}
-      <Card title="分析信息" style={{ marginBottom: 16 }}>
+      <Card title={<span style={{ fontSize: 13 }}>分析信息</span>} style={{ marginBottom: 12 }}>
         <Form form={form} layout="vertical" disabled={uploading}>
-          {/* AI 工具选择 */}
           <Form.Item
             label={
               <Space>
-                AI 分析工具
+                <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>AI 分析工具</span>
                 <Tooltip title="选择用于执行分析的 AI CLI 工具。不同工具可能使用不同的模型和分析策略。">
-                  <QuestionCircleOutlined style={{ color: '#888' }} />
+                  <QuestionCircleOutlined style={{ color: 'var(--text-tertiary)' }} />
                 </Tooltip>
               </Space>
             }
@@ -182,7 +173,7 @@ const Upload: React.FC = () => {
                 label: (
                   <Space>
                     <span>{p.label}</span>
-                    <span style={{ color: '#888', fontSize: 12 }}>{p.description}</span>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{p.description}</span>
                   </Space>
                 ),
               }))}
@@ -212,13 +203,12 @@ const Upload: React.FC = () => {
             <Input.TextArea rows={2} placeholder="任何补充说明..." />
           </Form.Item>
 
-          {/* 分析参数 */}
           <Collapse
             size="small"
             style={{ marginBottom: 0 }}
             items={[{
               key: 'params',
-              label: <span style={{ color: '#888', fontSize: 13 }}>分析参数 (可选调整)</span>,
+              label: <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>分析参数 (可选调整)</span>,
               children: (
                 <div>
                   <Space style={{ width: '100%' }} size={16}>
@@ -230,7 +220,7 @@ const Upload: React.FC = () => {
                         <Space>
                           帧预算
                           <Tooltip title="= 1000 / 目标帧率，自动计算">
-                            <QuestionCircleOutlined style={{ color: '#888' }} />
+                            <QuestionCircleOutlined style={{ color: 'var(--text-tertiary)' }} />
                           </Tooltip>
                         </Space>
                       }
@@ -239,7 +229,7 @@ const Upload: React.FC = () => {
                       <Input
                         disabled
                         value={`${(1000 / (form.getFieldValue('targetFps') || 30)).toFixed(1)} ms`}
-                        style={{ color: '#aaa' }}
+                        style={{ color: 'var(--text-secondary)' }}
                       />
                     </Form.Item>
                   </Space>
@@ -277,33 +267,34 @@ const Upload: React.FC = () => {
 
       {/* 进度展示 */}
       {progress && currentStep >= 3 && (
-        <Card style={{ marginBottom: 16 }}>
+        <Card style={{ marginBottom: 12 }}>
           <Progress
             percent={progress.progress}
             status={progress.stage === 'failed' ? 'exception' : progress.stage === 'completed' ? 'success' : 'active'}
-            strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+            strokeColor={{ '0%': 'var(--color-primary)', '100%': 'var(--color-success)' }}
           />
-          <p style={{ marginTop: 8, color: '#aaa' }}>{progress.message}</p>
+          <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 12 }}>{progress.message}</p>
         </Card>
       )}
 
       {/* CLI 实时日志 */}
       {logs.length > 0 && currentStep >= 3 && (
         <Card
-          title="CLI 实时输出"
+          title={<span style={{ fontSize: 13 }}>CLI 实时输出</span>}
           size="small"
-          style={{ marginBottom: 16 }}
-          extra={<span style={{ color: '#888', fontSize: 12 }}>{logs.length} 行</span>}
+          style={{ marginBottom: 12 }}
+          extra={<span style={{ color: 'var(--text-tertiary)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>{logs.length} 行</span>}
         >
           <div
             style={{
-              background: '#0a0a1a',
-              borderRadius: 6,
-              padding: '12px 16px',
-              maxHeight: 300,
+              background: 'var(--bg-root)',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border-primary)',
+              padding: '10px 14px',
+              maxHeight: 280,
               overflowY: 'auto',
-              fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-              fontSize: 12,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',
@@ -313,10 +304,10 @@ const Upload: React.FC = () => {
               <div
                 key={i}
                 style={{
-                  color: line.startsWith('[stderr]') ? '#ff7875' : '#b5b5b5',
-                  borderBottom: '1px solid #1a1a2e',
-                  paddingBottom: 2,
-                  marginBottom: 2,
+                  color: line.startsWith('[stderr]') ? 'var(--color-error)' : 'var(--text-secondary)',
+                  borderBottom: '1px solid var(--border-primary)',
+                  paddingBottom: 1,
+                  marginBottom: 1,
                 }}
               >
                 {line}
@@ -329,7 +320,7 @@ const Upload: React.FC = () => {
 
       {/* 错误提示 */}
       {error && (
-        <Alert type="error" message="分析失败" description={error} showIcon style={{ marginBottom: 16 }} />
+        <Alert type="error" message="分析失败" description={error} showIcon style={{ marginBottom: 12 }} />
       )}
 
       {/* 提交按钮 */}

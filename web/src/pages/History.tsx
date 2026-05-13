@@ -100,14 +100,22 @@ const History: React.FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 140,
-      render: (t: number) => dayjs(t).format('YYYY-MM-DD HH:mm'),
+      render: (t: number) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+          {dayjs(t).format('YYYY-MM-DD HH:mm')}
+        </span>
+      ),
     },
     {
       title: '耗时',
       dataIndex: 'duration',
       key: 'duration',
       width: 80,
-      render: (d: number | null) => d ? `${Math.round(d / 1000)}s` : '-',
+      render: (d: number | null) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+          {d ? `${Math.round(d / 1000)}s` : '-'}
+        </span>
+      ),
     },
     {
       title: '操作',
@@ -130,8 +138,8 @@ const History: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ color: '#fff', margin: 0 }}>历史记录</h1>
+      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>历史记录</h1>
         {selectedIds.length >= 2 && (
           <Button
             type="primary"
@@ -144,7 +152,7 @@ const History: React.FC = () => {
       </div>
 
       {/* 筛选栏 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <Card size="small" style={{ marginBottom: 12 }}>
         <Space wrap>
           <Input
             placeholder="搜索文件名..."
