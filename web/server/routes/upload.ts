@@ -24,7 +24,7 @@ export async function uploadRoutes(app: FastifyInstance) {
     // 验证文件类型
     const ext = path.extname(data.filename).toLowerCase();
     if (ext !== '.pdata') {
-      return reply.status(400).send({ error: '只支持 .pdata 文件' });
+      return reply.status(400).send({ error: `不支持 "${ext}" 格式，仅支持 Unity Profile Analyzer 导出的 .pdata 文件` });
     }
 
     const sessionId = uuid();

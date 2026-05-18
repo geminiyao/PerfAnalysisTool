@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lastUpdated": "2026-05-11T04:37:19.777Z",
-    "projectPath": "K:\\AOEYZ_AIBenchmark\\AOE3D"
+    "lastUpdated": "2026-05-18T03:09:22.417Z",
+    "projectPath": "/data/workspace/AOEYZ_trunk"
   },
   "Core.Update": {
     "source": "grep",
@@ -272,5 +272,15 @@
       }
     ],
     "snippet": "    return self.camera\r\nend\r\n\r\n--#if ENABLE_PROFILER\r\nlocal samplersViewPosCallback = {}\r\nlocal sampler_OnCameraPosChanged_Callback = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.CameraPosChanged_Callback\")\r\nlocal sampler_UpdateAudioListenerPosition = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.UpdateAudioListenerPosition\")\r\nlocal sampler_OnCameraPosChanged_Event = U3D.Profiling.CustomSampler.Create(\"MapCameraCtrl.OnCameraPosChanged_Event\")\r\n--#endif\r\nfunction cls:OnCameraPosChanged(forceUpdate)\r\n    if ObjUtil.IsNull(self._sightCameraRoot) then\r"
+  },
+  "InfiniteZoomMapGoEffectCtrl.OnStateChange": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "AOE3D/Assets/Scripts/.Lua/Module/InfiniteZoom/Ctrl/InfiniteZoomMapGoEffectCtrl.lua",
+        "line": 296
+      }
+    ],
+    "snippet": "    ProfilerUtil.SamplerEnd(sampler_SetRootScale)\r\n    self:RefreshConscriptHead(true)\r\n    --#endif\r\nend\r\n\r\nfunction cls:OnStateChange(curState, lastState)\r\n    local state = mgr.infiniteZoomMgr:GetCurState()\r\n    if (state == InfiniteZoomState.Outside or state == InfiniteZoomState.OutsideIcon) then\r\n        -- if not self.mapViewCtrl then\r\n        --     self.mapViewCtrl = mgr.mapCore.MapViewCtrl\r\n        --     if self.mapViewCtrl then\r"
   }
 }

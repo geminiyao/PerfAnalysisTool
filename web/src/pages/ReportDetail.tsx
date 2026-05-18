@@ -172,10 +172,10 @@ const ReportDetail: React.FC = () => {
       setSession(sessionData);
 
       const [reportRes, metricsRes, preprocessRes, logsRes, optimizeRes] = await Promise.all([
-        fetch(`/api/report/${sessionId}/content`).then(r => r.ok ? r.text() : ''),
-        fetch(`/api/report/${sessionId}/metrics`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/report/${sessionId}/preprocess`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/report/${sessionId}/logs`).then(r => r.ok ? r.text() : ''),
+        fetch(`/cpu/api/report/${sessionId}/content`).then(r => r.ok ? r.text() : ''),
+        fetch(`/cpu/api/report/${sessionId}/metrics`).then(r => r.ok ? r.json() : null),
+        fetch(`/cpu/api/report/${sessionId}/preprocess`).then(r => r.ok ? r.json() : null),
+        fetch(`/cpu/api/report/${sessionId}/logs`).then(r => r.ok ? r.text() : ''),
         getOptimizeResults(sessionId).catch(() => ({})),
       ]);
       setReport(reportRes);

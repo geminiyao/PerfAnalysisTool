@@ -7,6 +7,7 @@ import {
   HistoryOutlined,
   SwapOutlined,
   LineChartOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -21,6 +22,7 @@ const AppSider: React.FC = () => {
     { key: '/history', icon: <HistoryOutlined />, label: '历史记录' },
     { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
     { key: '/trends', icon: <LineChartOutlined />, label: '趋势图表' },
+    { key: '/settings', icon: <SettingOutlined />, label: '系统设置' },
   ];
 
   return (

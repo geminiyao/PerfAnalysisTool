@@ -8,6 +8,7 @@ import History from './pages/History';
 import ReportDetail from './pages/ReportDetail';
 import Compare from './pages/Compare';
 import Trends from './pages/Trends';
+import Settings from './pages/Settings';
 
 const { Content } = Layout;
 
@@ -24,6 +25,7 @@ const App: React.FC = () => {
             <Route path="/report/:id" element={<ReportDetail />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/trends" element={<Trends />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>

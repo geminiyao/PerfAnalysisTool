@@ -1,3 +1,6 @@
 {
-  "sourceProjectPath": "K:\\AOEYZ_AIBenchmark\\AOE3D"
+  "sourceProjectPath": "/data/workspace/AOEYZ_trunk",
+  "skillProjectPath": "/data/workspace/PerfAnalysisTool",
+  "maxUploadSize": "500mb",
+  "retentionDays": 0
 }

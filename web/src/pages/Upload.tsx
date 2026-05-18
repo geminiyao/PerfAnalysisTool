@@ -36,6 +36,21 @@ const Upload: React.FC = () => {
       return;
     }
 
+    // 前端文件格式校验
+    if (!isMock && file) {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext !== 'pdata') {
+        message.error(`不支持 ".${ext}" 格式文件，仅支持 Unity Profile Analyzer 导出的 .pdata 文件`);
+        return;
+      }
+      // 文件大小校验 (200MB)
+      const maxSize = 200 * 1024 * 1024;
+      if (file.size > maxSize) {
+        message.error(`文件过大（${(file.size / 1024 / 1024).toFixed(1)}MB），最大支持 200MB`);
+        return;
+      }
+    }
+
     try {
       setUploading(true);
       setError(null);
@@ -83,7 +98,7 @@ const Upload: React.FC = () => {
           let retries = 0;
           const checkAndNavigate = async () => {
             try {
-              const res = await fetch(`/api/report/${resultId}/content`);
+              const res = await fetch(`/cpu/api/report/${resultId}/content`);
               if (res.ok) {
                 const text = await res.text();
                 if (text && text.length > 0) {
@@ -111,8 +126,13 @@ const Upload: React.FC = () => {
 
       unsubRef.current = unsub;
     } catch (err: any) {
-      setError(err.message);
-      message.error(err.message);
+      const errMsg = err.message || '未知错误';
+      const displayMsg = errMsg === 'Failed to fetch'
+        ? '网络连接失败，请检查服务是否正常运行'
+        : errMsg;
+      setError(displayMsg);
+      message.error(displayMsg);
+      setCurrentStep(0);
       setUploading(false);
     }
   };
@@ -320,7 +340,7 @@ const Upload: React.FC = () => {
 
       {/* 错误提示 */}
       {error && (
-        <Alert type="error" message="分析失败" description={error} showIcon style={{ marginBottom: 12 }} />
+        <Alert type="error" message={currentStep <= 1 ? "上传失败" : "分析失败"} description={error} showIcon style={{ marginBottom: 12 }} />
       )}
 
       {/* 提交按钮 */}

@@ -5,3 +5,11 @@ dist/
 .DS_Store
 Thumbs.db
 .codebuddy/
+
+# 运行时数据
+web/data/db.sqlite
+web/data/db.sqlite-shm
+web/data/db.sqlite-wal
+web/data/uploads/
+web/data/results/
+web/data/server.pid
