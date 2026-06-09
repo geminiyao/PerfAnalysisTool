@@ -1,0 +1,118 @@
+========================================================================
+Single Profile Analysis: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf/perf_battle_after.data
+  event: cpu-cycles:u  totalSamples: 214495
+========================================================================
+
+Top hotspots (self time):
+  function                                         self(ms)      pct
+  real_gc()                                       129419.98   45.91%
+  Unity.Transforms.LocalToParentSystem.UpdateH      7387.69    2.62%
+  UI::UIGeometryJob(UI::UIGeometryJobData*)         7286.72    2.58%
+  Rendering.Animator.AnimatorECSComponentSyste      6180.26    2.19%
+  __memcpy                                          4705.38    1.67%
+
+Per-thread CPU breakdown:
+  UnityMain                 199103.83 ms   60.19%
+  Thread-73                  27470.68 ms    8.30%
+  Thread-74                  19800.49 ms    5.99%
+  Thread-76                  19706.26 ms    5.96%
+  Thread-77                  19072.33 ms    5.77%
+  Thread-75                  18981.83 ms    5.74%
+  UnityGfxRenderS            10939.30 ms    3.31%
+  NativeThread                8789.22 ms    2.66%
+  mali-cmar-backe             2334.50 ms    0.71%
+  UnityChoreograp             1904.58 ms    0.58%
+  AudioTrack                   456.38 ms    0.14%
+  Thread-333                   235.43 ms    0.07%
+  Binder:25087_6               230.74 ms    0.07%
+  GThreadManager               214.00 ms    0.07%
+  Thread-213                   198.54 ms    0.06%
+  BatchDeleteObje              146.39 ms    0.04%
+  GThreadProcess               116.89 ms    0.04%
+  Binder:25087_2               110.41 ms    0.03%
+  Thread-172                   109.41 ms    0.03%
+  GVoiceNet                    103.17 ms    0.03%
+  Binder:25087_4                88.59 ms    0.03%
+  gem-scheduled-0               75.82 ms    0.02%
+  mali-utility-wo               60.69 ms    0.02%
+  Thread-38                     56.68 ms    0.02%
+  APM-RoutineThre               56.01 ms    0.02%
+  Thread-331                    52.33 ms    0.02%
+  m.tencent.tmaoe               48.08 ms    0.01%
+  RenderThread                  44.34 ms    0.01%
+  Thread-72                     43.59 ms    0.01%
+  Thread-78                     43.21 ms    0.01%
+  Thread-212                    42.89 ms    0.01%
+  Thread-79                     42.83 ms    0.01%
+  Thread-196                    41.94 ms    0.01%
+  HeapTaskDaemon                35.65 ms    0.01%
+  Binder:25087_5                35.51 ms    0.01%
+
+Per-so CPU breakdown:
+  libxlua.so                                    139394.66 ms   42.14%
+  lib_burst_generated.so                         66168.25 ms   20.00%
+  libunity.so                                    64014.39 ms   19.35%
+  libil2cpp.so                                   18295.71 ms    5.53%
+  libGLES_mali.so                                16043.00 ms    4.85%
+  libc.so                                        10279.33 ms    3.11%
+  libAkSoundEngine.so                             8519.75 ms    2.58%
+  libm.so                                         2931.85 ms    0.89%
+  [JIT cache]                                      856.92 ms    0.26%
+  libart.so                                        713.11 ms    0.22%
+  libgcloud.so                                     558.45 ms    0.17%
+  libgui.so                                        447.61 ms    0.14%
+  libbinder.so                                     253.46 ms    0.08%
+  libutils.so                                      247.27 ms    0.07%
+  [vdso]                                           245.74 ms    0.07%
+  linker64                                         226.73 ms    0.07%
+  framework.jar                                    212.23 ms    0.06%
+  libaudioclient.so                                209.43 ms    0.06%
+  base.vdex                                        171.89 ms    0.05%
+  hwEmui.jar                                       104.62 ms    0.03%
+  libGVoice.so                                      98.31 ms    0.03%
+  core-oj.jar                                       94.84 ms    0.03%
+  libwilhelm.so                                     78.04 ms    0.02%
+  libGLESv2.so                                      70.64 ms    0.02%
+  libandroid_runtime.so                             57.03 ms    0.02%
+  libc++.so                                         54.75 ms    0.02%
+  libui.so                                          41.32 ms    0.01%
+  libgcloudcore.so                                  35.82 ms    0.01%
+  libEGL.so                                         31.79 ms    0.01%
+  libGPM.so                                         27.26 ms    0.01%
+  libGameGraphicsOpt.so                             26.34 ms    0.01%
+  libsigchain.so                                    25.41 ms    0.01%
+  libcutils.so                                      22.96 ms    0.01%
+  libhitrace.so                                     22.34 ms    0.01%
+  boot-hwEmui.oat                                   15.80 ms    0.01%
+  boot.oat                                          14.75 ms    0.00%
+  boot-framework.oat                                14.11 ms    0.00%
+  libhwmediamonitor_client.so                       13.31 ms    0.00%
+  libdl.so                                          13.26 ms    0.00%
+  libopenjdk.so                                     11.52 ms    0.00%
+  libinput.so                                       11.07 ms    0.00%
+  libhwaps.so                                        9.35 ms    0.00%
+  hwPartBasicplatform.jar                            8.68 ms    0.00%
+  libnetd_client.so                                  8.50 ms    0.00%
+  liblog.so                                          8.21 ms    0.00%
+  libartbase.so                                      7.78 ms    0.00%
+  libbase.so                                         7.48 ms    0.00%
+  libandroid.so                                      7.25 ms    0.00%
+  framework-wifi.jar                                 6.94 ms    0.00%
+  libsync.so                                         6.71 ms    0.00%
+  libhidlbase.so                                     6.58 ms    0.00%
+  libsensor.so                                       5.99 ms    0.00%
+  boot-core-libart.oat                               5.65 ms    0.00%
+  libartpalette-system.so                            5.38 ms    0.00%
+  libjavacore.so                                     4.51 ms    0.00%
+  libnativehelper.so                                 3.35 ms    0.00%
+  libartpalette.so                                   3.11 ms    0.00%
+  libdexfile.so                                      2.35 ms    0.00%
+  core-icu4j.jar                                     2.02 ms    0.00%
+  libhitrace_jni.so                                  1.94 ms    0.00%
+  libGameCollect.so                                  1.38 ms    0.00%
+  audiopolicy-aidl-cpp.so                            1.23 ms    0.00%
+  libnativewindow.so                                 1.15 ms    0.00%
+  core-libart.jar                                    1.02 ms    0.00%
+  libopenjdkjvm.so                                   0.91 ms    0.00%
+  libandroidio.so                                    0.00 ms    0.00%
+

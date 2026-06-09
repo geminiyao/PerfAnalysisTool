@@ -1,0 +1,1378 @@
+========================================================================
+Native Performance Comparison
+  baseline: data/baseline/perf_1.data
+  current : data/current/perf_1.data
+  event   : cpu-cycles:u
+========================================================================
+
+------------------------------------------------------------------------
+Level 1 - So-level CPU proportion (per thread)
+------------------------------------------------------------------------
+[UnityMain]
+  so                                    base%       cur%      delta
+  libil2cpp.so                         42.01%     45.81%    +3.80%
+  libunity.so                          32.58%     30.80%    -1.77%
+  libc.so                               5.03%      3.70%    -1.32%
+  libart.so                             4.22%      3.70%    -0.52%
+  libgcloud.so                          0.72%      0.56%    -0.17%
+  libxlua.so                           11.30%     11.32%    +0.02%
+  [JIT cache]                           0.80%      0.81%    +0.01%
+  lib_burst_generated.so                2.26%      2.26%    -0.00%
+
+[UnityGfxRenderS]
+  so                                    base%       cur%      delta
+  libunity.so                          94.32%     89.95%    -4.37%
+  libc.so                               5.48%      9.43%    +3.95%
+
+[GVoiceRender]
+  so                                    base%       cur%      delta
+  libc.so                              33.79%     42.34%    +8.55%
+  libGVoice.so                         66.21%     57.66%    -8.55%
+
+[AsyncWorker]
+  so                                    base%       cur%      delta
+  libgui.so                            56.45%     22.69%   -33.76%
+  libc.so                              42.49%     71.58%   +29.08%
+  libutils.so                           0.00%      5.72%    +5.72%
+  libhidlbase.so                        0.95%      0.00%    -0.95%
+
+[Background Job.]
+  so                                    base%       cur%      delta
+  libunity.so                          50.54%      0.00%   -50.54%
+  libc.so                              49.46%      0.00%   -49.46%
+
+[Binder:23525_5]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     91.91%   +91.91%
+  libbinder.so                          0.00%      6.08%    +6.08%
+  libutils.so                           0.00%      1.20%    +1.20%
+  libgui.so                             0.00%      0.81%    +0.81%
+
+[Thread-134]
+  so                                    base%       cur%      delta
+  libunity.so                          86.81%      0.00%   -86.81%
+  libc.so                               6.97%      0.00%    -6.97%
+  lib_burst_generated.so                4.20%      0.00%    -4.20%
+  libm.so                               2.02%      0.00%    -2.02%
+
+[Thread-145]
+  so                                    base%       cur%      delta
+  libunity.so                          84.99%      0.00%   -84.99%
+  libc.so                               6.49%      0.00%    -6.49%
+  lib_burst_generated.so                5.40%      0.00%    -5.40%
+  libm.so                               3.11%      0.00%    -3.11%
+
+[Thread-183]
+  so                                    base%       cur%      delta
+  libgcloud.so                         80.33%      0.00%   -80.33%
+  libc.so                              18.36%      0.00%   -18.36%
+  [vdso]                                1.32%      0.00%    -1.32%
+
+[Jit thread pool]
+  so                                    base%       cur%      delta
+  libart.so                            80.17%      0.00%   -80.17%
+  libart-compiler.so                   19.83%      0.00%   -19.83%
+
+[HeapTaskDaemon]
+  so                                    base%       cur%      delta
+  libart.so                            78.53%      0.00%   -78.53%
+  libc.so                              10.89%      0.00%   -10.89%
+  core-oj.jar                          10.56%      0.00%   -10.56%
+
+[m.tencent.aoeyz]
+  so                                    base%       cur%      delta
+  libc.so                               0.92%     77.56%   +76.64%
+  libgcloudcore.so                     94.94%     22.43%   -72.50%
+  [vdso]                                4.14%      0.00%    -4.14%
+
+[Thread-381]
+  so                                    base%       cur%      delta
+  libunity.so                          64.70%      0.00%   -64.70%
+  libc.so                              35.30%      0.00%   -35.30%
+
+[Binder:18276_6]
+  so                                    base%       cur%      delta
+  libgui.so                            62.57%      0.00%   -62.57%
+  libbinder.so                         24.41%      0.00%   -24.41%
+  libc.so                              10.59%      0.00%   -10.59%
+  libutils.so                           1.58%      0.00%    -1.58%
+  libui.so                              0.86%      0.00%    -0.86%
+
+[Thread-94]
+  so                                    base%       cur%      delta
+  libunity.so                          60.73%      0.00%   -60.73%
+  libc.so                              39.27%      0.00%   -39.27%
+
+[Thread-380]
+  so                                    base%       cur%      delta
+  libunity.so                          60.04%      0.00%   -60.04%
+  libc.so                              39.96%      0.00%   -39.96%
+
+[Thread-218]
+  so                                    base%       cur%      delta
+  libc.so                              59.87%      0.00%   -59.87%
+  libgcloud.so                         38.72%      0.00%   -38.72%
+  [vdso]                                1.41%      0.00%    -1.41%
+
+[Thread-400]
+  so                                    base%       cur%      delta
+  libunity.so                           0.00%     58.45%   +58.45%
+  libc.so                               0.00%     41.55%   +41.55%
+
+[Thread-196]
+  so                                    base%       cur%      delta
+  libgcloud.so                          0.00%     56.80%   +56.80%
+  libc.so                               0.00%     43.20%   +43.20%
+
+[Thread-239]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     56.56%   +56.56%
+  libgcloud.so                          0.00%     42.12%   +42.12%
+  [vdso]                                0.00%      1.31%    +1.31%
+
+[Thread-240]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     55.89%   +55.89%
+  libunity.so                           0.00%     44.11%   +44.11%
+
+[Thread-399]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     54.76%   +54.76%
+  libunity.so                           0.00%     45.24%   +45.24%
+
+[Thread-139]
+  so                                    base%       cur%      delta
+  lib_burst_generated.so                0.00%     53.07%   +53.07%
+  libunity.so                           0.00%     38.62%   +38.62%
+  libm.so                               0.00%      5.26%    +5.26%
+  libc.so                               0.00%      3.05%    +3.05%
+
+[Thread-217]
+  so                                    base%       cur%      delta
+  libunity.so                          52.99%      0.00%   -52.99%
+  libc.so                              47.01%      0.00%   -47.01%
+
+[Thread-229]
+  so                                    base%       cur%      delta
+  libart.so                            52.88%      0.00%   -52.88%
+  libc.so                              12.59%      0.00%   -12.59%
+  [JIT cache]                          12.11%      0.00%   -12.11%
+  libcutils.so                          6.73%      0.00%    -6.73%
+  base.vdex                             4.06%      0.00%    -4.06%
+  libopenjdk.so                         3.93%      0.00%    -3.93%
+  libartbase.so                         3.84%      0.00%    -3.84%
+  [vdso]                                3.84%      0.00%    -3.84%
+
+[Thread-225]
+  so                                    base%       cur%      delta
+  libunity.so                          52.79%      0.00%   -52.79%
+  libc.so                              47.21%      0.00%   -47.21%
+
+[Thread-95]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     50.97%   +50.97%
+  libunity.so                           0.00%     49.03%   +49.03%
+
+[Thread-136]
+  so                                    base%       cur%      delta
+  lib_burst_generated.so                0.00%     50.93%   +50.93%
+  libunity.so                           0.00%     40.55%   +40.55%
+  libm.so                               0.00%      6.16%    +6.16%
+  libc.so                               0.00%      2.37%    +2.37%
+
+[Thread-398]
+  so                                    base%       cur%      delta
+  libunity.so                           0.00%     50.90%   +50.90%
+  libc.so                               0.00%     49.10%   +49.10%
+
+[Thread-245]
+  so                                    base%       cur%      delta
+  libunity.so                           0.00%     50.31%   +50.31%
+  libc.so                               0.00%     49.69%   +49.69%
+
+[Thread-135]
+  so                                    base%       cur%      delta
+  lib_burst_generated.so                2.83%     51.86%   +49.03%
+  libunity.so                          85.24%     39.99%   -45.26%
+  libc.so                               9.32%      2.45%    -6.87%
+  libm.so                               2.61%      5.70%    +3.09%
+
+[Thread-137]
+  so                                    base%       cur%      delta
+  libunity.so                          85.83%     37.12%   -48.71%
+  lib_burst_generated.so                5.58%     54.02%   +48.44%
+  libm.so                               2.42%      5.42%    +3.00%
+  libc.so                               6.16%      3.43%    -2.73%
+
+[Thread-103]
+  so                                    base%       cur%      delta
+  libGLESv2_adreno.so                   0.00%     48.43%   +48.43%
+  libunity.so                           0.00%     28.59%   +28.59%
+  libc.so                               0.00%     14.38%   +14.38%
+  libm.so                               0.00%      3.62%    +3.62%
+  libgui.so                             0.00%      1.36%    +1.36%
+
+[CrashSight_Rout]
+  so                                    base%       cur%      delta
+  libbinder.so                          0.00%     46.38%   +46.38%
+  base.vdex                             0.00%     37.14%   +37.14%
+  boot-framework.oat                   32.12%      0.00%   -32.12%
+  core-oj.jar                          30.69%      0.00%   -30.69%
+  libCrashSight.so                     24.85%      0.00%   -24.85%
+  libart.so                             2.64%     12.97%   +10.33%
+  [JIT cache]                           9.66%      1.99%    -7.67%
+  libandroid_runtime.so                 0.00%      1.52%    +1.52%
+
+[Thread-102]
+  so                                    base%       cur%      delta
+  libGLESv2_adreno.so                  45.72%      0.00%   -45.72%
+  libunity.so                          29.22%      0.00%   -29.22%
+  libc.so                              14.40%      0.00%   -14.40%
+  libm.so                               6.44%      0.00%    -6.44%
+  libgui.so                             1.53%      0.00%    -1.53%
+
+[Binder:18276_7]
+  so                                    base%       cur%      delta
+  libgui.so                            43.93%      0.00%   -43.93%
+  libbinder.so                         23.03%      0.00%   -23.03%
+  libc.so                              20.81%      0.00%   -20.81%
+  libutils.so                           4.95%      0.00%    -4.95%
+  libui.so                              4.67%      0.00%    -4.67%
+  libsync.so                            2.61%      0.00%    -2.61%
+
+[Thread-9]
+  so                                    base%       cur%      delta
+  libPxKit3.so                          0.00%     36.60%   +36.60%
+  libPxEmbedded.so                      0.00%     24.31%   +24.31%
+  [JIT cache]                           0.00%     10.50%   +10.50%
+  libc.so                               0.00%      8.87%    +8.87%
+  libart.so                             0.00%      7.39%    +7.39%
+  libcrosCurl.so                        0.00%      5.70%    +5.70%
+  [vdso]                                0.00%      3.40%    +3.40%
+  boot.oat                              0.00%      1.17%    +1.17%
+  libartpalette.so                      0.00%      1.07%    +1.07%
+  base.vdex                             0.00%      0.97%    +0.97%
+
+[Binder:23525_7]
+  so                                    base%       cur%      delta
+  libc.so                               0.00%     35.50%   +35.50%
+  libgui.so                             0.00%     34.72%   +34.72%
+  libbinder.so                          0.00%     19.35%   +19.35%
+  libui.so                              0.00%      5.05%    +5.05%
+  libsync.so                            0.00%      3.58%    +3.58%
+  libc++.so                             0.00%      1.75%    +1.75%
+
+[Binder:23525_6]
+  so                                    base%       cur%      delta
+  libgui.so                             0.00%     35.14%   +35.14%
+  libc.so                               0.00%     27.33%   +27.33%
+  libbinder.so                          0.00%     16.12%   +16.12%
+  libutils.so                           0.00%      9.91%    +9.91%
+  libui.so                              0.00%      5.87%    +5.87%
+  libandroid_runtime.so                 0.00%      1.72%    +1.72%
+  libsync.so                            0.00%      1.72%    +1.72%
+  libhidlbase.so                        0.00%      1.36%    +1.36%
+  libhitrace.so                         0.00%      0.84%    +0.84%
+
+[Binder:18276_2]
+  so                                    base%       cur%      delta
+  libc.so                              32.10%      0.00%   -32.10%
+  libgui.so                            30.34%      0.00%   -30.34%
+  libbinder.so                         12.89%      0.00%   -12.89%
+  libui.so                             12.02%      0.00%   -12.02%
+  libc++.so                             9.35%      0.00%    -9.35%
+  libutils.so                           3.29%      0.00%    -3.29%
+
+[Thread-10]
+  so                                    base%       cur%      delta
+  libPxKit3.so                         31.16%      0.00%   -31.16%
+  libPxEmbedded.so                     20.18%      0.00%   -20.18%
+  [JIT cache]                          13.80%      0.00%   -13.80%
+  libart.so                            13.39%      0.00%   -13.39%
+  libc.so                              10.51%      0.00%   -10.51%
+  libcrosCurl.so                        5.22%      0.00%    -5.22%
+  libpimutex.so                         1.55%      0.00%    -1.55%
+  base.vdex                             1.48%      0.00%    -1.48%
+  libartbase.so                         1.38%      0.00%    -1.38%
+  libcutils.so                          1.34%      0.00%    -1.34%
+
+[AudioTrack]
+  so                                    base%       cur%      delta
+  libwilhelm.so                         8.22%     38.03%   +29.82%
+  libc.so                               3.47%     28.98%   +25.50%
+  libutils.so                          20.07%      2.67%   -17.40%
+  libaudioclient.so                    43.14%     30.17%   -12.98%
+  libhwmediamonitor_client.so          13.12%      0.15%   -12.97%
+  libdl.so                             11.71%      0.01%   -11.71%
+
+[Thread-254]
+  so                                    base%       cur%      delta
+  libart.so                             0.00%     29.01%   +29.01%
+  [JIT cache]                           0.00%     23.17%   +23.17%
+  base.vdex                             0.00%     22.32%   +22.32%
+  libc.so                               0.00%     10.91%   +10.91%
+  libpimutex.so                         0.00%      7.96%    +7.96%
+  boot.oat                              0.00%      6.63%    +6.63%
+
+[GThreadManager]
+  so                                    base%       cur%      delta
+  libc.so                              33.54%      5.30%   -28.24%
+  libgcloud.so                         66.46%     94.70%   +28.24%
+
+[APM-Routine]
+  so                                    base%       cur%      delta
+  [JIT cache]                          25.80%      0.45%   -25.34%
+  framework.jar                        16.11%     36.17%   +20.05%
+  core-icu4j.jar                        0.00%     16.64%   +16.64%
+  core-oj.jar                           0.30%     11.05%   +10.75%
+  base.vdex                            11.12%      1.20%    -9.92%
+  libart.so                            34.58%     25.49%    -9.09%
+  libbinder.so                         12.09%      4.45%    -7.64%
+  libGPM.so                             0.00%      4.55%    +4.55%
+
+[GVoiceUtil]
+  so                                    base%       cur%      delta
+  libc.so                              29.45%      4.57%   -24.88%
+  libGVoice.so                         70.55%     95.43%   +24.88%
+
+[Profile Saver]
+  so                                    base%       cur%      delta
+  libart.so                           100.00%     80.80%   -19.20%
+  libprofile.so                         0.00%     19.15%   +19.15%
+
+[gem-scheduled-0]
+  so                                    base%       cur%      delta
+  core-oj.jar                          20.47%      4.31%   -16.16%
+  [JIT cache]                          35.47%     47.43%   +11.96%
+  libicui18n.so                         9.70%      0.00%    -9.70%
+  base.vdex                             0.00%      9.55%    +9.55%
+  libc.so                               9.70%     15.57%    +5.88%
+  libbinder.so                          5.01%      0.00%    -5.01%
+  core-libart.jar                       0.00%      3.08%    +3.08%
+  libnativehelper.so                    0.00%      0.54%    +0.54%
+  libart.so                            19.63%     19.46%    -0.17%
+
+[GVoiceCapture]
+  so                                    base%       cur%      delta
+  libGVoice.so                         67.57%     53.74%   -13.83%
+  libc.so                              32.43%     46.26%   +13.83%
+
+[NativeThread]
+  so                                    base%       cur%      delta
+  libAkSoundEngine.so                  87.95%     96.41%    +8.46%
+  linker64                              5.35%      1.30%    -4.05%
+  libart.so                             2.13%      0.20%    -1.93%
+  libc.so                               3.13%      1.89%    -1.24%
+
+[com.tencent.aoeyz]
+  so                                    base%       cur%      delta
+  libhitrace.so                         6.62%      0.00%    -6.62%
+  [JIT cache]                          47.22%     52.19%    +4.97%
+  libutils.so                           1.12%      5.85%    +4.74%
+  libopenjdkjvm.so                      5.24%      0.83%    -4.41%
+  libbinder.so                          3.66%      7.75%    +4.09%
+  [vdso]                                2.08%      0.00%    -2.08%
+  libandroid_runtime.so                 2.72%      0.91%    -1.81%
+  libart.so                             1.14%      2.89%    +1.75%
+  libpimutex.so                         0.00%      1.70%    +1.70%
+  libartpalette.so                      1.12%      0.00%    -1.12%
+  libwebviewchromium.huawei.so          1.11%      0.00%    -1.11%
+  libhitrace_jni.so                     4.40%      3.42%    -0.98%
+  libcutils.so                          0.98%      0.00%    -0.98%
+  base.vdex                             1.27%      1.94%    +0.67%
+  boot-framework.oat                    1.27%      1.91%    +0.64%
+  libc.so                              12.61%     13.14%    +0.53%
+  libPxEmbedded.so                      7.37%      7.48%    +0.11%
+
+[Audio Stream Th]
+  so                                    base%       cur%      delta
+  libc.so                              24.57%     30.70%    +6.13%
+  libunity.so                          75.43%     69.30%    -6.13%
+
+[Audio Mixer Thr]
+  so                                    base%       cur%      delta
+  libc.so                               4.84%      9.41%    +4.57%
+  libunity.so                          95.16%     90.59%    -4.57%
+
+[UnityChoreograp]
+  so                                    base%       cur%      delta
+  [JIT cache]                          38.68%     40.98%    +2.30%
+  libbinder.so                          3.16%      1.86%    -1.30%
+  libc.so                               4.18%      2.95%    -1.23%
+  libutils.so                           1.71%      0.78%    -0.93%
+  libart.so                            37.30%     38.18%    +0.89%
+  [vdso]                                1.00%      0.27%    -0.74%
+  framework.jar                         1.61%      2.27%    +0.66%
+  boot-framework.oat                    0.43%      1.03%    +0.60%
+  libunity.so                           2.83%      3.42%    +0.59%
+  libopenjdk.so                         0.56%      0.00%    -0.56%
+  libdexfile.so                         0.78%      1.30%    +0.53%
+  libc++.so                             0.21%      0.68%    +0.47%
+  libgui.so                             1.26%      0.91%    -0.36%
+  libhitrace.so                         0.74%      0.44%    -0.30%
+  libandroid_runtime.so                 2.30%      2.35%    +0.04%
+  hwEmui.jar                            1.58%      1.54%    -0.04%
+
+[AAudio_1]
+  so                                    base%       cur%      delta
+  libhwmediamonitor_client.so           1.32%      3.31%    +1.99%
+  libaaudio_internal.so                23.86%     22.24%    -1.61%
+  libAkSoundEngine.so                   5.45%      4.07%    -1.38%
+  libc.so                               6.43%      5.38%    -1.05%
+  [vdso]                                0.52%      1.30%    +0.79%
+  linker64                             56.57%     57.33%    +0.76%
+  libdl.so                              1.70%      1.98%    +0.28%
+  libaudioutils.so                      1.75%      2.01%    +0.26%
+  libcutils.so                          1.54%      1.42%    -0.12%
+  libaaudio.so                          0.87%      0.95%    +0.08%
+
+------------------------------------------------------------------------
+Level 2 - Anchor subtree time
+------------------------------------------------------------------------
+  anchor                                         base(ms)    cur(ms)    delta
+  TranscriptScriptableRenderContext::ExecuteSc      15.63      12.16  -22.20%
+
+------------------------------------------------------------------------
+Level 3 - Function-level diff (A=Added M=Modified D=Deleted)
+------------------------------------------------------------------------
+[M] UnityMain 4993.48ms [maybe_inlined]
+	[M] luaV_execute 7940.01ms (+38.26%)
+	[M] il2cpp::vm::Runtime::Invoke(MethodInfo const*, void*, void**, Il2CppException**) 3514.48ms (+16.94%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::Testkey_GetPubKey_Return_CorrectKey_And_Raise_NoError_ForValidKey::RunImpl() const 3467.47ms (+16.71%)
+	[M] RuntimeInvoker_TrueVoid_t22962CB4C05B1D89B55A6E1139F0E87A90987017(void (*)(), MethodInfo const*, void*, void**) 3281.58ms (+15.81%)
+	[M] luaD_rawrunprotected 1634.55ms (+7.88%)
+	[M] lua_pcallk 1626.38ms (+7.84%)
+	[M] f_call.llvm.12877882672167099788 1623.97ms (+7.83%) [maybe_inlined]
+	[M] MeshUIManager_OnLateUpdate_mD1A233FAD58F6CA85ECA50F7F3FEA41B5C5F5A10 1249.57ms (+6.02%)
+	[M] GameLauncher_Update_m3CAA53A4029FEAB80C4F555EDC3A798C14E01B7E 1246.57ms (+6.01%)
+	[M] FrameworkCore_OnUpdate_m652ED8A40EC3FBF48D8118DECF2E23454BBF4479 1242.63ms (+5.99%)
+	[M] luaD_call 1174.52ms (+5.66%)
+	[M] ComponentSystem_Update_mAE72864D55CA50D9254DCB6D80778D42EA0EBBAD 1173.10ms (+5.65%)
+	[M] FrameworkCore_OnLateUpdate_mBB7DEC38A01DB20BC2FB415E90B060CF9A7B83B3 1127.03ms (+5.43%)
+	[M] GameLauncher_LateUpdate_mB162FBFCC2D0D45FD5873DFCDE3F4B29CE3ACEF9 1122.71ms (+5.41%) [maybe_inlined]
+	[M] ComponentSystemGroup_UpdateAllSystems_m85CAF07C55B79B97FA9CC91EAD8998E69588B4A2 1091.72ms (+5.26%)
+	[M] MUIControlManager_OnLateUpdate_mAD91DCD286F79F662FBC4BA326869C568D9A631C 1046.64ms (+5.04%)
+	[M] luaB_xpcall 893.14ms (+4.30%)
+	[M] UpdateFunction_Invoke_m6C0E9E5082FCEEF018602FD40A43E613360D410D 856.32ms (+4.13%)
+	[M] Lua_lua_pcall_m5FCE149B5BCF2A11013B5CD5A3472062FABAAF67 736.41ms (+3.55%)
+	[M] DelegateBridge_PCall_m9D48AB1CC89463B19E0084D0A5A0361036387821 735.13ms (+3.54%) [maybe_inlined]
+	[M] Action_Invoke_mC8D676E5DDF967EC5D23DD0E96FB52AA499817FD 729.31ms (+3.51%)
+	[M] JobComponentSystem_Update_mFFA4D358B16ED646660215CA62EB9BB514A9A3F7 725.44ms (+3.50%)
+	[M] DelegateBridge___Gen_Delegate_Imp97_m3166332F1CCE1D5910DF530886E0BABC11C9ED20 704.42ms (+3.39%)
+	[M] LuaMgr_OnUpdate_m2AF3D721C056492E9FFB6ACA3D308C1F7A2B9FB9 676.63ms (+3.26%)
+	[M] BaseLuaMgr_OnUpdate_m9A065F7A5031DFE36B42D8C5B127D546C5B9377D 675.26ms (+3.25%)
+	[M] MapManager_OnUpdate_mDE1EB897580A108B6670AF5381B3330E0CF79E80 448.94ms (+2.16%)
+	[M] BattleUIManager_OnUpdate_m7C2141EB895B437A7223329DAC1E15F0C77708B4 295.29ms (+1.42%)
+	[M] OutsideUtils_OptimizedRayTerrainIntersection_m6BDB8F728BE3F4B3932D6E0E019AFC1C26F754D9 -266.12ms (-1.28%)
+	[M] OutsideUtils_GetTargetPosForTerrainHeight_m4888A9488A15A0AAF7A068AC168C3D6E24A1E891 -265.98ms (-1.28%)
+	[M] UtilHeightMapBurst_GetBilinearHeight_m99E47AC892B479EA869D864C0144892B1318BCBB -226.78ms (-1.09%) [maybe_inlined]
+	[M] CamGroundFrustum_Calculate_mBCB910C4B4944761FB1EF1FD2A85E0AFB2E9453B -181.74ms (-0.88%)
+	[M] csharp_function_wrap 174.33ms (+0.84%)
+	[M] MapManager_OnLateUpdate_mA939E4C349C95A28D3EBF000584EA2672FD00AA2 -172.74ms (-0.83%)
+	[A] MoveChain_SoldierMoveSystem_OnUpdate_mF5B423C990DA3A2BE0A0D3D76848627741DE99FD 171.56ms (+0.83%)
+	[M] il2cpp::vm::Object::IsInst(Il2CppObject*, Il2CppClass*) 166.11ms (+0.80%)
+	[M] MUILayoutManager_OnUpdate_mCF0395574A581508205E341F055FDE282CAEDDD6 162.20ms (+0.78%)
+	[A] SuiteRemapperkUnitTestCategory::TestIsSerializedObjectIdentifierMappedToAnything_ReturnsTrue_ForKnownMappings::RunImpl() const 158.41ms (+0.76%)
+	[M] Enumerator_MoveNext_m04F91EFB2C11DE1ED39627288DD2CF031EC8819F_gshared 142.52ms (+0.69%)
+	[M] RuntimeInvoker_FalseVoid_t22962CB4C05B1D89B55A6E1139F0E87A90987017_RuntimeObject_IntPtr_t(void (*)(), MethodInfo const*, void*, void**) 140.95ms (+0.68%)
+	[M] c7a1a28595c426f61166442d4d621650 -135.46ms (-0.65%) [maybe_inlined]
+	[M] AOE.DOTS.UtilHeightMapBurst.GetBilinearHeight -134.26ms (-0.65%)
+	[M] UniversalRenderPipeline_Render_m8A72A7A33674DE0E8C5054934FD6051DFEFD56B9 132.98ms (+0.64%)
+	[M] MapEntityEffectMgr_OnUpdate_m3D3CDC70DA182EF20EBF6F30F974CA7C168BC4C5 131.18ms (+0.63%)
+	[M] MapEntityEffectMgr_UpdateEffectInstances_m078CC5ACB28A84A69267C8B17544C5FC264CDA42 130.58ms (+0.63%)
+	[M] RenderPipelineManager_DoRenderLoop_Internal_mF16D72874EE44C297C2D0623933207B448BFCD32 127.65ms (+0.62%)
+	[M] AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamplerHeights_0000FB49$BurstDirectCall.Invoke(ref Unity.Mathematics.float3 worldPos, ref HeightMapCalcInfo calcInfo, ref Unity.Mathematics.int2 leftBottom, ref Unity.Mathematics.float4 samplerHeights) -> void_356fe412ab5d279ecb02e1e6360be035 -125.76ms (-0.61%)
+	[A] MUILayoutManager_CreateLayoutNode_mE6201F25021E4777F30C7E2C6B473F0CB869FEC2 123.48ms (+0.60%)
+	[M] il2cpp::vm::Class::IsAssignableFrom(Il2CppClass*, Il2CppClass*) 122.95ms (+0.59%)
+	[A] 795172996201e54a1ce18c91ca7723a0 108.99ms (+0.53%) [maybe_inlined]
+	[A] Unity.Entities.JobChunkExtensions.JobChunkProducer`1<TBU.Rendering.Shadow.PlanarShadowStaticEntitiesCullingJob>.ExecuteInternal(ref Unity.Entities.JobChunkExtensions.JobChunkWrapper`1<TBU.Rendering.Shadow.PlanarShadowStaticEntitiesCullingJob> jobWrapper, ref Unity.Jobs.LowLevel.Unsafe.JobRanges ranges, int jobIndex) -> void_356fe412ab5d279ecb02e1e6360be035 108.99ms (+0.53%)
+	[M] ChunkIterationCalculation_Invoke_mEF327BDA714AC0779E315F7C040132D53D5F8D0B 101.66ms (+0.49%)
+	[M] DelegatePInvokeWrapper_ChunkIterationCalculation_t2C42A3598806A69F696D63AB59D4C33D8B8FD6C8 100.23ms (+0.48%)
+	[M] MUILayoutRoot_UpdateDirtyNodes_m8AA2A53534DF581386590D151AB20E601816316C 99.62ms (+0.48%)
+	[A] MapEntityEffectMgr_UpdateCasterEffect_m888254CBC54D34923C0C5E178AD2BF6643E3CCF2 94.66ms (+0.46%)
+	[A] MUIControl_get_enabledSelf_mD2221FB0ACAA2AC946DABD06107DE3A50BDAEB88 90.64ms (+0.44%)
+	[M] SystemState_ShouldRunSystem_mE084B29F5382F55C797696C835F0A1CD79F8A66C 88.95ms (+0.43%)
+	[M] UniversalRenderPipeline_RenderCameraStack_m2C700EE753A6E74CEC904E4350AE1F239A9ECA4D 87.11ms (+0.42%)
+	[M] OutsideUtils_RayToWorldPos_m41CF86D588B34449E4D26CF88C06ABB6AECEF909 -84.33ms (-0.41%)
+	[A] MoveChain_SyncMoveDataSystem_OnUpdate_m444E00816181F0102407EC8AEFA95665409737F5 84.27ms (+0.41%)
+	[M] TServerManager_OnUpdate_m80773458F9F83BF6D7DF1EF478586936F69D3F57 83.26ms (+0.40%)
+	[M] StaticLuaCallbacks_FixCSFunction_m66A0F91AB6807FF48F94DFFDC52F0491FB622A3F 82.50ms (+0.40%)
+	[M] Func_3_Invoke_m55ABBE1960B639ABDFAE50D20376BB6D626E96B1_gshared -81.98ms (-0.40%)
+	[M] dynamic_block_array<SuiteDynamicBlockArraykUnitTestCategory::LogDataWithLabel, 2ul>::grow(unsigned long) 81.26ms (+0.39%)
+	[M] ReversePInvokeWrapper_StaticLuaCallbacks_FixCSFunction_m66A0F91AB6807FF48F94DFFDC52F0491FB622A3F 81.19ms (+0.39%) [maybe_inlined]
+	[A] MoveChain_ArmyMoveSystem_OnUpdate_mE899B1545A17C75710C380741288D49EAA018135 81.17ms (+0.39%)
+	[M] lua_CSFunction_Invoke_m013AE6BFDB2C6FCB1E3B0C180B42D45E88D89009 79.21ms (+0.38%)
+	[A] TBU.Rendering.Shadow.PlanarShadowStaticEntitiesCullingJob.MarkRenderShadowRecursively(TBU.Rendering.Shadow.PlanarShadowStaticEntitiesCullingJob* this, Unity.Entities.Entity entity) -> void_356fe412ab5d279ecb02e1e6360be035 77.52ms (+0.37%)
+	[M] UpdateProximityJob(CrowdInfo*, unsigned int) 76.25ms (+0.37%)
+	[A] com.unity3d.player.UnityPlayer$e$1.handleMessage 76.20ms (+0.37%)
+	[M] TServer_Tick_m98221E764E372B16A64880AA588038C415377B57 75.91ms (+0.37%)
+	[M] CrowdManager::Update(float, CrowdAgentDebugInfo*, int) 73.92ms (+0.36%)
+	[M] MethodWrap_Call_m7EE6B8CEA10E848E995F870E33C2C99282A2124E 73.63ms (+0.35%)
+	[M] MonoMethod_Invoke_mD791F247764DAE0188BA06FD1DA51525E8F2F394 73.06ms (+0.35%) [maybe_inlined]
+	[M] OverloadMethodWrap_Call_mDB9D622FD5FF88DBADBDE4A7AF2F6A2BF7AF2390 72.15ms (+0.35%) [maybe_inlined]
+	[A] MapEntityEffectMgr_UpdateFollowPosAndDir_m11A58F1D3DA21589ADD25FFBB18F510E68C28A0E 71.22ms (+0.34%)
+	[M] il2cpp::vm::Runtime::InvokeConvertArgs(MethodInfo const*, void*, Il2CppObject**, int, Il2CppException**) 68.25ms (+0.33%)
+	[M] il2cpp::icalls::mscorlib::System::Reflection::MonoMethod::InternalInvoke(Il2CppReflectionMethod*, Il2CppObject*, Il2CppArray*, Il2CppException**) 67.98ms (+0.33%) [maybe_inlined]
+	[M] Testing::ParametricTestWithFixtureInstance<void (*)(GraphicsFormat, GraphicsFormat), SuiteImageOperationskPerformanceTestCategory::ParametricTestImagePerfFixture512x512FastBlitCopyForFormats>::RunImpl() const 67.85ms (+0.33%)
+	[M] 6f0ec224158d52e670be4411ef925cf5 67.71ms (+0.33%) [maybe_inlined]
+	[M] WorldTileRendering_DrawInternal_mC45F97194BBB8788B44C55A12D78E52973309AFB -66.17ms (-0.32%)
+	[M] Unity.Entities.ChunkIterationUtility.Unity.Entities.CalculateChunkCountExecute_00000745$BurstDirectCall.Invoke(ref Unity.Entities.UnsafeMatchingArchetypePtrList matchingArchetypes, ref Unity.Entities.EntityQueryFilter filter) -> int_356fe412ab5d279ecb02e1e6360be035 66.09ms (+0.32%)
+	[M] UniversalRenderPipeline_RenderSingleCamera_m43BFF4396AAFE09F5F815E2E1CC05133567EDFCE 63.36ms (+0.31%)
+	[M] OutsideEnvEffectMgr_RefreshEnvEffectBasedOnCamera_m206F625230F56977A0ED12D67055D8276078D4F7 -63.21ms (-0.30%) [maybe_inlined]
+	[M] OutsideEnvEffectMgr_OnLateUpdate_mA0D04E627927E47933AB1E998136D5127144F308 -63.13ms (-0.30%)
+	[A] SyncViewEntitySystem_OnUpdate_m8CC97659BAFB2BA316AF954A93D51F26602D23E4 62.47ms (+0.30%)
+	[M] PlanarShadow_CalculateTerrainHeight_m5AC4DDC256B3495217B5EF60784C5D228EA6AEF7 -62.31ms (-0.30%) [maybe_inlined]
+	[M] OutsideRoadsMgr_OnLateUpdate_m4AD6B2CD157540C3B8393E9AF6976C62F6C070BA -62.15ms (-0.30%)
+	[M] OutsideEnvEffectMgr_CalcCameraViewRect_m5043AF488D54217C6A552AE7B4183D5FC281F9A4 -61.98ms (-0.30%) [maybe_inlined]
+	[M] void RemapPPtrTransfer::TransferSTLStyleArray<ArrayOfManagedObjectsTransferer>(ArrayOfManagedObjectsTransferer&, TransferMetaFlags) 61.64ms (+0.30%)
+	[A] MUIEffect_OnLateUpdate_m3653883E3948952BBE7F22EBC19922164C2506F4 59.41ms (+0.29%)
+	[M] OutsideTreeTypeRenderer_DrawForestCell_m2599D7C54E343FBC5053B0446806E42E11DCB8A4 58.66ms (+0.28%)
+	[M] RenderMeshSystemV2_OnBeginFrameRendering_m9E70DE44E58E94B8C6EF0948350892D1A9973AF4 57.69ms (+0.28%)
+	[M] PlanarShadow_RenderShadow_m98C8B2E2CA705C8B691F39900DB640BAB96A90FA 57.05ms (+0.27%)
+	[M] TServer_DecodeMessages_mBDAAE6F63CA40E10A1C7888445642FFDFF284B97 56.91ms (+0.27%)
+	[M] Action_2_Invoke_m15A8BBEA920329AC5CCC74BFFC1B2190DE4D9231_gshared 56.61ms (+0.27%)
+	[M] NativeArray_1_Copy_m24306438D6F5D8642E07B5CF9C988EDC5645412D_gshared -54.61ms (-0.26%)
+	[M] OutsideViewTreeMgr_OnLateUpdate_mF45F83ED18D7247A29817E50F6A55B35C1327E6A -54.43ms (-0.26%)
+	[M] PlanarShadow_DrawShadow_m43F166A4D410F48526A7C91675C5EB93DF6B9DFF 53.90ms (+0.26%)
+	[M] QuadTreeNode_Query_TisRuntimeObject_m4BD53C23267A579A0581C3F9D48286D660E5B09A_gshared -53.53ms (-0.26%)
+	[M] unsigned int std::__ndk1::__sort3<SortByHashPred<LightData, DefaultHashFunctor<LightData> >&, LightData*>(LightData*, LightData*, LightData*, SortByHashPred<LightData, DefaultHashFunctor<LightData> >&) 53.52ms (+0.26%)
+	[M] RenderPipelineUtil_GetTerrainPosAtViewPos_m48028067F3601AA6A2E3119BBD9FE5ED9D4B8FFE -52.74ms (-0.25%) [maybe_inlined]
+	[M] GetBilinearHeight_0000FB4CU24BurstDirectCall_Invoke_mBF4278DF1DCB43F78557D9A65D0C2D959A81A806 -52.61ms (-0.25%)
+	[A] TPacketProcessProtobuf_ParsePacket_m105B16711024F2079EF49B9D47FC275222010147 51.98ms (+0.25%)
+	[M] EnlightenRuntimeManager::RepairSystemState(SortedHashArray<Hash128, DefaultHashFunctor<Hash128> > const&, EnlightenSceneMapping const&, bool) 51.76ms (+0.25%)
+	[M] LODGroupSelectSystem_OnUpdate_mDD49842AA516E1FB55DE2BA1D257C92538DF8E9C 50.17ms (+0.24%)
+	[M] luaV_finishget 49.90ms (+0.24%)
+	[M] ScriptableRenderer_ExecuteRenderPass_m48C767223C6D53BB268768BE02DDD39024362536 -48.73ms (-0.23%)
+	[M] ViewHandle_UpdateView_m39F016D9A9D05A79D7707FD8D06876CE44CE0910 -48.32ms (-0.23%) [maybe_inlined]
+	[M] MobileBaseRenderer_Setup_m6E6265C867AED4C31038CB3899C51118BA64AD5F 48.13ms (+0.23%)
+	[M] PlanarShadow_BeginProcessShadow_m1102AE9035077A70E9034FC30B068E1EA8FFA603 -48.05ms (-0.23%) [maybe_inlined]
+	[M] CamViewCalc_CalcFrustumCorners_m8B08D18FDCF369D4E1A0B3B72F1FF0ED8A3155C0 -47.26ms (-0.23%) [maybe_inlined]
+	[M] GC_end_stubborn_change 46.95ms (+0.23%)
+	[A] MergeTable(lua_State*, int, int, char const*, int, char const*) 46.78ms (+0.23%)
+	[M] DrawRendererPass_Execute_mB0274D80F03D124D6C9974755F3AB0577DBC698B -46.38ms (-0.22%)
+	[M] OutsideForestRenderer_DrawInternal_m0AC8B52485901DD383727955BB4FAE982A122A72 46.23ms (+0.22%)
+	[M] RenderPipelineUtil_DrawFoliageInstanceRenderers_mA11238423A6454C15AB798B39122D8AD8FE284F4 -45.37ms (-0.22%)
+	[A] lpbD_message 44.37ms (+0.21%)
+	[M] GetBilinearHeight_0000FB4CU24BurstDirectCall_GetFunctionPointer_mCD021A566093F8B293B37B855AED9F9E6A045A2D -44.21ms (-0.21%)
+	[A] 81c5d03e91df940b56871151c41a0161 43.67ms (+0.21%) [maybe_inlined]
+	[A] Unity.Jobs.IJobParallelForExtensions.ParallelForJobStruct`1<Unity.Rendering.WriteStaticShadowInstanceDataJob>.Execute 43.67ms (+0.21%) [maybe_inlined]
+	[A] Unity.Rendering.WriteStaticShadowInstanceDataJob.DoWriteData(Unity.Rendering.WriteStaticShadowInstanceDataJob* this, int SharedRenderMeshIndex, int dataIndexStart, byte* instDataCachePtr, ref Unity.Rendering.InstanceDataStart StartData) -> void_356fe412ab5d279ecb02e1e6360be035 43.67ms (+0.21%)
+	[M] TranscriptRenderingCommandBuffer::TranscriptRenderingCommandBuffer(MemLabelId const&, RenderingCommandBuffer const&, TranscriptScriptableRenderContext*) 43.22ms (+0.21%)
+	[A] DotsArmyViewEntityMgr_TryGetTRByBindIdxIgnoreViewEntity_m723342F11C085DD1FFE2BDBAC8FF173665B63139 43.07ms (+0.21%)
+	[A] BattleUIManager_UpdateMUIPos_m61503C001ED6B759364030072810F6541818DD54 42.67ms (+0.21%)
+	[M] DotsManager_OnPostLateUpdate_m0DADC6FF74CB81A2D74FB352BE8496D2A3888CA1 42.39ms (+0.20%)
+	[A] MUILayoutManager_CreateLayout_m69E98C2EA30C3AF60E1DAB1029A9FC098B5AA138 42.27ms (+0.20%) [maybe_inlined]
+	[M] com.unity3d.player.UnityPlayer$e.run 42.16ms (+0.20%) [maybe_inlined]
+	[M] RuntimeStatic<ARCore::ARCoreManager, false>::StaticDestroy(void*) 40.67ms (+0.20%) [maybe_inlined]
+	[M] MobileBaseRenderer_SetupGameCamera_m9744481881CAD40F9064FEB347ADD20B6BCC4ABC 40.42ms (+0.19%) [maybe_inlined]
+	[M] BaseLuaMgr_OnLateUpdate_m40AB4EA85860DC8CC0ECF0133C5B5D223EDD2079 39.42ms (+0.19%) [maybe_inlined]
+	[M] RenderMeshSystemV2_DrawRenderers_m7FCFFFFB18B76D7EB8C1996D6E3DA871E071A7FA 39.23ms (+0.19%)
+	[M] Dictionary_2_FindEntry_mFDF9D228127FB25281E0A80AA968857CC42D0069_gshared 38.81ms (+0.19%)
+	[M] FrameworkCore_OnPostLateUpdate_m4050866BB9A34678AA5D1900381D9DF0FA301467 38.68ms (+0.19%) [maybe_inlined]
+	[M] ExportCoreBindingsNew() -37.37ms (-0.18%)
+	[M] OutsideRoadsMgr_CalcCameraViewRect_mC1015292D129B9DF36A96F558019A359DCC08DEE -36.47ms (-0.18%) [maybe_inlined]
+	[M] GetBilinearHeight_0000FB4CU24BurstDirectCall_GetFunctionPointerDiscard_mA15D58ADA894BD5FC171F8CFC62FD8B7BFCCF97A -36.09ms (-0.17%)
+	[M] MapEntityManager_GetEntity_mE524977230A820199CCE89EB4B1DCB2BB3C431B2 35.98ms (+0.17%)
+	[M] VRDevice::EarlyUpdate() -35.90ms (-0.17%)
+	[M] ExecuteRenderPassAction_Invoke_m570C19D778C5B43D56C1CFDA9D12002B8BD81227 34.95ms (+0.17%)
+	[M] BatchRenderer_AppendList_m7DC51F6D0CA28875AF06A38589191154BA64126F 34.23ms (+0.16%)
+	[M] rcBuildLayerRegions(rcContext*, rcCompactHeightfield&, int, int) 34.21ms (+0.16%)
+	[M] MobileBaseRenderer_SetupRenderPassFromFeatures_m35ACB1DF6787A019AB289C3ADE164BD53A3094D8 34.19ms (+0.16%)
+	[M] QuadTreeNode_Query_TisRuntimeObject_mA88DE59636A4946AB3E214B0FB0300B9FF37A864_gshared 34.11ms (+0.16%)
+	[M] Dictionary_2_TryGetValue_mE295779CD0417DBC80453686144B2B908B7EC089_gshared 33.47ms (+0.16%)
+	[M] RenderPipelineUtil_GetViewCenterTerrainPos_mBCA477CA09BE7012C653FC33B9BBD79B18514A15 -33.35ms (-0.16%) [maybe_inlined]
+	[M] EnlightenRuntimeManager::SyncRuntimeDataExplicit(int, core::basic_string<char, core::StringStorageDefault<char> > const&, EnlightenSceneMapping const&) 33.13ms (+0.16%)
+	[M] RenderMeshSystemV2_UpdateDynamicRenderBatches_m5E12C6B55678D29EB6BD54D6DADFDF563359612D 32.73ms (+0.16%)
+	[M] RenderMeshSystemV2_DoUpdate_mE3026788EFBA067573E5467667ADE16DD37B72AC 32.70ms (+0.16%) [maybe_inlined]
+	[M] BurstCompiler_get_IsEnabled_m05F933051E525210A3A999C9EA671AF9C51312F0 -32.69ms (-0.16%)
+	[M] AnimationClip::FireAnimationEvents(AnimationClipEventInfo*, Unity::Component&) 32.64ms (+0.16%)
+	[A] MapEntityManager_GetEntityPos_mB0F3FE56B56D76E57C0BDE61AC98FB87099DF44F 32.33ms (+0.16%)
+	[A] lpbD_rawfield 32.21ms (+0.16%) [maybe_inlined]
+	[A] Dictionary_2_TryGetValue_m55C67368A39862F301667EAB2585C96D13CF5345_gshared 31.86ms (+0.15%)
+	[M] UnmanagedMemoryAccessor_Read_TisMapTerrainTypeConf_t721A08AF713840AB777294EF3784E619E4E0F241_mBCB5586EEC914CBB3CBEDD6CFFFD53A9D68CB622_gshared 31.78ms (+0.15%)
+	[A] SuiteBuiltinShaderParamsNameskUnitTestCategory::TestBuiltInShaderParamsNamesAreAlphabeticallySorted::RunImpl() const 30.77ms (+0.15%)
+	[M] FrameworkCore_OnPostEndOfFrame_mFA643523E45043F9E1255D3FD099A6E6079AA161 30.51ms (+0.15%) [maybe_inlined]
+	[M] WorldEnvironmentMeshItemMgr_CalcCameraViewRect_m95775188430E262D472F5E2426162B5C30F906E1 -29.90ms (-0.14%) [maybe_inlined]
+	[M] Array_Copy_mA10D079DD8D9700CA44721A219A934A2397653F6 29.89ms (+0.14%)
+	[M] GetEGLErrorString(int) 29.83ms (+0.14%)
+	[M] VROculus::EventGfxThreadCallback(UnityVREventGfxThreadType, unsigned int, UnityVRGraphicsContext const*) 29.73ms (+0.14%)
+	[M] RuntimeInvoker_FalseVoid_t22962CB4C05B1D89B55A6E1139F0E87A90987017(void (*)(), MethodInfo const*, void*, void**) 29.65ms (+0.14%) [maybe_inlined]
+	[M] stb__MatchColorsBlock(unsigned char*, unsigned char*, int) -29.65ms (-0.14%)
+	[M] WorldEnvironmentSubEntityInstance_LateUpdateQuery_mA9A41AF6E0032BB2EE3D8D7B8CFA5EA7D32CBA71 29.62ms (+0.14%)
+	[M] TBURenderGraph_GetInstance_mD34BC62F8D950A39F69D36EFD26A338B4A1884E1 29.59ms (+0.14%)
+	[M] AndroidActivityResolution_Update_m1063668C765A2FD46433032CB856EC54615B1D33 -29.56ms (-0.14%)
+	[A] MUILayout_Set3DPosition_mDD919E0330AED1BE5D03D64EBBD3C02A174FD540 29.35ms (+0.14%)
+	[M] VisualWrapperPool_1_OnTick_mAA1D67AA2A99234378186C4C4991B52DB28A97AB_gshared 29.08ms (+0.14%)
+	[M] CommandBuffer_CUSTOM_Internal_DrawMeshInstancedIndirect(ScriptingBackendNativeObjectPtrOpaque*, ScriptingBackendNativeObjectPtrOpaque*, int, ScriptingBackendNativeObjectPtrOpaque*, int, ScriptingBackendNativeObjectPtrOpaque*, int, ScriptingBackendNativeObjectPtrOpaque*) 28.72ms (+0.14%)
+	[A] InitializeBuiltinShaderParamNames() 28.59ms (+0.14%)
+	[A] VisualWrapper_GetCacheTargetTransform_m076225FA18CF2DA44E453D42C714586414694B02 28.23ms (+0.14%)
+	[M] GC_gcollect 27.95ms (+0.13%) [maybe_inlined]
+	[M] GC_try_to_collect_general 27.95ms (+0.13%) [maybe_inlined]
+	[M] GC_try_to_collect_inner 27.95ms (+0.13%) [maybe_inlined]
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisArmyMoveSyncData_t70676019D8F07CDC6EB148C7D985E4B5BDE76D45_mDA2A68C830811B242E571FC217A824D9117C172D_gshared 27.72ms (+0.13%)
+	[M] void GUIStyle::Transfer<RemapPPtrTransfer>(RemapPPtrTransfer&) 27.35ms (+0.13%)
+	[M] PlanarShadow_PrepareAllStaticShadows_mFA28CEFD0BB505BEAE13C7864C13D221FADD2DB4 27.31ms (+0.13%)
+	[M] GC_mark_some 27.08ms (+0.13%) [maybe_inlined]
+	[M] AndroidActivityResolution_IsInMultiWindowMode_mDBEDF4EF2EFCF2F4F63BB83EF701A4A347A02D75 -27.07ms (-0.13%) [maybe_inlined]
+	[M] VisualWrapperPoolManager_OnUpdate_m3E7201AF6A1052DE2E271778BD0020DB1AA4B1F8 26.88ms (+0.13%)
+	[M] SafeBuffer_Read_TisMapTerrainTypeConf_t721A08AF713840AB777294EF3784E619E4E0F241_m89B54062F5AD02F3761DB54E7941B8657917BC7E_gshared 26.77ms (+0.13%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisTranslation_t4F4413D71563BFACD1768F39D6C1315805FD5006_mA611F6752A30AF20FDC59DABAE8C2E6C068C81AA_gshared 26.61ms (+0.13%)
+	[M] Enumerator_MoveNext_m2E3757A7C76D2E1DB0B77D03FF3DE7406334779A_gshared 26.56ms (+0.13%)
+	[A] Dictionary_2_FindEntry_mAC4EDE485E1FAA7B0604437B048348F58244E7FB_gshared 26.35ms (+0.13%)
+	[M] AudioClipPlayable::ApplyProperties(FMOD::System*, AudioSource*, bool, bool, unsigned long, unsigned int) 26.14ms (+0.13%)
+	[M] AndroidJavaObject__Call_TisBoolean_tB53F6830F670160873277339AA58F15CAED4399C_mEBA0037C435AC77FA752193AEBECC3F65F684468_gshared -25.75ms (-0.12%)
+	[A] Func_6_Invoke_m2E3FC23B0CC0C1B703A6DEE14D2D66AAA481435E_gshared 25.75ms (+0.12%)
+	[M] GC_stopped_mark 25.74ms (+0.12%) [maybe_inlined]
+	[M] il2cpp::gc::GCHandle::GetTarget(unsigned int) -25.72ms (-0.12%)
+	[M] UISmashMgr_DeleteIdle_mBB9B16B16871F02302380F4D8E6DD87F289047FD -25.40ms (-0.12%)
+	[M] GC_mark_from 24.77ms (+0.12%)
+	[A] MUILayout_FreshHierarchy_mCB7A939A39A7395F08E1684FF06698A1213690A7 24.61ms (+0.12%) [maybe_inlined]
+	[A] DelegateBridge___Gen_Delegate_Imp192_m0503B4BF992E4A1FF7DF99DD7F60006208E0AC94 24.48ms (+0.12%) [maybe_inlined]
+	[M] il2cpp::vm::Monitor::Exit(Il2CppObject*) -24.38ms (-0.12%)
+	[M] il2cpp::icalls::mscorlib::System::Runtime::InteropServices::Marshal::PtrToStructure(long, Il2CppReflectionType*) 24.24ms (+0.12%)
+	[A] NativeList_1_get_Item_m48C5AEBD6739E7EC701C522E7CE0B3AFBBF0C94E_gshared 24.20ms (+0.12%)
+	[M] TBURenderGraph_OnEndExecutePass_mAB01D6246DD53AED8DA0648C3740FEC548E9DB3B 24.13ms (+0.12%)
+	[M] il2cpp_runtime_invoke 24.08ms (+0.12%)
+	[M] GeneralMMFDataReader_1_ReadFromOffset_TisMapTerrainTypeConf_t721A08AF713840AB777294EF3784E619E4E0F241_m7967977539D4F3189F1C770A05D033070FFB3BDD_gshared 24.07ms (+0.12%)
+	[M] ResManager_OnPostEndOfFrame_mADCAD231C93CD441546DBED5E595ED5190593235 23.95ms (+0.12%)
+	[M] RenderingUtils_SequenceEqualValidPart_mB056E76B107AF114CDF5D157CD96DD6E78B2C8C1 23.54ms (+0.11%)
+	[M] DotsArmyViewEntityMgr_OnPostLateUpdate_mD831CC33C5886655B9E6FFF89B62533E11DB36FB 23.06ms (+0.11%) [maybe_inlined]
+	[M] il2cpp::os::Event::Reset() -22.94ms (-0.11%) [maybe_inlined]
+	[M] il2cpp::os::EventImpl::Reset() -22.94ms (-0.11%)
+	[A] ReversePInvokeWrapper_AOEDOTSArmyEntityLuaCallWrap__m_StaticFreshArmyFormation_xlua_st__m878C8977536D213565536225AB790AEF15BACFFE 22.93ms (+0.11%) [maybe_inlined]
+	[A] AOEDOTSArmyEntityLuaCallWrap__m_StaticFreshArmyFormation_xlua_st__m878C8977536D213565536225AB790AEF15BACFFE 22.93ms (+0.11%)
+	[M] MainCameraPreCullingSystem_OnUpdate_m4BA89672B942C4553B1347E462A1E4B045912963 22.69ms (+0.11%)
+	[M] cls_indexer 22.63ms (+0.11%)
+	[M] DownloadHandlerAssetBundle::GetAssetBundle() 22.45ms (+0.11%)
+	[M] RuntimeInvoker_FalseVoid_t22962CB4C05B1D89B55A6E1139F0E87A90987017_Int32_t585191389E07734F19F3156FF88FB3EF4800D102(void (*)(), MethodInfo const*, void*, void**) 22.26ms (+0.11%)
+	[M] UnsafeMatchingArchetypePtrList_t35177C957F260B440EBFE45DD90F42639DDFAA18_marshal_pinvoke 22.06ms (+0.11%)
+	[A] NativeHashMap_2__ctor_m0B55DBE5EA2B6F75D66F305384B4FA1AC774F842_gshared 22.03ms (+0.11%) [maybe_inlined]
+	[M] RenderPipelineUtil_DrawInstanceRenderersShadow_m5377F351C40911037CAEE8A81BC0D4B1233C2497 21.78ms (+0.10%)
+	[A] PositionLerpSystem_OnUpdate_mD20C22E3DE87A1D0A27D8DEEC85D1FA82D4AF4B7 21.70ms (+0.10%)
+	[M] il2cpp::icalls::mscorlib::System::Array::GetRank(Il2CppArray*) 21.68ms (+0.10%)
+	[A] DotsArmyViewLoaderMgr_OnPostLateUpdate_m1D53221B0F5FA7AA9B633862E3A13A1C47EB918E 21.53ms (+0.10%)
+	[M] FrameworkCore_OnEndOfFrame_m54BA777532ECEDAC4C6C3D2BBBC1B9D16F39A2EA -21.41ms (-0.10%)
+	[M] luaH_next 21.30ms (+0.10%)
+	[M] JobComponentSystem_AfterOnUpdate_m2270F95D9EA65ECF495E0EFF978DA0009E16ECD2 20.83ms (+0.10%)
+	[M] ComponentSystem_BeforeOnUpdate_m7DA776C89B02A44B6E24B9094CDA4DA5CAD772D4 20.80ms (+0.10%)
+	[A] MoveChain_SyncArmyResultSystem_OnUpdate_m5AC415D6A7AD2416A6163F86CF9293C76F96F194 20.79ms (+0.10%) [maybe_inlined]
+	[A] Merge 20.78ms (+0.10%) [maybe_inlined]
+	[M] TBULODStreamingManager_GetCameraDistance_m4B9A9ED983A909FA4917627CE22E85EB65F3A840 -20.52ms (-0.10%)
+	[M] MapCoordUtil_ConvertWorldPosToGrid_mD56FD6199CC7DA8C44CF4E3E9886919585FF7E4C -20.31ms (-0.10%)
+	[M] luaB_next 20.24ms (+0.10%)
+	[M] TBULODStreamingManager_UpdateLOD_mA69F6C2695629E3E259A64CA187EEF9A9FAF61EC 19.91ms (+0.10%) [maybe_inlined]
+	[M] TBULOD_SetLOD_m30CBEF529E5D7158CBB88F872D530F4063CF1CA9 19.91ms (+0.10%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisPositionLerpData_t30418E4FA55D1D49B0E9E90B7A9E996429D33A61_m8AA72E0D1E5A48EB5B4ABA5D644E2E5C2092D4E3_gshared 19.52ms (+0.09%)
+	[M] MUIRenderManager_OnUpdate_mEE323D76AA53F08E0DB503AD970ED0467C4AE3E1 19.35ms (+0.09%)
+	[M] Dictionary_2_FindEntry_m70762A16CBEB2AB96B5D54B322294EFF0CAEAA9C_gshared 19.24ms (+0.09%)
+	[M] OutSideViewArmyAudioMgr_OnUpdate_m3E84299AE52357B7261A56C0223B4941D29D0072 19.13ms (+0.09%) [maybe_inlined]
+	[M] SuiteAsyncUploadManagerkUnitTestCategory::TestWhenRingBufferIsPersistent_RingBufferPersists::RunImpl() const -19.00ms (-0.09%)
+	[M] World_GetExistingSystem_TisRuntimeObject_mD4C3BD2223C420D433971E05B54D67EFDFA23CBB_gshared -18.75ms (-0.09%)
+	[M] SendMouseEvents_DoSendMouseEvents_m045BF5CABD2F263140E5F1427F81702EE0D3C507 18.64ms (+0.09%)
+	[M] TBURenderGraphPass_SetColorBuffer_m4B73417A452DC9E89AA8147AF3DE95033D9A3075 18.27ms (+0.09%)
+	[M] ObjectEqualityComparer_1_GetHashCode_m2C7FF89D905713ABD40FDCA1E98B7E86726F5ABB_gshared 18.24ms (+0.09%)
+	[M] Dictionary_2_TryGetValue_m3455807C552312C60038DF52EF328C3687442DE3_gshared 18.17ms (+0.09%)
+	[M] UnsafeList_1_get_Length_mB6E0B018AB350CE5DD1B49EA169E5F5CE266D431_gshared 17.95ms (+0.09%)
+	[M] TerrainVT_LateUpdate_m8DB1B72ED64E50F53DB1BAE581F82FAF6DCDE6BE 17.85ms (+0.09%)
+	[M] void PrepareBatchRendererGroupNodes<true>(RenderNodeQueuePrepareThreadContext&) 17.73ms (+0.09%)
+	[M] UGuiMgr_Update_m9CC09A80D7A0A6709053A1E203A82649D111C7D3 -17.71ms (-0.09%)
+	[A] ReversePInvokeWrapper_AOEDOTSOutsideUILuaCallWrap__m_SetCompassAngle_xlua_st__mC4B633B247195CD38B812528CF55D5E16D8A39AA 17.68ms (+0.09%) [maybe_inlined]
+	[A] AOEDOTSOutsideUILuaCallWrap__m_SetCompassAngle_xlua_st__mC4B633B247195CD38B812528CF55D5E16D8A39AA 17.68ms (+0.09%)
+	[M] libunity.so[+3230e60] 17.46ms (+0.08%)
+	[M] JobComponentSystem_BeforeOnUpdate_m740F21A8BF2B13632D26061002D39D518D7E1CF3 17.46ms (+0.08%)
+	[M] AoETextureStreamingManager_GetTexturesFromMaterial_m6A56E8300D0E51076280EAC7E7675AB1EC4583DA 17.37ms (+0.08%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::CreateTestx509_GetPubKey_Return_CorrectKey_And_Raise_NoError_ForValidECSignedCertificate(void*) 17.25ms (+0.08%)
+	[M] ReversePInvokeWrapper_UnityEngineInputWrap__m_GetKeyUp_xlua_st__mA375ED4A59F73F5A1B71AB692B9E57E2A550DDEF -17.16ms (-0.08%) [maybe_inlined]
+	[M] UnityEngineInputWrap__m_GetKeyUp_xlua_st__mA375ED4A59F73F5A1B71AB692B9E57E2A550DDEF -17.16ms (-0.08%) [maybe_inlined]
+	[M] SuiteLightManagerkUnitTestCategory::TestRemoveLight_RemovesLightFromListeners::RunImpl() const -17.12ms (-0.08%)
+	[A] SoldierLoopAnimSystem_OnUpdate_mD04537C0302B82B1A2EA86C3DE83F7218FACCBF1 17.11ms (+0.08%)
+	[A] MoveChain_SyncSoldierResultSystem_OnUpdate_m0CA5C2725D77354A8CE38CBBE6A2A77541A9A00F 17.06ms (+0.08%) [maybe_inlined]
+	[M] WorldEnvironmentMeshItemMgr_OnLateUpdate_m4A81799EFC29F286B51EE9794E7578A4B1F897EB -16.95ms (-0.08%)
+	[A] EntityManager_DestroyEntity_m0E4AD7ED4D9CAB04392920E3DB63EC69A1B3C12F 16.93ms (+0.08%) [maybe_inlined]
+	[A] ArmyEntityLuaCall_StaticFreshArmyFormation_mD71A0ABC592A3229A7692AC75127CC2690D9A59F 16.87ms (+0.08%) [maybe_inlined]
+	[M] luaH_get 16.86ms (+0.08%)
+	[M] VREyeTextureManager::BlitToBuffer(UnityVRDeviceSpecificConfiguration const&, UnityVRBlitMode, UnityVRBlitScaleMode, RectT<float> const&, RectT<float> const&, RenderTexture*) -16.84ms (-0.08%)
+	[M] SyncLogicEntitySystem_OnUpdate_m51A6005B1C9F6B5B257DDED70EC7E1B2C1CA83A1 16.82ms (+0.08%)
+	[M] RenderMeshSystemV2_DrawStaticShadowsInternal_mD8E8A96CFF94B5627A7381F3228648A25C57CB02 16.72ms (+0.08%)
+	[A] ReversePInvokeWrapper_AOEDOTSArmyEntityLuaCallWrap__m_StaticDeleteArmySoldiersWithDeadAnim_xlua_st__m34AF38381ED5633FB07C8B33A6E0C234B6D10F8C 16.67ms (+0.08%) [maybe_inlined]
+	[A] AOEDOTSArmyEntityLuaCallWrap__m_StaticDeleteArmySoldiersWithDeadAnim_xlua_st__m34AF38381ED5633FB07C8B33A6E0C234B6D10F8C 16.67ms (+0.08%) [maybe_inlined]
+	[M] MapCoordUtil_ConvertGridIndexToWorldPos_m3ACC6DFBC82CD84B922D0486BC2F28272375B1F3 -16.63ms (-0.08%) [maybe_inlined]
+	[M] TBURenderGraphResourceRegistry_CreateTexture_m7052662AE2E509385C264DFAA00A863D5229FC21 16.46ms (+0.08%)
+	[M] DrawRendererPass_Configure_m5593CC30D3397739CC0F71E29E47138C9B37DFD4 -16.45ms (-0.08%) [maybe_inlined]
+	[M] UniversalRenderPipeline_SetupPerFrameShaderConstants_m3EF49A201EFC8ACDCE283EDEE626810FD340A5D8 -16.32ms (-0.08%)
+	[M] Stopwatch_get_Elapsed_m6735B32BFB466FC4F52112AC3493D37404D184BB -16.30ms (-0.08%)
+	[M] Lua_lua_string_length_mDA3889319719B3A6DA0D4547895DC7C9EFE8C467 -16.26ms (-0.08%)
+	[M] lua_tolstring -16.26ms (-0.08%)
+	[M] ListPool_1_CopyTemp_m2EDA8EA31E05629C1FED454D20995B3D82A0C75C_gshared -16.22ms (-0.08%) [maybe_inlined]
+	[M] Stopwatch_get_ElapsedTicks_mABB4710231090C75F057E90A29C71C553077A901 -15.85ms (-0.08%) [maybe_inlined]
+	[M] RenderMeshSystemV2_DrawDynamicShadowsInternal_m1A3A509AF2C192D64A26755C4F8CB1F4A578B63B 15.84ms (+0.08%)
+	[M] ReversePInvokeWrapper_UnityEngineProfilingProfilerWrap__m_BeginSample_xlua_st__mF204A06855A20C18D64FA8980E63896ADD9237BA -15.83ms (-0.08%) [maybe_inlined]
+	[M] OutsideUILuaCall_GetWorldScreenPointByGridIndex_m1C8E01B0D626233C593244E40619CFFE219A5007 -15.82ms (-0.08%)
+	[M] World_GetOrCreateSystem_TisRuntimeObject_m6BC685D48AFBD58C2A3F8A253649E60086F32BC4_gshared 15.79ms (+0.08%)
+	[A] Realtime2DRegistSystem_OnUpdate_m7626A6CAD9E86AD398003FF9BC1008DE0FAA6D07 15.67ms (+0.08%)
+	[A] UtilArmyCtrl_FreshArmyFormation_mB4822A7BD9294BC3BEBE852345CACB5CC1949C83 15.63ms (+0.08%)
+	[A] Serializer_Deserialize_TisRuntimeObject_m0888878A0D3534C9DF77D8263BEE4376E262A708_gshared 15.52ms (+0.07%) [maybe_inlined]
+	[A] TypeModel_Deserialize_m92D4BE1773F5160DAF9C3660FB16144DA33F1C78 15.52ms (+0.07%) [maybe_inlined]
+	[M] Resources_CUSTOM_GetFileLength(ScriptingBackendNativeStringPtrOpaque*) 15.52ms (+0.07%)
+	[M] ManagedComponentStore_GetAllUniqueSharedComponents_TisRenderMesh_t323117B822ACFFF910E3990E193E75CAA26176E0_mA9BD0478E9A404A6CF14BD134262B00A61825DB6_gshared 15.50ms (+0.07%)
+	[M] BeginCpuSampleDelegate_Invoke_m5138DE6C06A98C2B2E168BBFF7B5D6FE654F470A 15.50ms (+0.07%)
+	[M] ObjectTranslator_GetObject_m8826FC3BB2E7D9EE8FE6B36A5C39C704C6006834 15.35ms (+0.07%)
+	[M] TBULODStreamingManager_LateUpdate_mD39D3254CC150AA2BE3AF2E9FA6C806A0DBF1D88 15.34ms (+0.07%)
+	[M] LoaderManager_OnUpdate_m4CBA349F7A5872C0C82F3EB78744FFCE93F4D5D3 -15.25ms (-0.07%) [maybe_inlined]
+	[M] libunity.so[+3230ef4] 15.10ms (+0.07%)
+	[M] LoaderManager_OnFrameEnd_mC9152F5135738D33036C8733B06071426211D4B9 15.02ms (+0.07%) [maybe_inlined]
+	[A] UtilArmyCtrl_OnDeadAnimAndRemoveAllSoldiers_m9FFF97FD3D0A3FBC2904AA28C64B8B2030B456F4 14.89ms (+0.07%) [maybe_inlined]
+	[M] SuiteWordkUnitTestCategory::TestIsStringNumber::RunImpl() const 14.88ms (+0.07%)
+	[M] EndCpuSampleDelegate_Invoke_m34E1CA4FE673C654209FB33FB9C0A9D12822B916 -14.74ms (-0.07%) [maybe_inlined]
+	[M] AsyncOperation_CUSTOM_InternalDestroy(void*) 14.69ms (+0.07%)
+	[M] MUIRendererBase_TryUpload_mD4C30976C6AC2D6FE923AA72D0D34AE0443801CE 14.68ms (+0.07%)
+	[M] Unity::ConfigurableJoint::VirtualRedirectTransfer(StreamedBinaryWrite&) -14.66ms (-0.07%)
+	[M] _AndroidJNIHelper_GetMethodID_TisBoolean_tB53F6830F670160873277339AA58F15CAED4399C_m925F482BC9FC2DFBADF1967639308C7F455A1F4B_gshared -14.63ms (-0.07%) [maybe_inlined]
+	[M] ChunkIterationUtility_PreparePrefilteredChunkLists_m44596A195D93AD5CC1BDB6B62C8A7E513D8728E6 -14.52ms (-0.07%)
+	[M] AOEOutsideOutsideSubEntityMgrWrap__m_HasTask_m3475BBE75334DA67AD404450D411466F7BF1CB24 14.49ms (+0.07%)
+	[M] GCHandle_Alloc_m30DAF14F75E3A692C594965CE6724E2454DE9A2E -14.49ms (-0.07%) [maybe_inlined]
+	[M] Lua_lua_tolstring_mF8823E19C52A258E4AB0DA5DABEBE6159E79B848 -14.38ms (-0.07%)
+	[M] RenderMeshSystemV2_DrawLODMeshInstanced_m7CF8DE87B719EC658B5BCD48079CBB30DC7C2865 14.29ms (+0.07%)
+	[M] UniversalRenderPipeline_InitializeCameraData_m011814335867AF4D1FB5038B9F3A787E485693E3 14.17ms (+0.07%) [maybe_inlined]
+	[M] MapCoordUtil_ConvertGridToWorldPos_m8C2E134B2C29D139CB5D3943F3DCBA915993CC0C -14.15ms (-0.07%) [maybe_inlined]
+	[M] LoaderManager_TickLoadOnFrameEnd_m97BAE09772E05F36365C647D5D077AC9BC6B3B72 14.08ms (+0.07%)
+	[M] MUILayoutRoot_Update_mC0C4D93A243393DB4843ED147E45E91FDF512B0F 14.06ms (+0.07%)
+	[M] MapTerrainGridDataMgr_GetGridLayerType_mF1ADD6B5BE87101A586183A47F7A0EE68328B6E3 14.05ms (+0.07%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisTagWorldEntity_t394B11F77711F5FF7027A970154F9D285E583A58_m76AB8EE421FB6A9CDBF22A2F41CFAEA76A914813_gshared 14.02ms (+0.07%) [maybe_inlined]
+	[D] UtilHeightMapBurst_ConvertGridToWorldPos_mCEC93ABD969BBF70FBD70F0A8861F10F040B641A -13.96ms (-0.07%)
+	[A] MUIKeywords_ScaleKeywordsDirty_m849992D3D0A095DDC352510582C20C711E974B6D 13.83ms (+0.07%)
+	[M] QuadTreeNode_Query_TisRuntimeObject_m598A05DC1ABCC9AB3F59C9F22F75B801EB823DD3_gshared -13.81ms (-0.07%)
+	[M] ReversePInvokeWrapper_UnityEngineScreenWrap__g_get_safeArea_mEAAAEEF400A2CD21E8705619B22C13AAB6AA3202 13.79ms (+0.07%)
+	[A] ObjectPool_1_Recycle_mE5861323BD13383792A389CB6474A5C1B149451F_gshared 13.74ms (+0.07%) [maybe_inlined]
+	[M] ArmyCustomCommandBufferSystem_OnPostLateUpdate_m73897C84D9F51DF1502C4674706FAA93280B1228 13.71ms (+0.07%) [maybe_inlined]
+	[M] ArmyCustomCommandBufferSystem_FlushPendingBuffers_mDF8DF54D3C37B4592523D21E6A288C0C06CF084E 13.71ms (+0.07%)
+	[A] UtilAnimator_GetAnimHash_mD7B0DDAF1EA678C1B0F98E9B2CB685D6B2B49652 13.67ms (+0.07%)
+	[M] ObjectPool_1_Get_m4E05499B46674BB2A3EF725A1252F95298E82164_gshared -13.58ms (-0.07%)
+	[M] RenderPipelineUtil_DrawRenderers_m95D1FE510E49AD7191537D24DB2172BE2232B8FC -13.56ms (-0.07%) [maybe_inlined]
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisViewUnitData_t632565A693A76FA3685F396FF73EC5BA47109AF7_m77FC1E2A12637AF5CCE6A81C769E36F0B3DD6D6B_gshared 13.51ms (+0.07%)
+	[A] SuiteStringkUnitTestCategory::Testreplace_WithZeroLenAndString_InsertsChars_stdstring::RunImpl() const 13.50ms (+0.07%)
+	[M] OutSideViewArmyLineMgr_OnUpdate_m450638A78FFDC4DEA693CB2280FA264FA228C173 -13.48ms (-0.06%) [maybe_inlined]
+	[M] TBURenderGraph_GetCompiledPassInfo_mCAF2E76548E11EC6C8EBF85BFFE442D82FBBF497 13.47ms (+0.06%)
+	[M] UniversalRenderPipeline_InitializeStackedCameraData_m6CA9455B268A2BE3DB514262924FE941B9B0BEE4 13.44ms (+0.06%)
+	[M] DecalParticlePass_Setup_m8DCDDAF944A77F7C0F4FF6B0E5A409EBDB05EC32 13.44ms (+0.06%)
+	[M] il2cpp::icalls::mscorlib::System::Object::GetType(Il2CppObject*) 13.33ms (+0.06%)
+	[M] ReversePInvokeWrapper_AOEOutsideOutsideSubEntityMgrWrap__m_HasTask_m3475BBE75334DA67AD404450D411466F7BF1CB24 13.25ms (+0.06%) [maybe_inlined]
+	[M] TServer_HandleMessages_m0D31F185F43AFF05E4299268911CFD4B6ED20ECB 13.25ms (+0.06%) [maybe_inlined]
+	[A] JobChunkExtensions_ScheduleParallel_TisArmyRearrangeLocalPosJob_t2EB47729301CAF89EBB1DC8B00ECE2488869FDF3_mE169E4CEE83D26FD516E6EC97C611C8C966CF0D8_gshared 13.16ms (+0.06%)
+	[A] ComponentDependencyManager_GetDependency_m3F8CB6643045F3C57567DBD465BAF0D01F46AA97 13.10ms (+0.06%)
+	[M] GeneralMMFDataReader_1_Read_TisMapTerrainTypeConf_t721A08AF713840AB777294EF3784E619E4E0F241_mC5BE97086D0BE4F8ED399FD4A27AA57CA47BA8A8_gshared 13.09ms (+0.06%)
+	[M] GC_malloc_kind_global -13.05ms (-0.06%)
+	[M] RenderBoundsUpdateSystem_OnUpdate_m5DE494909D894A00ED7BED52B803F0F10A42C78B -13.04ms (-0.06%)
+	[A] UnsafeHashMapBase_2_Clear_mF8F5CD19C185DF69D5AF163202DCD10777C2EE48_gshared 13.03ms (+0.06%)
+	[M] Dictionary_2_FindEntry_m8A730EBEC37C5B5394197A4AE0093C79D584C4AE_gshared -13.01ms (-0.06%)
+	[M] il2cpp::os::Time::GetTicks100NanosecondsMonotonic() -13.00ms (-0.06%) [maybe_inlined]
+	[M] libunity.so[+3242138] 12.93ms (+0.06%)
+	[A] TypeModel_DeserializeCore_m218AA406BC0822057ABAE8AAEEA9709869AFBD1D 12.89ms (+0.06%) [maybe_inlined]
+	[M] TBUResManagerImpl_Update_mCE58DF3FB236DE9948BFDC08B41A691BF1F4CE56 -12.89ms (-0.06%)
+	[M] libunity.so[+3242220] -12.89ms (-0.06%)
+	[A] EntityDataAccess_DestroyEntityInternal_mDAD583B38CE1AC0E1B6F61B30A88CEB96A45CC7E 12.86ms (+0.06%) [maybe_inlined]
+	[M] EntityCommandBuffer__ctor_m8E8014C52DEA08369A1DFEC1E0412ADE4AC69018 12.84ms (+0.06%)
+	[M] AOEDOTSOutsideUILuaCallWrap__m_GetWorldScreenPointByGridIndex_xlua_st__m868D5BA09177FC312C0A448AFD53DCFC71274079 -12.76ms (-0.06%) [maybe_inlined]
+	[A] OutsideSubEntityMgr_HasTask_mDC7A15A3E2CC4DE9BD2A73460FD18DA75E5044F8 12.70ms (+0.06%)
+	[A] RotationLerpSystem_OnUpdate_m1CF3CDAA219ACA1F03461F13C6E87B213338323A 12.65ms (+0.06%) [maybe_inlined]
+	[M] SuiteVector4kUnitTestCategory::TestSet_WithArrayOfValues_UpdatesExistingValuesInVector::RunImpl() const 12.54ms (+0.06%)
+	[M] obj_indexer -12.48ms (-0.06%)
+	[A] _mi_heap_realloc_zero 12.47ms (+0.06%)
+	[M] UnityEngineScreenWrap__g_get_safeArea_mEAAAEEF400A2CD21E8705619B22C13AAB6AA3202 12.45ms (+0.06%) [maybe_inlined]
+	[A] ObjectTranslator_FastGetCSObj_mF018C5C3A966D1C481E0F4CC3906D6F7322CA721 12.43ms (+0.06%)
+	[M] TBULOD_GetTotalLODCount_m777E37E8665289CD13346EFDFCB2EECCFE1C76F5 12.42ms (+0.06%)
+	[M] ExportVRBindingsNew() -12.42ms (-0.06%)
+	[A] MUIEffect_FreshEffectScale_mECCCE79E9A520220AEA963D43D751FC96F58BC4E 12.42ms (+0.06%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisArmyMoveStateData_t670CEBF8961AB2422CC09D208DBAB84EC273CC22_m0D0561D521C2CAE706FB8698139E6D594E16B5EB_gshared 12.40ms (+0.06%) [maybe_inlined]
+	[M] RenderingUtils_LastValid_m8D76D6AD0BA22ACC33F7C1E41D6982DE80D31B25 12.37ms (+0.06%)
+	[M] AoETextureStreamingManager_AddTexture_mD0665E7D0E4545EE5432B6A48C8502CC624154AC -12.34ms (-0.06%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisLocalToWorld_t723AFC5808D4DF1EFB4316793718AFC05134D0F5_m89BA0ABA3069E0FC066AA87BC258C6376AA2F4BF_gshared -12.33ms (-0.06%) [maybe_inlined]
+	[M] UnityEngineProfilingProfilerWrap__m_BeginSample_xlua_st__mF204A06855A20C18D64FA8980E63896ADD9237BA -12.31ms (-0.06%)
+	[A] UnsafeHashMapBase_2_Clear_m5980A104744B3C7F2D389167DDD558340C4A8C4D_gshared 12.30ms (+0.06%) [maybe_inlined]
+	[A] ReversePInvokeWrapper_AOEDOTSArmyEntityLuaCallWrap__m_StaticRemoveArmy_xlua_st__mE2E3663C383C5C8AA9EBEFF9C4A062B584E46AD8 12.27ms (+0.06%) [maybe_inlined]
+	[A] AOEDOTSArmyEntityLuaCallWrap__m_StaticRemoveArmy_xlua_st__mE2E3663C383C5C8AA9EBEFF9C4A062B584E46AD8 12.27ms (+0.06%) [maybe_inlined]
+	[A] ArmyEntityManager_RemoveArmy_m158543008C5C2965ED4418AFF7DF49F0BEBB5A54 12.27ms (+0.06%) [maybe_inlined]
+	[A] Lpb_decode_unsafe 12.16ms (+0.06%) [maybe_inlined]
+	[A] lpb_decode 12.16ms (+0.06%) [maybe_inlined]
+	[A] lpbD_repeated 12.16ms (+0.06%) [maybe_inlined]
+	[M] BaseLuaMgr_OnEndOfFrame_mFCF457EDD66E0791A78CE51A25F7F80589EB4957 -12.14ms (-0.06%) [maybe_inlined]
+	[M] il2cpp::os::ReaderWriterAutoLock::~ReaderWriterAutoLock() 12.13ms (+0.06%)
+	[M] ReversePInvokeWrapper_AOEDOTSOutsideUILuaCallWrap__m_GetWorldScreenPointByGridIndex_xlua_st__m868D5BA09177FC312C0A448AFD53DCFC71274079 -12.08ms (-0.06%)
+	[A] MUIControl_GetRoot_m01C337D410B803E843F3B4AFCEE8E1592A4FE2D1 12.02ms (+0.06%)
+	[M] ConvertGridToWorldPos_0000FB47U24BurstDirectCall_Invoke_mBD18739C4DBF654DE50CFA8CEC92C6186A68EDAF -11.94ms (-0.06%)
+	[M] TypeTreeIterator::DebugPrint(core::basic_string<char, core::StringStorageDefault<char> >&, int, TypeTreeIterator::DebugPrintInstructions) const 11.93ms (+0.06%)
+	[M] TimeStubBase_EndInvoke_m143FE4634848435F62C1FDF54179D325CD968450 11.92ms (+0.06%)
+	[M] ObjectTranslator_Push_mF12894F96B1C0471BF3F24AF1B3716F88C177168 11.91ms (+0.06%)
+	[M] SuiteAudioClipPlayableTimingkUnitTestCategory::TestAudioClipPlayable_AdvanceWhenPauseDelaySmallerThanStartDelay_PauseDelayHasNoEffect::RunImpl() const -11.88ms (-0.06%)
+	[M] ReversePInvokeWrapper_AOEProfilerUtilWrap__m_BeginCpuSample_xlua_st__m74D596151DAAA8884109A5E69DF161AFCF372C52 11.87ms (+0.06%)
+	[M] ListPool_1_CopyTemp_m96BD48797DEC8B01C9A043CEC3784CC4954E2A41_gshared 11.81ms (+0.06%)
+	[M] Unity::Cloth::Create() -11.75ms (-0.06%)
+	[A] SceneCameraConfig_get_IsRendering_m90AD7D35B8218BCE78DDBC8D6CD1563C755D8E9A 11.73ms (+0.06%)
+	[M] OutsideRoadsMgr_UpdateRoads_m690AEA93596586741B70527031141842D2DEC9CB -11.69ms (-0.06%)
+	[M] Enumerator_MoveNext_m38B1099DDAD7EEDE2F4CDAB11C095AC784AC2E34_gshared 11.63ms (+0.06%)
+	[M] ObjectTranslator_Assignable_m271A189FC3B2C36C5BE70FE24D160850B7808664 -11.62ms (-0.06%)
+	[M] GC_generic_malloc_inner -11.57ms (-0.06%) [maybe_inlined]
+	[M] ListPool_1_GetTemp_mCE7417E8FD66251F0E202AFBE3EF76E2DC0DACF0_gshared -11.56ms (-0.06%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::Testx509_GetPubKey_Return_CorrectKey_And_Raise_NoError_ForValidECSignedCertificate::RunImpl() const 11.51ms (+0.06%)
+	[M] _GLOBAL__sub_I_Runtime_Graphics_7.cpp 11.47ms (+0.06%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::CreateTestkey_GetRef_Return_InvalidHandle_And_Raise_InvalidArgument_ForNullPtr(void*) -11.46ms (-0.06%)
+	[D] TBUTextureHandle_op_Implicit_m6F1D826E6E737E56954EF344446DD0FA17DB6AB1 -11.41ms (-0.06%)
+	[M] Clipping_FindCullAndClipWorldRect_m1006EEFD92ECCD0551162A8E4D677970A00B597A 11.39ms (+0.05%)
+	[M] TBURenderGraphResourceRegistry_AddNewResource_TisRuntimeObject_mE6A383458835D26BCFFF54E85450161FC16DDBE6_gshared 11.30ms (+0.05%)
+	[M] OutSideViewArmyAudioMgr_TickSyncArmyAudioPosition_m4057374C554F9B35057149E99240096DC4839495 11.27ms (+0.05%) [maybe_inlined]
+	[M] Object_IsNativeObjectAlive_m683A8A1607CB2FF5E56EC09C5D150A8DA7D3FF08 11.26ms (+0.05%)
+	[A] OutSideViewArmyAudioMgr_TickPlayingAudio_m0E6BD911865C182CC54EF0F02F5EA287C9A104BD 11.25ms (+0.05%) [maybe_inlined]
+	[D] GCHandle_AddrOfPinnedObject_mA20090CB8274F28D087A6E8AD36D3230B6741EA5 -11.25ms (-0.05%)
+	[D] std::__ndk1::enable_if<(__is_forward_iterator<AnimationEvent*>::value) && (is_constructible<AnimationEvent, std::__ndk1::iterator_traits<AnimationEvent*>::reference>::value), void>::type std::__ndk1::vector<AnimationEvent, stl_allocator<AnimationEvent, (MemLabelIdentifier)32, 16> >::assign<AnimationEvent*>(AnimationEvent*, AnimationEvent*) -11.23ms (-0.05%)
+	[M] TBURenderGraph_OnBeginExecutePass_mCA2FADC85FA22B1FEE05F091FB3DB37167BD5F27 11.22ms (+0.05%)
+	[D] SoundManager::GetHandle(StreamedResource const&, int, unsigned int, unsigned int, SampleClip*, bool) -11.22ms (-0.05%)
+	[M] TBURenderGraph_AddRenderPass_mE894AE67CC0BF368262045B1B8AC6958F9499DA3 -11.19ms (-0.05%)
+	[M] WorldEnvironmentMeshItemInstance_LateUpdateQuery_m19FEB32B28A8C66B984E85A2C0FBB0D0AB3A5E89 -11.15ms (-0.05%)
+	[M] QuadNode_UpdateByViewRect_m9F6C5015C19A749B134510D5FCEC8FB5C6C64D56 11.15ms (+0.05%)
+	[M] DecalParticlePass_Execute_m7A0C10F1A451A24688DF3E40324CDC1B8E4D2045 -11.15ms (-0.05%) [maybe_inlined]
+	[M] JobChunkExtensions_ScheduleParallel_TisBoundsJob_tBCD26027FFDCE1CBB1C831464DA88695A96C597D_mFC49CED6D010C20EB118E1881DB37DAA52827986_gshared -11.14ms (-0.05%) [maybe_inlined]
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisNestEntityTRSData_tDD5264901C98A871FB3AE5C38A2D09E7F8901985_m56C6C27978E0DA6AF561863E05978E7C32393FB0_gshared 11.11ms (+0.05%)
+	[M] ObjectTranslatorPool_Find_mEEFF30C5180DC1BB6D5C76E6337DEE6E772A4354 -11.10ms (-0.05%)
+	[A] MUILayout_FreshChildrenAlignment_m5464FEAAE0A3B4A6D352CFE441827907635DADE0 11.10ms (+0.05%) [maybe_inlined]
+	[M] PlanarShadow_UpdateECSShadowBounds_m23EA0753AF3F2B104AAD1A6BF2773F6EE93AFDFD 11.01ms (+0.05%)
+	[M] ScriptableRenderer_InternalFinishRendering_m12639AF27B1B1A29590D91F11B659DB42D57D4AA 11.00ms (+0.05%)
+	[A] JobChunkExtensions_ScheduleInternal_TisArmyRearrangeLocalPosJob_t2EB47729301CAF89EBB1DC8B00ECE2488869FDF3_mE92F562019AD030EB109CB7193BBDCF89ADC4C3A_gshared 10.94ms (+0.05%)
+	[M] ScriptableRenderPass_ConfigureTarget_m057BE83F00826547EE449FC2F8404DF4807831CE -10.85ms (-0.05%)
+	[A] JobQueue::CreateGroup(unsigned int, JobGroupID) 10.84ms (+0.05%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisStatic_t4DF9C4D6FEB02EF52C7A0FF873C6AF3A3429EF35_m04807F682A8546250A8C81A8B00F9FBB02FEF6C2_gshared 10.76ms (+0.05%) [maybe_inlined]
+	[M] AnimationClip::~AnimationClip() -10.75ms (-0.05%)
+	[M] UnsafeHashMap_2_TryGetValue_m4B07DFC15B434FD3508F3FAB1E4E969D1821F5FA_gshared 10.72ms (+0.05%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisArmyMoveResultData_tDB977683449C0F4255EC02D82465345819F39E1A_mDE4AC9CFFC041BEFE93F406163D6FF072A0FF0A4_gshared 10.71ms (+0.05%)
+	[M] DebugUpdater_Update_m407D49EB4F4D9405608CB8DE5653B1507F7CE26B -10.71ms (-0.05%)
+	[M] ScriptableRenderer_ExecuteBlock_m93B343138FB87F31148CA5F1E78E73437F861DC4 -10.66ms (-0.05%)
+	[M] ExportVideoBindingsNew() -10.65ms (-0.05%)
+	[M] ScriptableRenderPass_ConfigureTarget_mE389873DA229AD684DF76AFDC09A0EFBD1941E6D -10.65ms (-0.05%) [maybe_inlined]
+	[M] il2cpp::gc::alloc_handle(il2cpp::gc::HandleData*, Il2CppObject*, bool) -10.63ms (-0.05%)
+	[M] RuntimeType_GetBaseType_m8174CD151A25AD016A89905CB35104382F6455ED 10.60ms (+0.05%)
+	[A] BattleFactory_CreateDeadSoldier_m3E458F159DAEE855E7C2FE442D6481D84EAFA3B0 10.60ms (+0.05%) [maybe_inlined]
+	[A] EntityManager_GetAllUniqueSharedComponentData_TisRenderMesh_t323117B822ACFFF910E3990E193E75CAA26176E0_m76AF14416C36567671C253CFFFEE6C8E5F305A4A_gshared 10.60ms (+0.05%)
+	[M] SetupCoroutine_InvokeMoveNext_m9106BA4E8AE0E794B17F184F1021A53F1D071F31 10.56ms (+0.05%)
+	[M] libunity.so[+3242040] 10.54ms (+0.05%)
+	[M] il2cpp_gc_wbarrier_set_field 10.53ms (+0.05%)
+	[A] RenderTextureHandle_op_Implicit_m00F9F6B0639F966993A6C079CDEB021E9430BC0E 10.52ms (+0.05%)
+	[M] TBURenderGraphPass_Clear_m85B064A3367C2D3431C1C768A46F85F174BCF771 10.45ms (+0.05%)
+	[M] ScriptableRenderer_EnqueuePass_m85EE215B3B8904DD2B28768C67BBE8263F7C84F8 10.44ms (+0.05%)
+	[M] SuiteWordkUnitTestCategory::TestStrStr_ReturnsSubstringPointerOnlyWhenFound_CaseSensitive::RunImpl() const 10.43ms (+0.05%)
+	[M] SuiteUNETAckkUnitTestCategory::TestAck_ReceivedAcksCannotAddTwiceMaxPacket::RunImpl() const -10.43ms (-0.05%)
+	[M] EntityManager_AddComponent_m75599D8A5FFF4D7C41616F915EB68B8710C229FB 10.42ms (+0.05%) [maybe_inlined]
+	[M] EntityQueryImpl_get_IsEmptyIgnoreFilter_m767A8D7EEED047FB454DFF1B5BFABB1B60C53BF2 10.42ms (+0.05%)
+	[M] ScriptableShadowsUtility::ComputeDirectionalShadowMatricesAndCullingPrimitives(ScriptableCullResults const&, int, int, int, Vector3f const&, int, float, Matrix4x4f&, Matrix4x4f&, ShadowSplitData&) 10.38ms (+0.05%)
+	[M] UISmashAtlas_FreeImageIdle_mDE9A07D0EE0823F322214010E36EDF0408C5ACEB -10.34ms (-0.05%) [maybe_inlined]
+	[M] AOEProfilerUtilWrap__m_BeginCpuSample_xlua_st__m74D596151DAAA8884109A5E69DF161AFCF372C52 10.26ms (+0.05%)
+	[A] RuntimeType_get_IsEnum_mC14D5D5AAE6FC3A7418D79D30CADB62EE07C905E 10.24ms (+0.05%) [maybe_inlined]
+	[M] ReversePInvokeWrapper_UnityEngineRectWrap__g_get_x_m09B1C097443D1AD6B3DF27D4375A857C71F89417 -10.22ms (-0.05%) [maybe_inlined]
+	[M] UnityEngineRectWrap__g_get_x_m09B1C097443D1AD6B3DF27D4375A857C71F89417 -10.22ms (-0.05%)
+	[M] SetSpecialStatusAction_Invoke_m7E1B608AD470BDFF72BED90CE80C34AF7F1B0256 -10.18ms (-0.05%)
+	[M] AoETextureStreamingManager_AddInstancedMaterial_m2BD8A65C31A2B20B3ED846C49246D1A6E26540B3 10.18ms (+0.05%)
+	[M] il2cpp::vm::Class::Init(Il2CppClass*) 10.18ms (+0.05%)
+	[M] SuiteAudioClipPlayableTimingkUnitTestCategory::TestAudioClipPlayable_AdvanceTimePastBothDelays_SetsBothToZero::RunImpl() const 10.09ms (+0.05%)
+	[M] EntityManager_GetBufferFromEntity_TisChild_tC54E10F7F8E3D4EE900B2CE720193D2EA684B6C6_m97429B604F7CB6303ED205421BC4D6004A7449C6_gshared -10.07ms (-0.05%) [maybe_inlined]
+	[M] luaD_poscall 10.04ms (+0.05%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisPathPointData_t2C1CD12A874C7128F62958A8112A1561A2B893A1_m5915D3C5C17F9247CDF23F27DD891E373A00983D_gshared 10.03ms (+0.05%)
+	[M] OutsideUIMgr_OnUpdate_m30A70DEC13DC28E93E18A2A940B14CF9B4891122 10.00ms (+0.05%)
+	[A] Queue_1_get_Count_m0CE0B6919A09EFFBB1EBA5B5DFEF50E4F8A89CFA_gshared 10.00ms (+0.05%)
+	[M] JobChunkExtensions_ScheduleInternal_TisBoundsJob_tBCD26027FFDCE1CBB1C831464DA88695A96C597D_m2C41F081377A0C8980F22ACC3E28B3FF7484B69E_gshared -9.95ms (-0.05%)
+	[A] UnsafeHashMapBase_2_TryGetFirstValueAtomic_m780525633B2B4CBCF9076D6134D9C8188386367C_gshared 9.94ms (+0.05%)
+	[M] AsyncUploadManager::StaticInitialize(void*) 9.93ms (+0.05%)
+	[M] RectangularVertexClipper_GetCanvasRect_m3A009069CB93F6A0D61221B26FD7BACD6A57533F 9.89ms (+0.05%)
+	[D] ReversePInvokeWrapper_UnityEngineBehaviourWrap__g_get_enabled_m01E8CAAA12F555AE055A7F51B2BB65099D7444A4 -9.87ms (-0.05%) [maybe_inlined]
+	[D] UnityEngineBehaviourWrap__g_get_enabled_m01E8CAAA12F555AE055A7F51B2BB65099D7444A4 -9.87ms (-0.05%)
+	[A] AOEProfilerUtilWrap__m_EndCpuSample_xlua_st__m4869786A7E965B666C7EF0E016B4806EA5D60FE5 9.86ms (+0.05%) [maybe_inlined]
+	[M] UTF8Encoding_GetChars_mAE7C631B0AD49170C3A4E48E2DCFE0A38509F21B 9.85ms (+0.05%)
+	[M] LuaMultiThreadGC_WaitGCThread_mEA532D6751ED99D09A81DD4A31C271E5C7D6AF72 9.82ms (+0.05%)
+	[M] QuadDriver_UpdateByViewRect_m8D5B8BF126EBF240F9FE37173523BDA863DB5A2C 9.77ms (+0.05%) [maybe_inlined]
+	[M] ComponentSystemBase_get_World_mAA76A34E1115CFE83CD840E87818F20ABAA1FFFA -9.77ms (-0.05%)
+	[A] JobChunkExtensions_ScheduleParallel_TisArmyMove_SyncArmyMoveResultJob_t891A5912EF085CE516B2CAF3263AF31A7C5BFA05_m1F663C249003506C52F0C6EB29CD4B46CD4654FF_gshared 9.75ms (+0.05%) [maybe_inlined]
+	[A] JobChunkExtensions_ScheduleInternal_TisArmyMove_SyncArmyMoveResultJob_t891A5912EF085CE516B2CAF3263AF31A7C5BFA05_m0AD07991639A9054BBE3C0DD051CA0E2F5D17793_gshared 9.75ms (+0.05%)
+	[M] il2cpp::icalls::mscorlib::System::Array::FastCopy(Il2CppArray*, int, Il2CppArray*, int, int) 9.68ms (+0.05%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisWorldRenderBounds_tC1BB5B13D42D3431B8EFE873FA1365C4ABE1BD25_mE79D6E0A0E1E4A4372D09E02F1B41928C0EB4350_gshared 9.65ms (+0.05%)
+	[M] InjectProfilerManager_EndWithRet_m35EA8AE61837AA9115BA65B6BD15295F7F4CEE48 -9.62ms (-0.05%)
+	[A] Event_Internal_MakeMasterEventCurrent_mAD78377C8BB08EFB5DF3D3E3A4F1089F2FC2BA48 9.61ms (+0.05%)
+	[A] TServerProtectCall_ProtectNotifyCallbackLua_mE30B777CC2E4DB47900C37349C06B11CF389C3A1 9.61ms (+0.05%) [maybe_inlined]
+	[A] LuaNotifyCallbackDelegate_Invoke_m5EB68E63D2225A7261D1DD1B36259F85D67ACAD6 9.61ms (+0.05%) [maybe_inlined]
+	[A] DelegateBridge___Gen_Delegate_Imp179_m47E4868A7E4F40E5A90CFA98083AA3A6FC3CE682 9.61ms (+0.05%) [maybe_inlined]
+	[A] ReversePInvokeWrapper_UnityEngineTimeWrap__g_get_realtimeSinceStartup_m2EAC1FA8476CC784D96C7927AC837891FD15BA55 9.60ms (+0.05%)
+	[A] EntityManager_GetArchetypeChunkComponentType_TisArmyMoveSyncData_t70676019D8F07CDC6EB148C7D985E4B5BDE76D45_m7E1674A95A5DE90F0C0E74EDE47A2891CC0C27B5_gshared 9.60ms (+0.05%)
+	[M] GC_allocobj -9.59ms (-0.05%) [maybe_inlined]
+	[M] TBURenderGraph_ClearRenderPasses_m71168E9F82A642CED5B6459342CA7C0B216D2C69 9.59ms (+0.05%) [maybe_inlined]
+	[M] TServer_HandleMessage_mC5BA7DA9DE7CED6446043C2B15786A46EE040352 9.54ms (+0.05%) [maybe_inlined]
+	[M] OptimizeMeshJobData<unsigned int>::OptimizeMeshJob(OptimizeMeshJobData<unsigned int>*, unsigned int) -9.51ms (-0.05%)
+	[A] JobHandle_Complete_m5EFD637001D6A9E0528E60C294FCA5354FD1E797 9.51ms (+0.05%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::Testkey_ParsePem_Return_Null_And_Raise_InvalidFormatError_ForNonPemFormattedString::RunImpl() const 9.48ms (+0.05%)
+	[M] Enumerator_MoveNext_mBDA3868EB5ADB3E1D9E3D6E1B20C359246A22C50_gshared 9.46ms (+0.05%)
+	[A] NativeMultiHashMap_2_Dispose_mA2F815418C88D60CC178ECE056A74CF1BD05613D_gshared 9.46ms (+0.05%)
+	[A] Lua_xlua_tocsobj_fast_m7E8230AD038EABEDF42AE561F9E6ED526B92FF9F 9.46ms (+0.05%)
+	[M] ComponentSystem_AfterOnUpdate_mC7F85D3C4165C75BF171E4EE61B5553F2AE907F4 9.44ms (+0.05%) [maybe_inlined]
+	[M] AsyncUploadManager::StaticDestroy(void*) -9.43ms (-0.05%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisRotation_tD64B4DA589B16C0DF4972D9BA30E425AB92E46AA_m2BBB7C13E600947F8E923E982FA945FE570856A3_gshared 9.42ms (+0.05%) [maybe_inlined]
+	[D] Dictionary_2_TryInsert_m3ACF67071BD7A8867E5510C6083BF7B55124E8AD_gshared -9.40ms (-0.05%)
+	[M] ResManager_OnEndOfFrame_mBD4449A088B916607F0B91323F36ADA704C36FB6 -9.40ms (-0.05%)
+	[M] InjectProfilerManager_Begin_mC9611C16C81802E7CEA4591C895D03124AD6B205 9.37ms (+0.05%)
+	[M] LuaUtilWrap__m_GetHeartBeatServerTs_xlua_st__mCFB5ED247C300228F050291DFC07BF9C125BAF11 -9.33ms (-0.04%) [maybe_inlined]
+	[M] MobileBaseRenderer_UpdateViewConstants_mD34DE4A45821BEBE59B375403A50A8159FC13AD7 9.31ms (+0.04%)
+	[M] Dictionary_2_TryGetValue_m3EF0DBAF5E4C36146DFEDFA38E652D8C27B7FDF3_gshared -9.31ms (-0.04%)
+	[M] DownloadHandlerAssetBundle::DownloadHandlerAssetBundle(core::basic_string<char, core::StringStorageDefault<char> > const&, core::basic_string<char, core::StringStorageDefault<char> > const&, Hash128 const&, unsigned int) 9.31ms (+0.04%) [maybe_inlined]
+	[D] il2cpp::icalls::mscorlib::System::Runtime::InteropServices::GCHandle::GetAddrOfPinnedObject(int) -9.28ms (-0.04%) [maybe_inlined]
+	[M] SuiteStringkUnitTestCategory::Testfind_last_not_of_WithStringObj_wstring::RunImpl() const -9.18ms (-0.04%)
+	[M] TBURenderGraph_CreateTexture_mC4BA9801882CE1DCBAC5A9476F34AB97F4605EB9 9.18ms (+0.04%) [maybe_inlined]
+	[M] Dictionary_2_TryGetValue_mF4D1D25DD6BDCD54B3E2E2C8819FB1D5D9132E8C_gshared 9.17ms (+0.04%)
+	[M] CullLights(CullResults&) (.llvm.9811024405006565357) 9.13ms (+0.04%)
+	[M] MapManager_MeetScope_m80F1D8360AD54E62D51EFA354B8EB46CE88B40D7 -9.10ms (-0.04%)
+	[M] GC_gcj_malloc -9.07ms (-0.04%)
+	[A] ReversePInvokeWrapper_AOEBattleOutsideBattleWrap__m_RegisterBattleMUIWithEntityId_xlua_st__m1A1AF78AF4316EFAF781A680D64D18CB0CE9795F 9.06ms (+0.04%) [maybe_inlined]
+	[A] AOEBattleOutsideBattleWrap__m_RegisterBattleMUIWithEntityId_xlua_st__m1A1AF78AF4316EFAF781A680D64D18CB0CE9795F 9.06ms (+0.04%) [maybe_inlined]
+	[A] BattleUIManager_RegisterBattleMUIWithEntityId_m4C27BACE8177A6C1782C5F7C6BE87037B90210AE 9.06ms (+0.04%) [maybe_inlined]
+	[A] UnsafeHashMap_2__ctor_mA6416736BDE8B60206EA00C17A1F9B891408DE3B_gshared 9.00ms (+0.04%)
+	[M] AsyncLoadBuffer_OnUpdate_m1F537915592C8550BEFEDC7264520F7D3C9CDBEC 9.00ms (+0.04%)
+	[M] GC_register_finalizer_inner -8.99ms (-0.04%)
+	[M] SuiteUNETAckkUnitTestCategory::TestAck_ArrayAckAndAdd::RunImpl() const 8.97ms (+0.04%)
+	[M] ProfilingScope__ctor_mF2C7FFDAD431282FC2A7DF9F8B89814A83F57117 -8.95ms (-0.04%)
+	[D] ScreenSpaceSubsurfaceScatteringPass_IsAvailable_m52895AFBE5D8B5CDAE2989F99DF9111B564E56D1 -8.94ms (-0.04%) [maybe_inlined]
+	[A] SoldierAnimSpeedLerpSystem_OnUpdate_m55E6FBEB9E9DFEF67DF87FADE1734B7773909C76 8.94ms (+0.04%)
+	[A] ConvertGridToWorldPos_0000FB47U24BurstDirectCall_GetFunctionPointerDiscard_m0D102CF11327115528F23CB6F69BC965006822D1 8.92ms (+0.04%)
+	[M] SuiteShadowCullingkUnitTestCategory::TestShadowCulling_SplitSphere_CasterDistributionInCascades_ManyCascades_BackToFrontLight::RunImpl() const 8.91ms (+0.04%)
+	[M] dummy::SuiteTLSModule_DummykUnitTestCategory::CreateTestkey_sign_Return_Zero_And_Ignore_Parameters_WhenCalledWithErrorRaised(void*) 8.85ms (+0.04%)
+	[M] BloomPass_Setup_mB4AFB01F7DC01D63E597194C99F3A27B3936C32C -8.85ms (-0.04%)
+	[M] void std::__ndk1::__sort<SortByHashPred<Experimental::GlobalIllumination::LightDataGI, SceneLights::Hasher>&, Experimental::GlobalIllumination::LightDataGI*>(Experimental::GlobalIllumination::LightDataGI*, Experimental::GlobalIllumination::LightDataGI*, SortByHashPred<Experimental::GlobalIllumination::LightDataGI, SceneLights::Hasher>&) 8.81ms (+0.04%)
+	[A] List_1_GetEnumerator_mD428855D5E9741B6E5F4A524AA727EB1E8C69C95_gshared 8.78ms (+0.04%)
+	[A] Testing::ParametricTestWithFixtureInstance<void (*)(int, bool, bool, bool), SuiteMeshkIntegrationTestCategory::ParametricTestTestFixtureBaseCombineMeshes>::RunImpl() const 8.78ms (+0.04%)
+	[M] ShadowPass_ProcessShadow_mD0A47E6866E4FE4B38464BCBA494F9B3DA482526 8.76ms (+0.04%) [maybe_inlined]
+	[M] SuiteMeshkIntegrationTestCategory::SetupMeshDataForCombineMeshesTest(TestFixtureBase*, std::__ndk1::vector<CombineInstance, std::__ndk1::allocator<CombineInstance> >&, std::__ndk1::vector<int, std::__ndk1::allocator<int> >&, int, bool) 8.72ms (+0.04%)
+	[M] AsyncOperation_Get_Custom_PropAllowSceneActivation(ScriptingBackendNativeObjectPtrOpaque*) 8.71ms (+0.04%)
+	[D] JobChunkExtensions_ScheduleParallel_TisBatchChunkSimpleCullingJob_tF7429E3BDEEA9E99265346736948DBEBD4768504_m880A011F84F0F4925C07568AC0C857673C8AF8A7_gshared -8.66ms (-0.04%) [maybe_inlined]
+	[D] JobChunkExtensions_ScheduleInternal_TisBatchChunkSimpleCullingJob_tF7429E3BDEEA9E99265346736948DBEBD4768504_m5C69612FE6574EC1543D637B4278306A481E94BA_gshared -8.66ms (-0.04%)
+	[A] ComponentType_ReadWrite_TisViewUnitData_t632565A693A76FA3685F396FF73EC5BA47109AF7_m3C1CF17468D0A0C40DA81749A44806266C8C1F48_gshared 8.62ms (+0.04%)
+	[M] il2cpp::vm::Class::HasParent(Il2CppClass*, Il2CppClass*) 8.62ms (+0.04%)
+	[M] SuiteMeshkIntegrationTestCategory::CompareTransformedOrCombinedMesh(Mesh const&, SubMesh const&, Mesh const&, SubMesh const&, Matrix4x4f const&, bool, SuiteMeshkIntegrationTestCategory::MeshCompareTolerance const&) 8.59ms (+0.04%)
+	[M] il2cpp::utils::StringUtils::GetLength(Il2CppString*) 8.58ms (+0.04%)
+	[M] HashSet_1_InternalGetHashCode_mEDA1E50A539285A881F57672782A6A5DB9441A91_gshared 8.57ms (+0.04%)
+	[M] void Transfer_Blittable<SafeBinaryRead, true, Vector2f>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) 8.56ms (+0.04%)
+	[M] Dictionary_2_TryGetValue_m410DB4DBC5FBF4906FFF31E198DDCE5CB466ACA0_gshared -8.55ms (-0.04%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisGroupLeaderData_t77B710EB616BCE111B53DE76EED64F0AEB692B02_mC4F6AC66C51FA2D801C4F1F18E0EFD733251E6E1_gshared 8.55ms (+0.04%) [maybe_inlined]
+	[M] List_1_InsertRange_m93343D24C499ACC090B9B8D01B6487D2A9213CCF_gshared 8.54ms (+0.04%)
+	[M] UnityEngine::Analytics::SuitePerformanceReportingConfigkUnitTestCategory::CreateTestCanDisablePerformanceReporting(void*) 8.53ms (+0.04%) [maybe_inlined]
+	[M] CommandBufferPool_Get_m26955E6CFAA0203A03E5F145032A1870C694D48F -8.53ms (-0.04%)
+	[M] SuiteWordkUnitTestCategory::TestReplaceString_EmptyOrNotFound_IsUnchanged::RunImpl() const -8.52ms (-0.04%)
+	[M] EasyTouch_UpdateTouches_m3858994D35B1E0B615145EB44E4663F14730006F 8.51ms (+0.04%) [maybe_inlined]
+	[A] MUILayout_Destroy_m30C0AE80F48AB321C993F96759912FFF001B9E2C 8.51ms (+0.04%) [maybe_inlined]
+	[M] ScriptableRenderer_SetRenderTarget_m04C971E9E44EF10B67FC6A97B1986715BE161980 -8.50ms (-0.04%) [maybe_inlined]
+	[M] il2cpp::gc::GarbageCollector::RegisterFinalizerForNewObject(Il2CppObject*) -8.45ms (-0.04%) [maybe_inlined]
+	[M] VisualWrapperPool_1_EvictIfNeeded_m52684C925129F8EF38FAA3F9F0EDF11C30CC6865_gshared 8.44ms (+0.04%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisSoldierAnimTriggerData_t4B8244E3ACBBDC38B7005045E7DD6281897CDAC3_mE516D4CA808F7AB6BFF667799782453B22205C82_gshared 8.44ms (+0.04%)
+	[M] ComponentDependencyManager_CompleteAllJobsAndInvalidateArrays_mA9ACBB5964A8511D843CFE1A9ECCAC3B124741A8 8.44ms (+0.04%)
+	[M] void Unity::ConfigurableJoint::Transfer<GenerateTypeTreeTransfer>(GenerateTypeTreeTransfer&) 8.40ms (+0.04%)
+	[D] StringBuilder__ctor_m105DFD306CF1352C62553EED8AC7ABAAC62B7245 -8.40ms (-0.04%)
+	[A] UnsafeHashMapBase_2_TryGetNextValueAtomic_mAD56193DB0CE69A3A257B3609A492F6DD26D3507_gshared 8.39ms (+0.04%)
+	[M] EntityCommandBuffer_Playback_m794DA5FE5052C1006886B407387E72459713B5B1 8.39ms (+0.04%)
+	[M] AnimatorInstanceMgr_OnCullCallback_m74BC377EC68C7A5AF08376D1E004F25F5A5C8207 8.38ms (+0.04%)
+	[M] RenderPipelineUtil_GetValidSceneCameraConfig_m470E1F4340E54EA66BC87F008082B8A8342EFFE2 8.33ms (+0.04%)
+	[M] ComponentType_ReadOnly_TisEnvEffectMotionType_t17B928C6BB7BAE3DD49171B580671259BCA39CFA_m337467C03DD6E284713FAC8548C400C326A3AB85_gshared 8.30ms (+0.04%)
+	[M] TBURenderGraph_CountReferences_m993C7CC3EDE9A792BF2F8D95A6684514CFAA7689 8.29ms (+0.04%)
+	[A] SceneCameraConfig_get_isActive_mFE44F1D5653960DB3D4C2C7524BC523A0C874A1A 8.29ms (+0.04%)
+	[A] il2cpp::vm::Profiler::Allocation(Il2CppObject*, Il2CppClass*) 8.29ms (+0.04%)
+	[A] EntityComponentStore_DestroyEntities_mC182C141B36BD64D2C1AEBB3C602F23B19817944 8.28ms (+0.04%) [maybe_inlined]
+	[D] libunity.so[+323094c] -8.28ms (-0.04%)
+	[M] FMODMemoryRealloc(void*, unsigned int, unsigned int, char const*) -8.28ms (-0.04%)
+	[M] Object_op_Inequality_m31EF58E217E8F4BDD3E409DEF79E1AEE95874FC1 -8.24ms (-0.04%) [maybe_inlined]
+	[M] Enumerator_MoveNext_m9B9FB07EC2C1D82E921C9316A4E0901C933BBF6C_gshared -8.24ms (-0.04%)
+	[M] U3CEndOfFrameU3Ed__23_MoveNext_m283B65DE5F40015A71B645BF575DED15BEF045A4 8.20ms (+0.04%)
+	[A] JobChunkExtensions_ScheduleParallel_TisArmyMoveJob_tBE3535BE63B4F044D4716662E483BAAFFE87934C_m61CEC51237C40CBFE01C96B00BCA8777DF252E96_gshared 8.19ms (+0.04%) [maybe_inlined]
+	[A] JobChunkExtensions_ScheduleInternal_TisArmyMoveJob_tBE3535BE63B4F044D4716662E483BAAFFE87934C_m00749CE3017679F4183B921DD0622DD55C73FD4D_gshared 8.19ms (+0.04%)
+	[M] PlanarShadow_PrepareStaticShadow_mB50C2ADA96746916879D8E0CC13C847C6FB8947C -8.16ms (-0.04%) [maybe_inlined]
+	[M] Object_CompareBaseObjects_mE918232D595FB366CE5FAD4411C5FBD86809CC04 8.14ms (+0.04%)
+	[M] d6654f5f4ddcb9c69e29952b8a46479e 8.14ms (+0.04%) [maybe_inlined]
+	[M] Unity.Entities.ChunkIterationUtility.Unity.Entities.CalculateEntityCountExecute_00000744$BurstDirectCall.Invoke(ref Unity.Entities.UnsafeMatchingArchetypePtrList matchingArchetypes, ref Unity.Entities.EntityQueryFilter filter) -> int_356fe412ab5d279ecb02e1e6360be035 8.14ms (+0.04%)
+	[A] ComponentType_ReadOnly_TisTranslation_t4F4413D71563BFACD1768F39D6C1315805FD5006_mFD62CA955EF1073615009026C074014EA833D449_gshared 8.11ms (+0.04%)
+	[D] RenderPipelineConfig_IsJitterEnable_m700F434CA9DBFEFCCA9B63626AADFF62016047C6 -8.10ms (-0.04%) [maybe_inlined]
+	[M] ObjectTranslatorPool_get_Instance_m1CD326A3124015DDF719FB78F9D92DE59BEACB6E -8.08ms (-0.04%)
+	[A] EntityManager_GetArchetypeChunkComponentType_TisTagWorldEntity_t394B11F77711F5FF7027A970154F9D285E583A58_m8EB840A0687580020D4D04C0A68CB2582F410311_gshared 8.06ms (+0.04%)
+	[A] JobChunkExtensions_Schedule_TisSelectLODJob_tDBCA4522236C74B19CA68D501DDF29521C497FF2_mF14C322AC59114BFA9DC24DBBD8D25AFB41F8C2C_gshared 8.03ms (+0.04%) [maybe_inlined]
+	[A] JobChunkExtensions_ScheduleInternal_TisSelectLODJob_tDBCA4522236C74B19CA68D501DDF29521C497FF2_m45A39AC7BAECC70D65F62002FF65F50A6C5BFE21_gshared 8.03ms (+0.04%)
+	[A] NativeMultiHashMap_2__ctor_m9640A7F3D35AA2CE96BC7CC063DD91BD4D63954F_gshared 8.03ms (+0.04%) [maybe_inlined]
+	[M] Array_Clear_m174F4957D6DEDB6359835123005304B14E79132E 8.00ms (+0.04%)
+	[M] TBURenderGraph_GetTexture_mC1BEB701398D9835AD30FA7C6B49CB0074EA21E5 -7.99ms (-0.04%) [maybe_inlined]
+	[A] void Transfer_Blittable<GenerateTypeTreeTransfer, true, unsigned short>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) 7.98ms (+0.04%)
+	[M] RenderPipelineConfig_IsFramePredictionEnable_mBA9DE90D22A9DE2171EFC16302F1729003B02853 -7.98ms (-0.04%)
+	[M] SuiteTLSModulekUnitTestCategory::TestX509Verify_DefaultCA_InvokeCallback_With_FlagExpired_And_Raise_NoError_ForExpiredCertificate::RunImpl() const 7.97ms (+0.04%)
+	[A] luaH_resize 7.94ms (+0.04%)
+	[M] ProfilerUtil_BeginCpuSample_mF95608B2714E622D67912E846E4E57BCEE5F282B 7.93ms (+0.04%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisSteeringMoveData_tCFF47FF0C7E31CF57F3A5DE6ED2003B7A29DC10D_m89BDC0AC90FFD3CC27532C00193ECC54C3CD9E74_gshared 7.93ms (+0.04%) [maybe_inlined]
+	[M] EasyTouch_Update_mEA6E10E42D7B9791DABFFE184D174A4B2616B320 7.92ms (+0.04%)
+	[M] HashSet_1_Contains_mFDE4338334A068A9D9F5DB7526CD695FD8B007C5_gshared 7.88ms (+0.04%)
+	[A] DummyDelegateWrapper_TriggerUpdate_mCD23D9DDE01C50C4AE3F1E73F1EFC7CB3F0E9C63 7.87ms (+0.04%)
+	[M] AnimationClip::AddScaleCurve(AnimationCurveTpl<Vector3f> const&, core::basic_string<char, core::StringStorageDefault<char> > const&) 7.87ms (+0.04%)
+	[M] AsyncOperation_Get_Custom_PropIsDone(ScriptingBackendNativeObjectPtrOpaque*) -7.87ms (-0.04%)
+	[A] ReversePInvokeWrapper_AOEDOTSArmyEntityLuaCallWrap__m_StaticSetArmyState_xlua_st__m216848AB2D3355A7DD972435CBF6CDB4C3899778 7.86ms (+0.04%) [maybe_inlined]
+	[A] AOEDOTSArmyEntityLuaCallWrap__m_StaticSetArmyState_xlua_st__m216848AB2D3355A7DD972435CBF6CDB4C3899778 7.86ms (+0.04%) [maybe_inlined]
+	[A] ArmyEntityLuaCall_StaticSetArmyState_m6ED7717829E609CF199ABEEC6B11404FB936B94B 7.86ms (+0.04%) [maybe_inlined]
+	[M] BattleBluePrint_Update_m80473494D3D5CAF13BA50D1777EC68EA485C3FD0 7.84ms (+0.04%)
+	[M] libunity.so[+3242500] 7.84ms (+0.04%)
+	[M] CompareInfo_Compare_m59ABC53310F6E2C9EF5363D4D4BFEF51A30A6C41 -7.81ms (-0.04%) [maybe_inlined]
+	[M] SimpleCollator_Compare_mEDE295E6D8B3ACB2378D50267659C9203ACBD795 -7.81ms (-0.04%) [maybe_inlined]
+	[M] SimpleCollator_CompareInternal_mF1EBF91A96A1653415C36E6FCADDDA66F92BB3DE -7.81ms (-0.04%) [maybe_inlined]
+	[M] URPCallbackManager_SetupRenderMeshSystem_m2889A8FAD9B7B810246D772100387F6602685417 -7.81ms (-0.04%) [maybe_inlined]
+	[A] AnimatorInstance_UpdateAnimator_m3E7005F3F92F6705E587FB6D7F83640A5A17F86E 7.80ms (+0.04%) [maybe_inlined]
+	[A] AnimatorInstance_IsVisible_mD1182234DE76A955859011C3A66EBD40BB13D660 7.80ms (+0.04%)
+	[A] SkinnedMeshRendererManagerTests::Fixture::CheckMatrix(char const*, Matrix4x4f const&, Matrix4x4f const&) 7.79ms (+0.04%)
+	[M] ComponentDependencyManager_AddDependency_m3BD2F696120CB8E171BF60CB53CDB788ACC50EA8 7.79ms (+0.04%)
+	[A] EntityDataAccess_get_ManagedComponentStore_mBD970770E239DC76641B4AAB4463DD707C46CDBC 7.78ms (+0.04%)
+	[D] MUICamera_OnUpdate_mFC17A526C0EA61C2869A849DED9C192806626CAE -7.78ms (-0.04%)
+	[M] EntityCommandBufferSystem_FlushPendingBuffers_m3203D82D3B33D81B8B4E0CECBDEAC2999E7C3438 -7.77ms (-0.04%) [maybe_inlined]
+	[M] CullReflectionProbes(CullResults&) (.llvm.9811024405006565357) -7.75ms (-0.04%)
+	[A] JobChunkExtensions_ScheduleParallel_TisArmyMove_SyncMoveDataJob_tBE4FBE132C6C71D0B0733761AC14F0C7C321A377_mC28488CFAD8F6E7CAC845963575402CED17D7751_gshared 7.75ms (+0.04%)
+	[M] AsyncLoadBuffer_ClearOutOfDisplayRangeTiles_m54A7817B0D3412910006C8214E45E1C48E360854 7.75ms (+0.04%)
+	[A] UGuiResMgr_Update_m95601F80B520EBF0EC3EF6B797E1EC3C2C966960 7.74ms (+0.04%)
+	[D] tetgenmesh::removesteiners2() -7.74ms (-0.04%)
+	[M] GenericEqualityComparer_1_GetHashCode_m873A336A32DFED92B6AB4DB5C2F88043F69FEFC7_gshared 7.73ms (+0.04%)
+	[A] Component_TryGetComponent_TisRuntimeObject_m52AE59A1695186BE8CFD9E6C6EC4C7AD725B3724_gshared 7.72ms (+0.04%)
+	[M] ClipperRegistry_Cull_m1ECFA826A6969A177CE2DC701056E4A5E73A4BCB 7.70ms (+0.04%)
+	[M] _AndroidJNIHelper_GetSignature_TisBoolean_tB53F6830F670160873277339AA58F15CAED4399C_mDC229F84C56F314FD5336BDEE523328986473C50_gshared -7.69ms (-0.04%) [maybe_inlined]
+	[A] EntityManager_GetArchetypeChunkComponentType_TisTranslation_t4F4413D71563BFACD1768F39D6C1315805FD5006_m1E8E2B674D4D3E6389EA71248BA37CF800F87A66_gshared 7.65ms (+0.04%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisEnvEffectMotionType_t17B928C6BB7BAE3DD49171B580671259BCA39CFA_mE76CA72768576691632F9B65893AD53F0472E21A_gshared 7.60ms (+0.04%)
+	[M] OutSideViewArmyEffectMgr_OnUpdate_m01E27EFE485A26462FE2150E55BFB06B04DB73C3 7.60ms (+0.04%)
+	[M] void Transfer_Blittable<GenerateTypeTreeTransfer, true, short>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) -7.60ms (-0.04%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisRotationLerpData_t1668C78ECE0149BAD49F727D03DF0D57AA595597_m731B3D2871DED6EBCBBD0F32D9EAD45F8D9FF243_gshared 7.59ms (+0.04%) [maybe_inlined]
+	[M] Light::VirtualRedirectTransfer(StreamedBinaryWrite&) -7.58ms (-0.04%)
+	[M] WorldTileStreaming_LateUpdate_m60B669056C76EE7BAB67992428B62BFC483EC21E 7.58ms (+0.04%)
+	[D] ProfilingScope_Dispose_m849B59FFA4912D16867A2EBE24D8088C4820F167 -7.58ms (-0.04%) [maybe_inlined]
+	[A] UnsafeHashMapBase_2_Clear_m9583D31186D667AF9C5024D7E019780C4372725B_gshared 7.58ms (+0.04%)
+	[A] BattleUIManager_ReleaseBattleMUI_mA1E3D4B0259C65153711DA9019E94BEED264D8B6 7.57ms (+0.04%) [maybe_inlined]
+	[A] List_1_Clear_m875281D3B7B901AB8ABEFA5D915DE4FED81219A5_gshared 7.54ms (+0.04%)
+	[M] List_1_Clear_m84985DFCF2C0BA26BC7BAF814BEFD598A64FC7A2_gshared 7.54ms (+0.04%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisFlyStateData_t56CBDE0241ACF86D8E8F53A111AE623A1F11F758_m66AFA0ED777C7A869D1159002CCC3E3D59B1427E_gshared 7.53ms (+0.04%) [maybe_inlined]
+	[M] EnumEqualityComparer_1_Equals_m90B356FCF177C25D39DEDD65CC5746D403B2B7D6_gshared 7.52ms (+0.04%)
+	[M] Dictionary_2_FindEntry_mCB33BF535EAD1D94B3620E0E1794BA27836D012A_gshared 7.51ms (+0.04%)
+	[M] SuiteShadowCullingkUnitTestCategory::TestShadowCulling_SplitSphere_CasterDistributionInCascades_ManyCascades_FrontToBackLight::RunImpl() const -7.51ms (-0.04%)
+	[D] PlanarShadow_UpdateDynamicCamera_mB13F29E9FDBB25AF40159A71F3584B62A4F55C05 -7.48ms (-0.04%)
+	[M] Dictionary_2_ContainsKey_m4EBC00E16E83DA33851A551757D2B7332D5756B9_gshared 7.48ms (+0.04%)
+	[M] SuiteRemapperkUnitTestCategory::TestGetOrGenerateInstanceID_Generates_PositiveIDs::RunImpl() const 7.47ms (+0.04%)
+	[M] TBUBasePass_CreateTransientTexture_mF645BE89C85FCAA53C46345E6D6AB1C03082FF91 -7.47ms (-0.04%) [maybe_inlined]
+	[M] MapSubManagerBase_MeetScope_m33A9A51BEA5ECDFCB9197F02B6EB84389D6B0E57 7.46ms (+0.04%)
+	[M] ComponentSystemBase_ShouldRunSystem_m2A38AC76E118DD235884952237F6CD1729EAB84F 7.44ms (+0.04%) [maybe_inlined]
+	[M] TonemapperPass_Execute_mD6E99E2201DB8EA8E334B635D6F99A14FE53D3F2 -7.43ms (-0.04%)
+	[A] libunity.so[+32428b4] 7.42ms (+0.04%)
+	[M] EntityCommandBufferSystem_OnUpdate_m7F656FC527711B8A9564E04C5CE7D5EC703B75DF -7.40ms (-0.04%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisChunkBatchData_t761A79B1C14F019A6066F944DB0C9EE13E692F43_mF94A36EF4E5EBABA018DBC3DDFF6F07CCEDCE559_gshared 7.38ms (+0.04%) [maybe_inlined]
+	[M] EntityManager_GetArchetypeChunkComponentType_TisChunkBatchData_t761A79B1C14F019A6066F944DB0C9EE13E692F43_m152E0216000676E29A5514E27BEC948963A1A105_gshared 7.37ms (+0.04%)
+	[A] TriggerModule::Update(ParticleSystemUpdateData const&, ParticleSystemParticles&, unsigned long, unsigned long, math::float1 const&) const 7.37ms (+0.04%)
+	[M] CustomGridRendererMgr_DrawOnPass_mA3B7AC8C0D9060BCBFF489F83E300A22C5382952 -7.35ms (-0.04%) [maybe_inlined]
+	[D] Suitecore_string_refkUnitTestCategory::Testoperator_not_equal_ReturnsFalseForEqualString<core::basic_string_ref<char> >::RunImpl() const -7.34ms (-0.04%)
+	[A] NativeHashMap_2__ctor_m1851D9C9F4B79D1F1B859AD531D53BE2EB0A5A73_gshared 7.34ms (+0.04%) [maybe_inlined]
+	[M] MaterialPropertyBlock_CUSTOM_SetFloatImpl(ScriptingBackendNativeObjectPtrOpaque*, int, float) 7.33ms (+0.04%)
+	[A] ComponentType_ReadWrite_TisStatic_t4DF9C4D6FEB02EF52C7A0FF873C6AF3A3429EF35_mEF940B477CB7EEE2E9441AD8D0525894D475EC1D_gshared 7.32ms (+0.04%)
+	[M] il2cpp::vm::Class::SetupTypeHierarchy(Il2CppClass*) 7.31ms (+0.04%) [maybe_inlined]
+	[M] MUIAnimationManager_OnUpdate_m95EB520D0648277ED343338AF08FED6F1CE54D68 7.30ms (+0.04%)
+	[A] TypeSerializer_Read_mD0597FEEBD3F1AC7406ED5D70BC3D71D8277C823 7.30ms (+0.04%) [maybe_inlined]
+	[M] ScriptingObjectOfType<OcclusionArea>::GetPtrUnchecked() const -7.30ms (-0.04%)
+	[A] Dictionary_2_TryGetValue_m00BCCBE38EF0960D892748F0162C82A9B23D35F9_gshared 7.30ms (+0.04%)
+	[M] TBURenderGraph_SetupCommonCameraTarget_m07D3F93884BA13E38BF0AFD82CC0F17285D32B6E 7.27ms (+0.04%)
+	[M] Enumerator_MoveNext_mD42903A68CB9DD8FA5C3FA7438600AFF98EC1617_gshared 7.27ms (+0.04%)
+	[D] libunity.so[+332da88] -7.25ms (-0.03%)
+	[M] ReversePInvokeWrapper_AOEProfilerUtilWrap__m_EndCpuSample_xlua_st__m4869786A7E965B666C7EF0E016B4806EA5D60FE5 7.24ms (+0.03%) [maybe_inlined]
+	[D] mbedtls_ssl_handshake_client_step -7.20ms (-0.03%)
+	[M] ReversePInvokeWrapper_LuaUtilWrap__m_GetHeartBeatServerTs_xlua_st__mCFB5ED247C300228F050291DFC07BF9C125BAF11 -7.18ms (-0.03%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisGroupUnitData_t25B4498F968A7D916E96B2AE3CCE6F26C632F411_m0740C54C8AD9F55B41D5C5270DF2DA77B3123886_gshared 7.18ms (+0.03%)
+	[A] SoldierDeadSystem_OnUpdate_mB63AFB0AD6132FD5D5DBA7A37103961E9BE75B57 7.18ms (+0.03%) [maybe_inlined]
+	[M] EntityCommandBuffer_PlaybackInternal_m4C8942746A5A9270F819FC18A5CC9CEB6A9EDC4A 7.16ms (+0.03%)
+	[A] MUIEffect_FreshScreenPosition_mF6AB48EE38A555E16DDCC663BBDBBDE1626B93C0 7.16ms (+0.03%)
+	[M] EnumEqualityComparer_1_GetHashCode_m95241B5467DF4BF7BB27FF82D9BB555DE6073766_gshared -7.16ms (-0.03%)
+	[D] TBUResManager_get_Instance_m936DB22214D096FE81F07E3A0EA2CF75C6EA9444 -7.15ms (-0.03%)
+	[M] libunity.so[+3242380] -7.14ms (-0.03%)
+	[A] UnsafeHashMapData_AllocateHashMap_TisEntity_t514FBEC5923A575B6549FFCE0A7E0928BBB9F3D8_TisArmyMoveSyncToSoldierData_tCF4621D2F567A59DB4C5F40E7275AEF6BE59AC74_mF91D23BAD301B8B404CBE883B893CB7FB08BE745_gshared 7.13ms (+0.03%)
+	[A] JobChunkProducer_1_InitializeParallel_mA915D6AA9C33AC3E1E471EDF88750373C5C146D8_gshared 7.11ms (+0.03%)
+	[M] SuiteAsyncUploadManagerkUnitTestCategory::TestWhenRingBufferIsPersistentAndResized_DeallocatesAfterUploads::RunImpl() const -7.10ms (-0.03%)
+	[M] libunity.so[+3242258] 7.09ms (+0.03%)
+	[A] ComponentType_ReadWrite_TisPositionLerpData_t30418E4FA55D1D49B0E9E90B7A9E996429D33A61_mE4E11F74BDD0DA5AFDEF704800694A2B8F6529CC_gshared 7.06ms (+0.03%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisNonUniformScale_t2896D2FA85422398799F79095429B4BC69490620_m4B482ED3DDAF1602F3250DAEF15F6EB41BF27551_gshared 7.06ms (+0.03%) [maybe_inlined]
+	[M] EntityQueryImpl_CalculateChunkCount_mB400DD6B3C3C687CF7F90F851DE5F2EEE876FD6B -7.04ms (-0.03%)
+	[M] RenderTexturePool_ReleaseTemporaryRenderTexture_m6985B4F037D2FDD48A41F5F7017CABD2208981E7 7.02ms (+0.03%)
+	[M] BloomPass_Execute_m0312AF6819191E5F184EC21C6C5A6FC0DB4D23DB 7.01ms (+0.03%)
+	[M] Stack_1_Pop_mD632EB4DA13E5CAEC62EECFAD1C88818F1223E20_gshared -7.01ms (-0.03%)
+	[M] ScriptableRenderer_SetRenderTarget_mAA455BF0211784794E0FDDC81B9F3D1118E173A8 -7.01ms (-0.03%)
+	[M] ComponentType_ReadWrite_TisTranslation_t4F4413D71563BFACD1768F39D6C1315805FD5006_mADBA53C91ED65547B08BD2764F96C33910CA9476_gshared 7.00ms (+0.03%)
+	[M] Dictionary_2_TryGetValue_mE7571EF8ACAF5941AF78909A00CD9CE5FB07C69C_gshared -6.96ms (-0.03%)
+	[M] UnityEngineProfilingCustomSamplerWrap__m_End_m5A5FB4DD8A377E19EB7902BDF2699F14B03B2684 -6.94ms (-0.03%) [maybe_inlined]
+	[M] Single_Equals_mCDFA927E712FBA83D076864E16C77E39A6E66FE7 6.94ms (+0.03%)
+	[M] OcclusionCullingData::VirtualRedirectTransfer(GenerateTypeTreeTransfer&) 6.93ms (+0.03%)
+	[M] UtilArmyCtrl_GetArmyPos_m7DD414849CCB2CAC2F887454B060EFDD2A6007A2 -6.91ms (-0.03%) [maybe_inlined]
+	[M] EndCpuSampleWithRetDelegate_Invoke_mC8CE2EE0D8AF669FD8BA7115DF071578EA4FDB5C -6.91ms (-0.03%)
+	[D] TimeSpan_get_TotalMilliseconds_m48B00B27D485CC556C10A5119BC11E1A1E0FE363 -6.91ms (-0.03%)
+	[M] Dictionary_2_GetEnumerator_mF1CF1D13F3E70C6D20D96D9AC88E44454E4C0053_gshared -6.89ms (-0.03%)
+	[M] ManagedComponentStore_GetAllUniqueSharedComponents_TisRenderMesh_t323117B822ACFFF910E3990E193E75CAA26176E0_mAD99C89B123A7CAE0400D70159A4C163CF517D5C_gshared 6.88ms (+0.03%)
+	[M] Realtime2DSetDataSystem_OnUpdate_mF81C124FED0A6766BC6A9D91FFEFE6FC84958658 6.86ms (+0.03%)
+	[M] SuiteStringkUnitTestCategory::Testreplace_WithIterator_ReinterpretsAndOverwritesChars_stdstring::RunImpl() const -6.86ms (-0.03%)
+	[M] Dictionary_2_ContainsKey_mBFF6A4687D45C03F7648043EC9DACA2AABC60F71_gshared 6.85ms (+0.03%)
+	[M] OutsideTreeTypeRenderer_FilterDraw_mD67D04F6E3D99B16FDD888BBE1D35EE2635E998F 6.82ms (+0.03%)
+	[A] GameCore_get_InjectProfilerMgr_m85F7207ED87489A7A46A300FD9A45DB4CF836939 6.82ms (+0.03%)
+	[D] EntityManager_GetArchetypeChunkSharedComponentType_TisDisableRenderer_tA8A334C2AA5F2A08068A56B48948B9E3E150ACB2_m7DFFABDEA0CA7078C93BA68E103500964C0E2D0E_gshared -6.81ms (-0.03%)
+	[M] Dictionary_2_FindEntry_m2C1C3F470F5A9993D3FB533844813853E3C3FD1C_gshared 6.80ms (+0.03%)
+	[M] TBURenderGraph_GetRenderPass_mB282F017BE262D6B1064B3C6028C0E6BCADB5C1D -6.79ms (-0.03%)
+	[M] Dictionary_2_TryGetValue_mA641395D64E8BE4BE5B327686EE6D87CF84B48E2_gshared 6.76ms (+0.03%)
+	[M] UniversalRenderPipeline_CreateRenderTextureDescriptor_m87F24D1177956BA2801ED58B275F3C33C4E7DC72 6.76ms (+0.03%)
+	[A] Suitecore_string_refkUnitTestCategory::Testoperator_equal_ReturnsFalseForNotEqualString<core::basic_string_ref<char> >::RunImpl() const 6.76ms (+0.03%)
+	[D] MnaMessageCenter_Update_m8F5E32C99976D41AF66A81B96714C91DA2D09B4D -6.75ms (-0.03%)
+	[M] OutsideConfigCtrl_GetEnvironmentLayer_mA00B7FBC2AC225B6A1CFC542F9B810517BBC7892 -6.75ms (-0.03%)
+	[A] EntityManager_GetArchetypeChunkComponentType_TisGroupLeaderData_t77B710EB616BCE111B53DE76EED64F0AEB692B02_mC29AD038655E1B7340D371B6C5463C5D7ACB1848_gshared 6.75ms (+0.03%) [maybe_inlined]
+	[A] ArchetypeChunkComponentType_1__ctor_mB7E4836C0B4F41D5F7FE5D8158B6F5ED2423A6E1_gshared 6.75ms (+0.03%)
+	[M] ConvertGridToWorldPos_0000FB47U24BurstDirectCall_GetFunctionPointer_m139FC502F1B4CA503E71A5C8E6BA5413B1C009F5 6.73ms (+0.03%)
+	[A] MUILayoutRoot_OnRecycle_m1219E87AAFE22A888F66026CB5E18A88817039B4 6.72ms (+0.03%) [maybe_inlined]
+	[A] UIPass_Execute_m2EE2BDA1321D097934F435DD2101601D3CD99FE4 6.69ms (+0.03%)
+	[A] RtEditorMgr_OnUpdate_m8A47F587BC6796C0A985AA7BFBDE1457FD9E50AD 6.69ms (+0.03%) [maybe_inlined]
+	[A] ConsoleDataMgr_OnUpdate_mC8D89330EF92C5B7756FA3E71F21F49F940EBE98 6.69ms (+0.03%)
+	[M] LuaString_GetFromCache_m7AE455E0D3049529CAC7969A34A9563C33CB36AF -6.68ms (-0.03%)
+	[A] UnityEngineTimeWrap__g_get_realtimeSinceStartup_m2EAC1FA8476CC784D96C7927AC837891FD15BA55 6.68ms (+0.03%)
+	[M] il2cpp::vm::Class::IsSubclassOf(Il2CppClass*, Il2CppClass*, bool) -6.68ms (-0.03%) [maybe_inlined]
+	[D] Enumerator_MoveNext_m42C746E84C832B62E93536A47B4086F3A3AC6609_gshared -6.65ms (-0.03%)
+	[A] ListPool_1_GetTemp_m07DFCD247646009476FC5B84520F5CBC36A41F0D_gshared 6.63ms (+0.03%)
+	[M] TBURenderGraphPass_ConfigureTarget_mDB9658CEE2047F6A4E854B4A13F479B0E17F2D62 -6.63ms (-0.03%)
+	[M] EntityManager_GetBufferFromEntity_TisChild_tC54E10F7F8E3D4EE900B2CE720193D2EA684B6C6_m13C1879CA94568671D913F3EF703BBD1B4123CF0_gshared -6.62ms (-0.03%)
+	[M] __cxx_global_var_init.13 6.60ms (+0.03%)
+	[M] ConcurrentDictionary_2_ReleaseLocks_m675FED767C253CB16847755D255D49C10B110A25_gshared -6.60ms (-0.03%) [maybe_inlined]
+	[M] ApolloObjectManager_Update_mB19D49123E5A639734C8FE4612191E88502F763A 6.60ms (+0.03%)
+	[A] SortingSettings__ctor_m05CC25CC8BCE175ABD0B67393C11B25616C93BE9 6.59ms (+0.03%)
+	[M] EntityManager_GetArchetypeChunkComponentType_TisLocalToWorld_t723AFC5808D4DF1EFB4316793718AFC05134D0F5_m94EAD4B695092B429440AC49B37E3C531E236D99_gshared -6.59ms (-0.03%) [maybe_inlined]
+	[D] MatrixBufferCollector_GetMatrixBuffer_m3BFD561FE143690D6773990BF559291065DB7C47 -6.59ms (-0.03%)
+	[M] World_GetExistingSystemInternal_mED4944CF8C3D92FD8467349F84652E2A2DD020CC 6.59ms (+0.03%)
+	[M] WorldTileRendering_CalcDisplayLod_mA22996A9949BEFBF426817C5AAFA2089C0519203 6.57ms (+0.03%)
+	[D] TranscriptScriptableRenderContext::FindSurface(MonoRenderTargetIdentifier const&) -6.55ms (-0.03%)
+	[A] MUILayoutManager_CreateSprite_m2D5BDD8B2561A7F1275390A42D7D2AA5DB084750 6.55ms (+0.03%) [maybe_inlined]
+	[A] PlanarShadow_SetShadowParams_mC84AC367E08148311CCF072E72787AC3E0FE2CAE 6.54ms (+0.03%)
+	[A] ArchetypeChunkComponentType_1__ctor_m8407446BB1785C1C825412B351CF6E8F534CC0C7_gshared 6.54ms (+0.03%)
+	[A] xlua_tocsobj_fast 6.53ms (+0.03%)
+	[M] RectTransform_GetWorldCorners_m073AA4D13C51C5654A5983EE3FE7E2E60F7761B6 6.53ms (+0.03%)
+	[D] RuntimeType_CreateInstanceDefaultCtor_m7553969A13B4A66B8A0D95C3B598CE3B92325064 -6.52ms (-0.03%) [maybe_inlined]
+	[A] SuiteArrayRefkUnitTestCategory::Testconst_reverse_iterator_list_all_elements<core::array_ref_writable<int> >::RunImpl() const 6.51ms (+0.03%)
+	[M] PlanarShadow_ResetAllObjectToRender_m3878747ED084BEC635485939354E723496A887F1 -6.50ms (-0.03%) [maybe_inlined]
+	[D] ArchetypeChunkComponentType_1__ctor_mC9EE1AF870AC4AE8C3341942F1A142CBAFDBFBE7_gshared -6.50ms (-0.03%)
+	[M] VideoPlayer::VirtualRedirectTransfer(SafeBinaryRead&) 6.48ms (+0.03%)
+	[D] ReversePInvokeWrapper_BaseCameraCtrlWrap__m_IsGestureMoveDelta_m29D8CC934A6DC0194B2C9255D16A43286791BDFF -6.47ms (-0.03%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisSoldierMoveStateData_t4DACC6F63712E2DF931D9978594FDAC5588F83B0_m3AF825D4C6C3E4EF56D45E224A06C27E960C83AA_gshared 6.47ms (+0.03%)
+	[A] JobChunkExtensions_Schedule_TisSyncViewEntityJob_tF6368FC5D7C76CF5D78C8355F97E173A1FF712CE_m1211921AC046FF08DBB313AC8AE9AD50C890C3A8_gshared 6.46ms (+0.03%) [maybe_inlined]
+	[A] JobChunkExtensions_ScheduleInternal_TisSyncViewEntityJob_tF6368FC5D7C76CF5D78C8355F97E173A1FF712CE_m9863C08158D275C9B5E03A5EAE3288A1F6B1E7E6_gshared 6.46ms (+0.03%)
+	[A] UnsafeHashMapBase_2_Clear_m567397B1C4AC26C4AE3DF9FA234C126519AD73F6_gshared 6.46ms (+0.03%) [maybe_inlined]
+	[M] Mathf_Approximately_m91AF00403E0D2DEA1AAE68601AD218CFAD70DF7E 6.44ms (+0.03%)
+	[A] void TransferScriptingObject<GenerateTypeTreeTransfer, false>(GenerateTypeTreeTransfer&, ScriptingObjectPtr, ScriptingClassPtr, SerializationCache::Data*&, ManagedReferencesRegistry*) 6.44ms (+0.03%)
+	[M] Dictionary_2_FindEntry_mDEC3D202D30264D6FBF9FA2453D869EAC62A68F9_gshared 6.44ms (+0.03%)
+	[A] NativeArray_1_Allocate_m3D352A5DC732A683DF311DDA3191359FF2AC86F7_gshared 6.43ms (+0.03%)
+	[D] Lua_xlua_tryget_cachedud_m543DB94A50D35A5AEB21CCA783A8D3E0F3D2F72F -6.42ms (-0.03%) [maybe_inlined]
+	[D] xlua_tryget_cachedud -6.42ms (-0.03%) [maybe_inlined]
+	[M] DynamicArray_1_get_Item_m8214B67EA157D439F2BDB03C29F7EABFF9F5A201_gshared 6.42ms (+0.03%)
+	[D] PlanarShadow_SaveCachedStaticShadowPosition_mE64140CCB43D9AB17A456DB36E621773EF1307DF -6.41ms (-0.03%)
+	[A] MUILayoutManager_CreateText_m49866186F76FFFFD7FAA98D80627BEAB0E274992 6.41ms (+0.03%) [maybe_inlined]
+	[M] EnvEffectMotionSystem_OnUpdate_m526441F50763DFB1EBB013D698C7E0C4FE5F2C83 -6.41ms (-0.03%)
+	[A] MUILayout_SetRadius_m2059609707D1FBB343413BF2F4C0139824B7B5E5 6.41ms (+0.03%)
+	[A] std::__ndk1::vector<Geo::GeoGuid, stl_allocator<Geo::GeoGuid, (MemLabelIdentifier)90, 16> >::insert(std::__ndk1::__wrap_iter<Geo::GeoGuid const*>, Geo::GeoGuid const&) 6.39ms (+0.03%)
+	[D] RealtimeShadow_SetupRealtimeShadowData_m1CDCA1FE4DABB540E6F4A039FE3DC625D978F409 -6.38ms (-0.03%) [maybe_inlined]
+	[A] ComponentSystemBase_GetArchetypeChunkBufferType_TisPathPointTypesBufferElement_t2C2888242A8BE3CCAB47C6B0EAD816F7832504DC_mFB1E5E71532E86C9CE7A8ACC380477990B7F1F9A_gshared 6.38ms (+0.03%)
+	[M] BufferFromEntity_1__ctor_m0BBD78860CFA39CBFD2C8CC9A98D0B30AF8D9C9F_gshared -6.35ms (-0.03%) [maybe_inlined]
+	[M] libunity.so[+3242050] 6.34ms (+0.03%)
+	[M] UIPreDepthPass_IsAvailable_mDD8E277782F0CD8B7D6FF98F5CA7E6DACF5174FE -6.31ms (-0.03%) [maybe_inlined]
+	[D] Dictionary_2_ContainsKey_m055B31A14B105CA82AC614942A97C52FB284CEAF_gshared -6.31ms (-0.03%) [maybe_inlined]
+	[D] Dictionary_2_FindEntry_m099C93102F8496BD345ED14B9F00827EC333CE92_gshared -6.31ms (-0.03%)
+	[M] UTF8Encoding_GetCharCount_m017E8B367F7FC3F5961630795B453D9FA09066A1 6.30ms (+0.03%)
+	[M] void (anonymous namespace)::ETC2Block<((anonymous namespace)::AlphaMode)0, (anonymous namespace)::WriteRGBA8888Downscaled>(unsigned long, unsigned char*, unsigned int, int, int, int, int, unsigned int) (.llvm.9613639017598201076) 6.29ms (+0.03%)
+	[M] World_SetTime_m8064FE1A95EA9AD56E914519CB2D6DBA04DEF85E 6.29ms (+0.03%)
+	[M] libunity.so[+3230994] -6.29ms (-0.03%)
+	[M] il2cpp::icalls::mscorlib::System::Threading::Monitor::try_enter_with_atomic_var(Il2CppObject*, int, bool*) -6.28ms (-0.03%) [maybe_inlined]
+	[D] SuiteDynamicArraykUnitTestCategory::Testemplace_back_UsingNestedClassWithMemLabelConstructor_ConstructsWithExpectedLabel<core::basic_string<char, core::StringStorageDefault<char> > >::RunImpl() const -6.23ms (-0.03%)
+	[M] FrameworkCore_Tick_m0282A9F36015E7934BAB4CF5ED8CCB0390EE3CAD -6.22ms (-0.03%)
+	[A] SuiteStringkUnitTestCategory::Testoperator_plus_StringPlusString_CreatesStringWithAppendData_string::RunImpl() const 6.22ms (+0.03%)
+	[M] GUIUtility_EndGUI_mE93B54A19231BCC9DFC68DF54CE7C29DE41A3414 -6.22ms (-0.03%) [maybe_inlined]
+	[M] MonoSingleton_1_get_Instance_mDEFED7D97685BBE532858F90E296B185FC32F969_gshared 6.21ms (+0.03%)
+	[A] ComponentType_ReadOnly_TisPositionLerpData_t30418E4FA55D1D49B0E9E90B7A9E996429D33A61_m6AB22DEF49CE05E3F1F389473E0343F05D320980_gshared 6.20ms (+0.03%)
+	[M] JobChunkExtensions_Schedule_TisRenderBatchJob_tD10B91B7D3D4795A4B994C7E4A379AD0FEB35ACF_m533F568FEE1396EB4D0A22B6E1ED001DA090C4E4_gshared -6.17ms (-0.03%) [maybe_inlined]
+	[A] DoPrePassRenderLoop(RenderLoopContext const&, dynamic_array<RenderObjectData, 0ul>&, dynamic_array<RenderObjectData, 0ul>&, CullResults const&, RenderTexture*&, RenderTexture*&, bool*) 6.16ms (+0.03%)
+	[D] AsyncUploadManager::TimeSlicedUpdate() -6.16ms (-0.03%)
+	[A] GameCore_get_AudioMgr_mECC45BAE953C1043F869DB3E13D6E8D771300B9A 6.15ms (+0.03%)
+	[A] Realtime2DCollectSystem_OnUpdate_mC766E131089D2DC482165F5E63E9D6D871C7B780 6.14ms (+0.03%)
+	[A] ArchetypeChunkComponentType_1__ctor_mAE29D313495D4DC8E9728721D383C548CF5EC961_gshared 6.14ms (+0.03%)
+	[A] EntityComponentStore_DestroyBatch_m641FEEAEE28AEB5A5FB6A1C87C51EED4D14D8DE8 6.13ms (+0.03%) [maybe_inlined]
+	[A] ChunkDataUtility_Deallocate_mDE86AD6EA2810D1A5684BA3815DB5D7B99BF801F 6.13ms (+0.03%) [maybe_inlined]
+	[A] StencilOutlinePass_Execute_m1095BB67081C80EC08FE3CC034C1F78DFCBABEA8 6.13ms (+0.03%)
+	[M] void ConfigSettingsRead::Transfer<std::__ndk1::vector<MonoPPtr, stl_allocator<MonoPPtr, (MemLabelIdentifier)1, 16> > >(std::__ndk1::vector<MonoPPtr, stl_allocator<MonoPPtr, (MemLabelIdentifier)1, 16> >&, char const*, TransferMetaFlags, bool) 6.12ms (+0.03%)
+	[A] JitHelpers_UnsafeEnumCast_TisInt32Enum_t6312CE4586C17FE2E2E513D2E7655B574F10FDCD_mABB37D821194A0B87A72F6409DDD2A907BFA0E81_gshared 6.10ms (+0.03%)
+	[M] GetMeshByHashCode_Invoke_m3A067ED5E6AD6CBD6AA5E49A4A6083FE65B722E4 6.09ms (+0.03%)
+	[M] libunity.so[+324203c] -6.09ms (-0.03%)
+	[M] ExecuteRendererAction_Invoke_m2FF96706A98D6CF1F35C198F641F4A24257D5F9A -6.09ms (-0.03%) [maybe_inlined]
+	[M] SuiteUNETAckkUnitTestCategory::TestAck_DroppedPacketsHandled::RunImpl() const 6.08ms (+0.03%) [maybe_inlined]
+	[M] RenderPipelineUtil_GetRenderingConfig_m767F1DA2C13CDB96E9F27A5AA9F8EF4228313D85 6.05ms (+0.03%)
+	[M] Suitecore_string_refkUnitTestCategory::Testfind_first_of_UsingCStyleString<core::basic_string_ref<char> >::RunImpl() const -6.04ms (-0.03%)
+	[M] SpriteRendererDataAccessExtensions_CUSTOM_SetLocalAABB_Injected(ScriptingBackendNativeObjectPtrOpaque*, AABB const&) -6.04ms (-0.03%)
+	[A] VisualWrapper_get_m_cacheTargetTransform_m88C1B7EE7229C92751E5A2B8ACFFE7E93E95BA55 6.02ms (+0.03%)
+	[D] MeshUIPass_Execute_m1E17782C7DEF85BF45E7371A1E7C79C6F052EDD8 -6.02ms (-0.03%)
+	[A] lpb_type.llvm.14089736408295247619 5.99ms (+0.03%)
+	[A] bool std::__ndk1::__insertion_sort_incomplete<SortByHashPred<Hash128, DefaultHashFunctor<Hash128> >&, Hash128*>(Hash128*, Hash128*, SortByHashPred<Hash128, DefaultHashFunctor<Hash128> >&) 5.98ms (+0.03%)
+	[M] SuiteStringkUnitTestCategory::Testoperator_plus_assign_WithChar_AppendsChar_stdstring::RunImpl() const 5.98ms (+0.03%) [maybe_inlined]
+	[A] void Transfer_Blittable_FixedBufferField<SafeBinaryRead, float>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) 5.97ms (+0.03%)
+	[A] ReversePInvokeWrapper_AOEDOTSArmyEntityLuaCallWrap__m_StaticGetAllSelectedArmy_xlua_st__mCA50A99E22AE538EC4A7D7EB22AC02E1BC643CBE 5.97ms (+0.03%) [maybe_inlined]
+	[A] AOEDOTSArmyEntityLuaCallWrap__m_StaticGetAllSelectedArmy_xlua_st__mCA50A99E22AE538EC4A7D7EB22AC02E1BC643CBE 5.97ms (+0.03%) [maybe_inlined]
+	[M] Dictionary_2_GetEnumerator_mF1C0D99F1D74161B52E54DFA0FAB1B2B938E2A8C_gshared 5.96ms (+0.03%)
+	[A] ComponentType_ReadOnly_TisTagWorldEntity_t394B11F77711F5FF7027A970154F9D285E583A58_m8E73C2B22A42F6C0745165A53ED15767B67E3813_gshared 5.96ms (+0.03%)
+	[D] EntityManager_AddComponent_TisFrozen_tAF993ADFA80498992D991873385B62BE40261C3E_m5DBB1FF41B942E05C465C91A5DDFADD915804596_gshared -5.94ms (-0.03%)
+	[A] libunity.so[+3242300] 5.94ms (+0.03%)
+	[M] ParallelForJobStruct_1_Initialize_mFA0DD7AE444D77BFDB5F7C92A93BCF052EBB6815_gshared -5.93ms (-0.03%)
+	[A] ArchetypeChunkComponentType_1__ctor_m73759B830F7DCD623B959402CA6997C7D260CF0F_gshared 5.93ms (+0.03%)
+	[A] JobChunkExtensions_ScheduleInternal_TisArmyMove_SyncMoveDataJob_tBE4FBE132C6C71D0B0733761AC14F0C7C321A377_m5E873976547304AF7F935002BC5DBA8FB5B5535C_gshared 5.92ms (+0.03%)
+	[M] OutsideForestRenderer_UpdateLod_m34CD256D43134BE55E4B8CD0E56080D2E3EFE36F 5.91ms (+0.03%)
+	[A] RuntimeType_get_ContainsGenericParameters_mB6BC5A7168B262D2E1D8465E406F3FB0BFD0BE8F 5.91ms (+0.03%)
+	[M] EntityQueryImpl_CalculateChunkCountWithoutFiltering_m59FE3F66FE9F7359C14F7F6633285C5315643B49 5.90ms (+0.03%) [maybe_inlined]
+	[A] MUILayoutRoot_SetLocalPos_mD2145C59A4E19DC440DD7791BC4CEDAD2AA77A88 5.89ms (+0.03%)
+	[M] ExportAudioBindingsNew() 5.88ms (+0.03%)
+	[M] MeshUIManager_OnUpdate_m88F716FC880BECB8B5D117F2EFFD5521979E5A57 -5.86ms (-0.03%) [maybe_inlined]
+	[M] dynamic_array<TilemapRefCountedData<PPtr<Sprite> >, 0ul>::resize_buffer_nocheck(unsigned long, ResizePolicy) -5.85ms (-0.03%)
+	[A] AnimatorInstanceMgr_SyncCacheToHashMap_mE4BE101F2C0C36002E0EC5455A0C2695912B41BA 5.83ms (+0.03%)
+	[M] void AnimationClipOverride::Transfer<SafeBinaryRead>(SafeBinaryRead&) 5.82ms (+0.03%)
+	[M] ArraySortHelper_1_Sort_m6D4291F75006579E636331CC48432B945A22DEC4_gshared 5.82ms (+0.03%)
+	[A] Lua_xlua_debug_get_times_reset_mD3CD10C507C47AFCCD10F270AFB94292AAC5C22A 5.81ms (+0.03%) [maybe_inlined]
+	[A] xlua_debug_get_times_reset 5.81ms (+0.03%)
+	[D] EntityManager_GetArchetypeChunkComponentType_TisEnvEffectMotionState_tA5F03F5B2FC9A41BB1ECB21CD233BDB590E90537_mB7B9AB64B39C24E245988B5A1D259C98F4D5CA76_gshared -5.81ms (-0.03%) [maybe_inlined]
+	[D] ArchetypeChunkComponentType_1__ctor_m65B48A5DE46AB1A23A41FEFFF9CF58CB79AC810E_gshared -5.81ms (-0.03%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisLocalLODDistance_t8EFFAABDA6791A51F8C2A32A96C44327E03C1531_m238C6ADAD0A115F6A2346721B67B05CA28FF11EB_gshared 5.80ms (+0.03%) [maybe_inlined]
+	[D] IJobBurstScheduableExtensions_Schedule_TisGatherChunksAndOffsetsWithFilteringJob_t2D850827422A7640D00CAE9B01855ECA2EC11F51_m89CAC226481EA38FEE173E944B306936EB034D9E_gshared -5.80ms (-0.03%)
+	[A] ProfilerUtil_EndCpuSampleWithRet_mEDD54874BA49B68D1523615AEFD1BA1D56C65027 5.79ms (+0.03%)
+	[D] SuiteAsyncUploadManagerkUnitTestCategory::ReadCompleteCallbackThreadCheck(bool, AsyncUploadCallbackInfo const&) -5.79ms (-0.03%)
+	[D] Enumerator_MoveNext_mF9F996DF26641B24A65B5E1950E0C92C38747034_gshared -5.79ms (-0.03%)
+	[M] VRInput::VRInput(UnityVRDeviceDefinition const*, UnityVRDeviceSpecificConfiguration const*) -5.78ms (-0.03%) [maybe_inlined]
+	[D] NativeList_1_op_Implicit_mE3C1D5780D9EFE92A1CEBD90156F0A1A166C7D86_gshared -5.78ms (-0.03%)
+	[D] CanvasScaler_Handle_mF38FFB050D9EF070AEA7B02DA20BCC4A0B8CC1C3 -5.77ms (-0.03%) [maybe_inlined]
+	[M] Dictionary_2_ContainsKey_m379C08BE13D2E0AD1F9102B6E280A32F0C9C7015_gshared 5.77ms (+0.03%)
+	[M] NativeMultiHashMap_2__ctor_mB6E68724C70CA4B3EEAEB3BFD9C8B4A5AA1744A1_gshared 5.76ms (+0.03%) [maybe_inlined]
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisTagViewTree_t0E9B9D329383B6B2FF373D79C8EC8E4E1986A1C2_m1A6EFD50EB352187021BEA956AACA5E3D0B539D0_gshared 5.75ms (+0.03%) [maybe_inlined]
+	[M] List_1_GetEnumerator_mE721B3C5E137DCDB408BE05CA472EECBAAAA418A_gshared 5.75ms (+0.03%)
+	[M] Stack_1_Push_m093B9DD635DC4EFEAC301FBDEC1B06024071DF73_gshared 5.75ms (+0.03%)
+	[D] UIContolMgrText_Update_m490C388FB47310A1D77C81F27985A66292D1DDA4 -5.73ms (-0.03%)
+	[M] Collider::ClosestPointOnBounds(Vector3f const&, Vector3f&, float&) 5.72ms (+0.03%)
+	[M] ScrollRect_LateUpdate_mD0338F8F0C9BDB6ED9A77936E9B842CE4C3AFED8 5.72ms (+0.03%) [maybe_inlined]
+	[M] Dictionary_2_TryInsert_m729B71E869DFC8DAB29969BB05B2C43DCE3A4A2E_gshared -5.71ms (-0.03%)
+	[D] RenderTargetIdentifier_op_Equality_mAB9168185A74088E10E2AC74603FA4C8C14FB8DC -5.70ms (-0.03%)
+	[M] VxToggleAutoAnimation_Update_m2ABC5D9F596DE22E4A51DF3F6F9484BB3267CDFB -5.70ms (-0.03%) [maybe_inlined]
+	[M] void Transfer_Blittable<SafeBinaryRead, true, unsigned char>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) 5.70ms (+0.03%)
+	[A] Dictionary_2_set_Item_m4F6019D60FAEBE98F9E1805B0455CDF8A18AA795_gshared 5.69ms (+0.03%) [maybe_inlined]
+	[A] Dictionary_2_TryInsert_m24995B79D57097C95878289EEA86AD88BC9EF477_gshared 5.69ms (+0.03%)
+	[A] libunity.so[+3242418] 5.69ms (+0.03%)
+	[M] BnSFog_Apply_m21D13EE3348D5E3A183CCAC0E49CDAE630764FF9 5.69ms (+0.03%)
+	[M] ResManager_OnUpdate_m4E6B5747AE8C0C2E4593965C6DE83772BAE125B5 -5.68ms (-0.03%)
+	[M] CommandBufferExt_DrawMeshInstanced_m3B46657E51EA9195D6249E26C5D9EB1BB6431FA9 -5.68ms (-0.03%) [maybe_inlined]
+	[M] ReversePInvokeWrapper_UnityEngineProfilingProfilerWrap__m_EndSample_xlua_st__mC61E8F16AAAA7FCC3A9F69168FFEF154A98F3867 -5.67ms (-0.03%) [maybe_inlined]
+	[M] il2cpp::vm::Array::NewSpecific(Il2CppClass*, unsigned long) -5.66ms (-0.03%) [maybe_inlined]
+	[M] MobileBaseRenderer_CustomCull_m6A15B6AA7C17A182831858C8E6179AFD3555B26E 5.65ms (+0.03%)
+	[A] NativeMultiHashMap_2__ctor_mE302F43230CBE0ACD00301B1E92D3C702903842D_gshared 5.64ms (+0.03%)
+	[M] Lua_lua_isnil_m6DDA3EE8529050F6CF8C458C094901AC7AF344B6 5.64ms (+0.03%)
+	[A] UInt64_GetHashCode_mCBB4031BF70D0CBD023B4D71F4FEA37BE2C749AD 5.64ms (+0.03%)
+	[A] Dictionary_2_get_Item_m171D93CFCA804092C34F59B15A4E618503C91C36_gshared 5.63ms (+0.03%)
+	[M] SystemState_CheckScopeInfo_m2BA792ED73DF242F3169BD46A72D29377CFEE395 5.63ms (+0.03%)
+	[A] ComponentSystemBase_GetArchetypeChunkComponentType_TisAnimation2DTRS_t61E3E7A61B47F211D4D1EEA0E2C0EA4D69F3E312_m3A30923A840D2F92B1999FAFFD6A4C3A4FC67846_gshared 5.62ms (+0.03%)
+	[D] Graphic_get_canvasRenderer_mB3E532BE19116A3F0D6ADC1CD29D242428EAE8AA -5.62ms (-0.03%)
+	[D] OutsideResLevelRenderer_GetRenderLayer_mFE41732E41BFAB9BC86C9B3E842CDC65CE3C9A24 -5.62ms (-0.03%)
+	[D] GenericPropertyBindingT<16ul>::GenerateBinding(core::basic_string<char, core::StringStorageDefault<char> > const&, bool, UnityEngine::Animation::GenericBinding&) const -5.61ms (-0.03%)
+	[M] GPMFrameProcessor_Update_m3453384D9A70604EAD2969E671ED534367F2337C -5.60ms (-0.03%)
+	[A] SuiteStringkUnitTestCategory::TestCtorWithSubStringAndMemLabel_CopiesData_string::RunImpl() const 5.60ms (+0.03%)
+	[A] JobChunkProducer_1_InitializeParallel_m5FD7A7D7B38F8E253B52C57B4B3D71EBF8946AFF_gshared 5.57ms (+0.03%)
+	[M] UtilArmyCtrl_GetArmyPos_mFC09D8CB31E7E76D0FAE202C18B3A2296DE823B1 -5.57ms (-0.03%)
+	[M] Unity::HingeJoint::WriteStateOnNewJoint(physx::PxTransform const&, physx::PxTransform const&) -5.57ms (-0.03%)
+	[D] DrawRendererPass_SetGlobalSceneColorCopyTexToDefault_m72F23AC6A65592618D770688A9840C9A601929E6 -5.56ms (-0.03%)
+	[D] libunity.so[+31ffd20] -5.55ms (-0.03%)
+	[M] InjectProfilerManager_End_m74F0BFB50279A3F5ED491ABFF7FD6EE8272AAC15 5.55ms (+0.03%)
+	[A] Array_CopyTo_m455300D414FFB0EBFE53EA4E8BBD31532006EBB7 5.53ms (+0.03%)
+	[D] UnsafeList_1_get_Item_m8A3E3AC5201F6B74F6372579A7A15296551BEB05_gshared -5.52ms (-0.03%)
+	[M] TBURenderGraph_CreateTransientTexture_mB1656CB7A19F2020210A87F50A620298B75868AF -5.51ms (-0.03%) [maybe_inlined]
+	[M] UtilCommon_GetPosition_m35080FCAA67014049F63E827E5DCCA635D2B8DC4 -5.51ms (-0.03%)
+	[M] UniversalRenderPipeline_InitializeRenderingData_m4E354D2EF305DDFCEA5A2DEB813BFE47C40E6086 5.51ms (+0.03%)
+	[D] UnsafeHashMapData_AllocateHashMap_TisEntity_t514FBEC5923A575B6549FFCE0A7E0928BBB9F3D8_TisSoldierCombatInfo_t3E9BA2C040AC15D554571448F4621D15368ECEEF_m55C5F725308530A6F799DA01E5F63FFDB6F769B1_gshared -5.50ms (-0.03%)
+	[M] SpriteRendererDataAccessExtensions_CUSTOM_DeactivateDeformableBuffer(ScriptingBackendNativeObjectPtrOpaque*) -5.50ms (-0.03%)
+	[A] ComponentType_ReadOnly_TisRenderState_t53A4AE506E6AB78793733FB3EAEBADCA7805B809_m52DAC12A7AE1D30265F31A2C260518F8A0DF19DD_gshared 5.50ms (+0.03%)
+	[A] SpriteDataAccessExtensions_CUSTOM_GetIndicesInfo_Injected(ScriptingBackendNativeObjectPtrOpaque*, SpriteChannelInfo&) 5.49ms (+0.03%)
+	[D] libunity.so[+32424f8] -5.48ms (-0.03%)
+	[M] Texture2D_CUSTOM_GetPixelImpl_Injected(ScriptingBackendNativeObjectPtrOpaque*, int, int, int, ColorRGBAf&) -5.45ms (-0.03%)
+	[M] UnityEngine::Analytics::SuitePerformanceReportingConfigkUnitTestCategory::TestCanEnablePerformanceReporting::RunImpl() const 5.44ms (+0.03%)
+	[D] StringBuilder_ToString_mC93526603BBE053CAD68863D7ED464354598E7EF -5.43ms (-0.03%)
+	[A] luaM_realloc_ 5.42ms (+0.03%) [maybe_inlined]
+	[A] _mi_malloc_generic 5.42ms (+0.03%) [maybe_inlined]
+	[A] _mi_free_delayed_block 5.42ms (+0.03%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisGroupUnitPropertyData_t6CEAB26D641B0DEFB280720090ED37CBAA762511_mF33A459D6A85A4624EA1F996CF4A2582E533A77E_gshared 5.42ms (+0.03%) [maybe_inlined]
+	[D] WorldEnvironmentMeshItemInstance_ProcessLoadTask_mBC41AB0B9D1C1258820E7DEE52344F9AC9B29243 -5.42ms (-0.03%)
+	[A] GetMonitorAndThrowIfNotLockedByCurrentThread(Il2CppObject*) 5.42ms (+0.03%)
+	[D] String_op_Inequality_m0BD184A74F453A72376E81CC6CAEE2556B80493E -5.41ms (-0.03%)
+	[A] URPCallbackManager_BeginRenderTime_m1151EE93DF217685D05159BFC6B9C3F36992794A 5.40ms (+0.03%)
+	[D] ObjectTranslator_Get_m3078777B800CE078EBE40AFFBBE94C6BB3A6DE57 -5.39ms (-0.03%)
+	[M] ComponentSystemBase_GetArchetypeChunkComponentType_TisLogicColliderData_t54066131FF9F5AF2236E9868A196EEA5C926857E_mF7A21C2B963B0617AE9A779AA7D91F328805F627_gshared -5.38ms (-0.03%) [maybe_inlined]
+	[D] mbedtls::SuiteTLSModule_MbedtlskUnitTestCategory::Testx509list_ExportPem_Equals_ParsePem_And_Raise_NoError::RunImpl() const -5.38ms (-0.03%)
+	[M] ObjectPool_1_Release_mB8571DD227FE571762BDF82931DE941530A23C23_gshared -5.36ms (-0.03%)
+	[A] EntityManager_GetArchetypeChunkComponentType_TisNonUniformScale_t2896D2FA85422398799F79095429B4BC69490620_mB419099C3923ED188ADB34104B0212C3AD9E23C8_gshared 5.36ms (+0.03%)
+	[M] ProduceHelper<Unity::CharacterJoint, false>::Produce(MemLabelId, ObjectCreationMode) 5.35ms (+0.03%)
+	[M] GC_generic_malloc -5.35ms (-0.03%) [maybe_inlined]
+	[M] GPMAgent_tapmNativePostFrame_mC6386B48A305081BD65E245AF38F70F7F1E0760D -5.34ms (-0.03%) [maybe_inlined]
+	[M] SuiteStringkUnitTestCategory::Testiterator_arithmetics_returns_correct_char_wstring::RunImpl() const 5.33ms (+0.03%)
+	[M] ARCore::ARCoreManager::ARCoreManager()::EarlyUpdateTangoUpdateRegistrator::Forward() 5.33ms (+0.03%)
+	[M] ComponentSystemBase_AfterUpdateVersioning_m261275BD32B10E3A26F1508A7AF06674DD43D5C0 5.33ms (+0.03%)
+	[M] DebugManager_UpdateActions_mBDEB8245666C993B8E1E933D1AA900970AE29C47 -5.33ms (-0.03%) [maybe_inlined]
+	[D] Enumerator__ctor_mDA0E07D8E55C8BA6CA122BEB31C4DA628CEAB31B_gshared -5.32ms (-0.03%)
+	[A] LuaMgr_get_LuaGcPerf_mD17019C2B092F1528B909AFAD317CB8AD667AFD3 5.32ms (+0.03%)
+	[D] BaseCameraCtrlWrap__m_IsGestureMoveDelta_m29D8CC934A6DC0194B2C9255D16A43286791BDFF -5.32ms (-0.03%)
+	[M] ArchetypeChunkComponentType_1__ctor_m24D129CCE6C72432A3DBCB1616A181C4E666EAC0_gshared -5.31ms (-0.03%) [maybe_inlined]
+	[M] ArcMgr_ReleaseDelayHandles_m9B0CAD8A23CC087914FC84B42C7717316B3672E1 5.31ms (+0.03%)
+	[D] PlayerData_get_HeartBeatServerTs_m9A95C9F2823624854E33C6C729597C8E45D6F0B6 -5.31ms (-0.03%)
+	[A] _GLOBAL__sub_I_Runtime_Core_Containers_0.cpp 5.31ms (+0.03%)
+	[A] ObjectPool_1_Recycle_m36F05A201FA5828E5ECC1ACE88F491EAAF02D6C7_gshared 5.30ms (+0.03%) [maybe_inlined]
+	[A] CreateArmyData_OnRecycle_m775574F9D9A632880B01F56F09795ADC67D69792 5.30ms (+0.03%) [maybe_inlined]
+	[A] VRInput::GetWorldToCameraMatrix(UnityVRTrackedNodeType, PPtr<Transform>) const 5.30ms (+0.03%) [maybe_inlined]
+	[M] MapCoordUtil_ConvertWorldPosToGridFloat_m9EA66E00D66BCBF94BE292F955672B11E74270AE -5.29ms (-0.03%)
+	[A] ps_unicode_value 5.27ms (+0.03%)
+	[M] DrawRendererPass_Setup_m1B3D34D48A1B52786195887B2F20E128DD08EDEF -5.26ms (-0.03%)
+	[A] TypeManager_GetTypeIndex_TisViewUnitData_t632565A693A76FA3685F396FF73EC5BA47109AF7_m63B63CC3A1A6902EC6E91E1EE9D747A62C4F7410_gshared 5.25ms (+0.03%)
+	[M] ComponentType_ReadWrite_TisEnvEffectMotionType_t17B928C6BB7BAE3DD49171B580671259BCA39CFA_m84CEAE68AB44C7D7360A660B042020FCEC0EE2FE_gshared 5.23ms (+0.03%)
+	[M] SdfDefine_CallWithProfiler_m4DC28E2B130B723C70AA36F80127259AB11E0BE5 -5.23ms (-0.03%) [maybe_inlined]
+	[A] Unity::CharacterJoint::Create() 5.23ms (+0.03%)
+	[A] JobChunkExtensions_Schedule_TisPositionLerpJop_t2139128BEA2F1B5B2352DB8A1DA6657183DE2697_mEFBB56FA3B33F331E47A0BE2E1807F2F3B1F715B_gshared 5.22ms (+0.03%)
+	[D] WorldTileRendering_RemapSmLod_m42C845CA12DD6E0049A2ECD7F925C7AB353E2E23 -5.22ms (-0.03%)
+	[M] SystemBase_Update_m87BE381BE8931F9AA7F947827308B5D0A5675D71 -5.22ms (-0.03%) [maybe_inlined]
+	[M] void Transfer_Blittable<SafeBinaryRead, true, float>(SerializationCommandArguments const&, RuntimeSerializationCommandInfo&) 5.21ms (+0.03%)
+	[D] Stack_1_Pop_m9A754566910D626419047ADA68D8493D6692F5FC_gshared -5.20ms (-0.03%)
+	[A] TBUBasePass_CreateOrGetTexture_m133F18F3185D38321F853BB9D88AEFD0731D863D 5.20ms (+0.03%)
+	[M] UnityAction_1_Invoke_m3685D48F30F3A109E86A04023B754E16F87F692B_gshared -5.19ms (-0.03%)
+	[M] TServer_ReadData_m83221A5AF75E742A33A810B226021BB7629B938C -5.16ms (-0.02%)
+	[M] PostRenderCleanupCullingContexts(void*) (.llvm.17502035831811773731) 5.15ms (+0.02%)
+	[A] PhysicsManager::VirtualRedirectTransfer(GenerateTypeTreeTransfer&) 5.15ms (+0.02%)
+	[M] OutsideUIMgr_SetFloatUIPos_m4A856E9661AEE27096013C636C9C9A224710FE28 -5.15ms (-0.02%)
+	[A] MUIControl_OnRecycle_mB992EF9A18B9B98A52EFDAA3C477EAE61F1C61C7 5.14ms (+0.02%) [maybe_inlined]
+	[A] MUIClickHandler_ClearListeners_m4FC0782924807CFCBB273A5064656812FCF6DBEA 5.14ms (+0.02%) [maybe_inlined]
+	[A] MUIClickHandler_get_onButtonClick_m4AAED0CB54FC96E06702CA1F84FC2845628C60A1 5.14ms (+0.02%) [maybe_inlined]
+	[A] UnityEventBase__ctor_m57AF08DAFA9C1B4F4C8DA855116900BAE8DF9595 5.14ms (+0.02%) [maybe_inlined]
+	[M] MonoField_CheckGeneric_mD59862B12548B999D07F7C2AF14F651AAAAD69E4 5.14ms (+0.02%) [maybe_inlined]
+	[A] il2cpp::icalls::mscorlib::System::MonoType::GetMethodsByName(Il2CppReflectionType*, Il2CppString*, int, bool, Il2CppReflectionType*) 5.14ms (+0.02%)
+	[D] AkSoundEnginePINVOKE_CSharp_AkCallbackSerializer_Lock_m64DE1A5BD38122A433AAC40B276E1B28F7539639 -5.13ms (-0.02%) [maybe_inlined]
+	[D] ComponentType_ReadWrite_TisEnvEffectMotionRange_tFA965EBB2EFA85A830BFC9E180B98D091D91E569_m0B525CAE555B644645B03564720EBDA78EA449A9_gshared -5.12ms (-0.02%)
+	[M] List_1_InsertRange_mA02419C0AE2C54B4137831483DF1E1481593B8B3_gshared 5.12ms (+0.02%)
+	[D] Texture2DArray::CanReuploadDataToGfxDevice() const -5.12ms (-0.02%)
+	[D] PolygonCollider2D_Get_Custom_PropAutoTiling(ScriptingBackendNativeObjectPtrOpaque*) -5.11ms (-0.02%)
+	[A] CommandBuffer_DrawMeshInstanced_m302E005091F1D4582A45453EA9F332AA5D28CC3A 5.11ms (+0.02%)
+	[A] MapEntityEffectMgr_UpdateFadeEffect_mC6676A4FEBE9B48F6EF9BB94EAC38FB258332CAF 5.10ms (+0.02%)
+	[M] NativeList_1_get_Length_m56B877FE8A5346B62CA34407AEA92A2E28911A32_gshared -5.10ms (-0.02%)
+	[M] lua_rawgeti -5.10ms (-0.02%)
+	[A] AkSoundEnginePINVOKE_CSharp_RenderAudio__SWIG_1_m3CBB5FEB04CBAFA814BE06346E10FF4F79E6B779 5.09ms (+0.02%) [maybe_inlined]
+	[M] SuiteAsyncUploadManagerkUnitTestCategory::TestJobFunc(Semaphore*) 5.09ms (+0.02%)
+	[A] OrderedList_1_System_Collections_Generic_IEnumerableU3CTU3E_GetEnumerator_mF2077C6F1F9A1B9A963C829415F5FA0C51401A5B_gshared 5.09ms (+0.02%)
+	[D] GfxDeviceClient::SetThreadGroupMemoryLength(int, int, int) -5.08ms (-0.02%)
+	[M] UtilHeightMapBurst_GetBilinearHeight_mED1C051A5EDC12F452601655239DA3D05CFFBC6A -5.08ms (-0.02%)
+	[M] Dictionary_2_FindEntry_m0355E4CFC77F27301F77F3AB521403C3088F7402_gshared -5.07ms (-0.02%)
+	[M] SuiteOptimizeTransformHierarchykUnitTestCategory::TestFlattened_Transforms_Have_Correct_TRS::RunImpl() const 5.07ms (+0.02%)
+	[D] void dynamic_block_array<int, 2ul>::resize_with_resizer_internal<dynamic_block_array<int, 2ul>::ResizerWithDefault>(unsigned long, dynamic_block_array<int, 2ul>::ResizerWithDefault const&) -5.07ms (-0.02%)
+	[D] Suitecore_string_refkUnitTestCategory::Testfind_first_of_UsingCStyleString<core::basic_string<wchar_t, core::StringStorageDefault<wchar_t> > >::RunImpl() const -5.06ms (-0.02%)
+	[M] SharedStatic_1_get_Data_m34930B7C909408E354B2FE851C4A0BFB404739CA_gshared 5.06ms (+0.02%)
+	[A] SuiteAudioSampleProviderkUnitTestCategory::TestQueueSampleFrames_WhenQueueingSamplesAboveThreshold_EmitsReadyNativeEvent::RunImpl() const 5.05ms (+0.02%)
+	[A] InternString_Intern_mF54217F3835178D52E7C1F688887DB413EFAC3AF 5.05ms (+0.02%) [maybe_inlined]
+	[A] InternString_IsInterned_m55B13388E11F94DA8032901279A374B6302D49D8 5.05ms (+0.02%)
+	[M] void std::__ndk1::__sort<SortByHashPred<LightData, DefaultHashFunctor<LightData> >&, LightData*>(LightData*, LightData*, SortByHashPred<LightData, DefaultHashFunctor<LightData> >&) 5.03ms (+0.02%)
+	[M] Text_SetTextContent_m13C76FBCF692115E6DDF65C2DB71E9FBA0748CA2 -5.01ms (-0.02%) [maybe_inlined]
+	[A] Type_get_IsInterface_m8BC291C33120399B14CAAC6E205F06884B9F96ED 5.01ms (+0.02%)
+	[M] ObjectPool_1_Release_mEAB0213918673E16D974C3B39EB50B71CE5E5E8A_gshared 5.00ms (+0.02%)
+
+========================================================================
+Summary
+========================================================================
+  il2cpp_delta_pct_unitymain           +3.80%

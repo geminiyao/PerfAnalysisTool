@@ -1,0 +1,157 @@
+========================================================================
+Single Profile Analysis: data/baseline/perf_1.data
+  event: cpu-cycles:u  totalSamples: 31977
+========================================================================
+
+Top hotspots (self time):
+  function                                         self(ms)      pct
+  __memcpy                                          1221.82    3.65%
+  luaV_execute                                       776.93    2.32%
+  __ieee754_powf                                     757.25    2.26%
+  tetrahedralize(tetgenbehavior*, tetgenio*, t       731.58    2.18%
+  !!!0000!f56be09eb88f86833124f1df42e945!272cf       450.78    1.34%
+  GC_end_stubborn_change                             430.43    1.28%
+  Suitecore_string_refkUnitTestCategory::Testr       340.72    1.02%
+  stb__MatchColorsBlock(unsigned char*, unsign       334.53    1.00%
+  Testing::ParametricTestWithFixtureInstance<v       328.78    0.98%
+  !!!0000!5076e583aa8765198a272b40557a10!272cf       303.06    0.90%
+  RenderShadowMaps(ShadowMapJobHeader const*,        300.43    0.90%
+  mbedtls::SuiteTLSModule_MbedtlskUnitTestCate       288.25    0.86%
+  !!!0000!ffbd91fa84cc503d3291e671d19f43!272cf       279.67    0.83%
+  Suitecore_string_refkUnitTestCategory::Testf       279.01    0.83%
+  propagatemark                                      277.82    0.83%
+  AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamp       251.35    0.75%
+  Testing::ParametricTestWithFixture<void (*)(       247.94    0.74%
+  pthread_getspecific                                236.09    0.70%
+  syscall                                            230.72    0.69%
+  Suitecore_string_refkUnitTestCategory::Testf       230.63    0.69%
+  SuiteTLSModulekUnitTestCategory::TestTLSCtx_       225.65    0.67%
+  [linker]do_dlsym(void*, char const*, char co       225.65    0.67%
+  SuiteAsyncUploadManagerkUnitTestCategory::Te       217.10    0.65%
+  Suitecore_string_refkUnitTestCategory::Testr       208.02    0.62%
+  luaD_call                                          206.51    0.62%
+  libunity.so[+3242984]                              196.25    0.58%
+  pthread_mutex_unlock                               193.16    0.58%
+  void Transfer_ManagedObjectRef<StreamedBinar       192.40    0.57%
+  Suitecore_string_refkUnitTestCategory::Testf       186.76    0.56%
+  mbedtls::SuiteTLSModule_MbedtlskUnitTestCate       181.24    0.54%
+
+Per-thread CPU breakdown:
+  UnityMain                  16275.53 ms   41.34%
+  Thread-102                 10757.34 ms   27.33%
+  UnityGfxRenderS             5144.74 ms   13.07%
+  NativeThread                1346.49 ms    3.42%
+  UnityChoreograp             1108.36 ms    2.82%
+  AAudio_1                     828.66 ms    2.10%
+  Thread-135                   692.85 ms    1.76%
+  Thread-145                   667.81 ms    1.70%
+  Thread-134                   665.05 ms    1.69%
+  Thread-137                   659.86 ms    1.68%
+  Thread-10                    234.43 ms    0.60%
+  com.tencent.aoeyz            216.88 ms    0.55%
+  AudioTrack                   100.03 ms    0.25%
+  Audio Mixer Thr               88.06 ms    0.22%
+  GVoiceRender                  69.92 ms    0.18%
+  Binder:18276_7                53.67 ms    0.14%
+  Thread-183                    43.53 ms    0.11%
+  Binder:18276_6                42.94 ms    0.11%
+  Thread-229                    38.45 ms    0.10%
+  GVoiceCapture                 38.41 ms    0.10%
+  Binder:18276_2                37.45 ms    0.10%
+  Thread-218                    34.31 ms    0.09%
+  APM-Routine                   27.53 ms    0.07%
+  Audio Stream Th               21.20 ms    0.05%
+  gem-scheduled-0               17.16 ms    0.04%
+  m.tencent.aoeyz               15.18 ms    0.04%
+  HeapTaskDaemon                13.94 ms    0.04%
+  Thread-225                    13.74 ms    0.04%
+  Thread-380                    13.24 ms    0.03%
+  Thread-217                    13.05 ms    0.03%
+  GVoiceUtil                    13.04 ms    0.03%
+  Thread-381                    12.77 ms    0.03%
+  Thread-94                     12.74 ms    0.03%
+  Background Job.               11.59 ms    0.03%
+  GThreadManager                10.72 ms    0.03%
+  AsyncWorker                    8.51 ms    0.02%
+  CrashSight_Rout                7.32 ms    0.02%
+  Profile Saver                  5.38 ms    0.01%
+  Jit thread pool                4.24 ms    0.01%
+
+Per-so CPU breakdown:
+  libunity.so                                    15774.91 ms   40.07%
+  libil2cpp.so                                    6836.88 ms   17.37%
+  libGLESv2_adreno.so                             4917.93 ms   12.49%
+  libc.so                                         3194.95 ms    8.12%
+  libxlua.so                                      1839.50 ms    4.67%
+  libAkSoundEngine.so                             1235.52 ms    3.14%
+  libart.so                                       1216.07 ms    3.09%
+  libm.so                                          793.30 ms    2.02%
+  [JIT cache]                                      716.93 ms    1.82%
+  linker64                                         542.33 ms    1.38%
+  lib_burst_generated.so                           487.98 ms    1.24%
+  libgui.so                                        245.53 ms    0.62%
+  libaaudio_internal.so                            197.69 ms    0.50%
+  libgcloud.so                                     172.49 ms    0.44%
+  libbinder.so                                     120.73 ms    0.31%
+  libutils.so                                       93.29 ms    0.24%
+  libGVoice.so                                      90.41 ms    0.23%
+  [vdso]                                            89.09 ms    0.23%
+  libPxKit3.so                                      73.05 ms    0.19%
+  libPxEmbedded.so                                  63.28 ms    0.16%
+  libaudioclient.so                                 43.16 ms    0.11%
+  libcutils.so                                      36.93 ms    0.09%
+  libandroid_runtime.so                             32.60 ms    0.08%
+  libdl.so                                          31.57 ms    0.08%
+  libhitrace.so                                     28.35 ms    0.07%
+  libGLESv2.so                                      28.02 ms    0.07%
+  libgsl.so                                         27.88 ms    0.07%
+  framework.jar                                     26.79 ms    0.07%
+  libhwmediamonitor_client.so                       24.03 ms    0.06%
+  libui.so                                          20.07 ms    0.05%
+  hwEmui.jar                                        17.50 ms    0.04%
+  eglSubDriverAndroid.so                            16.86 ms    0.04%
+  libEGL_adreno.so                                  14.94 ms    0.04%
+  libc++.so                                         14.86 ms    0.04%
+  base.vdex                                         14.81 ms    0.04%
+  libaudioutils.so                                  14.54 ms    0.04%
+  libgcloudcore.so                                  14.41 ms    0.04%
+  libGPM.so                                         14.19 ms    0.04%
+  libhwaps.so                                       14.15 ms    0.04%
+  libEGL.so                                         12.61 ms    0.03%
+  libhitrace_jni.so                                 12.29 ms    0.03%
+  libadreno_utils.so                                12.24 ms    0.03%
+  libcrosCurl.so                                    12.24 ms    0.03%
+  core-oj.jar                                       11.55 ms    0.03%
+  libopenjdkjvm.so                                  11.37 ms    0.03%
+  boot-framework.oat                                11.33 ms    0.03%
+  libaaudio.so                                       9.71 ms    0.03%
+  vendor.qti.hardware.display.mapperextensions       9.67 ms    0.03%
+  libpimutex.so                                      9.05 ms    0.02%
+  libdexfile.so                                      8.61 ms    0.02%
+  libwilhelm.so                                      8.22 ms    0.02%
+  libgrallocutils.so                                 8.16 ms    0.02%
+  boot.oat                                           8.00 ms    0.02%
+  libsigchain.so                                     7.80 ms    0.02%
+  libopenjdk.so                                      7.69 ms    0.02%
+  libqdMetaData.so                                   7.67 ms    0.02%
+  libinput.so                                        7.39 ms    0.02%
+  libartbase.so                                      7.38 ms    0.02%
+  libartpalette-system.so                            5.89 ms    0.01%
+  libandroid.so                                      5.72 ms    0.01%
+  libhwrme_client.so                                 4.97 ms    0.01%
+  hwPartBasicplatform.jar                            3.81 ms    0.01%
+  libhidlbase.so                                     3.38 ms    0.01%
+  android.hardware.graphics.mapper@4.0-impl-qt       3.31 ms    0.01%
+  libartpalette.so                                   2.43 ms    0.01%
+  libwebviewchromium.huawei.so                       2.41 ms    0.01%
+  boot-hwEmui.oat                                    2.38 ms    0.01%
+  boot-core-libart.oat                               2.35 ms    0.01%
+  libCrashSight.so                                   1.82 ms    0.01%
+  libjavacore.so                                     1.68 ms    0.00%
+  libicui18n.so                                      1.66 ms    0.00%
+  libsync.so                                         1.40 ms    0.00%
+  libnetd_client.so                                  0.95 ms    0.00%
+  libart-compiler.so                                 0.84 ms    0.00%
+  libbase.so                                         0.64 ms    0.00%
+  libandroidio.so                                    0.00 ms    0.00%
+

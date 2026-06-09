@@ -1,0 +1,549 @@
+{
+  "meta": {
+    "file": "D:/Android/android-ndk-r21e-windows-x86_64/simpleperf/perf_battle_after.data",
+    "label": "perf_battle_after.data",
+    "event": "cpu-cycles:u",
+    "total_samples": 214495
+  },
+  "hotspots": [
+    {
+      "func": "real_gc()",
+      "lib": "libxlua.so",
+      "self_ms": 129419.98,
+      "pct": 45.908
+    },
+    {
+      "func": "Unity.Transforms.LocalToParentSystem.UpdateHierarchy.ChildLocalToWorld(Unity.Transforms.LocalToParentSystem.UpdateHierarchy* this, Unity.Mathematics.float4x4 parentLocalToWorld, Unity.Entities.Entity entity, bool updateChildrenTransform) -> void_356fe412ab5d279ecb02e1e6360be035",
+      "lib": "lib_burst_generated.so",
+      "self_ms": 7387.693,
+      "pct": 2.621
+    },
+    {
+      "func": "UI::UIGeometryJob(UI::UIGeometryJobData*)",
+      "lib": "libunity.so",
+      "self_ms": 7286.715,
+      "pct": 2.585
+    },
+    {
+      "func": "Rendering.Animator.AnimatorECSComponentSystem.AnimatorECSJob.InitCtrlImplByStep(Rendering.Animator.AnimatorECSComponentSystem.AnimatorECSJob* this, ref Rendering.Animator.AnimatorECSComponentSystem.AnimatorECSJob.AnimatorInfo info) -> bool_356fe412ab5d279ecb02e1e6360be035",
+      "lib": "lib_burst_generated.so",
+      "self_ms": 6180.255,
+      "pct": 2.192
+    },
+    {
+      "func": "__memcpy",
+      "lib": "libc.so",
+      "self_ms": 4705.38,
+      "pct": 1.669
+    }
+  ],
+  "threads": [
+    {
+      "name": "UnityMain",
+      "self_ms": 199103.835,
+      "pct": 60.19
+    },
+    {
+      "name": "Thread-73",
+      "self_ms": 27470.68,
+      "pct": 8.305
+    },
+    {
+      "name": "Thread-74",
+      "self_ms": 19800.485,
+      "pct": 5.986
+    },
+    {
+      "name": "Thread-76",
+      "self_ms": 19706.263,
+      "pct": 5.957
+    },
+    {
+      "name": "Thread-77",
+      "self_ms": 19072.334,
+      "pct": 5.766
+    },
+    {
+      "name": "Thread-75",
+      "self_ms": 18981.831,
+      "pct": 5.738
+    },
+    {
+      "name": "UnityGfxRenderS",
+      "self_ms": 10939.295,
+      "pct": 3.307
+    },
+    {
+      "name": "NativeThread",
+      "self_ms": 8789.221,
+      "pct": 2.657
+    },
+    {
+      "name": "mali-cmar-backe",
+      "self_ms": 2334.502,
+      "pct": 0.706
+    },
+    {
+      "name": "UnityChoreograp",
+      "self_ms": 1904.579,
+      "pct": 0.576
+    },
+    {
+      "name": "AudioTrack",
+      "self_ms": 456.384,
+      "pct": 0.138
+    },
+    {
+      "name": "Thread-333",
+      "self_ms": 235.427,
+      "pct": 0.071
+    },
+    {
+      "name": "Binder:25087_6",
+      "self_ms": 230.742,
+      "pct": 0.07
+    },
+    {
+      "name": "GThreadManager",
+      "self_ms": 213.995,
+      "pct": 0.065
+    },
+    {
+      "name": "Thread-213",
+      "self_ms": 198.536,
+      "pct": 0.06
+    },
+    {
+      "name": "BatchDeleteObje",
+      "self_ms": 146.393,
+      "pct": 0.044
+    },
+    {
+      "name": "GThreadProcess",
+      "self_ms": 116.888,
+      "pct": 0.035
+    },
+    {
+      "name": "Binder:25087_2",
+      "self_ms": 110.41,
+      "pct": 0.033
+    },
+    {
+      "name": "Thread-172",
+      "self_ms": 109.406,
+      "pct": 0.033
+    },
+    {
+      "name": "GVoiceNet",
+      "self_ms": 103.175,
+      "pct": 0.031
+    },
+    {
+      "name": "Binder:25087_4",
+      "self_ms": 88.59,
+      "pct": 0.027
+    },
+    {
+      "name": "gem-scheduled-0",
+      "self_ms": 75.823,
+      "pct": 0.023
+    },
+    {
+      "name": "mali-utility-wo",
+      "self_ms": 60.693,
+      "pct": 0.018
+    },
+    {
+      "name": "Thread-38",
+      "self_ms": 56.684,
+      "pct": 0.017
+    },
+    {
+      "name": "APM-RoutineThre",
+      "self_ms": 56.011,
+      "pct": 0.017
+    },
+    {
+      "name": "Thread-331",
+      "self_ms": 52.327,
+      "pct": 0.016
+    },
+    {
+      "name": "m.tencent.tmaoe",
+      "self_ms": 48.082,
+      "pct": 0.015
+    },
+    {
+      "name": "RenderThread",
+      "self_ms": 44.342,
+      "pct": 0.013
+    },
+    {
+      "name": "Thread-72",
+      "self_ms": 43.593,
+      "pct": 0.013
+    },
+    {
+      "name": "Thread-78",
+      "self_ms": 43.206,
+      "pct": 0.013
+    },
+    {
+      "name": "Thread-212",
+      "self_ms": 42.888,
+      "pct": 0.013
+    },
+    {
+      "name": "Thread-79",
+      "self_ms": 42.83,
+      "pct": 0.013
+    },
+    {
+      "name": "Thread-196",
+      "self_ms": 41.938,
+      "pct": 0.013
+    },
+    {
+      "name": "HeapTaskDaemon",
+      "self_ms": 35.649,
+      "pct": 0.011
+    },
+    {
+      "name": "Binder:25087_5",
+      "self_ms": 35.508,
+      "pct": 0.011
+    }
+  ],
+  "libs": [
+    {
+      "name": "libxlua.so",
+      "self_ms": 139394.663,
+      "pct": 42.14
+    },
+    {
+      "name": "lib_burst_generated.so",
+      "self_ms": 66168.25,
+      "pct": 20.003
+    },
+    {
+      "name": "libunity.so",
+      "self_ms": 64014.385,
+      "pct": 19.352
+    },
+    {
+      "name": "libil2cpp.so",
+      "self_ms": 18295.712,
+      "pct": 5.531
+    },
+    {
+      "name": "libGLES_mali.so",
+      "self_ms": 16043.005,
+      "pct": 4.85
+    },
+    {
+      "name": "libc.so",
+      "self_ms": 10279.325,
+      "pct": 3.107
+    },
+    {
+      "name": "libAkSoundEngine.so",
+      "self_ms": 8519.751,
+      "pct": 2.576
+    },
+    {
+      "name": "libm.so",
+      "self_ms": 2931.852,
+      "pct": 0.886
+    },
+    {
+      "name": "[JIT cache]",
+      "self_ms": 856.922,
+      "pct": 0.259
+    },
+    {
+      "name": "libart.so",
+      "self_ms": 713.108,
+      "pct": 0.216
+    },
+    {
+      "name": "libgcloud.so",
+      "self_ms": 558.449,
+      "pct": 0.169
+    },
+    {
+      "name": "libgui.so",
+      "self_ms": 447.608,
+      "pct": 0.135
+    },
+    {
+      "name": "libbinder.so",
+      "self_ms": 253.458,
+      "pct": 0.077
+    },
+    {
+      "name": "libutils.so",
+      "self_ms": 247.274,
+      "pct": 0.075
+    },
+    {
+      "name": "[vdso]",
+      "self_ms": 245.739,
+      "pct": 0.074
+    },
+    {
+      "name": "linker64",
+      "self_ms": 226.731,
+      "pct": 0.069
+    },
+    {
+      "name": "framework.jar",
+      "self_ms": 212.231,
+      "pct": 0.064
+    },
+    {
+      "name": "libaudioclient.so",
+      "self_ms": 209.431,
+      "pct": 0.063
+    },
+    {
+      "name": "base.vdex",
+      "self_ms": 171.891,
+      "pct": 0.052
+    },
+    {
+      "name": "hwEmui.jar",
+      "self_ms": 104.618,
+      "pct": 0.032
+    },
+    {
+      "name": "libGVoice.so",
+      "self_ms": 98.307,
+      "pct": 0.03
+    },
+    {
+      "name": "core-oj.jar",
+      "self_ms": 94.841,
+      "pct": 0.029
+    },
+    {
+      "name": "libwilhelm.so",
+      "self_ms": 78.042,
+      "pct": 0.024
+    },
+    {
+      "name": "libGLESv2.so",
+      "self_ms": 70.64,
+      "pct": 0.021
+    },
+    {
+      "name": "libandroid_runtime.so",
+      "self_ms": 57.028,
+      "pct": 0.017
+    },
+    {
+      "name": "libc++.so",
+      "self_ms": 54.75,
+      "pct": 0.017
+    },
+    {
+      "name": "libui.so",
+      "self_ms": 41.319,
+      "pct": 0.012
+    },
+    {
+      "name": "libgcloudcore.so",
+      "self_ms": 35.822,
+      "pct": 0.011
+    },
+    {
+      "name": "libEGL.so",
+      "self_ms": 31.79,
+      "pct": 0.01
+    },
+    {
+      "name": "libGPM.so",
+      "self_ms": 27.258,
+      "pct": 0.008
+    },
+    {
+      "name": "libGameGraphicsOpt.so",
+      "self_ms": 26.336,
+      "pct": 0.008
+    },
+    {
+      "name": "libsigchain.so",
+      "self_ms": 25.405,
+      "pct": 0.008
+    },
+    {
+      "name": "libcutils.so",
+      "self_ms": 22.958,
+      "pct": 0.007
+    },
+    {
+      "name": "libhitrace.so",
+      "self_ms": 22.344,
+      "pct": 0.007
+    },
+    {
+      "name": "boot-hwEmui.oat",
+      "self_ms": 15.802,
+      "pct": 0.005
+    },
+    {
+      "name": "boot.oat",
+      "self_ms": 14.753,
+      "pct": 0.004
+    },
+    {
+      "name": "boot-framework.oat",
+      "self_ms": 14.113,
+      "pct": 0.004
+    },
+    {
+      "name": "libhwmediamonitor_client.so",
+      "self_ms": 13.309,
+      "pct": 0.004
+    },
+    {
+      "name": "libdl.so",
+      "self_ms": 13.255,
+      "pct": 0.004
+    },
+    {
+      "name": "libopenjdk.so",
+      "self_ms": 11.521,
+      "pct": 0.003
+    },
+    {
+      "name": "libinput.so",
+      "self_ms": 11.07,
+      "pct": 0.003
+    },
+    {
+      "name": "libhwaps.so",
+      "self_ms": 9.349,
+      "pct": 0.003
+    },
+    {
+      "name": "hwPartBasicplatform.jar",
+      "self_ms": 8.684,
+      "pct": 0.003
+    },
+    {
+      "name": "libnetd_client.so",
+      "self_ms": 8.499,
+      "pct": 0.003
+    },
+    {
+      "name": "liblog.so",
+      "self_ms": 8.214,
+      "pct": 0.002
+    },
+    {
+      "name": "libartbase.so",
+      "self_ms": 7.777,
+      "pct": 0.002
+    },
+    {
+      "name": "libbase.so",
+      "self_ms": 7.476,
+      "pct": 0.002
+    },
+    {
+      "name": "libandroid.so",
+      "self_ms": 7.254,
+      "pct": 0.002
+    },
+    {
+      "name": "framework-wifi.jar",
+      "self_ms": 6.938,
+      "pct": 0.002
+    },
+    {
+      "name": "libsync.so",
+      "self_ms": 6.713,
+      "pct": 0.002
+    },
+    {
+      "name": "libhidlbase.so",
+      "self_ms": 6.58,
+      "pct": 0.002
+    },
+    {
+      "name": "libsensor.so",
+      "self_ms": 5.992,
+      "pct": 0.002
+    },
+    {
+      "name": "boot-core-libart.oat",
+      "self_ms": 5.651,
+      "pct": 0.002
+    },
+    {
+      "name": "libartpalette-system.so",
+      "self_ms": 5.381,
+      "pct": 0.002
+    },
+    {
+      "name": "libjavacore.so",
+      "self_ms": 4.511,
+      "pct": 0.001
+    },
+    {
+      "name": "libnativehelper.so",
+      "self_ms": 3.351,
+      "pct": 0.001
+    },
+    {
+      "name": "libartpalette.so",
+      "self_ms": 3.109,
+      "pct": 0.001
+    },
+    {
+      "name": "libdexfile.so",
+      "self_ms": 2.355,
+      "pct": 0.001
+    },
+    {
+      "name": "core-icu4j.jar",
+      "self_ms": 2.024,
+      "pct": 0.001
+    },
+    {
+      "name": "libhitrace_jni.so",
+      "self_ms": 1.936,
+      "pct": 0.001
+    },
+    {
+      "name": "libGameCollect.so",
+      "self_ms": 1.375,
+      "pct": 0.0
+    },
+    {
+      "name": "audiopolicy-aidl-cpp.so",
+      "self_ms": 1.23,
+      "pct": 0.0
+    },
+    {
+      "name": "libnativewindow.so",
+      "self_ms": 1.154,
+      "pct": 0.0
+    },
+    {
+      "name": "core-libart.jar",
+      "self_ms": 1.016,
+      "pct": 0.0
+    },
+    {
+      "name": "libopenjdkjvm.so",
+      "self_ms": 0.908,
+      "pct": 0.0
+    },
+    {
+      "name": "libandroidio.so",
+      "self_ms": 0.002,
+      "pct": 0.0
+    }
+  ]
+}

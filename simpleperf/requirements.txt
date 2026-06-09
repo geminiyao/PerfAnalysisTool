@@ -1,0 +1,12 @@
+# simpleperf_analyzer requires no third-party packages.
+# It uses only the Python standard library plus the official simpleperf
+# report library shipped inside the Android NDK (imported at runtime from
+# NDK_SIMPLEPERF_DIR, default D:/Android/android-ndk-r21e-windows-x86_64/simpleperf).
+#
+# Requirements:
+#   - Python 3.6+
+#   - Android NDK with simpleperf (report_html.py, simpleperf_report_lib.py, ...)
+#
+# Data collection (scripts/collect_perf.py) additionally needs:
+#   - adb on PATH
+#   - a connected, rooted (or debuggable-app) Android device
