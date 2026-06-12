@@ -15,7 +15,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 /** 上传 .pdata 文件 */
-export async function uploadFile(file: File, meta: Record<string, string>): Promise<{ id: string }> {
+export async function uploadFile(file: File, meta: Record<string, string>): Promise<{ id: string; assetId?: string; sha256?: string; storageBackend?: string }> {
   const formData = new FormData();
   formData.append('file', file);
   Object.entries(meta).forEach(([k, v]) => formData.append(k, v));

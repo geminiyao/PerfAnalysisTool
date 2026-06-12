@@ -17,7 +17,7 @@ export default defineConfig({
     allowedHosts: ['aoeyz-perf.devcloud.woa.com'],
     proxy: {
       '/cpu/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cpu/, ''),
       },
@@ -32,5 +32,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist/client',
+    chunkSizeWarningLimit: 3000,
   },
 });

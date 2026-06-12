@@ -90,6 +90,22 @@ const History: React.FC = () => {
       },
     },
     {
+      title: 'Asset',
+      key: 'asset',
+      width: 180,
+      render: (_: any, record: Session) => {
+        if (!record.inputAsset) return <span style={{ color: 'var(--text-tertiary)' }}>旧数据</span>;
+        return (
+          <div style={{ fontSize: 12 }}>
+            <div><Tag color="blue">{record.inputAsset.storageBackend}</Tag>{record.inputAsset.assetType}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }} title={record.inputAsset.sha256}>
+              {record.inputAsset.sha256.slice(0, 12)}...
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       title: '提交人',
       dataIndex: 'createdBy',
       key: 'createdBy',

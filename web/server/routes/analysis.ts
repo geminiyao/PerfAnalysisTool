@@ -124,8 +124,41 @@ export async function analysisRoutes(app: FastifyInstance) {
       }
     });
 
-    // 发送初始心跳
+    // 发送初始心跳，并回放当前会话状态，避免任务快速失败/完成时前端错过 SSE 事件
     reply.raw.write(`data: ${JSON.stringify({ type: 'connected', sessionId: id })}\n\n`);
+
+    try {
+      const db = getDb();
+      const session = await db.select().from(sessions).where(eq(sessions.id, id)).get();
+      if (session?.status === 'failed') {
+        send({
+          sessionId: id,
+          stage: 'failed',
+          progress: 0,
+          message: session.error || '分析失败',
+          timestamp: Date.now(),
+          log: session.error ? `[错误] ${session.error}` : undefined,
+        });
+      } else if (session?.status === 'completed') {
+        send({
+          sessionId: id,
+          stage: 'completed',
+          progress: 100,
+          message: '分析完成，报告已保存',
+          timestamp: Date.now(),
+        });
+      } else if (session?.status === 'running') {
+        send({
+          sessionId: id,
+          stage: 'analyzing',
+          progress: 50,
+          message: '分析仍在进行中...',
+          timestamp: Date.now(),
+        });
+      }
+    } catch (err: any) {
+      console.warn(`[SSE] Failed to replay session status ${id}:`, err.message);
+    }
   });
 
   /**

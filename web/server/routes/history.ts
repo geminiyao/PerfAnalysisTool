@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { eq, desc, and, like, gte, lte, sql } from 'drizzle-orm';
+import { eq, desc, and, like, gte, lte, sql, inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { sessions, metrics } from '../db/schema.js';
+import { sessions, metrics, sessionAssets, assets } from '../db/schema.js';
 import type { HistoryQuery } from '../../shared/types.js';
 
 export async function historyRoutes(app: FastifyInstance) {
@@ -61,8 +61,52 @@ export async function historyRoutes(app: FastifyInstance) {
       .offset(offset)
       .all();
 
+    const sessionIds = items.map(item => item.id);
+    const assetRows = sessionIds.length > 0
+      ? await db
+        .select({
+          sessionId: sessionAssets.sessionId,
+          role: sessionAssets.role,
+          asset: assets,
+        })
+        .from(sessionAssets)
+        .innerJoin(assets, eq(sessionAssets.assetId, assets.id))
+        .where(and(
+          inArray(sessionAssets.sessionId, sessionIds),
+          eq(sessionAssets.sessionType, 'profiler'),
+        ))
+        .all()
+      : [];
+
+    const assetsBySession = new Map<string, any[]>();
+    for (const row of assetRows) {
+      const list = assetsBySession.get(row.sessionId) || [];
+      list.push({
+        id: row.asset.id,
+        assetType: row.asset.assetType,
+        fileName: row.asset.fileName,
+        fileSize: row.asset.fileSize,
+        sha256: row.asset.sha256,
+        storageBackend: row.asset.storageBackend,
+        localPath: row.asset.localPath || undefined,
+        remoteKey: row.asset.remoteKey || undefined,
+        role: row.role,
+        createdAt: row.asset.createdAt,
+      });
+      assetsBySession.set(row.sessionId, list);
+    }
+
+    const enrichedItems = items.map(item => {
+      const linkedAssets = assetsBySession.get(item.id) || [];
+      return {
+        ...item,
+        assets: linkedAssets,
+        inputAsset: linkedAssets.find(asset => asset.role === 'input'),
+      };
+    });
+
     return reply.send({
-      items,
+      items: enrichedItems,
       total,
       page,
       limit,

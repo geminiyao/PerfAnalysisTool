@@ -6,6 +6,7 @@ import { sessions } from '../db/schema.js';
 import { getConfig } from '../utils/config.js';
 import { executeCli, type AnalysisJob } from './cli-executor.js';
 import { extractMetrics } from './metrics-extractor.js';
+import { assetService } from './asset-service.js';
 import { emitProgress } from '../routes/analysis.js';
 import type { CliProvider } from '../../shared/types.js';
 
@@ -153,6 +154,7 @@ class AnalysisQueue {
       // 提取指标存入数据库
       try {
         await extractMetrics(sessionId, outputDir);
+        await registerGeneratedAssets(sessionId, outputDir);
 
         // 全部成功 → completed
         await db.update(sessions).set({
@@ -207,6 +209,43 @@ class AnalysisQueue {
         log: `[错误] ${result.error || '未知错误'}`,
       });
     }
+  }
+}
+
+async function registerGeneratedAssets(sessionId: string, outputDir: string) {
+  const generatedFiles = [
+    {
+      fileName: 'preprocess-result.json',
+      filePath: path.join(outputDir, 'preprocess-result.json'),
+      assetType: 'report_json',
+      role: 'output',
+      mimeType: 'application/json',
+    },
+    {
+      fileName: 'performance-report.md',
+      filePath: path.join(outputDir, 'performance-report.md'),
+      assetType: 'report_md',
+      role: 'report',
+      mimeType: 'text/markdown',
+    },
+  ];
+
+  for (const item of generatedFiles) {
+    if (!fs.existsSync(item.filePath)) continue;
+    const asset = await assetService.registerExistingFile({
+      filePath: item.filePath,
+      fileName: item.fileName,
+      assetType: item.assetType,
+      source: 'generated',
+      mimeType: item.mimeType,
+      metadata: { sessionId, outputDir },
+    });
+    await assetService.linkSessionAsset({
+      sessionId,
+      sessionType: 'profiler',
+      assetId: asset.id,
+      role: item.role,
+    });
   }
 }
 

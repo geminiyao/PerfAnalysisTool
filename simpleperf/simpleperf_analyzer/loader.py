@@ -151,6 +151,86 @@ class Profile(object):
                 yield pname, thread
 
 
+def _patch_load_record_file(record_data, time_start_ns, time_end_ns):
+    """Monkey-patch record_data so load_record_file skips samples outside the window.
+
+    RecordData.load_record_file() iterates over ReportLib.GetNextSample().
+    Each raw_sample has a .time field (nanoseconds, clock_monotonic).
+    We wrap the original method to skip samples whose timestamp falls
+    outside [time_start_ns, time_end_ns].
+    """
+    original_load = record_data.load_record_file.__func__  # unbound
+
+    def patched_load(self, record_file, show_art_frames):
+        # Inline reimplementation of RecordData.load_record_file with time filter.
+        # Import here to avoid circular imports.
+        ndk_dir = config.NDK_SIMPLEPERF_DIR
+        if ndk_dir not in sys.path:
+            sys.path.insert(0, ndk_dir)
+        from simpleperf_report_lib import ReportLib  # type: ignore
+
+        lib = ReportLib()
+        lib.SetRecordFile(record_file)
+        lib.ShowIpForUnknownSymbol()
+        if show_art_frames:
+            lib.ShowArtFrames()
+        if self.binary_cache_path:
+            lib.SetSymfs(self.binary_cache_path)
+        self.meta_info = lib.MetaInfo()
+        self.cmdline = lib.GetRecordCmd()
+        self.arch = lib.GetArch()
+
+        skipped = 0
+        kept = 0
+        while True:
+            raw_sample = lib.GetNextSample()
+            if not raw_sample:
+                lib.Close()
+                break
+            # Time filter
+            if time_start_ns is not None and raw_sample.time < time_start_ns:
+                skipped += 1
+                continue
+            if time_end_ns is not None and raw_sample.time > time_end_ns:
+                skipped += 1
+                continue
+            kept += 1
+
+            raw_event = lib.GetEventOfCurrentSample()
+            symbol = lib.GetSymbolOfCurrentSample()
+            callchain = lib.GetCallChainOfCurrentSample()
+            event = self._get_event(raw_event.name)
+            self.total_samples += 1
+            event.sample_count += 1
+            event.event_count += raw_sample.period
+            process = event.get_process(raw_sample.pid)
+            process.event_count += raw_sample.period
+            thread = process.get_thread(raw_sample.tid, raw_sample.thread_comm)
+            thread.event_count += raw_sample.period
+            thread.sample_count += 1
+
+            lib_id = self.libs.get_lib_id(symbol.dso_name)
+            func_id = self.functions.get_func_id(lib_id, symbol)
+            callstack = [(lib_id, func_id, symbol.vaddr_in_file)]
+            for i in range(callchain.nr):
+                sym = callchain.entries[i].symbol
+                l_id = self.libs.get_lib_id(sym.dso_name)
+                f_id = self.functions.get_func_id(l_id, sym)
+                callstack.append((l_id, f_id, sym.vaddr_in_file))
+            if len(callstack) > 750:  # MAX_CALLSTACK_LENGTH
+                callstack = callstack[:750]
+            thread.add_callstack(raw_sample.period, callstack, self.build_addr_hit_map)
+
+        for event in self.events.values():
+            for thread in event.threads:
+                thread.update_subtree_event_count()
+
+        print(f"[INFO] 时间窗口过滤: 保留 {kept} 个 sample，跳过 {skipped} 个")
+
+    import types
+    record_data.load_record_file = types.MethodType(patched_load, record_data)
+
+
 def load_profile(
     path,
     binary_cache=None,
@@ -158,6 +238,8 @@ def load_profile(
     aggregate_by_thread_name=False,
     min_func_percent=None,
     min_callchain_percent=None,
+    time_start_ns=None,
+    time_end_ns=None,
 ):
     """Load a perf.data file and return a :class:`Profile`.
 
@@ -166,6 +248,8 @@ def load_profile(
         None; symbols then come from whatever is embedded in perf.data.
     :param aggregate_by_thread_name: merge threads sharing a name (useful when
         averaging multiple runs of the same app).
+    :param time_start_ns: if given, only include samples with timestamp >= this value (ns).
+    :param time_end_ns: if given, only include samples with timestamp <= this value (ns).
     """
     record_data_cls = _import_record_data()
 
@@ -180,6 +264,13 @@ def load_profile(
     sys.setrecursionlimit(config.MAX_CALLSTACK_LENGTH * 2 + 50)
 
     record_data = record_data_cls(binary_cache, False, config.NDK_PATH)
+
+    if time_start_ns is not None or time_end_ns is not None:
+        # Monkey-patch load_record_file to filter samples by timestamp.
+        # RecordData.load_record_file loops over ReportLib.GetNextSample();
+        # raw_sample.time is the nanosecond clock_monotonic timestamp.
+        _patch_load_record_file(record_data, time_start_ns, time_end_ns)
+
     record_data.load_record_file(path, False)
     if aggregate_by_thread_name:
         record_data.aggregate_by_thread_name()

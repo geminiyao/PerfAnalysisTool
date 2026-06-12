@@ -7,7 +7,12 @@ import {
   HistoryOutlined,
   SwapOutlined,
   LineChartOutlined,
+  RobotOutlined,
   SettingOutlined,
+  DatabaseOutlined,
+  FileTextOutlined,
+  PartitionOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -18,10 +23,15 @@ const AppSider: React.FC = () => {
 
   const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
-    { key: '/upload', icon: <UploadOutlined />, label: '上传分析' },
+    { key: '/upload', icon: <UploadOutlined />, label: '采集上传' },
+    { key: '/runs', icon: <PartitionOutlined />, label: 'Runs' },
+    { key: '/reports', icon: <FileTextOutlined />, label: 'Reports' },
     { key: '/history', icon: <HistoryOutlined />, label: '历史记录' },
     { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
     { key: '/trends', icon: <LineChartOutlined />, label: '趋势图表' },
+    { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
+    { key: '/maple', icon: <ExperimentOutlined />, label: 'Maple 对比' },
+    { key: '/ai', icon: <RobotOutlined />, label: 'AI 工作台' },
     { key: '/settings', icon: <SettingOutlined />, label: '系统设置' },
   ];
 

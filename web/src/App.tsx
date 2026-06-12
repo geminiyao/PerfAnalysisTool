@@ -8,6 +8,12 @@ import History from './pages/History';
 import ReportDetail from './pages/ReportDetail';
 import Compare from './pages/Compare';
 import Trends from './pages/Trends';
+import AIWorkbench from './pages/AIWorkbench';
+import Assets from './pages/Assets';
+import Runs from './pages/Runs';
+import Reports from './pages/Reports';
+import SimpleperfReport from './pages/SimpleperfReport';
+import MapleReport from './pages/MapleReport';
 import Settings from './pages/Settings';
 
 const { Content } = Layout;
@@ -22,9 +28,15 @@ const App: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/history" element={<History />} />
+            <Route path="/runs" element={<Runs />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/assets" element={<Assets />} />
             <Route path="/report/:id" element={<ReportDetail />} />
+            <Route path="/simpleperf/report/:id" element={<SimpleperfReport />} />
+            <Route path="/maple" element={<MapleReport />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/trends" element={<Trends />} />
+            <Route path="/ai" element={<AIWorkbench />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

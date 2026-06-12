@@ -2,6 +2,24 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "D:/Android/android-ndk-r21e-windows-x86_64/simpleperf"
+		},
+		{
+			"path": "../../AOEYZ_trunk/AOE3D"
+		},
+		{
+			"path": "../../AOEYZ_trunk/MapleILOpt"
+		},
+		{
+			"path": "../AOE-Issue-AutoFix"
+		},
+		{
+			"path": "G:/AOEYZ_Trunk/Build/Android/MainActivity"
+		},
+		{
+			"path": "G:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts"
 		}
 	],
 	"settings": {}

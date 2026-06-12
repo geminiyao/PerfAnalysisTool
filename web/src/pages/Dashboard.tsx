@@ -6,6 +6,9 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   UploadOutlined,
+  DatabaseOutlined,
+  FireOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { getHistory, getHistoryStats, getQueueStatus } from '../services/api';
@@ -17,6 +20,7 @@ const Dashboard: React.FC = () => {
   const [recentSessions, setRecentSessions] = useState<Session[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [queue, setQueue] = useState<any>(null);
+  const [simpleperfSessions, setSimpleperfSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,14 +30,16 @@ const Dashboard: React.FC = () => {
   async function loadData() {
     setLoading(true);
     try {
-      const [historyRes, statsRes, queueRes] = await Promise.all([
+      const [historyRes, statsRes, queueRes, simpleperfRes] = await Promise.all([
         getHistory({ limit: 5 }),
         getHistoryStats(),
         getQueueStatus(),
+        fetch('/cpu/api/simpleperf/sessions?limit=5').then(res => res.json()).catch(() => ({ items: [] })),
       ]);
       setRecentSessions(historyRes.items);
       setStats(statsRes);
       setQueue(queueRes);
+      setSimpleperfSessions(simpleperfRes.items || []);
     } catch (err) {
       console.error('加载数据失败:', err);
     } finally {
@@ -65,6 +71,28 @@ const Dashboard: React.FC = () => {
           上传分析
         </Button>
       </div>
+
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={8}>
+          <Card size="small" title="数据源状态">
+            <Space wrap>
+              <Tag color="blue" icon={<FileSearchOutlined />}>Profiler 已接入</Tag>
+              <Tag color="purple" icon={<FireOutlined />}>simpleperf P3</Tag>
+              <Tag icon={<DatabaseOutlined />}>Perfetto 预留</Tag>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} md={16}>
+          <Card size="small" title="快速入口">
+            <Space wrap>
+              <Button icon={<UploadOutlined />} onClick={() => navigate('/upload')}>上传 .pdata</Button>
+              <Button icon={<FireOutlined />} onClick={() => navigate('/upload')}>上传 perf.data</Button>
+              <Button onClick={() => navigate('/runs')}>创建/查看 Run</Button>
+              <Button onClick={() => navigate('/ai')}>AI 综合分析</Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       {/* 统计卡片 */}
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
@@ -107,6 +135,36 @@ const Dashboard: React.FC = () => {
           )}
         </Card>
       )}
+
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={12}>
+          <Card size="small" title="最近 simpleperf">
+            {simpleperfSessions.length === 0 ? <Empty description="暂无 simpleperf 记录" /> : (
+              <List
+                size="small"
+                dataSource={simpleperfSessions}
+                renderItem={(item) => (
+                  <List.Item actions={[item.status === 'completed' ? <a key="view" onClick={() => navigate(`/simpleperf/report/${item.id}`)}>查看</a> : null].filter(Boolean)}>
+                    <List.Item.Meta
+                      title={<Space><span>{item.fileName}</span><Tag color={statusTagMap[item.status]?.color || 'default'}>{item.status}</Tag></Space>}
+                      description={<span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{item.projectName || '未填项目'} · {dayjs(item.createdAt).format('MM-DD HH:mm')}</span>}
+                    />
+                  </List.Item>
+                )}
+              />
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card size="small" title="高风险问题">
+            <Space direction="vertical" size={8}>
+              <Tag color="red">BigJank / 长帧 Spike</Tag>
+              <Tag color="orange">Native CPU 热点上升</Tag>
+              <Tag color="purple">符号解析缺失需确认</Tag>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       {/* 最近分析 */}
       <Card

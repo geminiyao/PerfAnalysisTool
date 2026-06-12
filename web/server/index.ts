@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import fs from 'fs';
 import { getConfig } from './utils/config.js';
 import { getDb, closeDb } from './db/index.js';
 import { uploadRoutes } from './routes/upload.js';
@@ -12,6 +13,10 @@ import { compareRoutes } from './routes/compare.js';
 import { trendsRoutes } from './routes/trends.js';
 import { optimizeRoutes } from './routes/optimize.js';
 import { settingsRoutes } from './routes/settings.js';
+import { assetRoutes } from './routes/assets.js';
+import { aiChatRoutes } from './routes/ai-chat.js';
+import { simpleperfRoutes } from './routes/simpleperf.js';
+import { mapleRoutes } from './routes/maple.js';
 
 const config = getConfig();
 
@@ -38,26 +43,44 @@ async function start() {
   getDb();
   console.log('✓ Database initialized');
 
-  // 注册 API 路由
-  await app.register(uploadRoutes, { prefix: '/api' });
-  await app.register(analysisRoutes, { prefix: '/api' });
-  await app.register(historyRoutes, { prefix: '/api' });
-  await app.register(compareRoutes, { prefix: '/api' });
-  await app.register(trendsRoutes, { prefix: '/api' });
-  await app.register(optimizeRoutes, { prefix: '/api' });
-  await app.register(settingsRoutes, { prefix: '/api' });
+  // 注册 API 路由：同时支持根路径 /api 和子路径 /cpu/api
+  const apiRouteGroups = [
+    uploadRoutes,
+    analysisRoutes,
+    historyRoutes,
+    compareRoutes,
+    trendsRoutes,
+    optimizeRoutes,
+    settingsRoutes,
+    assetRoutes,
+    aiChatRoutes,
+    simpleperfRoutes,
+    mapleRoutes,
+  ];
+  for (const routes of apiRouteGroups) {
+    await app.register(routes, { prefix: '/api' });
+    await app.register(routes, { prefix: '/cpu/api' });
+  }
 
   // 生产模式下提供静态前端文件
-  const clientDist = path.resolve(import.meta.dirname, '../dist/client');
+  const clientDistCandidates = [
+    path.resolve(import.meta.dirname, '../dist/client'),
+    path.resolve(import.meta.dirname, '../../client'),
+    path.resolve(process.cwd(), 'dist/client'),
+  ];
+  const clientDist = clientDistCandidates.find(dir => fs.existsSync(path.join(dir, 'index.html'))) || clientDistCandidates[0];
   try {
     await app.register(fastifyStatic, {
       root: clientDist,
-      prefix: '/',
-      wildcard: false,
+      prefix: '/cpu/',
+      wildcard: true,
     });
+    app.get('/', async (_req, reply) => reply.redirect('/cpu/'));
+    app.get('/cpu', async (_req, reply) => reply.redirect('/cpu/'));
+    console.log(`✓ Static client served from: ${clientDist}`);
     // SPA 回退
     app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith('/api')) {
+      if (req.url.startsWith('/api') || req.url.startsWith('/cpu/api')) {
         reply.status(404).send({ error: 'Not found' });
       } else {
         reply.sendFile('index.html');

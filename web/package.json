@@ -8,13 +8,14 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist/server/index.js",
+    "start": "node dist/server/server/index.js",
     "db:migrate": "tsx server/db/migrate.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
     "@fastify/multipart": "^9.0.0",
     "@fastify/static": "^8.0.0",
+    "@tencent-ai/agent-sdk": "file:../vendor/agent-sdk",
     "antd": "^5.22.0",
     "better-sqlite3": "^11.6.0",
     "dayjs": "^1.11.13",

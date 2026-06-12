@@ -1,11 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { v4 as uuid } from 'uuid';
 import path from 'path';
-import fs from 'fs';
-import { pipeline } from 'stream/promises';
-import { getConfig } from '../utils/config.js';
 import { getDb } from '../db/index.js';
 import { sessions } from '../db/schema.js';
+import { assetService } from '../services/asset-service.js';
 
 export async function uploadRoutes(app: FastifyInstance) {
   /**
@@ -14,7 +12,6 @@ export async function uploadRoutes(app: FastifyInstance) {
    * multipart/form-data: file + projectName + version + createdBy + ...
    */
   app.post('/upload', async (request, reply) => {
-    const config = getConfig();
     const data = await request.file();
 
     if (!data) {
@@ -28,16 +25,6 @@ export async function uploadRoutes(app: FastifyInstance) {
     }
 
     const sessionId = uuid();
-    const uploadDir = path.join(config.dataDir, 'uploads');
-    // 保留原始文件名（去掉路径中不安全字符），便于 CLI 识别
-    const safeName = data.filename.replace(/[<>:"|?*]/g, '_');
-    const filePath = path.join(uploadDir, `${sessionId}_${safeName}`);
-
-    // 保存文件到磁盘
-    await pipeline(data.file, fs.createWriteStream(filePath));
-
-    // 获取文件大小
-    const stat = fs.statSync(filePath);
 
     // 解析表单中的元数据字段
     const fields = data.fields as Record<string, any>;
@@ -48,29 +35,58 @@ export async function uploadRoutes(app: FastifyInstance) {
       return String(field || '');
     };
 
+    const metadata = {
+      projectName: getMeta('projectName'),
+      version: getMeta('version'),
+      branch: getMeta('branch'),
+      device: getMeta('device'),
+      scene: getMeta('scene'),
+      notes: getMeta('notes'),
+      createdBy: getMeta('createdBy'),
+    };
+
+    const asset = await assetService.createFromStream({
+      stream: data.file,
+      fileName: data.filename,
+      assetType: 'pdata',
+      source: 'web_upload',
+      mimeType: data.mimetype,
+      metadata,
+    });
+
     // 写入数据库
     const db = getDb();
     await db.insert(sessions).values({
       id: sessionId,
       fileName: data.filename,
-      fileSize: stat.size,
-      filePath: filePath,
+      fileSize: asset.fileSize,
+      filePath: asset.localPath,
       status: 'pending',
-      createdBy: getMeta('createdBy'),
-      projectName: getMeta('projectName'),
-      version: getMeta('version'),
-      branch: getMeta('branch') || null,
-      device: getMeta('device') || null,
-      scene: getMeta('scene') || null,
-      notes: getMeta('notes') || null,
+      createdBy: metadata.createdBy,
+      projectName: metadata.projectName,
+      version: metadata.version,
+      branch: metadata.branch || null,
+      device: metadata.device || null,
+      scene: metadata.scene || null,
+      notes: metadata.notes || null,
       createdAt: Date.now(),
+    });
+
+    await assetService.linkSessionAsset({
+      sessionId,
+      sessionType: 'profiler',
+      assetId: asset.id,
+      role: 'input',
     });
 
     return reply.status(201).send({
       id: sessionId,
       fileName: data.filename,
-      fileSize: stat.size,
+      fileSize: asset.fileSize,
       status: 'pending',
+      assetId: asset.id,
+      sha256: asset.sha256,
+      storageBackend: asset.storageBackend,
     });
   });
 }

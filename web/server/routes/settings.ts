@@ -17,6 +17,11 @@ export async function settingsRoutes(app: FastifyInstance) {
       retentionDays: config.retentionDays,
       port: config.port,
       cliPaths: config.cliPaths || {},
+      storageBackend: config.storageBackend || 'local',
+      assetStorageDir: config.assetStorageDir || path.join(config.dataDir, 'assets'),
+      cdnEnabled: config.cdnEnabled || false,
+      cdnProvider: config.cdnProvider || 'placeholder',
+      remoteStorageConfigured: config.remoteStorageConfigured || false,
     };
   });
 
@@ -68,6 +73,11 @@ export async function settingsRoutes(app: FastifyInstance) {
         retentionDays: newConfig.retentionDays,
         port: newConfig.port,
         cliPaths: newConfig.cliPaths || {},
+        storageBackend: newConfig.storageBackend || 'local',
+        assetStorageDir: newConfig.assetStorageDir || path.join(newConfig.dataDir, 'assets'),
+        cdnEnabled: newConfig.cdnEnabled || false,
+        cdnProvider: newConfig.cdnProvider || 'placeholder',
+        remoteStorageConfigured: newConfig.remoteStorageConfigured || false,
       },
     };
   });

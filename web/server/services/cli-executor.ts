@@ -76,13 +76,37 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
     return executeMock(job, config);
   }
 
-  const prompt = buildPrompt(job.pdataPath, job.outputDir, job.params?.targetFps);
   const provider = CLI_PROVIDERS[job.cliProvider] || CLI_PROVIDERS.codebuddy;
   const cliCommand = getCliCommand(job.cliProvider);
-  const args = provider.buildArgs(prompt);
+  const skillPaths = getUnityProfilerSkillPaths(config.skillProjectPath);
 
   // 收集全部日志行
   const logLines: string[] = [];
+
+  const missingRequiredFiles = [
+    skillPaths.skillDir,
+    skillPaths.skillMd,
+    skillPaths.preprocessScript,
+  ].filter(p => !fs.existsSync(p));
+
+  if (!fs.existsSync(job.pdataPath) || missingRequiredFiles.length > 0) {
+    const error = !fs.existsSync(job.pdataPath)
+      ? `pdata 文件不存在: ${job.pdataPath}`
+      : `Unity Profiler skill 文件缺失: ${missingRequiredFiles.join(', ')}`;
+    logLines.push(`[错误] ${error}`);
+    emitProgress({
+      sessionId: job.sessionId,
+      stage: 'failed',
+      progress: 0,
+      message: error,
+      timestamp: Date.now(),
+      log: `[错误] ${error}`,
+    });
+    return { success: false, error, logs: logLines };
+  }
+
+  const prompt = buildPrompt(job.pdataPath, job.outputDir, job.params?.targetFps);
+  const args = provider.buildArgs(prompt);
 
   // 共享状态对象（引用传递，不会有值拷贝问题）
   const state: ExecutionState = {
@@ -125,6 +149,8 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
       shell: true,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+
+    child.stdin?.end(prompt);
 
     let jsonBuffer = '';
 
@@ -232,14 +258,6 @@ function handleStreamEvent(
         if (block.type === 'text') {
           const text = block.text || '';
 
-          // 只检测明确的 SKILL_NOT_FOUND 标记
-          if (text.includes('SKILL_NOT_FOUND')) {
-            child.kill('SIGTERM');
-            emit('failed', 0, 'Skill 未被识别，已停止', `[错误] ${text.slice(0, 200)}`);
-            doResolve({ success: false, error: 'Skill 未被识别' });
-            return;
-          }
-
           emit('analyzing', 70, '生成报告中...', `[AI输出] ${text.slice(0, 200)}`);
         }
 
@@ -305,21 +323,33 @@ function handleStreamEvent(
 // Prompt 构建 - 全部使用绝对路径
 // ============================================================
 
+function getUnityProfilerSkillPaths(skillProjectPath: string) {
+  const skillDir = path.resolve(skillProjectPath, '.claude/skills/unity-profiler-analysis');
+  return {
+    skillDir,
+    skillMd: path.join(skillDir, 'SKILL.md'),
+    preprocessScript: path.join(skillDir, 'scripts', 'preprocess.ts'),
+    mapSourceScript: path.join(skillDir, 'scripts', 'map-source.ts'),
+    knowledgeMd: path.join(skillDir, 'references', 'unity-cpu-knowledge.md'),
+    markerSourceMap: path.join(skillDir, 'marker-source-map.json'),
+  };
+}
+
 function buildPrompt(pdataPath: string, outputDir: string, targetFps?: number): string {
   const config = getConfig();
-  const skillPath = path.resolve(config.skillProjectPath, '.claude/skills/unity-profiler-analysis').replace(/\\/g, '/');
+  const skillPaths = getUnityProfilerSkillPaths(config.skillProjectPath);
   const normalizedPdata = path.resolve(pdataPath).replace(/\\/g, '/');
   const normalizedOutput = path.resolve(outputDir).replace(/\\/g, '/');
+  const normalizedSkillDir = skillPaths.skillDir.replace(/\\/g, '/');
   const fps = targetFps || 30;
 
-  // 用空格拼接而非 \n — Windows cmd.exe 的 shell: true 模式下
-  // 真实换行符会被截断导致 CLI 只收到第一行 prompt
+  // 保持 prompt 短且不包含 --xxx 命令参数，避免 Windows shell 将其误解析为 CLI 参数
   return [
-    `请使用 ${skillPath} skill 分析这个 pdata 文件: ${normalizedPdata}`,
+    `请使用 ${normalizedSkillDir} skill 分析 Unity Profiler pdata 文件: ${normalizedPdata}。`,
     `目标帧率: ${fps} FPS。`,
-    `输出目录: ${normalizedOutput}`,
-    `请将 preprocess-result.json 和 performance-report.md 保存到输出目录。报告用中文。`,
-    `重要：如果无法识别上述 skill，请直接回复"SKILL_NOT_FOUND"并停止，不要尝试自行分析。`,
+    `输出目录: ${normalizedOutput}。`,
+    `请按照该 skill 的原有流程执行预处理和 AI 分析。`,
+    `请将 preprocess-result.json 和 performance-report.md 保存到输出目录，报告用中文。`,
   ].join(' ');
 }
 

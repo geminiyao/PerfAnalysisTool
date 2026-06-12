@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, InputNumber, Button, message, Spin, Divider, Tag, Space, Alert } from 'antd';
-import { SaveOutlined, FolderOpenOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { SaveOutlined, FolderOpenOutlined, CloudOutlined, DatabaseOutlined } from '@ant-design/icons';
 
 const BASE_URL = '/cpu/api';
 
@@ -178,10 +178,27 @@ const Settings: React.FC = () => {
 
           {data && (
             <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 4 }}>
-              <span>数据目录: </span>
-              <Tag style={{ fontSize: 11 }}>{data.dataDir}</Tag>
-              <span style={{ marginLeft: 8 }}>端口: </span>
-              <Tag style={{ fontSize: 11 }}>{data.port}</Tag>
+              <div style={{ marginBottom: 8 }}>
+                <span>数据目录: </span>
+                <Tag style={{ fontSize: 11 }}>{data.dataDir}</Tag>
+                <span style={{ marginLeft: 8 }}>端口: </span>
+                <Tag style={{ fontSize: 11 }}>{data.port}</Tag>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <DatabaseOutlined style={{ marginRight: 4 }} />
+                <span>Asset 存储后端: </span>
+                <Tag color="blue" style={{ fontSize: 11 }}>{data.storageBackend || 'local'}</Tag>
+                <span style={{ marginLeft: 8 }}>资产目录: </span>
+                <Tag style={{ fontSize: 11 }}>{data.assetStorageDir}</Tag>
+              </div>
+              <div>
+                <CloudOutlined style={{ marginRight: 4 }} />
+                <span>CDN/对象存储: </span>
+                <Tag color={data.remoteStorageConfigured ? 'green' : 'default'} style={{ fontSize: 11 }}>
+                  {data.remoteStorageConfigured ? '已配置' : '占位未启用'}
+                </Tag>
+                <Tag style={{ fontSize: 11 }}>{data.cdnProvider || 'placeholder'}</Tag>
+              </div>
             </div>
           )}
         </Card>

@@ -2,12 +2,20 @@ import path from 'path';
 import fs from 'fs';
 import type { ServerConfig } from '../../shared/types.js';
 
+const defaultDataDir = path.resolve(import.meta.dirname, '../../data');
+const defaultProjectRoot = findProjectRoot(import.meta.dirname);
+
 const DEFAULT_CONFIG: ServerConfig = {
   port: 3000,
-  dataDir: path.resolve(import.meta.dirname, '../../data'),
+  dataDir: defaultDataDir,
   maxUploadSize: '200mb',
   retentionDays: 0, // 0 = 永久保留
-  skillProjectPath: path.resolve(import.meta.dirname, '../../../'), // 项目根目录
+  skillProjectPath: defaultProjectRoot, // 项目根目录
+  storageBackend: 'local',
+  assetStorageDir: path.join(defaultDataDir, 'assets'),
+  cdnEnabled: false,
+  cdnProvider: 'placeholder',
+  remoteStorageConfigured: false,
   cliPaths: {}, // 不配则使用 PATH 中的命令名
 };
 
@@ -39,10 +47,23 @@ export function getConfig(): ServerConfig {
     if (process.env.CLAUDE_CLI_PATH) cfg.cliPaths.claude = process.env.CLAUDE_CLI_PATH;
     if (process.env.UNITY_PROJECT_PATH) cfg.sourceProjectPath = process.env.UNITY_PROJECT_PATH;
 
+    cfg.storageBackend = cfg.storageBackend || 'local';
+    cfg.assetStorageDir = cfg.assetStorageDir || path.join(cfg.dataDir, 'assets');
+    cfg.cdnEnabled = cfg.cdnEnabled ?? false;
+    cfg.cdnProvider = cfg.cdnProvider || 'placeholder';
+    cfg.remoteStorageConfigured = cfg.remoteStorageConfigured ?? false;
+
     // 确保数据目录存在
     ensureDir(cfg.dataDir);
     ensureDir(path.join(cfg.dataDir, 'uploads'));
     ensureDir(path.join(cfg.dataDir, 'results'));
+    ensureDir(cfg.assetStorageDir);
+    ensureDir(path.join(cfg.assetStorageDir, 'raw', 'pdata'));
+    ensureDir(path.join(cfg.assetStorageDir, 'raw', 'simpleperf'));
+    ensureDir(path.join(cfg.assetStorageDir, 'raw', 'perfetto'));
+    ensureDir(path.join(cfg.assetStorageDir, 'generated', 'reports'));
+    ensureDir(path.join(cfg.assetStorageDir, 'generated', 'flamegraphs'));
+    ensureDir(path.join(cfg.assetStorageDir, 'generated', 'summaries'));
 
     _config = cfg;
   }
@@ -72,4 +93,20 @@ function ensureDir(dir: string) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+}
+
+function findProjectRoot(startDir: string): string {
+  let current = path.resolve(startDir);
+  for (let i = 0; i < 8; i++) {
+    if (
+      fs.existsSync(path.join(current, '.claude', 'skills', 'unity-profiler-analysis', 'SKILL.md')) ||
+      fs.existsSync(path.join(current, 'web', 'package.json'))
+    ) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return path.resolve(startDir, '../../../');
 }

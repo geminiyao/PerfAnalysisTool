@@ -21,6 +21,19 @@ export const CLI_PROVIDERS: CliProviderOption[] = [
 export type SessionStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed';
 
 /** 分析会话 */
+export interface AssetSummary {
+  id: string;
+  assetType: string;
+  fileName: string;
+  fileSize: number;
+  sha256: string;
+  storageBackend: string;
+  localPath?: string;
+  remoteKey?: string;
+  role?: string;
+  createdAt?: number;
+}
+
 export interface Session {
   id: string;
   fileName: string;
@@ -37,6 +50,8 @@ export interface Session {
   completedAt?: number;
   duration?: number;
   error?: string;
+  inputAsset?: AssetSummary;
+  assets?: AssetSummary[];
 }
 
 /** 性能指标摘要 */
@@ -77,6 +92,46 @@ export interface ProgressEvent {
   timestamp: number;
   /** CLI 实时输出日志行 */
   log?: string;
+}
+
+/** simpleperf 细分阶段 */
+export type SimpleperfStage =
+  | 'idle'
+  | 'uploading_perf_data'
+  | 'uploading_symbols'
+  | 'upload_completed'
+  | 'creating_session'
+  | 'queued'
+  | 'extracting_perf'
+  | 'extract_completed'
+  | 'generating_structured_report'
+  | 'structured_report_ready'
+  | 'ai_prompt_ready'
+  | 'ai_thinking'
+  | 'ai_streaming'
+  | 'ai_completed'
+  | 'writing_ai_report'
+  | 'report_ready'
+  | 'completed'
+  | 'failed';
+
+/** simpleperf 可观测分析事件 */
+export interface SimpleperfProgressEvent {
+  sessionId: string;
+  type: 'stage' | 'log' | 'structured_report' | 'ai_prompt' | 'ai_delta' | 'ai_stats' | 'artifact' | 'done' | 'error';
+  stage?: SimpleperfStage;
+  message?: string;
+  progress?: number;
+  prompt?: string;
+  text?: string;
+  report?: any;
+  artifact?: {
+    kind: 'json' | 'txt' | 'folded' | 'ai';
+    path?: string;
+    url?: string;
+  };
+  error?: string;
+  createdAt: number;
 }
 
 /** 历史查询参数 */
@@ -180,6 +235,11 @@ export interface ServerConfig {
   maxUploadSize: string;
   retentionDays: number;
   skillProjectPath: string;
+  storageBackend?: 'local' | 'cdn' | 'cos';
+  assetStorageDir?: string;
+  cdnEnabled?: boolean;
+  cdnProvider?: string;
+  remoteStorageConfigured?: boolean;
   /** 各 CLI 工具的可执行路径，不配则使用 PATH 中的命令名 */
   cliPaths: Partial<Record<CliProvider, string>>;
   /** Unity 工程源码根目录（服务端本地路径），用于源码定位和优化建议 */
