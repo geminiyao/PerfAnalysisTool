@@ -115,6 +115,8 @@ export type SimpleperfStage =
   | 'completed'
   | 'failed';
 
+export type MapleCompareStage = SimpleperfStage;
+
 /** simpleperf 可观测分析事件 */
 export interface SimpleperfProgressEvent {
   sessionId: string;
@@ -126,7 +128,7 @@ export interface SimpleperfProgressEvent {
   text?: string;
   report?: any;
   artifact?: {
-    kind: 'json' | 'txt' | 'folded' | 'ai';
+    kind: 'json' | 'txt' | 'folded' | 'ai' | 'md';
     path?: string;
     url?: string;
   };

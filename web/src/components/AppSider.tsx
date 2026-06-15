@@ -31,6 +31,7 @@ const AppSider: React.FC = () => {
     { key: '/trends', icon: <LineChartOutlined />, label: '趋势图表' },
     { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
     { key: '/maple', icon: <ExperimentOutlined />, label: 'Maple 对比' },
+    { key: '/maple-compare', icon: <ExperimentOutlined />, label: 'Maple 三源对比分析' },
     { key: '/ai', icon: <RobotOutlined />, label: 'AI 工作台' },
     { key: '/settings', icon: <SettingOutlined />, label: '系统设置' },
   ];

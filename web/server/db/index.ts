@@ -162,6 +162,24 @@ function initTables(sqlite: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_optimize_results_session_id ON optimize_results(session_id);
+
+    CREATE TABLE IF NOT EXISTS maple_compare_sessions (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL DEFAULT '',
+      device TEXT NOT NULL DEFAULT '',
+      scene TEXT NOT NULL DEFAULT '',
+      base_dir TEXT,
+      opt_dir TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      error TEXT,
+      result_json_path TEXT,
+      report_md_path TEXT,
+      created_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      duration INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_maple_compare_sessions_status ON maple_compare_sessions(status);
+    CREATE INDEX IF NOT EXISTS idx_maple_compare_sessions_created_at ON maple_compare_sessions(created_at);
   `);
 
   ensureColumn(sqlite, 'simpleperf_sessions', 'ai_report_path', 'TEXT');

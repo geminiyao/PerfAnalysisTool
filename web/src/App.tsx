@@ -14,6 +14,7 @@ import Runs from './pages/Runs';
 import Reports from './pages/Reports';
 import SimpleperfReport from './pages/SimpleperfReport';
 import MapleReport from './pages/MapleReport';
+import MapleComparePage from './pages/MapleComparePage';
 import Settings from './pages/Settings';
 
 const { Content } = Layout;
@@ -34,6 +35,8 @@ const App: React.FC = () => {
             <Route path="/report/:id" element={<ReportDetail />} />
             <Route path="/simpleperf/report/:id" element={<SimpleperfReport />} />
             <Route path="/maple" element={<MapleReport />} />
+            <Route path="/maple-compare" element={<MapleComparePage />} />
+            <Route path="/maple-compare/:id" element={<MapleComparePage />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/ai" element={<AIWorkbench />} />

@@ -17,6 +17,7 @@ import { assetRoutes } from './routes/assets.js';
 import { aiChatRoutes } from './routes/ai-chat.js';
 import { simpleperfRoutes } from './routes/simpleperf.js';
 import { mapleRoutes } from './routes/maple.js';
+import { mapleCompareRoutes } from './routes/maple-compare.js';
 
 const config = getConfig();
 
@@ -56,6 +57,7 @@ async function start() {
     aiChatRoutes,
     simpleperfRoutes,
     mapleRoutes,
+    mapleCompareRoutes,
   ];
   for (const routes of apiRouteGroups) {
     await app.register(routes, { prefix: '/api' });

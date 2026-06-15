@@ -18,7 +18,7 @@ import {
   mapleRuns, maplePdataResults, maplePerfettoResults,
 } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { parsePdataFile } from '../../main/profiler/pdata-parser.js';
+import { parsePdataFile } from './pdata-parser.js';
 import { randomUUID } from 'crypto';
 
 // ---------------------------------------------------------------------------

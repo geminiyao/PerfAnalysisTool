@@ -270,3 +270,22 @@ export const mapleCompareReports = sqliteTable('maple_compare_reports', {
   baseIdx: index('idx_maple_compare_base').on(table.baseRunId),
   optIdx: index('idx_maple_compare_opt').on(table.optRunId),
 }));
+
+export const mapleCompareSessions = sqliteTable('maple_compare_sessions', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull().default(''),
+  device: text('device').notNull().default(''),
+  scene: text('scene').notNull().default(''),
+  baseDir: text('base_dir'),
+  optDir: text('opt_dir'),
+  status: text('status').notNull().default('pending'),
+  error: text('error'),
+  resultJsonPath: text('result_json_path'),
+  reportMdPath: text('report_md_path'),
+  createdAt: integer('created_at').notNull(),
+  completedAt: integer('completed_at'),
+  duration: integer('duration'),
+}, table => ({
+  statusIdx: index('idx_maple_compare_sessions_status').on(table.status),
+  createdAtIdx: index('idx_maple_compare_sessions_created_at').on(table.createdAt),
+}));
