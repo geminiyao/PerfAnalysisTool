@@ -112,7 +112,12 @@ def _annotate_lib_names(node, profile):
 
 
 def _thread_dicts(profile, lib_whitelist):
-    """Return {char_index: thread_func_dict} for characteristic threads."""
+    """Return {thread_name: thread_func_dict} for characteristic threads.
+
+    Key is the thread name (e.g. "UnityMain") rather than a char_index so that
+    threads are matched by name across profiles. When multiple tids share the
+    same thread name, the one with the richest children_dict is kept.
+    """
     scale = config.TIME_SCALE_NS
     result = {}
     for _pname, thread in profile.iter_threads():
@@ -120,13 +125,70 @@ def _thread_dicts(profile, lib_whitelist):
         _annotate_lib_names(cg, profile)
         func_dict = {}
         char_index = _walk(cg, func_dict, lib_whitelist, scale)
+        tname = thread["thread_name"]
+
+        # Fallback: if no characteristic func found in call graph (e.g. libunity.so
+        # is stripped and ExecutePlayerLoop appears as an address), identify the
+        # thread by its name instead.
+        if char_index < 0:
+            for token, idx in config.THREAD_CHARACTERISTIC_NAMES.items():
+                if token in tname:
+                    char_index = idx
+                    print(f"[func_compare] {profile.label}: '{tname}' char_index via name fallback={idx}")
+                    break
+
         if char_index < 0:
             continue
-        tname = thread["thread_name"]
-        if func_dict.get(tname) and func_dict[tname]["children_dict"]:
-            func_dict[tname]["characteristic_func_index"] = char_index
-            result[char_index] = func_dict[tname]
+
+        children = func_dict.get(tname, {}).get("children_dict", {})
+        if not func_dict.get(tname):
+            print(f"[func_compare] {profile.label}: '{tname}' SKIP – not in func_dict")
+            continue
+        if not children:
+            print(f"[func_compare] {profile.label}: '{tname}' SKIP – children_dict empty")
+            continue
+
+        func_dict[tname]["characteristic_func_index"] = char_index
+        print(f"[func_compare] {profile.label}: '{tname}' OK char_index={char_index}, children={len(children)}")
+
+        # Keep the entry with the most children so the richest call graph wins
+        # when multiple tids share the same thread name.
+        existing = result.get(tname)
+        if existing is None or len(children) > len(existing["children_dict"]):
+            result[tname] = func_dict[tname]
     return result
+
+
+def _compare_thread_dicts(prev_threads, cur_threads):
+    """Compare two {thread_name: func_dict} dicts into A/M/D merged dict."""
+    merged = {}
+    # A / M for threads present in current build
+    for tname, cur_thread in cur_threads.items():
+        cur_ms = cur_thread["subtree_event_time"]
+        prev_thread = prev_threads.get(tname, {})
+        prev_ms = prev_thread.get("subtree_event_time", 0.0)
+
+        node = _make_func(func_name=cur_thread["func_name"],
+                          subtree_ms=cur_ms - prev_ms,
+                          mask="M" if prev_thread else "A")
+        node["abs_event_time"] = cur_ms or prev_ms
+        if prev_thread and prev_thread.get("func_name") != cur_thread["func_name"]:
+            node["func_name"] = "prev_%s|cur_%s" % (
+                prev_thread.get("func_name", ""), cur_thread["func_name"])
+        merged[tname] = node
+        _merge_children(node["children_dict"], prev_thread, cur_thread)
+
+    # D for threads only in baseline
+    for tname, prev_thread in prev_threads.items():
+        if tname in merged:
+            continue
+        node = _make_func(func_name=prev_thread["func_name"],
+                          subtree_ms=-prev_thread["subtree_event_time"],
+                          mask="D")
+        node["abs_event_time"] = prev_thread["subtree_event_time"]
+        merged[tname] = node
+        _merge_children(node["children_dict"], prev_thread, {})
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -160,37 +222,6 @@ def _merge_children(merged_children, prev_thread, cur_thread):
         merged_children[prev_name]["merge_mask"] = "D"
 
 
-def _compare_thread_dicts(prev_threads, cur_threads):
-    merged = {}
-    # A / M for characteristic threads present in current build
-    for c_index, cur_thread in cur_threads.items():
-        cur_name = cur_thread["func_name"]
-        cur_ms = cur_thread["subtree_event_time"]
-        prev_thread = prev_threads.get(c_index, {})
-        prev_ms = prev_thread.get("subtree_event_time", 0.0)
-
-        node = _make_func(func_name=cur_name,
-                          subtree_ms=cur_ms - prev_ms,
-                          mask="M" if prev_thread else "A")
-        # absolute reference time for percentage (current build, fallback prev)
-        node["abs_event_time"] = cur_ms or prev_ms
-        if prev_thread and prev_thread.get("func_name") != cur_name:
-            node["func_name"] = "prev_%s|cur_%s" % (
-                prev_thread.get("func_name", ""), cur_name)
-        merged[c_index] = node
-        _merge_children(node["children_dict"], prev_thread, cur_thread)
-
-    # D for threads only in baseline
-    for c_index, prev_thread in prev_threads.items():
-        if c_index in merged:
-            continue
-        node = _make_func(func_name=prev_thread["func_name"],
-                          subtree_ms=-prev_thread["subtree_event_time"],
-                          mask="D")
-        node["abs_event_time"] = prev_thread["subtree_event_time"]
-        merged[c_index] = node
-        _merge_children(node["children_dict"], prev_thread, {})
-    return merged
 
 
 # ---------------------------------------------------------------------------

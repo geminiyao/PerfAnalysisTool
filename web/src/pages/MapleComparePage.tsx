@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Col, Empty, Form, Input, Row, Space, Spin, Statistic, Steps, Table, Tabs, Tag, Timeline, Typography, message } from 'antd';
-import { DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { DownloadOutlined, HistoryOutlined, InboxOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -45,6 +45,17 @@ interface LocalDirectorySelection {
 
 
 
+interface MapleCompareSession {
+  id: string;
+  label: string;
+  device: string;
+  scene: string;
+  status: string;
+  createdAt: number;
+  completedAt: number | null;
+  duration: number | null;
+}
+
 const MapleComparePage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -53,12 +64,27 @@ const MapleComparePage: React.FC = () => {
   const [optDir, setOptDir] = useState<LocalDirectorySelection | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  const [sessions, setSessions] = useState<MapleCompareSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const [data, setData] = useState<any>(null);
   const [events, setEvents] = useState<SimpleperfProgressEvent[]>([]);
   const [aiDraft, setAiDraft] = useState('');
   const [loading, setLoading] = useState(!!id);
   const seenRef = useRef<Set<string>>(new Set());
+
+  const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/maple-compare/sessions?limit=20`);
+      if (res.ok) {
+        const body = await res.json();
+        setSessions(body.items || []);
+      }
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
 
   const ingestEvent = useCallback((event: SimpleperfProgressEvent) => {
     if (!event || event.type === 'connected') return;
@@ -80,6 +106,12 @@ const MapleComparePage: React.FC = () => {
     if (next.reportMd) setAiDraft(next.reportMd);
     return next;
   }, [id, ingestEvent]);
+
+  useEffect(() => {
+    if (!id) {
+      loadSessions();
+    }
+  }, [id, loadSessions]);
 
   useEffect(() => {
     if (!id) return;
@@ -188,6 +220,73 @@ const MapleComparePage: React.FC = () => {
         </Card>
       )}
 
+      {!id && (
+        <Card
+          size="small"
+          title={<Space><HistoryOutlined />历史分析记录</Space>}
+          style={{ marginBottom: 12 }}
+          extra={<Button size="small" onClick={loadSessions} loading={sessionsLoading}>刷新</Button>}
+        >
+          {sessionsLoading ? (
+            <Spin />
+          ) : sessions.length === 0 ? (
+            <Empty description="暂无历史记录" />
+          ) : (
+            <Table
+              size="small"
+              rowKey="id"
+              dataSource={sessions}
+              pagination={{ pageSize: 10, showSizeChanger: false }}
+              columns={[
+                {
+                  title: '标签',
+                  dataIndex: 'label',
+                  render: (v: string) => v || <Text type="secondary">-</Text>,
+                },
+                {
+                  title: '设备',
+                  dataIndex: 'device',
+                  width: 140,
+                  render: (v: string) => v || <Text type="secondary">-</Text>,
+                },
+                {
+                  title: '场景',
+                  dataIndex: 'scene',
+                  width: 120,
+                  render: (v: string) => v || <Text type="secondary">-</Text>,
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'status',
+                  width: 100,
+                  render: (v: string) => <Tag color={statusColor(v)}>{v}</Tag>,
+                },
+                {
+                  title: '创建时间',
+                  dataIndex: 'createdAt',
+                  width: 160,
+                  render: (v: number) => v ? new Date(v).toLocaleString('zh-CN') : '-',
+                },
+                {
+                  title: '耗时',
+                  dataIndex: 'duration',
+                  width: 90,
+                  render: (v: number | null) => v != null ? `${(v / 1000).toFixed(1)}s` : '-',
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 80,
+                  render: (_: unknown, row: MapleCompareSession) => (
+                    <Button size="small" type="link" onClick={() => navigate(`/maple-compare/${row.id}`)}>查看</Button>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </Card>
+      )}
+
 
 
       {id && loading && <Card><Spin /> <Text style={{ marginLeft: 8 }}>加载中...</Text></Card>}
@@ -208,7 +307,7 @@ const MapleComparePage: React.FC = () => {
           <Card size="small" title="分析进度" style={{ marginBottom: 12 }}>
             <Steps size="small" current={stageIndex(currentStage)} status={session.status === 'failed' ? 'error' : isProcessing ? 'process' : 'finish'} items={[{ title: '上传完成' }, { title: '分析中' }, { title: 'AI 生成报告' }, { title: '完成' }]} />
           </Card>
-          {report ? <ResultTabs report={report} reportMd={reportMd} sessionId={id} events={events} /> : <Card><Spin /> <Text style={{ marginLeft: 8 }}>等待结构化报告...</Text></Card>}
+          {report ? <ResultTabs report={report} reportMd={reportMd} sessionId={id} events={events} status={session.status} /> : <Card><Spin /> <Text style={{ marginLeft: 8 }}>等待结构化报告...</Text></Card>}
         </>
       )}
     </div>
@@ -246,7 +345,7 @@ const LocalDirectoryDrop: React.FC<{ title: string; value: LocalDirectorySelecti
 );
 
 
-const ResultTabs: React.FC<{ report: any; reportMd: string; sessionId: string; events: SimpleperfProgressEvent[] }> = ({ report, reportMd, sessionId, events }) => {
+const ResultTabs: React.FC<{ report: any; reportMd: string; sessionId: string; events: SimpleperfProgressEvent[]; status?: string }> = ({ report, reportMd, sessionId, events, status }) => {
   const cross = useMemo(() => buildCrossValidation(report), [report]);
   return (
     <Tabs items={[
@@ -254,12 +353,26 @@ const ResultTabs: React.FC<{ report: any; reportMd: string; sessionId: string; e
       { key: 'il2cpp', label: 'il2cpp [A]', children: <Il2cppTab stats={report.il2cpp_stats} /> },
       { key: 'hotspots', label: '热点函数 [B]', children: <HotspotsTab items={report.main_thread_hotspots?.compare || []} /> },
       { key: 'so', label: 'So 分布 [C]', children: <SoTab threads={report.level1_so_compare?.threads || []} /> },
-      { key: 'diff', label: '虚函数/Diff [C3+C4]', children: <DiffTab anchors={report.level2_anchor_compare?.anchors || []} items={report.level3_func_diff?.items || []} /> },
+      { key: 'worker', label: `Worker 线程 [C2] (${(report.worker_threads || []).length})`, children: <WorkerTab threads={report.worker_threads || []} /> },
+      { key: 'diff', label: '虚函数/Diff [C3+C4]', children: <DiffTab anchors={report.level2_anchor_compare?.anchors || []} items={report.level3_func_diff?.items || []} funcText={report.level3_func_diff?.text} /> },
+      { key: 'flame', label: '差分火焰图', children: <FlameTab sessionId={sessionId} status={status} /> },
       { key: 'perfetto', label: 'perfetto [D-F]', children: <PerfettoTab perfetto={report.perfetto || {}} /> },
       { key: 'pdata', label: 'pdata [G]', children: <PdataTab pdata={report.pdata || {}} /> },
       { key: 'cross', label: '交叉验证 [H]', children: <CrossTab cross={cross} /> },
       { key: 'ai', label: 'AI 分析报告', children: <AiTab content={reportMd} sessionId={sessionId} events={events} /> },
     ]} />
+  );
+};
+
+const FlameTab: React.FC<{ sessionId: string; status?: string }> = ({ sessionId, status }) => {
+  const src = `${BASE_URL}/maple-compare/sessions/${sessionId}/artifact/flame`;
+  if (status && status !== 'completed') {
+    return <Card size="small"><Space><Spin /><Text type="secondary">差分火焰图生成中（整段采样，约需 1~2 分钟），完成后自动可用…</Text></Space></Card>;
+  }
+  return (
+    <Card size="small" title="差分火焰图（base vs opt · 整段采样）" extra={<Button size="small" type="link" href={src} target="_blank">新窗口打开</Button>}>
+      <iframe key={status} src={src} title="diff-flamegraph" style={{ width: '100%', height: '74vh', border: '1px solid var(--border-primary)', borderRadius: 8 }} />
+    </Card>
   );
 };
 
@@ -293,11 +406,59 @@ const HotspotsTab: React.FC<{ items: any[] }> = ({ items }) => <Table size="smal
 
 const SoTab: React.FC<{ threads: any[] }> = ({ threads }) => threads.length ? <Space direction="vertical" style={{ width: '100%' }}>{threads.map(t => <Card key={t.name} size="small" title={`${t.name} · event ${t.baseline_total_event || 0} → ${t.current_total_event || 0}`}><ReactECharts style={{ height: 280 }} option={barCompareOption((t.libs || []).slice(0, 12), 'name', 'baseline_pct', 'current_pct')} /></Card>)}</Space> : <Empty description="无 SO 分布数据" />;
 
-const DiffTab: React.FC<{ anchors: any[]; items: any[] }> = ({ anchors, items }) => {
+const WorkerTab: React.FC<{ threads: any[] }> = ({ threads }) => {
+  if (!threads.length) return <Empty description="无 Worker 线程数据" />;
+  return (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      {threads.map((t: any) => {
+        const bTotal = t.base_total_event || 0;
+        const oTotal = t.opt_total_event || 0;
+        const deltaEvt = bTotal ? ((oTotal - bTotal) / bTotal * 100) : 0;
+        const deltaColor = deltaEvt < -2 ? '#52c41a' : deltaEvt > 2 ? '#cf1322' : undefined;
+        return (
+          <Card key={t.thread} size="small"
+            title={<Space>
+              <span>{t.thread}</span>
+              <Tag>base events: {(bTotal / 1e6).toFixed(0)}M</Tag>
+              <Tag>opt events: {(oTotal / 1e6).toFixed(0)}M</Tag>
+              {bTotal > 0 && <Tag color={deltaEvt < -2 ? 'success' : deltaEvt > 2 ? 'error' : 'default'} style={{ color: deltaColor }}>{deltaEvt > 0 ? '+' : ''}{deltaEvt.toFixed(1)}%</Tag>}
+            </Space>}
+          >
+            <Table
+              size="small"
+              rowKey="lib"
+              dataSource={t.libs || []}
+              pagination={false}
+              columns={[
+                { title: 'SO', dataIndex: 'lib', ellipsis: true },
+                { title: 'base %', dataIndex: 'base_pct', width: 90, render: (v: number) => `${Number(v || 0).toFixed(2)}%` },
+                { title: 'opt %', dataIndex: 'opt_pct', width: 90, render: (v: number) => `${Number(v || 0).toFixed(2)}%` },
+                {
+                  title: 'Δpp', dataIndex: 'delta_pp', width: 110, defaultSortOrder: 'descend' as const,
+                  sorter: (a: any, b: any) => Math.abs(Number(a.delta_pp || 0)) - Math.abs(Number(b.delta_pp || 0)),
+                  render: (v: number) => <span style={{ color: Number(v) < -0.3 ? '#52c41a' : Number(v) > 0.3 ? '#cf1322' : undefined, fontFamily: 'var(--font-mono)' }}>{Number(v || 0) > 0 ? '+' : ''}{Number(v || 0).toFixed(2)}pp</span>,
+                },
+              ]}
+            />
+          </Card>
+        );
+      })}
+    </Space>
+  );
+};
+
+const DiffTab: React.FC<{ anchors: any[]; items: any[]; funcText?: string }> = ({ anchors, items, funcText }) => {
   const funcs = items.flatMap((g: any) => (g.functions || []).map((f: any) => ({ ...f, abs_ms: g.abs_ms })));
   return <Space direction="vertical" style={{ width: '100%' }}>
     <Card size="small" title="Anchor 子树对比"><Table size="small" rowKey={(_, i) => String(i)} dataSource={anchors} pagination={{ pageSize: 10 }} columns={[{ title: 'Anchor', dataIndex: 'name', ellipsis: true }, { title: 'base_ms', dataIndex: 'baseline_ms', render: fmt }, { title: 'opt_ms', dataIndex: 'current_ms', render: fmt }, { title: 'delta%', dataIndex: 'delta_pct', render: (v: number) => <DeltaTag value={v} unit="%" /> }]} /></Card>
     <Card size="small" title="函数级 A/M/D Diff"><Table size="small" rowKey={(_, i) => String(i)} dataSource={funcs} pagination={{ pageSize: 15 }} columns={[{ title: 'Mask', dataIndex: 'mask', width: 80, render: (v: string) => <Tag color={v === 'D' ? 'red' : v === 'A' ? 'blue' : 'default'}>{v}</Tag> }, { title: '函数', dataIndex: 'func', ellipsis: true }, { title: 'lib', dataIndex: 'lib', width: 160 }, { title: 'delta_ms', dataIndex: 'delta_ms', render: fmt }, { title: 'delta%', dataIndex: 'delta_pct', render: (v: number) => <DeltaTag value={v} unit="%" /> }, { title: 'inline?', dataIndex: 'maybe_inlined', render: (v: boolean) => v ? <Tag color="gold">maybe</Tag> : '-' }]} /></Card>
+    {funcText && (
+      <Card size="small" title="缩进树原文（func_compare.py）" extra={<Tag>A=新增 M=变化 D=删除</Tag>}>
+        <pre style={{ fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.6, background: 'var(--bg-code, #1a1a2e)', color: 'var(--text-code, #e2e8f0)', padding: '12px 16px', borderRadius: 6, overflowX: 'auto', whiteSpace: 'pre', maxHeight: 480, overflowY: 'auto', margin: 0 }}>
+          {funcText}
+        </pre>
+      </Card>
+    )}
   </Space>;
 };
 

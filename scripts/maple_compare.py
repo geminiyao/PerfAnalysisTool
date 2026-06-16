@@ -1034,7 +1034,7 @@ def main():
         "il2cpp_stats": il2cpp_stats,
         "level1_so_compare": so_result,
         "level2_anchor_compare": anchor_result,
-        "level3_func_diff": {"items": func_result.get("items", [])},
+        "level3_func_diff": {"items": func_result.get("items", []), "text": func_result.get("text", "")},
         "main_thread_hotspots": {"base": base_hotspots, "opt": opt_hotspots, "compare": hotspot_cmp},
         "worker_threads": worker_cmp,
         "perfetto": {"base": base_perf, "opt": opt_perf},

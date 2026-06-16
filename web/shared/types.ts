@@ -128,7 +128,7 @@ export interface SimpleperfProgressEvent {
   text?: string;
   report?: any;
   artifact?: {
-    kind: 'json' | 'txt' | 'folded' | 'ai' | 'md';
+    kind: 'json' | 'txt' | 'folded' | 'ai' | 'md' | 'flame';
     path?: string;
     url?: string;
   };

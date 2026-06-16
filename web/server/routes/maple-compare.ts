@@ -205,6 +205,15 @@ export async function mapleCompareRoutes(app: FastifyInstance) {
     if (!paths.reportMdPath || !fs.existsSync(paths.reportMdPath)) return reply.status(404).send({ error: 'Markdown 报告不存在' });
     return reply.sendFile(path.basename(paths.reportMdPath), path.dirname(paths.reportMdPath));
   });
+
+  app.get('/maple-compare/sessions/:id/artifact/flame', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const session = await getMapleCompareSession(id);
+    if (!session) return reply.status(404).send({ error: 'Maple 三源对比 session 不存在' });
+    const paths = resolveArtifactPaths(id, session);
+    if (!paths.flamegraphPath || !fs.existsSync(paths.flamegraphPath)) return reply.status(404).send({ error: '差分火焰图尚未生成' });
+    return reply.sendFile(path.basename(paths.flamegraphPath), path.dirname(paths.flamegraphPath));
+  });
 }
 
 async function runMapleCompareAnalysis(sessionId: string, aiModel: string) {
@@ -273,6 +282,15 @@ async function runMapleCompareAnalysis(sessionId: string, aiModel: string) {
   emitProgress(sessionId, 'stage', 'extract_completed', 'maple_compare.py 分析完成', 52);
   emitEvent({ sessionId, type: 'structured_report', stage: 'structured_report_ready', message: '结构化 JSON 已生成', progress: 65, report: reportJson, createdAt: Date.now() });
   emitArtifact(sessionId, 'json', resultJsonPath, 'JSON 结构化报告已产出');
+
+  // 差分火焰图（整段采样，独立 spawn diff_flamegraph.py，与其它 Tab 解耦；失败不影响主报告）
+  try {
+    emitProgress(sessionId, 'stage', 'extract_completed', '正在生成差分火焰图（整段采样，约需 1~2 分钟）', 58);
+    const flamePath = await generateMapleFlamegraph(session.baseDir!, session.optDir!, resultDir);
+    emitArtifact(sessionId, 'flame', flamePath, '差分火焰图已生成');
+  } catch (e: any) {
+    emitEvent({ sessionId, type: 'log', stage: 'extract_completed', message: `差分火焰图生成失败（不影响其余报告）：${e.message || e}`, createdAt: Date.now() });
+  }
 
   let reportMd = '';
   try {
@@ -352,6 +370,30 @@ async function generateMapleAiReport(sessionId: string, report: any, aiModel: st
   }
 }
 
+async function generateMapleFlamegraph(baseDir: string, optDir: string, resultDir: string) {
+  const config = getConfig();
+  const outPath = path.join(resultDir, 'report_flamegraph.html');
+  const python = process.env.PYTHON || 'python';
+  const args = [
+    path.join(config.skillProjectPath, 'scripts', 'diff_flamegraph.py'),
+    '--base', baseDir,
+    '--opt', optDir,
+    '--out', outPath,
+  ];
+  const result = await new Promise<{ code: number | null; output: string }>((resolve) => {
+    const child = spawn(python, args, { cwd: config.skillProjectPath, shell: true, windowsHide: true, env: { ...process.env } });
+    let output = '';
+    child.stdout.on('data', (d: Buffer) => { output += d.toString(); });
+    child.stderr.on('data', (d: Buffer) => { output += d.toString(); });
+    child.on('close', (code: number | null) => resolve({ code, output }));
+    child.on('error', (err: Error) => resolve({ code: -1, output: err.message }));
+  });
+  if (result.code !== 0 || !fs.existsSync(outPath)) {
+    throw new Error(result.output ? result.output.slice(-500) : `退出码 ${result.code}`);
+  }
+  return outPath;
+}
+
 async function createMapleCompareSession(sessionId: string, meta: MapleCompareMeta & { baseDir: string; optDir: string }) {
   const now = Date.now();
   const db = getDb();
@@ -387,14 +429,14 @@ function emitProgress(sessionId: string, type: SimpleperfProgressEvent['type'], 
   emitEvent({ sessionId, type, stage, message, progress, createdAt: Date.now() });
 }
 
-function emitArtifact(sessionId: string, kind: 'json' | 'md', filePath: string, message: string) {
+function emitArtifact(sessionId: string, kind: 'json' | 'md' | 'flame', filePath: string, message: string) {
   emitEvent({
     sessionId,
     type: 'artifact',
     stage: kind === 'md' ? 'report_ready' : 'structured_report_ready',
     message,
-    progress: kind === 'md' ? 98 : 66,
-    artifact: { kind, path: filePath, url: `/cpu/api/maple-compare/sessions/${sessionId}/artifact/${kind === 'md' ? 'md' : 'json'}` },
+    progress: kind === 'md' ? 98 : kind === 'flame' ? 60 : 66,
+    artifact: { kind, path: filePath, url: `/cpu/api/maple-compare/sessions/${sessionId}/artifact/${kind}` },
     createdAt: Date.now(),
   });
 }
@@ -419,9 +461,11 @@ function resolveArtifactPaths(sessionId: string, session: any) {
   const resultDir = path.join(config.dataDir, 'maple-compare', sessionId, 'result');
   const fallbackJson = path.join(resultDir, 'report.json');
   const fallbackMd = path.join(resultDir, 'ai-report.md');
+  const fallbackFlame = path.join(resultDir, 'report_flamegraph.html');
   return {
     resultJsonPath: session.resultJsonPath || (fs.existsSync(fallbackJson) ? fallbackJson : null),
     reportMdPath: session.reportMdPath || (fs.existsSync(fallbackMd) ? fallbackMd : null),
+    flamegraphPath: session.flamegraphPath || (fs.existsSync(fallbackFlame) ? fallbackFlame : null),
   };
 }
 

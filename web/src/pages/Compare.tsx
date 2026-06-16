@@ -565,6 +565,34 @@ const Compare: React.FC = () => {
                 ),
               },
               {
+                key: 'sp_func_text',
+                label: '缩进树原文',
+                children: (
+                  <Card size="small">
+                    <Alert type="info" showIcon style={{ marginBottom: 12 }}
+                      message="func_compare.py 原始缩进方法树"
+                      description="格式：[A/M/D] 函数名 delta_ms (±pct%)，[maybe_inlined] 表示疑似内联消失。A=新增/M=变化/D=删除。" />
+                    {simpleperfResult?.level3?.text ? (
+                      <pre style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        background: 'var(--bg-code, #1a1a2e)',
+                        color: 'var(--text-code, #e2e8f0)',
+                        padding: '12px 16px',
+                        borderRadius: 6,
+                        overflowX: 'auto',
+                        whiteSpace: 'pre',
+                        maxHeight: 600,
+                        overflowY: 'auto',
+                      }}>
+                        {simpleperfResult.level3.text}
+                      </pre>
+                    ) : <Empty description="无原始文本（level3.text 为空）" />}
+                  </Card>
+                ),
+              },
+              {
                 key: 'sp_flame_diff',
                 label: '火焰图对比',
                 children: (

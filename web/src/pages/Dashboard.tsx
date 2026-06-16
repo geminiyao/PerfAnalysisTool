@@ -21,6 +21,7 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [queue, setQueue] = useState<any>(null);
   const [simpleperfSessions, setSimpleperfSessions] = useState<any[]>([]);
+  const [mapleCompareSessions, setMapleCompareSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,16 +31,18 @@ const Dashboard: React.FC = () => {
   async function loadData() {
     setLoading(true);
     try {
-      const [historyRes, statsRes, queueRes, simpleperfRes] = await Promise.all([
+      const [historyRes, statsRes, queueRes, simpleperfRes, mapleCompareRes] = await Promise.all([
         getHistory({ limit: 5 }),
         getHistoryStats(),
         getQueueStatus(),
         fetch('/cpu/api/simpleperf/sessions?limit=5').then(res => res.json()).catch(() => ({ items: [] })),
+        fetch('/cpu/api/maple-compare/sessions?limit=5').then(res => res.json()).catch(() => ({ items: [] })),
       ]);
       setRecentSessions(historyRes.items);
       setStats(statsRes);
       setQueue(queueRes);
       setSimpleperfSessions(simpleperfRes.items || []);
+      setMapleCompareSessions(mapleCompareRes.items || []);
     } catch (err) {
       console.error('加载数据失败:', err);
     } finally {
@@ -156,12 +159,25 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card size="small" title="高风险问题">
-            <Space direction="vertical" size={8}>
-              <Tag color="red">BigJank / 长帧 Spike</Tag>
-              <Tag color="orange">Native CPU 热点上升</Tag>
-              <Tag color="purple">符号解析缺失需确认</Tag>
-            </Space>
+          <Card
+            size="small"
+            title="最近 Maple 三源对比"
+            extra={<a onClick={() => navigate('/maple-compare')} style={{ fontSize: 12, color: 'var(--text-link)' }}>查看全部</a>}
+          >
+            {mapleCompareSessions.length === 0 ? <Empty description="暂无 Maple 三源对比记录" /> : (
+              <List
+                size="small"
+                dataSource={mapleCompareSessions}
+                renderItem={(item: any) => (
+                  <List.Item actions={[<a key="view" onClick={() => navigate(`/maple-compare/${item.id}`)}>查看</a>]}>
+                    <List.Item.Meta
+                      title={<Space><span>{item.label || item.id.slice(0, 8)}</span><Tag color={statusTagMap[item.status]?.color || 'default'}>{item.status}</Tag></Space>}
+                      description={<span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{[item.device, item.scene].filter(Boolean).join(' · ') || '未填信息'} · {dayjs(item.createdAt).format('MM-DD HH:mm')}</span>}
+                    />
+                  </List.Item>
+                )}
+              />
+            )}
           </Card>
         </Col>
       </Row>

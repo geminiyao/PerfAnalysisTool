@@ -46,12 +46,21 @@ DEFAULT_ANCHOR_FUNCS = [
 ]
 
 # Functions used to identify a "characteristic" thread (Level 3). A thread is
-# only diffed if its call tree contains one of these.
+# only diffed if its call tree contains one of these, OR if its thread name
+# matches THREAD_CHARACTERISTIC_NAMES (fallback when libunity.so is unsymbolized).
 THREAD_CHARACTERISTIC_FUNCS = [
     "ExecutePlayerLoop",
     "GfxDeviceWorker::RunCommand",
     "TranscriptScriptableRenderContext::ExecuteScriptableRenderLoop",
 ]
+
+# Thread names used as fallback identifiers when symbol resolution fails
+# (e.g. libunity.so stripped). Maps thread-name substring → char_index.
+THREAD_CHARACTERISTIC_NAMES = {
+    "UnityMain":      0,
+    "UnityGfxDevice": 1,
+    "GfxDevice":      1,
+}
 
 # ---------------------------------------------------------------------------
 # Library filtering
