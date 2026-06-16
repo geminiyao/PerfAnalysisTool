@@ -1,5 +1,7 @@
-# 性能分析管理平台需求文档
+# 性能分析管理平台需求文档（v1 · 已被 v2 取代）
 
+> ⚠️ **本文档（v1）已被 [`performance-platform-requirements-v2.md`](./performance-platform-requirements-v2.md) 统筹取代。** v2 收敛了数据模型（Run = core/detail/raw，取代每源一张 Session 表的筒仓）、去除了 `Maple` 关键字、将 `pdata` 改名为 `UnityProfilerData`，并新增了出数据/分析解耦、N+1 skill 架构、对比结论可读性等内容。本文保留作历史规划记录；新需求请以 v2 为准。
+>
 > 本文档用于定义性能分析管理平台的目标形态、核心需求、数据结构、采集/分析流程、UX 重构方向、simpleperf 接入、Profiler/simpleperf/Perfetto 多源关联分析，以及分阶段交付边界。本文档仅描述需求与设计，不代表当前代码已全部实现。
 
 ## 1. 背景与目标

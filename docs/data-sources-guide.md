@@ -1,7 +1,9 @@
-# Maple ILOpt 性能分析 — 三源数据指南
+# Android 通用性能分析 — 多源数据指南
 
-> 版本: v1.0 · 日期: 2026-06-12  
-> 本文档说明 simpleperf、Unity Profiler (.pdata)、perfetto 三类数据源各自的能力、局限性及互补关系，作为理解和使用 `maple_compare.py` 分析报告的前置参考。
+> 版本: v1.1 · 日期: 2026-06-16  
+> 本文档说明 Unity Profiler (.pdata)、simpleperf、perfetto 等数据源各自的能力、局限性及互补关系，作为多源性能分析的前置参考。
+>
+> **定位**：通用 Android 性能分析。具体优化（如某次 IL 去虚化）只是其中**一个用例**，分析框架对用例透明。文中标注"（示例）"的内容仅为举例说明，不代表框架内置任何特定优化的假设。框架层面的单点/对比分析关系与分层设计见 [`analysis-framework-design.md`](./analysis-framework-design.md)。
 
 ---
 
@@ -15,6 +17,7 @@
 6. [三源数据的局限性与噪音](#6-三源数据的局限性与噪音)
 7. [交叉验证规则](#7-交叉验证规则)
 8. [时间窗口对齐机制](#8-时间窗口对齐机制)
+9. [可扩展数据源（路线图）](#9-可扩展数据源路线图)
 
 ---
 
@@ -90,6 +93,25 @@
 | **统计误差** | 采样统计，短时间热点或低频调用可能被漏采 |
 | **Job.Worker 采样少** | Unity Job 线程每帧执行时间极短，simpleperf 样本量不足，可靠性低 |
 | **符号依赖** | 必须有正确的 `binary_cache`，否则函数名全部显示为十六进制地址 |
+
+### 2.4 simpleperf 与 Unity Profiler 的精确边界（重要）
+
+容易误解的一点：**"找哪个 C# 方法慢" 不是 simpleperf 的独占优势** —— Unity Profiler 本身就能定位到 C# 方法级（开 Deep Profile 给完整托管调用树，或靠 ProfilerMarker 埋点）。所以不要用"看哪个 C# 方法慢"来论证 simpleperf 的必要性。把界限划清：
+
+**Unity Profiler 更强 / 独占的：**
+- 精确帧边界 + 每帧每阶段计时（instrumentation，非采样，无统计误差）。
+- 引擎语义归属：天然知道这是 Physics / Render / Animation / GC，并给出 Main / Render / Submit / Job.Worker 线程的每帧负载。
+- C# 方法级耗时（但需 Deep Profile，开销 2~10x、会扭曲真机帧时，通常不敢在设备上常开）。
+
+**simpleperf 真正独占的（精确表述）：**
+1. **托管运行时本身的调用机制开销** —— 虚表派发、icall 跨界、GC write barrier、装箱、元数据/类型初始化。这些发生在 C# 方法"之间"，不归属任何 Marker，**Unity Profiler 看不见也量不出**。（示例：去虚化类优化的收益正落在这一层，因此 simpleperf 是衡量这类优化的金标准——不是因为它能看 C# 方法，而是因为它能看到方法调用机制的开销。）
+2. **native / 引擎内部黑盒**：`libunity.so` 渲染/物理/裁剪内部、`libc`、`[kernel.kallsyms]`、脚本 VM 解释器内部。Unity 把 `Camera.Render` 显示成一根条，看不进它内部为什么慢；simpleperf 能下钻到具体 native 函数。
+3. **低开销全覆盖采样**：4000Hz 统计采样几乎不扭曲帧时，能看到所有未埋点代码；Deep Profile 要全覆盖就得付出严重计时失真的代价。simpleperf 用"不失真"换 Unity 需要"失真"才能拿到的全景。
+4. **全进程统一归因**：把所有 `.so` / 不同语言层放在同一 CPU 占比视图里横向比；Unity Profiler 只看得见 Unity 自己的世界。
+
+> 反直觉补充：IL2CPP 把每个 C# 方法编译成一个带名字的 native 函数（如 `XXX_Update_mNNNN`），所以 **simpleperf 也能给到"C# 方法级"归属，且无需 Deep Profile 的开销**。但它给的是"该方法及其运行时开销的 CPU 周期"，Unity 给的是"该方法的墙钟耗时"——维度不同，互为补充。
+
+> **互补示例（修正版）**：pdata（甚至 Deep Profile）能告诉你 "`MyScript.Update` 这帧很慢"；但要回答 "慢在真实业务逻辑，还是虚函数派发 / GC / 运行时开销" → 只能靠 simpleperf，因为这部分开销对 Unity 的埋点是隐形的。
 
 ---
 
@@ -357,3 +379,33 @@ t6  atrace 色块结束（perfetto 终点）
 ```
 
 三个窗口在物理上有微小偏移，但**对 60s 采样的分析结论无实质影响**。
+
+---
+
+## 9. 可扩展数据源（路线图）
+
+现有三源仍有盲区，按"补哪个盲区 / 性价比"排序如下。新增源遵循"可插拔"原则：只新增一个提取 Provider，产出 `PerfProfile` 片段，不改上层分析逻辑（见 [`analysis-framework-design.md`](./analysis-framework-design.md) §6）。
+
+### 9.1 强烈建议补（补当前明显盲区）
+
+| 数据源 | 采集方式 | 补的盲区 | 备注 |
+|--------|----------|----------|------|
+| **SurfaceFlinger / FrameTimeline** | perfetto 加 `android.surfaceflinger` + Frame Timeline 事件 | **用户真实感知掉帧**：区分"应用卡"还是"合成/显示链路卡"（VSync miss、SF 掉帧）；expected vs actual frame | perfetto 直接支持，几乎零成本，补一个大盲区 |
+| **Thermal / 温度** | `dumpsys thermalservice` 或 perfetto thermal ftrace | **真正判断降频**：频率掉了是没负载还是过热？需温度 + throttling 状态 | 当前只采 cpufreq 均值，无法判断热降频，这是"机器是否降频"需求的核心缺口 |
+| **simpleperf 硬件 PMU 计数器** | `simpleperf stat -e cache-misses,instructions,cpu-cycles,branch-misses` | **优化深层效果**：IPC、cache miss 率——区分"减少了指令数"还是"改善了 cache 局部性" | 已有 simpleperf 工具链，边际成本低 |
+
+### 9.2 值得补（看精力）
+
+| 数据源 | 采集方式 | 补的盲区 |
+|--------|----------|----------|
+| **GPU 深度数据** | Mali Streamline / Adreno Profiler / Android GPU Inspector (AGI)，或引擎侧 FrameTimingManager | perfetto 的 GPU counter 多数设备拿不全；当三源都指向"等 GPU"时需要 |
+| **内存全景** | `dumpsys meminfo`（PSS/Java heap/Native heap/Graphics）、Unity Memory Profiler | GC 卡顿与 OOM 根因 |
+| **ANR / 主线程长卡顿** | `dumpsys` ANR trace，或运行时 watchdog | 捕捉采样可能错过的偶发长卡顿 |
+| **功耗 / power rail** | perfetto power rails / `batterystats` | "省了 CPU 但帧没变快"时证明优化省了功耗（移动端正收益） |
+
+### 9.3 可选（锦上添花）
+
+- **Unity FrameTimingManager / Recorder API**：引擎内主动上报 CPU/GPU 帧时间，作为 pdata 与 perfetto 帧口径的"第三方裁判"。
+- **logcat 结构化埋点**：扩展业务关键事件打点（进战斗/加载完成），让分析能按"运行阶段"切片。
+
+> **优先级建议**：前两个（SurfaceFlinger/FrameTimeline、Thermal）几乎只是给 perfetto 多开几个 trace 事件，投入产出比最高，应优先接入。
