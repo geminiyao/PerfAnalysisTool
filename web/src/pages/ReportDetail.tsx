@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, createContext } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Statistic, Spin, Button, Tag, Tabs, message } from 'antd';
 import {
@@ -15,39 +15,7 @@ import dayjs from 'dayjs';
 import FrameDistChart from '../components/FrameDistChart';
 import IssueList, { type Issue } from '../components/IssueList';
 import IssueDetail from '../components/IssueDetail';
-
-// ============================================================
-// Per-issue optimize state (lifted to ReportDetail)
-// ============================================================
-
-export interface OptimizeIssueState {
-  result: string;
-  loading: boolean;
-  mapping: boolean;
-  logs: string[];
-  error: string;
-  sourceFiles: { path: string; line: number }[];
-}
-
-export interface OptimizeContextValue {
-  getState: (issueKey: string) => OptimizeIssueState;
-  startOptimize: (issueKey: string, params: OptimizeSuggestRequest) => void;
-  cancelOptimize: (issueKey: string) => void;
-  showSetting: boolean;
-  setShowSetting: (v: boolean) => void;
-}
-
-const defaultIssueState: OptimizeIssueState = {
-  result: '', loading: false, mapping: false, logs: [], error: '', sourceFiles: [],
-};
-
-export const OptimizeContext = createContext<OptimizeContextValue>({
-  getState: () => defaultIssueState,
-  startOptimize: () => {},
-  cancelOptimize: () => {},
-  showSetting: false,
-  setShowSetting: () => {},
-});
+import { OptimizeContext, type OptimizeIssueState, defaultIssueState } from '../components/UnityProfilerReportView';
 
 interface PreprocessData {
   config: { targetFps: number; frameBudgetMs: number };

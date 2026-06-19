@@ -52,6 +52,7 @@ THREAD_CHARACTERISTIC_FUNCS = [
     "ExecutePlayerLoop",
     "GfxDeviceWorker::RunCommand",
     "TranscriptScriptableRenderContext::ExecuteScriptableRenderLoop",
+    "JobQueue::WorkLoop",
 ]
 
 # Thread names used as fallback identifiers when symbol resolution fails

@@ -1,335 +1,110 @@
 ---
 name: perfetto-trace-analysis
-description: Analyzes Perfetto .pftrace files for Android Unity games to diagnose CPU scheduling issues, thermal throttling, thread coordination problems, and system-level performance bottlenecks
+description: Analyzes Perfetto .pftrace files for Android Unity games to diagnose CPU-bound vs wait-bound bottlenecks, thread scheduling, thermal throttling, off-CPU reasons, and system-level performance, producing a single-source PerfProfile report.
 ---
 
-# Perfetto System-Level Performance Analysis
+# Perfetto 系统级性能分析(单源)
 
-## When to Use This Skill
+从 perfetto `.pftrace` 产出**单源分析报告**。perfetto 回答 **Why:线程为什么没在跑、机器什么状态**——独占 off-CPU 原因、CPU/GPU 频率与降频、调度状态、binder、热状态、显示链路掉帧。
 
-- User provides a `.pftrace` file (Perfetto trace)
-- User asks about Android system-level performance, CPU scheduling, thermal throttling
-- User asks about big/little core usage, thread scheduling, frame drops on Android
-- User mentions keywords: perfetto, pftrace, systrace, atrace, CPU scheduling, thermal, big core, frequency
+> **本 skill 已对齐新 PerfProfile 流程**(出数据=Provider 脚本,解读=本 skill 读 summary)。
+> 主线: `帧慢是在算还是在等? 等什么? 机器拖后腿了吗?`——围绕这条组织,别平铺指标。
+
+## When to Use
+
+- 用户提供 `.pftrace`,问系统级/调度/降频/瓶颈定型。
+- 关键词: perfetto, pftrace, systrace, atrace, CPU 调度, 降频, 大小核, off-CPU, 帧时间线。
+
+不要用于 `.pdata`(用 `unity-profiler-analysis`)或 `perf.data`(用 `simpleperf-native-analysis`)。
+
+## Prerequisites
+
+- perfetto Python 包:`python -c "from perfetto.trace_processor import TraceProcessor; print('OK')"`,缺则 `pip install perfetto`。
 
 ## Execution Flow
 
-**You MUST follow this flow in order:**
+**必须按序执行。**
 
-### Step 0: Check Dependencies
-
-Verify the `perfetto` Python package is installed:
+### Step 1: 出数据 —— 构建统一 PerfProfile
 
 ```bash
-PYTHONUTF8=1 python -c "from perfetto.trace_processor import TraceProcessor; print('perfetto OK')"
+python scripts/build_perfetto_profile.py --trace <x.pftrace> --out <out_dir> [--meta <meta.json>]
 ```
 
-If it fails, install dependencies:
+产出到 `<out_dir>/`:
+- `perfetto-profile.json` — 全量 PerfProfile(`core.threads/frame/system` + `detail.perfetto` 全量 slice 树 / 降频 / off-CPU …)。**入库/深层用,AI 不直接读。**
+- `perfetto-profile-summary.json` — **AI 读这个**(~25KB)。
 
+> `meta.json`(trace 同目录)提供 device/scene/pid/durationSec,缺失也能跑。
+> base 样本示例:`--trace output/maple/base_PAL-AL00_20260612_154316/2026-06-12_15-43-be56b7.pftrace --out output/p1-perfetto`
+
+等待完成再继续。
+
+### Step 2: 读 summary(禁读全量)
+
+**✅ 读 `perfetto-profile-summary.json`**(~25KB),含:
+- `metrics[]` — `thread.<name>.{running,runnable,sleeping}Pct` / `system.cpuFreqAvgMhz` / `system.binder.*` / `system.pssMb`(命名见 metric-key-naming-spec)。
+- `frame[]` — **帧口径 `choreographer`(vsync 节拍,≠ playerloop,禁与 unity 直比)**。
+- `threadsSched` — 关键线程 Running/Runnable/Sleeping。
+- `system` — 频率 / GPU / binder / 内存。
+- `throttling` — `{level: confirmed/suspected/none, evidence, perCpu}`。
+- `offCpuReasons` — 主线程非运行时间拆分(若内核含 sched_blocked_reason)。
+- `atraceSlices` / `callTrees[]` — 关键线程 atrace slice 树(主循环阶段)。
+- `frameTimeline` — expected/actual frame(若 trace 含 actual_frame_timeline,否则 null)。
+- `confidence` / `profileWindow`。
+
+需更细(如某线程完整 slice 树、任意 marker 下钻)→ 回读全量或重查 raw(perfetto trace_processor SQL,见 framework §5.5):
 ```bash
-pip install -r .claude/skills/perfetto-trace-analysis/requirements.txt
+cd <out_dir> && node -e "const p=require('./perfetto-profile.json'); const t=p.detail.perfetto.callTrees.find(x=>x.thread==='UnityMain'); console.log(JSON.stringify(t,null,2).slice(0,4000));"
 ```
 
-### Step 1: Run Preprocessing Script
+### Step 3: 分析(依据 report-spec §4)
 
-```bash
-PYTHONUTF8=1 python .claude/skills/perfetto-trace-analysis/scripts/preprocess.py --input <file.pftrace> --target-fps <fps> --output-dir ./output/perfetto
-```
+1. **瓶颈类型定性(核心结论)**:综合主线程 Running vs Sleeping + GPU 忙 → 判 **CPU-bound / 等待型(等 GPU/锁/binder/vsync)**。这是 perfetto 对单次分析最大贡献。
+2. **off-CPU 归因**(独占):主线程 Sleeping 高时拆「在等什么」;数据不足时明说。
+3. **调度树**:关键线程 atrace slice 树(PlayerLoop→各阶段)+ 占比,看一帧「算 vs 等」分布。
+4. **降频判定分级**:`throttling.level` = confirmed(有 sysfs:scaling_max<cpuinfo_max / cooling)/ suspected(仅频率低于额定)/ none。据此对全报告可信度打折。
+5. **显示链路掉帧**:`frameTimeline` 有则报 expected vs actual、VSync miss;为 null 标「数据缺失,需采 actual_frame_timeline」。
+6. **GPU**:无 GPU busy/频率计数器时,**明说「GPU 是否瓶颈无法定论」**,不臆断。
 
-- `<file>`: The .pftrace file the user provided
-- `<fps>`: Target FPS (default 30)
-- Output: `./output/perfetto/preprocess-result.json`
+### Step 4: 出报告 + 自检
 
-Wait for this to complete before proceeding.
+中文 Markdown,**结论先行**。文件名 `performance-report_YYYYMMDDHHmmss.md`,存 `<out_dir>/`。
 
-### Step 2: Read Data and Knowledge Base
-
-#### 2a. Read preprocess-result.json
-
-Read the full output (typically 5-15KB, safe to read entirely).
-
-#### 2b. Read perfetto-knowledge.md
-
-- `.claude/skills/perfetto-trace-analysis/references/perfetto-knowledge.md`
-
-### Step 3: Analyze
-
-Perform ALL analysis dimensions (A-H) described in the Analysis Procedure below.
-
-### Step 4: Generate Report and Self-Check
-
-Generate the final report. Save to `./output/perfetto/`.
-
-The filename MUST include a timestamp: `perfetto-report_YYYYMMDDHHmmss.md`
-
----
-
-## Analysis Procedure
-
-### A. Frame Rate & Stability
-
-1. Compare actual FPS vs target FPS
-2. Analyze frame time distribution (mean, median, P25/P75, min/max)
-3. Identify Jank frames (ratio > 2x prev 3-frame average)
-4. For Jank frames, determine if caused by: CPU scheduling, frequency drop, or thread contention
-
-### B. CPU Scheduling (Big/Little Core)
-
-1. Report main thread's big-core vs little-core usage percentage
-2. Report render thread's big-core vs little-core usage percentage
-3. Analyze core migration frequency (too many migrations = scheduling instability)
-4. Check if critical threads (Main, Render) are consistently on big cores
-5. If on little cores frequently → suggest thread affinity optimization
-
-### C. CPU Frequency & Throttling
-
-1. Report average frequency for big/little clusters
-2. **Use `throttleVerdict` for the primary conclusion:**
-   - `level: confirmed` + `source: sysfs` → 报告中写"**确认降频**"（有硬件证据）
-   - `level: suspected` + `source: perfetto_inference` → 报告中写"**疑似降频 [推测]**"
-   - `level: none` → 报告中写"未检测到降频"
-3. If confirmed: report which CPUs are limited (`thermalSysfs.limitedCpus`), temperature, cooling state
-4. If suspected: list `throttleClassification.evidence` as推测依据，明确标注 [推测]
-5. Report `freqReachability`: can CPU reach theoretical max during trace?
-6. Correlate throttle timing with frame time spikes
-7. **Never state "确认降频" without sysfs evidence. When only Perfetto data available, always use "疑似" + [推测]**
-
-### D. Thread Scheduling Efficiency
-
-1. Runnable wait time: how long threads wait in ready queue before getting CPU
-   - avg < 1ms: normal
-   - avg 1-3ms: moderate contention
-   - avg > 3ms: severe contention
-2. Preemption analysis: how often game threads are interrupted
-   - Check preemptionCount: correlate high preemption with system interference (dimension F)
-3. Max runnable time: worst-case scheduling delay
-4. Wakeup latency: time from sched_waking event to thread actually getting CPU
-   - avg < 0.5ms: normal
-   - avg 0.5-2ms: moderate delay
-   - avg > 2ms: severe wakeup delay (may indicate CPU overload)
-
-### E. Multi-Thread Coordination
-
-1. Main-Render overlap: are they running in parallel or serial?
-2. Render thread idle time (Semaphore.WaitForSignal = waiting for main)
-3. Determine frame bottleneck: Main-bound vs Render-bound vs GPU-bound
-4. Job Worker utilization:
-   - Worker count and total CPU time
-   - Big/little core distribution for workers
-   - If workers mostly on big cores → may be competing with Main/Render
-   - If workers utilization < 10% → job system underutilized
-   - If workers utilization > 60% → potential thread pool saturation
-
-### F. System Interference
-
-1. Identify top system processes running on same cores as game
-2. Quantify total interference time vs frame budget
-3. Flag if surfaceflinger/system_server consume > 5% of frame budget
-4. Note any unusual system activity (Bluetooth, PEM, thermal daemon)
-
-### G. GPU Load Analysis (if data available)
-
-1. Check gpuAnalysis.available — if false, state "本 trace 未采集 GPU 数据" and skip
-2. If data available:
-   - GPU frequency: average vs max (is it at max = saturated?)
-   - GPU utilization distribution (average/peak percentage)
-   - GPU-bound determination: utilization > 80% + main thread has Gfx.WaitForPresent
-3. Combine with E's bottleneck analysis to confirm GPU-bound vs CPU-bound
-4. Confidence level: high (direct utilization data) / medium (frequency only) / low (inferred)
-
-### H. Time Segment Analysis
-
-1. Analyze 3 segments (前段/中段/后段) for FPS, frequency, Jank differences
-2. Detect temporal patterns:
-   - Thermal degradation (performance worsens over time + frequency drops)
-   - Burst Spike (Jank concentrated in one segment)
-   - Warmup pattern (first segment unstable, then stabilizes)
-   - Sustained slow frames (≥5 consecutive frames exceeding 1.5x budget)
-3. Conclusion: Is the performance issue persistent or time-degrading?
-4. Use patterns.description from preprocess data as supporting evidence
-
----
-
-## Output Format
-
-Output in **Chinese**, **Markdown** format:
+## Output Format(报告结构)
 
 ```markdown
-# Perfetto 系统级性能分析报告
+# 系统级性能分析报告 · perfetto 单源
 
-## 一、概览
+> **结论**: (一句普通话:CPU-bound 还是等待型/等什么 + 是否降频 + 可信度)
 
-| 指标 | 数值 |
-|------|------|
-| 采集时长 | Xms (X.Xs) |
-| 帧数 | N |
-| 目标帧率 | X FPS |
-| 实际帧率 | X FPS |
-| 平均帧耗时 | X ms |
-| 中位数帧耗时 | X ms |
-| Jank 次数 | X |
-| 设备 CPU | X 大核 + X 小核 |
+## 一、瓶颈类型定性(核心)
+主线程 Running/Sleeping(`thread.UnityMain.*`)+ GPU 忙 → CPU-bound / 等待型判定 + 依据。
 
-## 二、核心结论
+## 二、主循环阶段分解
+UnityMain atrace slice 树各阶段占比(脚本/渲染/Canvas/ECS…)。
 
-> 2-3 sentences: frame rate status, primary bottleneck (CPU/GPU/scheduling/thermal), key finding
+## 三、off-CPU 归因(独占)
+Sleeping 拆分(等 GPU/锁/binder/vsync);数据不足则说明。
 
-## 三、帧耗时归因
+## 四、线程调度
+关键线程 Running/Runnable/Sleeping 表。
 
-### 分层概况
-(Use playerLoopBreakdown.categories, show as table with ASCII bar chart)
+## 五、降频与系统状态
+降频分级(confirmed/suspected/none)+ 证据;CPU 频率、binder、内存。
 
-| 阶段 | 每帧 (ms) | 占比 | |
-|------|-----------|------|---|
-| Rendering CPU | X.X | XX% | ████████ |
-| Lua Logic | X.X | XX% | ██████ |
-| C# Logic | X.X | XX% | ████ |
-| ECS/Job | X.X | XX% | ███ |
-| UGUI | X.X | XX% | ███ |
-| Wait/Sync | X.X | XX% | █ |
+## 六、显示链路掉帧(若有 FrameTimeline)
+expected vs actual、VSync miss;无则标数据缺失。
 
-### TOP 耗时函数
-(For each category, list topFunctions with name + avgMs)
-
-## 四、CPU 调度分析
-
-### 大小核使用
-(Table: thread → big core %, little core %, migrations)
-
-### Runnable 等待
-(avg/max/p95 runnable time, interpretation)
-
-### 唤醒延迟
-(avg/max/p95 wakeup latency, is there wakeup delay?)
-
-### 被抢占分析
-(preemption count, correlation with system interference)
-
-### 调度问题判定
-(Is scheduling optimal? What's wrong?)
-
-## 五、CPU 频率与降频分析
-
-### 降频判定
-(Use throttleVerdict — state conclusion level clearly:)
-- `confirmed` → "**确认降频**: scaling_max_freq=X < cpuinfo_max_freq=Y, 降幅Z%"
-- `suspected` → "**疑似降频 [推测]**: 基于Perfetto频率数据推断，推测依据: ..."
-- `none` → "未检测到降频迹象"
-
-### 频率概况
-(avg freq per cluster, % of max, freqReachability)
-
-### 降频详情（如有）
-(If confirmed: limitedCpus, temperature, cooling state)
-(If suspected: evidence list, 每条标注 [推测])
-
-### 建议
-(如未采集sysfs数据，建议使用增强版采集脚本 record_tmaoe_thermal.bat 获取确认级降频判定)
-
-## 六、多线程协作分析
-
-### Main-Render 并行度
-(overlap %, who waits for whom, bottleneck determination)
-
-### 帧瓶颈判定
-(Main-bound / Render-bound / GPU-bound)
-
-### Job Worker 利用率
-(Worker count, total CPU time, big/little core distribution, utilization %)
-
-## 七、系统干扰分析
-
-### 干扰进程 TOP 5
-(Table: process, count, total ms, % of frame budget)
-
-### 干扰严重度评估
-(Normal / Mild / Severe)
-
-## 八、GPU 负载分析
-
-### GPU 数据可用性
-(本 trace 是否包含 GPU 数据？如 gpuAnalysis.available = false，注明"本 trace 未采集 GPU 数据")
-
-### GPU 频率与利用率
-(如有数据：avg/max frequency, utilization avg/peak %)
-
-### GPU-bound 判定
-(是否 GPU-bound + confidence level + supporting evidence)
-
-## 九、时间段分析
-
-### 分段概况
-| 指标 | 前段 | 中段 | 后段 |
-|------|------|------|------|
-| 帧率 | X FPS | X FPS | X FPS |
-| 平均帧耗时 | X ms | X ms | X ms |
-| 大核频率 | X MHz | X MHz | X MHz |
-| 降频次数 | X | X | X |
-| Jank 数 | X | X | X |
-
-### 性能趋势判定
-(Detected patterns + evidence from patterns.description)
-
-## 十、优化建议
-
-### P0/P1/P2 suggestions
-- 目标问题
-- 具体方案
-- 预期收益
-
-## 十一、补充说明
-- 数据局限性
-- 建议下一步
+## 七、优化建议 + 局限
+点名建议;帧口径/降频/GPU 缺数据/窗口 等可信度声明。
 ```
 
----
+## Output Quality Rules(MUST NOT VIOLATE)
 
-## Output Quality Rules
-
-### Rule 1: Data Truthfulness
-All numbers MUST come from preprocess-result.json. Do NOT fabricate data.
-
-### Rule 2: Judgment Criteria
-For every conclusion (e.g. "scheduling is poor"), state the evidence with specific numbers.
-
-### Rule 3: Actionable Suggestions
-Every optimization suggestion must include specific steps (API calls, settings, code changes).
-
-### Rule 4: Uncertainty Marking
-If a conclusion is inferred (not directly from data), mark with [推断].
-
-### Rule 5: Bottleneck Determination
-Must clearly state: is the problem CPU-bound, GPU-bound, scheduling-bound, or thermal-bound? With evidence.
-
----
-
-## Self-Check
-
-After generating the report, verify:
-
-- [ ] PlayerLoop 归因有分层表格 + TOP 函数？
-- [ ] 降频判定使用了 throttleVerdict.level？confirmed 有硬件证据？suspected 标了 [推测]？
-- [ ] Clear bottleneck determination (CPU/GPU/scheduling/thermal)?
-- [ ] All cited numbers match preprocess-result.json?
-- [ ] Optimization suggestions are actionable?
-- [ ] Uncertain conclusions marked [推测]?
-- [ ] GPU section: if data unavailable, stated clearly (not fabricated)?
-- [ ] Time segment analysis: pattern detection backed by data evidence?
-
----
-
-## Examples
-
-### Example: Triggering This Skill
-
-```
-User: 分析这个 perfetto trace 文件 recording.pftrace，目标帧率 30
-```
-
-```
-User: 我的 Android 游戏帧率不稳定，这是 pftrace 数据，帮我看看是不是调度问题
-```
-
-```
-User: 请分析 CPU 大小核调度和降频情况
-```
+1. **帧口径**:`choreographer` ≠ playerloop,**禁与 unity 帧时长直比**;说明它是 vsync 节拍。
+2. **瓶颈定型引数值**:Running/Sleeping% 明确给出再下 CPU-bound/等待型结论。
+3. **降频分级诚实**:无 sysfs 旁路只能 suspected,不报 confirmed。
+4. **GPU/FrameTimeline 缺数据**:明说「无法定论」,不臆断 GPU 瓶颈。
+5. **[推断]** 标无直接数据的推理;缺数据标「数据缺失」。
+6. **不编造**:线程名/百分比来自 summary;采样窗口(profileWindow)如非全程要标注。

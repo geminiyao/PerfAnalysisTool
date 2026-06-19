@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import fs from 'fs';
 import path from 'path';
 import { getConfig, updateConfig } from '../utils/config.js';
+import { isCliAvailable, defaultCliProvider } from '../utils/cli-resolver.js';
 import type { ServerConfig } from '../../shared/types.js';
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -17,6 +18,12 @@ export async function settingsRoutes(app: FastifyInstance) {
       retentionDays: config.retentionDays,
       port: config.port,
       cliPaths: config.cliPaths || {},
+      cliAvailability: {
+        codebuddy: isCliAvailable('codebuddy', config.cliPaths?.codebuddy),
+        claude: isCliAvailable('claude', config.cliPaths?.claude),
+        mock: true,
+      },
+      defaultCliProvider: defaultCliProvider(config.cliPaths),
       storageBackend: config.storageBackend || 'local',
       assetStorageDir: config.assetStorageDir || path.join(config.dataDir, 'assets'),
       cdnEnabled: config.cdnEnabled || false,

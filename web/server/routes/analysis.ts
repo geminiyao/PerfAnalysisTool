@@ -1,11 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
-import path from 'path';
-import fs from 'fs';
 import { getDb } from '../db/index.js';
-import { sessions, metrics, reports } from '../db/schema.js';
+import { sessions } from '../db/schema.js';
 import { analysisQueue } from '../services/analysis-queue.js';
-import { getConfig } from '../utils/config.js';
+import {
+  readAnalysisLogs,
+  readPreprocessJson,
+  readReportMarkdown,
+  readReportMetrics,
+} from '../services/report-artifacts.js';
 import type { ProgressEvent, CliProvider } from '../../shared/types.js';
 
 // 存储 SSE 连接
@@ -175,30 +178,20 @@ export async function analysisRoutes(app: FastifyInstance) {
    */
   app.get('/report/:id/content', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const db = getDb();
-
-    const report = await db.select().from(reports).where(eq(reports.sessionId, id)).get();
-    if (!report || !report.content) {
-      return reply.status(404).send('');
-    }
-
+    const content = readReportMarkdown(id);
+    if (!content) return reply.status(404).send('');
     reply.header('Content-Type', 'text/plain; charset=utf-8');
-    return reply.send(report.content);
+    return reply.send(content);
   });
 
   /**
    * GET /api/report/:id/metrics
-   * 获取分析指标
+   * 获取分析指标 (legacy 表 / preprocess-result.json)
    */
   app.get('/report/:id/metrics', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const db = getDb();
-
-    const metric = await db.select().from(metrics).where(eq(metrics.sessionId, id)).get();
-    if (!metric) {
-      return reply.status(404).send({ error: '无指标数据' });
-    }
-
+    const metric = readReportMetrics(id);
+    if (!metric) return reply.status(404).send({ error: '无指标数据' });
     return reply.send(metric);
   });
 
@@ -208,14 +201,8 @@ export async function analysisRoutes(app: FastifyInstance) {
    */
   app.get('/report/:id/logs', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const config = getConfig();
-    const logPath = path.join(config.dataDir, 'results', id, 'analysis.log');
-
-    if (!fs.existsSync(logPath)) {
-      return reply.status(404).send('');
-    }
-
-    const content = fs.readFileSync(logPath, 'utf-8');
+    const content = readAnalysisLogs(id);
+    if (!content) return reply.status(404).send('');
     reply.header('Content-Type', 'text/plain; charset=utf-8');
     return reply.send(content);
   });
@@ -226,16 +213,10 @@ export async function analysisRoutes(app: FastifyInstance) {
    */
   app.get('/report/:id/preprocess', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const config = getConfig();
-    const preprocessPath = path.join(config.dataDir, 'results', id, 'preprocess-result.json');
-
-    if (!fs.existsSync(preprocessPath)) {
-      return reply.status(404).send({ error: '无预处理数据' });
-    }
-
-    const content = fs.readFileSync(preprocessPath, 'utf-8');
+    const data = readPreprocessJson(id);
+    if (!data) return reply.status(404).send({ error: '无预处理数据' });
     reply.header('Content-Type', 'application/json; charset=utf-8');
-    return reply.send(content);
+    return reply.send(data);
   });
 
   /**

@@ -4,37 +4,35 @@ import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined,
   UploadOutlined,
-  HistoryOutlined,
   SwapOutlined,
   LineChartOutlined,
-  RobotOutlined,
   SettingOutlined,
   DatabaseOutlined,
-  FileTextOutlined,
   PartitionOutlined,
-  ExperimentOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
 
+/** v2 §4 信息架构: 7 项导航 — 单次分析进 Runs 详情, 对比独立一项。 */
+const menuItems = [
+  { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
+  { key: '/upload', icon: <UploadOutlined />, label: '采集上传' },
+  { key: '/runs', icon: <PartitionOutlined />, label: 'Runs' },
+  { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
+  { key: '/trends', icon: <LineChartOutlined />, label: '趋势' },
+  { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
+  { key: '/settings', icon: <SettingOutlined />, label: '设置' },
+];
+
+function selectedMenuKey(pathname: string): string {
+  if (pathname.startsWith('/runs')) return '/runs';
+  if (pathname.startsWith('/compare')) return '/compare';
+  return pathname;
+}
+
 const AppSider: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
-    { key: '/upload', icon: <UploadOutlined />, label: '采集上传' },
-    { key: '/runs', icon: <PartitionOutlined />, label: 'Runs' },
-    { key: '/reports', icon: <FileTextOutlined />, label: 'Reports' },
-    { key: '/history', icon: <HistoryOutlined />, label: '历史记录' },
-    { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
-    { key: '/trends', icon: <LineChartOutlined />, label: '趋势图表' },
-    { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
-    { key: '/maple', icon: <ExperimentOutlined />, label: 'Maple 对比' },
-    { key: '/maple-compare', icon: <ExperimentOutlined />, label: 'Maple 三源对比分析' },
-    { key: '/ai', icon: <RobotOutlined />, label: 'AI 工作台' },
-    { key: '/settings', icon: <SettingOutlined />, label: '系统设置' },
-  ];
 
   return (
     <Sider
@@ -75,7 +73,7 @@ const AppSider: React.FC = () => {
       <Menu
         theme="dark"
         mode="inline"
-        selectedKeys={[location.pathname]}
+        selectedKeys={[selectedMenuKey(location.pathname)]}
         items={menuItems}
         onClick={({ key }) => navigate(key)}
         style={{

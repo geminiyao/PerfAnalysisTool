@@ -1,7 +1,8 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { getConfig } from '../utils/config.js';
+import { resolveCliExecutable, cliUnavailableHint, spawnCliProcess } from '../utils/cli-resolver.js';
 import { emitProgress } from '../routes/analysis.js';
 import type { ProgressEvent, CliProvider } from '../../shared/types.js';
 
@@ -16,6 +17,8 @@ export interface AnalysisJob {
     bigJankMultiplier?: number;
     budgetRatio?: number;
   };
+  /** 可选: 将进度/日志转发到 ingest job 等外部消费者 */
+  onLog?: (line: string) => void;
 }
 
 interface CliProviderConfig {
@@ -54,7 +57,11 @@ const CLI_PROVIDERS: Record<CliProvider, CliProviderConfig> = {
 function getCliCommand(provider: CliProvider): string {
   const config = getConfig();
   const pathMap = config.cliPaths || {};
-  return pathMap[provider] || provider;
+  const { command, resolved } = resolveCliExecutable(provider, pathMap[provider]);
+  if (!resolved && provider !== 'mock') {
+    console.warn(`[cli-executor] ${provider} 未解析到绝对路径，将尝试 PATH 命令名: ${command}`);
+  }
+  return command;
 }
 
 /** 共享执行状态 */
@@ -78,10 +85,24 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
 
   const provider = CLI_PROVIDERS[job.cliProvider] || CLI_PROVIDERS.codebuddy;
   const cliCommand = getCliCommand(job.cliProvider);
-  const skillPaths = getUnityProfilerSkillPaths(config.skillProjectPath);
-
-  // 收集全部日志行
   const logLines: string[] = [];
+  const { resolved } = resolveCliExecutable(job.cliProvider, config.cliPaths?.[job.cliProvider]);
+
+  if (!resolved) {
+    const error = cliUnavailableHint(job.cliProvider);
+    logLines.push(`[错误] ${error}`);
+    emitProgress({
+      sessionId: job.sessionId,
+      stage: 'failed',
+      progress: 0,
+      message: error,
+      timestamp: Date.now(),
+      log: `[错误] ${error}`,
+    });
+    return { success: false, error, logs: logLines };
+  }
+
+  const skillPaths = getUnityProfilerSkillPaths(config.skillProjectPath);
 
   const missingRequiredFiles = [
     skillPaths.skillDir,
@@ -117,7 +138,10 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
 
   return new Promise((resolve) => {
     const emit = (stage: ProgressEvent['stage'], progress: number, message: string, log?: string) => {
-      if (log) logLines.push(log);
+      if (log) {
+        logLines.push(log);
+        job.onLog?.(log);
+      }
       // cli-executor 不再发 completed/failed 事件（交由 queue 控制最终状态）
       if (stage === 'completed' || stage === 'failed') return;
       emitProgress({
@@ -139,18 +163,19 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
 
     // 推送调试信息
     const skillPath = path.resolve(config.skillProjectPath, '.claude/skills/unity-profiler-analysis').replace(/\\/g, '/');
-    emit('preprocessing', 5, `正在启动 ${provider.label} CLI...`, `[系统] skill: ${skillPath}`);
+    emit('preprocessing', 5, `正在启动 ${provider.label} CLI...`, `[系统] cli: ${cliCommand.replace(/\\/g, '/')}`);
+    emit('preprocessing', 5, '准备中...', `[系统] skill: ${skillPath}`);
     emit('preprocessing', 5, '准备中...', `[系统] pdata: ${path.resolve(job.pdataPath).replace(/\\/g, '/')}`);
     emit('preprocessing', 5, '准备中...', `[系统] 输出目录: ${path.resolve(job.outputDir).replace(/\\/g, '/')}`);
 
-    const child: ChildProcess = spawn(cliCommand, args, {
+    const child: ChildProcess = spawnCliProcess(cliCommand, args, {
       cwd: config.skillProjectPath,
-      env: { ...process.env },
-      shell: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env,
+      windowsHide: true,
+      stdio: 'pipe',
     });
 
-    child.stdin?.end(prompt);
+    // prompt 已通过 -p 传入，勿再写 stdin（避免部分 CLI 行为异常）
 
     let jsonBuffer = '';
 
@@ -195,8 +220,9 @@ export async function executeCli(job: AnalysisJob): Promise<{ success: boolean; 
           const fileStatus = `preprocess: ${hasPreprocess ? '✅' : '❌'}, report: ${hasReport ? '✅' : '❌'}`;
 
           if (!hasReport || !hasPreprocess) {
-            // CLI 退出码正常但输出文件缺失 → 视为失败
-            const errMsg = `CLI 执行完毕但输出文件缺失 (${fileStatus})`;
+            const errMsg = !hasReport
+              ? `CLI 退出但未生成 performance-report.md (${fileStatus})。若 stderr 含 reg/wmic 不可识别，请重启 Web 服务后再试。`
+              : `CLI 执行完毕但输出文件缺失 (${fileStatus})`;
             logLines.push(`[错误] ${errMsg}`);
             doResolve({ success: false, error: errMsg });
           } else {
@@ -241,6 +267,12 @@ function handleStreamEvent(
   doResolve: (result: { success: boolean; error?: string }) => void,
 ) {
   switch (event.type) {
+    case 'error': {
+      const msg = event.error || event.message || JSON.stringify(event);
+      emit('failed', 0, 'CLI 内部错误', `[错误] ${String(msg).slice(0, 500)}`);
+      break;
+    }
+
     case 'system': {
       if (event.subtype === 'init') {
         emit('preprocessing', 8, 'CLI 已初始化', `[系统] cwd: ${event.cwd}, model: ${event.model}`);
@@ -363,7 +395,10 @@ async function executeMock(
 ): Promise<{ success: boolean; error?: string; logs: string[] }> {
   const logLines: string[] = [];
   const emit = (stage: ProgressEvent['stage'], progress: number, message: string, log?: string) => {
-    if (log) logLines.push(log);
+    if (log) {
+      logLines.push(log);
+      job.onLog?.(log);
+    }
     emitProgress({
       sessionId: job.sessionId,
       stage,
@@ -375,42 +410,63 @@ async function executeMock(
   };
 
   const defaultOutputDir = path.join(config.skillProjectPath, 'output');
+  const destPreprocess = path.join(job.outputDir, 'preprocess-result.json');
+  const destReport = path.join(job.outputDir, 'performance-report.md');
 
   emit('preprocessing', 10, '[Mock] 开始模拟分析...', '[Mock] 使用已有数据，不消耗 token');
-  await sleep(800);
+  await sleep(400);
 
-  emit('preprocessing', 30, '[Mock] 读取预处理数据...', '[Mock] 复制 preprocess-result.json');
-  await sleep(600);
-
-  const srcPreprocess = path.join(defaultOutputDir, 'preprocess-result.json');
-  if (fs.existsSync(srcPreprocess)) {
-    fs.copyFileSync(srcPreprocess, path.join(job.outputDir, 'preprocess-result.json'));
-    emit('preprocessing', 50, '[Mock] 预处理数据已复制', `[Mock] ${srcPreprocess}`);
-  } else {
-    emit('failed', 30, '[Mock] 未找到 output/preprocess-result.json', '[Mock] 请先手动执行一次 skill 生成数据');
-    return { success: false, error: '未找到 output/preprocess-result.json', logs: logLines };
+  // preprocess 应由 run-analysis-service 预先按当前 pdata 生成；此处仅兜底
+  if (!fs.existsSync(destPreprocess)) {
+    emit('failed', 20, '[Mock] 缺少 preprocess-result.json', '[Mock] 请先完成入库或改用 CodeBuddy CLI');
+    return { success: false, error: '缺少与当前 pdata 匹配的 preprocess-result.json', logs: logLines };
   }
 
-  await sleep(500);
-  emit('analyzing', 70, '[Mock] 复制分析报告...', '[Mock] 查找最新的 performance-report*.md');
-
-  const reports = fs.readdirSync(defaultOutputDir)
-    .filter(f => f.startsWith('performance-report') && f.endsWith('.md'))
-    .map(f => ({ name: f, path: path.join(defaultOutputDir, f), mtime: fs.statSync(path.join(defaultOutputDir, f)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime);
-
-  if (reports.length > 0) {
-    fs.copyFileSync(reports[0].path, path.join(job.outputDir, 'performance-report.md'));
-    emit('analyzing', 90, '[Mock] 报告已复制', `[Mock] ${reports[0].name}`);
-  } else {
-    const mockReport = `# Mock 性能分析报告\n\n> Mock 模式占位报告。请使用真实 CLI 模式执行一次完整分析。\n`;
-    fs.writeFileSync(path.join(job.outputDir, 'performance-report.md'), mockReport, 'utf-8');
-    emit('analyzing', 90, '[Mock] 已生成占位报告');
+  let frameCount = 0;
+  try {
+    const pre = JSON.parse(fs.readFileSync(destPreprocess, 'utf-8')) as { frameSummary?: { count?: number } };
+    frameCount = pre.frameSummary?.count ?? 0;
+    emit('preprocessing', 40, '[Mock] 使用当前 preprocess', `[Mock] ${frameCount} 帧, targetFps=${(pre as { config?: { targetFps?: number } }).config?.targetFps ?? '?'}`);
+  } catch {
+    emit('failed', 30, '[Mock] preprocess 解析失败', '[Mock] preprocess-result.json 无效');
+    return { success: false, error: 'preprocess-result.json 无效', logs: logLines };
   }
 
   await sleep(300);
-  emit('completed', 100, '[Mock] 模拟分析完成');
+  emit('analyzing', 70, '[Mock] 匹配帧数一致的报告...', `[Mock] 查找 ${frameCount} 帧的 performance-report*.md`);
 
+  const { findMatchingPerformanceReport } = await import('./unity-preprocess-runner.js');
+  const matched = frameCount > 0
+    ? findMatchingPerformanceReport(frameCount, [
+        defaultOutputDir,
+        path.join(defaultOutputDir, 'p1-unity'),
+        path.join(defaultOutputDir, 'p-web-unity'),
+      ])
+    : null;
+
+  if (matched) {
+    fs.copyFileSync(matched, destReport);
+    emit('analyzing', 90, '[Mock] 报告已复制 (帧数匹配)', `[Mock] ${path.basename(matched)}`);
+  } else {
+    const stub = [
+      '# Mock 性能分析报告',
+      '',
+      `> Mock 模式：未找到与当前 preprocess (**${frameCount}** 帧) 帧数一致的已有报告。`,
+      `> 请切换 **CodeBuddy CLI** 对当前 .pdata 重新生成完整报告。`,
+      '',
+      '## 一、概览',
+      '',
+      '| 指标 | 数值 |',
+      '|------|------|',
+      `| 总帧数 | ${frameCount} |`,
+      '',
+    ].join('\n');
+    fs.writeFileSync(destReport, stub, 'utf-8');
+    emit('analyzing', 90, '[Mock] 已生成占位报告 (无匹配 md)', `[Mock] 需要 ${frameCount} 帧的 performance-report*.md`);
+  }
+
+  await sleep(200);
+  emit('completed', 100, '[Mock] 模拟分析完成');
   return { success: true, logs: logLines };
 }
 

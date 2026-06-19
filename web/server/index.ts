@@ -18,6 +18,8 @@ import { aiChatRoutes } from './routes/ai-chat.js';
 import { simpleperfRoutes } from './routes/simpleperf.js';
 import { mapleRoutes } from './routes/maple.js';
 import { mapleCompareRoutes } from './routes/maple-compare.js';
+import { runsRoutes } from './routes/runs.js';
+import { runIngestRoutes } from './routes/run-ingest.js';
 
 const config = getConfig();
 
@@ -58,6 +60,8 @@ async function start() {
     simpleperfRoutes,
     mapleRoutes,
     mapleCompareRoutes,
+    runsRoutes,
+    runIngestRoutes,
   ];
   for (const routes of apiRouteGroups) {
     await app.register(routes, { prefix: '/api' });

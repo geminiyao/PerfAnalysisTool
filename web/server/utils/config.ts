@@ -1,9 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import type { ServerConfig } from '../../shared/types.js';
+import { detectCliExecutable } from './cli-resolver.js';
 
-const defaultDataDir = path.resolve(import.meta.dirname, '../../data');
 const defaultProjectRoot = findProjectRoot(import.meta.dirname);
+// 统一数据目录: 无论从 tsx(dev/ingest) 还是 dist/server(production) 启动都指向 web/data，
+// 避免编译后 import.meta.dirname 落在 dist/server 下产生另一份空 db.sqlite。
+const defaultDataDir = path.join(defaultProjectRoot, 'web', 'data');
 
 const DEFAULT_CONFIG: ServerConfig = {
   port: 3000,
@@ -53,6 +56,18 @@ export function getConfig(): ServerConfig {
     cfg.cdnProvider = cfg.cdnProvider || 'placeholder';
     cfg.remoteStorageConfigured = cfg.remoteStorageConfigured ?? false;
 
+    cfg.skillProjectPath = resolveSkillProjectPath(cfg.skillProjectPath || defaultProjectRoot, defaultProjectRoot);
+
+    // Windows: Node 服务进程 PATH 常不含 npm 全局 bin，自动探测 codebuddy.cmd
+    if (!cfg.cliPaths.codebuddy) {
+      const codebuddy = detectCliExecutable('codebuddy');
+      if (codebuddy) cfg.cliPaths.codebuddy = codebuddy;
+    }
+    if (!cfg.cliPaths.claude) {
+      const claude = detectCliExecutable('claude');
+      if (claude) cfg.cliPaths.claude = claude;
+    }
+
     // 确保数据目录存在
     ensureDir(cfg.dataDir);
     ensureDir(path.join(cfg.dataDir, 'uploads'));
@@ -93,6 +108,18 @@ function ensureDir(dir: string) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+}
+
+/** config.json 可能含 Linux 路径；无效时回退到自动检测的项目根。 */
+function resolveSkillProjectPath(configured: string, fallback: string): string {
+  const marker = path.join(configured, 'simpleperf', 'build_simpleperf_profile.py');
+  if (fs.existsSync(marker)) return configured;
+  const fbMarker = path.join(fallback, 'simpleperf', 'build_simpleperf_profile.py');
+  if (configured !== fallback && fs.existsSync(fbMarker)) {
+    console.warn(`[config] skillProjectPath 无效 (${configured})，已回退到 ${fallback}`);
+    return fallback;
+  }
+  return configured;
 }
 
 function findProjectRoot(startDir: string): string {

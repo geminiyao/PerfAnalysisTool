@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import CallChainTree from './CallChainTree';
 import SourcePathSetting from './SourcePathSetting';
 import { applyPatch } from '../services/api';
-import { OptimizeContext } from '../pages/ReportDetail';
+import { OptimizeContext } from './UnityProfilerReportView';
 import type { Issue } from './IssueList';
 import type { OptimizeSuggestRequest } from '../../shared/types';
 

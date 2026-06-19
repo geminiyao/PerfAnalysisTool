@@ -331,11 +331,22 @@ function grepForMarker(markerName: string, projectPath: string): { path: string;
   return null
 }
 
+function runGrep(cmd: string, timeout = 10000): string {
+  // grep exits 1 when no matches (not an error). On Windows cmd.exe the shell
+  // idioms `2>/dev/null || true` break, so we capture stdout via try/catch instead.
+  try {
+    return execSync(cmd, { encoding: 'utf-8', timeout, maxBuffer: 20 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] })
+  } catch (e: any) {
+    if (e && typeof e.stdout === 'string') return e.stdout
+    return ''
+  }
+}
+
 function tryGrep(pattern: string, projectPath: string, fileGlob: string): { path: string; line: number; snippet: string } | null {
   try {
-    // Use grep (cross-platform: works on Windows with Git Bash, macOS, Linux)
-    const cmd = `grep -rn --include="${fileGlob}" -m 1 "${pattern}" "${projectPath}" 2>/dev/null || true`
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 10000 }).trim()
+    // Use grep (cross-platform: works on Windows with Git Bash grep, macOS, Linux)
+    const cmd = `grep -rnE --include="${fileGlob}" -m 1 "${pattern}" "${projectPath.replace(/\\/g, '/')}"`
+    const output = runGrep(cmd).trim()
 
     if (!output) return null
 
@@ -365,6 +376,52 @@ function getSnippet(filePath: string, lineNum: number, contextLines: number): st
     return lines.slice(start, end).join('\n')
   } catch {
     return ''
+  }
+}
+
+/**
+ * Resolve markers whose name is NOT a literal sampler string but is auto-derived
+ * from a C# type, e.g. `CS:AOE.Outside.OutSideViewArmyLineMgr` is created at runtime
+ * via `CustomSampler.Create(string.Format("CS:{0}", this.GetType()))` (see
+ * MapManager.cs). For these, the meaningful source location is the class definition.
+ * Returns the line of `class <ClassName>`, preferring a file named <ClassName>.cs.
+ */
+function resolveTypeMarker(markerName: string, projectPath: string): SourceMapping | null {
+  let core = markerName
+  const isCS = core.startsWith('CS:')
+  if (isCS) core = core.slice(3)
+  // Drop a trailing "()" / ".Method()" the profiler sometimes appends (e.g. native dll markers)
+  core = core.replace(/\(\)\s*$/, '')
+  // Take the last dotted segment as the class name (strip namespace).
+  const className = (core.split('.').pop() || core).trim()
+  if (!/^[A-Za-z_]\w*$/.test(className)) return null
+
+  const searchPath = path.join(projectPath, 'Assets', 'Scripts').replace(/\\/g, '/')
+  const pattern = `(class|struct|interface)[[:space:]]+${className}([[:space:]]*[:<{]|[[:space:]]*$)`
+  const out = runGrep(`grep -rnE --include="*.cs" "${pattern}" "${searchPath}"`, 30000)
+  if (!out.trim()) return null
+
+  const matches: { path: string; line: number; content: string }[] = []
+  for (const line of out.split('\n')) {
+    if (!line.trim()) continue
+    const m = line.match(/^(.+?):(\d+):(.*)$/)
+    if (!m) continue
+    matches.push({ path: m[1], line: parseInt(m[2], 10), content: m[3] })
+  }
+  if (matches.length === 0) return null
+
+  // Prefer the declaration in a file literally named <ClassName>.cs (most authoritative),
+  // then a non-partial-looking decl, else the first hit.
+  const exactFile = matches.find(x => path.basename(x.path).toLowerCase() === `${className.toLowerCase()}.cs`)
+  const best = exactFile || matches[0]
+
+  return {
+    source: 'grep',
+    files: [{ path: path.relative(projectPath, best.path), line: best.line }],
+    snippet: getSnippet(best.path, best.line, 5) || best.content.trim(),
+    note: isCS
+      ? `CS: 自动采样器 (CustomSampler.Create(string.Format("CS:{0}", GetType()))) → 映射到类定义`
+      : `映射到类定义 (marker 名非字面量)`,
   }
 }
 
@@ -521,6 +578,25 @@ function main(): void {
   }
 
   console.error(`[map-source] Phase 1 result: ${found} matched from index, ${unmatchedMarkers.length} unmatched`)
+
+  // Phase 1.5: Resolve type-derived markers (e.g. `CS:Namespace.Class` auto-samplers
+  // and `Namespace.Class!Type::Method()` native markers) to their class definition.
+  // These have no literal sampler string so the index can never find them.
+  const typeCandidates = unmatchedMarkers.filter(name =>
+    name.startsWith('CS:') || /[A-Za-z]\.[A-Z][A-Za-z0-9_]*$/.test(name) || name.includes('::')
+  )
+  if (typeCandidates.length > 0) {
+    console.error(`[map-source] Phase 1.5: Resolving ${typeCandidates.length} type-derived (CS:/class) markers...`)
+    for (const name of typeCandidates) {
+      const result = resolveTypeMarker(name, project)
+      if (result) {
+        existingMap[name] = result
+        found++
+        const idx = unmatchedMarkers.indexOf(name)
+        if (idx >= 0) unmatchedMarkers.splice(idx, 1)
+      }
+    }
+  }
 
   // Phase 3: For unmatched markers, try ClassName.MethodName fallback (only for markers with dots)
   // Limit fallback grep to avoid timeout — only try markers that look like "Class.Method"

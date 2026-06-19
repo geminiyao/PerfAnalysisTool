@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lastUpdated": "2026-05-18T03:09:22.417Z",
-    "projectPath": "/data/workspace/AOEYZ_trunk"
+    "lastUpdated": "2026-06-19T08:08:47.536Z",
+    "projectPath": "k:\\AOEYZ_trunk\\AOE3D"
   },
   "Core.Update": {
     "source": "grep",
@@ -282,5 +282,71 @@
       }
     ],
     "snippet": "    ProfilerUtil.SamplerEnd(sampler_SetRootScale)\r\n    self:RefreshConscriptHead(true)\r\n    --#endif\r\nend\r\n\r\nfunction cls:OnStateChange(curState, lastState)\r\n    local state = mgr.infiniteZoomMgr:GetCurState()\r\n    if (state == InfiniteZoomState.Outside or state == InfiniteZoomState.OutsideIcon) then\r\n        -- if not self.mapViewCtrl then\r\n        --     self.mapViewCtrl = mgr.mapCore.MapViewCtrl\r\n        --     if self.mapViewCtrl then\r"
+  },
+  "CS:AOE.Outside.OutSideViewArmyLineMgr": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Outside\\View\\OutSideViewArmyLineMgr.cs",
+        "line": 25
+      }
+    ],
+    "snippet": "\r\nusing UnityEngine;\r\n\r\nnamespace AOE.Outside\r\n{\r\n    public class OutSideViewArmyLineMgr : MapSubManagerBase\r\n    {\r\n        private struct PreviewData\r\n        {\r\n            public float  speed;\r\n            public float3 endPos;\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
+  },
+  "CS:AOE.MeshUIManager": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\MeshUI\\MeshUIManager.cs",
+        "line": 9
+      }
+    ],
+    "snippet": "\r\nusing UnityEngine;\r\n\r\nnamespace AOE\r\n{\r\n    public class MeshUIManager : ManagerBase\r\n    {\r\n        // 基础设施：资源\r\n        public static MeshUIResource        resource     = new MeshUIResource();\r\n        // 基础设施：渲染器\r\n        public static MUIRenderManager      renderers    = new MUIRenderManager();\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
+  },
+  "CS:AOE.Outside.MapManager": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Outside\\MapManager.cs",
+        "line": 128
+      }
+    ],
+    "snippet": "            }\r\n#endif\r\n        }\r\n    }\r\n\r\n    public class MapManager : ManagerBase\r\n    {\r\n        #region 核心管理器\r\n        private List<MapSubManagerBase>      m_coreMgrList = new List<MapSubManagerBase>();\r\n        public static DotsOutFarmerMgr       DotsOutFarmerMgr { get; private set; }\r\n        public static DotsOutLegendaryMonsterMgr DotsOutLegendaryMonsterMgr { get; private set; }\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
+  },
+  "CS:AOE.LuaMgr": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Managers\\LuaMgr.cs",
+        "line": 16
+      }
+    ],
+    "snippet": "using XLua.LuaDLL;\r\n\r\nnamespace AOE\r\n{\r\n    [LuaCallCSharp]\r\n    public class LuaMgr : BaseLuaMgr\r\n    {\r\n        public static LuaMgr instance { get; private set; }\r\n\r\n        public LuaMgr()\r\n        {\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
+  },
+  "CS:AOE.Outside.WorldEnvironmentMeshItemMgr": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Outside\\View\\WorldEnvironmentMeshItemMgr.cs",
+        "line": 9
+      }
+    ],
+    "snippet": "\r\nusing UnityEngine;\r\n\r\nnamespace AOE.Outside\r\n{\r\n    public class WorldEnvironmentMeshItemMgr : MapSubManagerBase\r\n    {\r\n        #region 生命周期\r\n        public override void Init()\r\n        {\r\n        }\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
+  },
+  "CS:AOE.Outside.OutsideRoadsMgr": {
+    "source": "grep",
+    "files": [
+      {
+        "path": "Assets\\Scripts\\CS\\Outside\\View\\OutsideRoadsMgr.cs",
+        "line": 9
+      }
+    ],
+    "snippet": "\r\nusing UnityEngine;\r\n\r\nnamespace AOE.Outside\r\n{\r\n    public class OutsideRoadsMgr : MapSubManagerBase\r\n    {\r\n        #region query item\r\n        public struct RoadMapArea : IMapArea\r\n        {\r\n            public enum TermType\r",
+    "note": "CS: 自动采样器 (CustomSampler.Create(string.Format(\"CS:{0}\", GetType()))) → 映射到类定义"
   }
 }

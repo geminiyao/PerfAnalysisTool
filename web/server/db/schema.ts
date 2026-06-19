@@ -289,3 +289,98 @@ export const mapleCompareSessions = sqliteTable('maple_compare_sessions', {
   statusIdx: index('idx_maple_compare_sessions_status').on(table.status),
   createdAtIdx: index('idx_maple_compare_sessions_created_at').on(table.createdAt),
 }));
+
+// ============================================================
+// 通用性能分析平台 · P0 新领域模型 (Run / Analysis / 指标袋 / 报告)
+//
+// 依据: docs/analysis-framework-design.md §5, performance-platform-requirements-v2.md §2/§11。
+// 与旧 sessions / simpleperf_sessions / maple_* 筒仓表 **并存**; 旧表通过只读适配器过渡
+// (services/run-adapter.ts), 本阶段不删旧表、不双写。
+//
+// 命名说明 (待确认): 需求 P0 列的表名为 metrics / reports, 但同名物理表已被旧模型占用
+// (metrics/reports 均挂在 sessions 上)。SQLite 不允许同名表共存, 故新模型采用
+// run_metrics (指标袋) / analysis_reports (分析报告) 物理表名, 语义对应需求中的 metrics/reports。
+// 旧表退役 (P6) 后可考虑收敛命名。
+// ============================================================
+
+/** runs — 新模型的 Run。打包 core(归一化结构) + raw/detail 指针; 指标袋单列 run_metrics。 */
+export const runs = sqliteTable('runs', {
+  id: text('id').primaryKey(),
+  label: text('label'),
+  status: text('status').notNull().default('pending'), // pending | parsing | ready | failed
+  sources: text('sources'),                             // JSON: SourceId[]
+  // 元信息
+  device: text('device').notNull().default(''),
+  scene: text('scene').notNull().default(''),
+  projectName: text('project_name').notNull().default(''),
+  version: text('version').notNull().default(''),
+  branch: text('branch'),
+  createdBy: text('created_by').notNull().default(''),
+  notes: text('notes'),
+  durationSec: integer('duration_sec'),
+  frameCount: integer('frame_count'),
+  monoNsStart: text('mono_ns_start'),
+  monoNsEnd: text('mono_ns_end'),
+  // core: 指标袋以外的归一化结构, 以 JSON 物化
+  schemaVersion: integer('schema_version').notNull().default(1),
+  coreFrameJson: text('core_frame_json'),               // FrameStat[]
+  coreThreadsJson: text('core_threads_json'),           // ThreadStat[]
+  coreSystemJson: text('core_system_json'),             // SystemStat
+  coreConfidenceJson: text('core_confidence_json'),     // ProfileConfidence
+  // raw + detail: 指针 / schemaless
+  rawJson: text('raw_json'),                            // RawAssetRef[]
+  detailJson: text('detail_json'),                      // SourceDetail (产物指针)
+  error: text('error'),
+  createdAt: integer('created_at').notNull(),
+  completedAt: integer('completed_at'),
+}, table => ({
+  statusIdx: index('idx_runs_status').on(table.status),
+  projectIdx: index('idx_runs_project').on(table.projectName),
+  createdAtIdx: index('idx_runs_created_at').on(table.createdAt),
+}));
+
+/**
+ * run_metrics — core 的指标袋 (语义即需求 §2 的 "metrics")。
+ * 加指标 = 多一行, 不改表结构; 趋势/列表查询硬依赖此表 (按 key 取曲线)。
+ */
+export const runMetrics = sqliteTable('run_metrics', {
+  id: text('id').primaryKey(),
+  runId: text('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
+  key: text('key').notNull(),                           // 如 cpu.lib.libil2cpp.pct / frame.p95Ms
+  value: real('value').notNull().default(0),
+  unit: text('unit').notNull().default(''),
+  source: text('source').notNull(),                     // SourceId
+  confidence: text('confidence'),                       // high | medium | low
+}, table => ({
+  runIdx: index('idx_run_metrics_run_id').on(table.runId),
+  keyIdx: index('idx_run_metrics_key').on(table.key),
+}));
+
+/** analyses — 分析任务。single(1 个 run) / compare(2 个 run)。 */
+export const analyses = sqliteTable('analyses', {
+  id: text('id').primaryKey(),
+  mode: text('mode').notNull(),                         // single | compare
+  runIds: text('run_ids').notNull(),                    // JSON: string[] (compare 为 [base, current])
+  status: text('status').notNull().default('pending'),  // pending | queued | running | completed | failed
+  skill: text('skill'),
+  reportId: text('report_id'),
+  error: text('error'),
+  createdAt: integer('created_at').notNull(),
+  completedAt: integer('completed_at'),
+}, table => ({
+  modeIdx: index('idx_analyses_mode').on(table.mode),
+  statusIdx: index('idx_analyses_status').on(table.status),
+  createdAtIdx: index('idx_analyses_created_at').on(table.createdAt),
+}));
+
+/** analysis_reports — 分析产出 (语义即需求 §2 的 "reports"), 挂在 analyses 上。 */
+export const analysisReports = sqliteTable('analysis_reports', {
+  id: text('id').primaryKey(),
+  analysisId: text('analysis_id').notNull().references(() => analyses.id, { onDelete: 'cascade' }),
+  headline: text('headline'),                           // 结论先行: 一句普通话总结
+  markdown: text('markdown'),
+  insightsJson: text('insights_json'),                  // Insight[]
+  createdAt: integer('created_at').notNull(),
+}, table => ({
+  analysisIdx: index('idx_analysis_reports_analysis_id').on(table.analysisId),
+}));

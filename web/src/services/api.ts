@@ -1,4 +1,7 @@
-import type { Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, DiffResult, TrendPoint, CliProvider } from '../../shared/types';
+import type {
+  Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, DiffResult, TrendPoint, CliProvider,
+  IngestJobEvent, IngestRunResponse, IngestJobStartResponse,
+} from '../../shared/types';
 
 const BASE_URL = '/cpu/api';
 
@@ -132,6 +135,186 @@ export async function getTrendMetrics() {
 /** 删除分析记录 */
 export async function deleteAnalysis(sessionId: string) {
   return request<{ success: boolean }>(`/analysis/${sessionId}`, { method: 'DELETE' });
+}
+
+// ============================================================
+// P2: 新模型 Run API (runs / run_metrics / analysis_reports)
+// ============================================================
+
+import type { Run, Analysis, Report } from '@shared/perf-model';
+
+export interface RunListItem {
+  id: string;
+  label?: string;
+  sources: string[];
+  status: string;
+  device: string;
+  scene: string;
+  projectName: string;
+  version: string;
+  frameCount?: number;
+  metricCount: number;
+  createdAt: number;
+}
+
+export async function listRuns(limit = 50, offset = 0) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return request<{ items: RunListItem[]; total: number }>(`/runs?${params}`);
+}
+
+export async function getRunDetail(runId: string) {
+  return request<{
+    run: Run;
+    analysis: { analysis: Analysis; report: Report } | null;
+  }>(`/runs/${runId}`);
+}
+
+export async function compareRuns(baseRunId: string, currentRunId: string) {
+  return request<import('@shared/run-compare-types').RunCompareResult>('/runs/compare', {
+    method: 'POST',
+    body: JSON.stringify({ baseRunId, currentRunId }),
+  });
+}
+
+export function compareFlamegraphUrl(baseRunId: string, currentRunId: string): string {
+  const params = new URLSearchParams({ baseRunId, currentRunId });
+  return `${BASE_URL}/runs/compare/flamegraph?${params}`;
+}
+
+export async function generateRunAnalysis(
+  runId: string,
+  opts?: { cliProvider?: CliProvider; targetFps?: number },
+) {
+  return request<{
+    analysis: Analysis;
+    report: Report;
+    skill?: string;
+    markdownPath?: string;
+    digestPath?: string;
+  }>(`/runs/${runId}/generate-analysis`, {
+    method: 'POST',
+    body: JSON.stringify(opts ?? {}),
+  });
+}
+
+/** @deprecated 使用 generateRunAnalysis */
+export const generateCrossSourceAnalysis = generateRunAnalysis;
+
+export function ingestUnifiedRun(
+  files: File[],
+  meta: Record<string, string> & { cliProvider?: string },
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/unified', fd), onEvent);
+}
+
+async function postIngestMultipart(url: string, formData: FormData): Promise<IngestJobStartResponse> {
+  const res = await fetch(`${BASE_URL}${url}`, { method: 'POST', body: formData });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '入库失败');
+  }
+  return res.json();
+}
+
+async function postIngestJson(url: string, body: unknown): Promise<IngestJobStartResponse> {
+  const res = await fetch(`${BASE_URL}${url}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '入库失败');
+  }
+  return res.json();
+}
+
+export function waitIngestJob(
+  jobId: string,
+  onEvent?: (event: IngestJobEvent) => void,
+): Promise<IngestRunResponse> {
+  return new Promise((resolve, reject) => {
+    const es = new EventSource(`${BASE_URL}/runs/ingest/jobs/${jobId}/events`);
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data) as IngestJobEvent;
+        if (data.type === 'connected') return;
+        onEvent?.(data);
+        if (data.type === 'done' && data.runId) {
+          es.close();
+          resolve({
+            runId: data.runId,
+            sources: data.sources ?? [],
+            label: data.label,
+            url: `/runs/${data.runId}`,
+          });
+        }
+        if (data.type === 'error') {
+          es.close();
+          reject(new Error(data.error || data.message || '入库失败'));
+        }
+      } catch {
+        /* ignore malformed */
+      }
+    };
+    es.onerror = () => {
+      es.close();
+      reject(new Error('进度连接中断，请查看 Runs 列表或重试'));
+    };
+  });
+}
+
+async function ingestWithProgress(
+  start: () => Promise<IngestJobStartResponse>,
+  onEvent?: (event: IngestJobEvent) => void,
+): Promise<IngestRunResponse> {
+  const { jobId } = await start();
+  return waitIngestJob(jobId, onEvent);
+}
+
+export function ingestUnityRun(
+  file: File,
+  meta: Record<string, string>,
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('file', file);
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/unity', fd), onEvent);
+}
+
+export function ingestSimpleperfRun(
+  file: File,
+  meta: Record<string, string>,
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('perfData', file);
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/simpleperf', fd), onEvent);
+}
+
+export function ingestPerfettoRun(
+  file: File,
+  meta: Record<string, string>,
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('file', file);
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/perfetto', fd), onEvent);
+}
+
+export function mergeRuns(
+  runIds: string[],
+  meta: Record<string, string> = {},
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  return ingestWithProgress(() => postIngestJson('/runs/ingest/merge', { runIds, ...meta }), onEvent);
 }
 
 // ============================================================

@@ -1,248 +1,118 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, List, Tag, Button, Space, Empty } from 'antd';
 import {
-  PlayCircleOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
   UploadOutlined,
-  DatabaseOutlined,
-  FireOutlined,
-  FileSearchOutlined,
+  PartitionOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { getHistory, getHistoryStats, getQueueStatus } from '../services/api';
-import type { Session } from '../../shared/types';
+import { listRuns, type RunListItem } from '../services/api';
 import dayjs from 'dayjs';
+
+const SOURCE_COLORS: Record<string, string> = {
+  unity_profiler: 'green',
+  simpleperf: 'blue',
+  perfetto: 'purple',
+};
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [recentSessions, setRecentSessions] = useState<Session[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [queue, setQueue] = useState<any>(null);
-  const [simpleperfSessions, setSimpleperfSessions] = useState<any[]>([]);
-  const [mapleCompareSessions, setMapleCompareSessions] = useState<any[]>([]);
+  const [runs, setRuns] = useState<RunListItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    listRuns(8)
+      .then(res => {
+        setRuns(res.items);
+        setTotal(res.total);
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [historyRes, statsRes, queueRes, simpleperfRes, mapleCompareRes] = await Promise.all([
-        getHistory({ limit: 5 }),
-        getHistoryStats(),
-        getQueueStatus(),
-        fetch('/cpu/api/simpleperf/sessions?limit=5').then(res => res.json()).catch(() => ({ items: [] })),
-        fetch('/cpu/api/maple-compare/sessions?limit=5').then(res => res.json()).catch(() => ({ items: [] })),
-      ]);
-      setRecentSessions(historyRes.items);
-      setStats(statsRes);
-      setQueue(queueRes);
-      setSimpleperfSessions(simpleperfRes.items || []);
-      setMapleCompareSessions(mapleCompareRes.items || []);
-    } catch (err) {
-      console.error('加载数据失败:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const statusTagMap: Record<string, { color: string; icon: React.ReactNode }> = {
-    completed: { color: 'success', icon: <CheckCircleOutlined /> },
-    running: { color: 'processing', icon: <PlayCircleOutlined /> },
-    queued: { color: 'warning', icon: <ClockCircleOutlined /> },
-    pending: { color: 'default', icon: <ClockCircleOutlined /> },
-    failed: { color: 'error', icon: <CloseCircleOutlined /> },
-  };
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{
-          margin: 0,
-          color: 'var(--text-primary)',
-          fontSize: 16,
-          fontWeight: 600,
-        }}>
-          Performance Dashboard
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 16, fontWeight: 600 }}>
+          性能分析
         </h1>
-        <Button type="primary" icon={<UploadOutlined />} onClick={() => navigate('/upload')}>
-          上传分析
-        </Button>
+        <Space wrap>
+          <Button type="primary" icon={<UploadOutlined />} onClick={() => navigate('/upload')}>采集上传</Button>
+          <Button icon={<PartitionOutlined />} onClick={() => navigate('/runs')}>Runs 列表</Button>
+          <Button icon={<SwapOutlined />} onClick={() => navigate('/compare')}>对比分析</Button>
+        </Space>
       </div>
 
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={8}>
-          <Card size="small" title="数据源状态">
-            <Space wrap>
-              <Tag color="blue" icon={<FileSearchOutlined />}>Profiler 已接入</Tag>
-              <Tag color="purple" icon={<FireOutlined />}>simpleperf P3</Tag>
-              <Tag icon={<DatabaseOutlined />}>Perfetto 预留</Tag>
-            </Space>
+        <Col xs={12} sm={8}>
+          <Card size="small">
+            <Statistic title="Run 总数" value={total} loading={loading} />
           </Card>
         </Col>
-        <Col xs={24} md={16}>
-          <Card size="small" title="快速入口">
-            <Space wrap>
-              <Button icon={<UploadOutlined />} onClick={() => navigate('/upload')}>上传 .pdata</Button>
-              <Button icon={<FireOutlined />} onClick={() => navigate('/upload')}>上传 perf.data</Button>
-              <Button onClick={() => navigate('/runs')}>创建/查看 Run</Button>
-              <Button onClick={() => navigate('/ai')}>AI 综合分析</Button>
-            </Space>
+        <Col xs={12} sm={8}>
+          <Card size="small">
+            <Statistic title="多源 Run" value={runs.filter(r => r.sources.length > 1).length} loading={loading} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card size="small" title="工作流" style={{ fontSize: 12 }}>
+            <TextBlock />
           </Card>
         </Col>
       </Row>
 
-      {/* 统计卡片 */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="总分析次数" value={stats?.total || 0} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="成功" value={stats?.completed || 0} valueStyle={{ color: 'var(--color-success)' }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="失败" value={stats?.failed || 0} valueStyle={{ color: 'var(--color-error)' }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic
-              title="平均耗时"
-              value={stats?.avgDuration ? Math.round(stats.avgDuration / 1000) : 0}
-              suffix="秒"
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 队列状态 */}
-      {queue && (queue.running || queue.queued.length > 0) && (
-        <Card title="分析队列" style={{ marginBottom: 16 }} size="small">
-          {queue.running && (
-            <Tag color="processing" icon={<PlayCircleOutlined />}>
-              正在分析: {queue.running.slice(0, 8)}...
-            </Tag>
-          )}
-          {queue.queued.length > 0 && (
-            <Tag color="warning">等待中: {queue.queued.length} 个</Tag>
-          )}
-        </Card>
-      )}
-
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={12}>
-          <Card size="small" title="最近 simpleperf">
-            {simpleperfSessions.length === 0 ? <Empty description="暂无 simpleperf 记录" /> : (
-              <List
-                size="small"
-                dataSource={simpleperfSessions}
-                renderItem={(item) => (
-                  <List.Item actions={[item.status === 'completed' ? <a key="view" onClick={() => navigate(`/simpleperf/report/${item.id}`)}>查看</a> : null].filter(Boolean)}>
-                    <List.Item.Meta
-                      title={<Space><span>{item.fileName}</span><Tag color={statusTagMap[item.status]?.color || 'default'}>{item.status}</Tag></Space>}
-                      description={<span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{item.projectName || '未填项目'} · {dayjs(item.createdAt).format('MM-DD HH:mm')}</span>}
-                    />
-                  </List.Item>
-                )}
-              />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} md={12}>
-          <Card
-            size="small"
-            title="最近 Maple 三源对比"
-            extra={<a onClick={() => navigate('/maple-compare')} style={{ fontSize: 12, color: 'var(--text-link)' }}>查看全部</a>}
-          >
-            {mapleCompareSessions.length === 0 ? <Empty description="暂无 Maple 三源对比记录" /> : (
-              <List
-                size="small"
-                dataSource={mapleCompareSessions}
-                renderItem={(item: any) => (
-                  <List.Item actions={[<a key="view" onClick={() => navigate(`/maple-compare/${item.id}`)}>查看</a>]}>
-                    <List.Item.Meta
-                      title={<Space><span>{item.label || item.id.slice(0, 8)}</span><Tag color={statusTagMap[item.status]?.color || 'default'}>{item.status}</Tag></Space>}
-                      description={<span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{[item.device, item.scene].filter(Boolean).join(' · ') || '未填信息'} · {dayjs(item.createdAt).format('MM-DD HH:mm')}</span>}
-                    />
-                  </List.Item>
-                )}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 最近分析 */}
       <Card
-        title={<span style={{ fontSize: 13, fontWeight: 500 }}>最近分析</span>}
-        extra={
-          <a
-            onClick={() => navigate('/history')}
-            style={{ fontSize: 12, color: 'var(--text-link)' }}
-          >
-            查看全部
-          </a>
-        }
+        size="small"
+        title="最近 Runs"
+        extra={<a onClick={() => navigate('/runs')} style={{ fontSize: 12 }}>查看全部</a>}
       >
-        {recentSessions.length === 0 && !loading ? (
-          <Empty description="暂无分析记录" />
+        {runs.length === 0 && !loading ? (
+          <Empty description="暂无 Run — 上传采集或运行 ingest" />
         ) : (
           <List
             loading={loading}
-            dataSource={recentSessions}
-            renderItem={(session) => {
-              const tag = statusTagMap[session.status] || statusTagMap.pending;
-              return (
-                <List.Item
-                  style={{ borderBottom: '1px solid var(--border-primary)', padding: '10px 0' }}
-                  actions={[
-                    session.status === 'completed' && (
-                      <a
-                        key="view"
-                        onClick={() => navigate(`/report/${session.id}`)}
-                        style={{ fontSize: 12, color: 'var(--text-link)' }}
-                      >
-                        查看报告
-                      </a>
-                    ),
-                  ].filter(Boolean)}
-                >
-                  <List.Item.Meta
-                    title={
-                      <Space size={8}>
-                        <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{session.fileName}</span>
-                        <Tag color={tag.color} icon={tag.icon} style={{ fontSize: 11, lineHeight: '18px' }}>
-                          {session.status}
-                        </Tag>
-                      </Space>
-                    }
-                    description={
-                      <Space split={<span style={{ color: 'var(--text-tertiary)' }}>·</span>} size={6}>
-                        {session.projectName && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{session.projectName}</span>}
-                        {session.version && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{session.version}</span>}
-                        <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{dayjs(session.createdAt).format('MM-DD HH:mm')}</span>
-                        {session.createdBy && <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{session.createdBy}</span>}
-                      </Space>
-                    }
-                  />
-                </List.Item>
-              );
-            }}
+            dataSource={runs}
+            renderItem={(row) => (
+              <List.Item
+                actions={[
+                  <a key="detail" onClick={() => navigate(`/runs/${row.id}`)}>单次分析</a>,
+                  <a key="compare" onClick={() => navigate(`/compare?base=${row.id}&current=`)}>选为基准</a>,
+                ]}
+              >
+                <List.Item.Meta
+                  title={
+                    <Space size={6} wrap>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{row.id}</span>
+                      {row.label && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{row.label}</span>}
+                      {row.sources.map(s => (
+                        <Tag key={s} color={SOURCE_COLORS[s] ?? 'default'} style={{ fontSize: 10 }}>{s}</Tag>
+                      ))}
+                    </Space>
+                  }
+                  description={
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      {[row.projectName, row.scene, row.device].filter(Boolean).join(' · ') || '—'}
+                      {' · '}{dayjs(row.createdAt).format('MM-DD HH:mm')}
+                    </span>
+                  }
+                />
+              </List.Item>
+            )}
           />
         )}
       </Card>
     </div>
   );
 };
+
+function TextBlock() {
+  return (
+    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+      <div>① 上传 / ingest → <b>Runs</b></div>
+      <div>② 点 Run → <b>单次分析 + 报告</b></div>
+      <div>③ 选两 Run → <b>对比分析 + 差分火焰图</b></div>
+    </div>
+  );
+}
 
 export default Dashboard;

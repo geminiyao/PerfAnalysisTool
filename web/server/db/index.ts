@@ -284,6 +284,80 @@ function initTables(sqlite: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_maple_compare_base ON maple_compare_reports(base_run_id);
     CREATE INDEX IF NOT EXISTS idx_maple_compare_opt ON maple_compare_reports(opt_run_id);
   `);
+
+  // ============================================================
+  // 通用性能分析平台 · P0 新领域模型 (Run / Analysis / 指标袋 / 报告)
+  // 与旧 sessions/simpleperf_sessions/maple_* 并存; 旧表只读适配, 不删不双写。
+  // ============================================================
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS runs (
+      id TEXT PRIMARY KEY,
+      label TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      sources TEXT,
+      device TEXT NOT NULL DEFAULT '',
+      scene TEXT NOT NULL DEFAULT '',
+      project_name TEXT NOT NULL DEFAULT '',
+      version TEXT NOT NULL DEFAULT '',
+      branch TEXT,
+      created_by TEXT NOT NULL DEFAULT '',
+      notes TEXT,
+      duration_sec INTEGER,
+      frame_count INTEGER,
+      mono_ns_start TEXT,
+      mono_ns_end TEXT,
+      schema_version INTEGER NOT NULL DEFAULT 1,
+      core_frame_json TEXT,
+      core_threads_json TEXT,
+      core_system_json TEXT,
+      core_confidence_json TEXT,
+      raw_json TEXT,
+      detail_json TEXT,
+      error TEXT,
+      created_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+    CREATE INDEX IF NOT EXISTS idx_runs_project ON runs(project_name);
+    CREATE INDEX IF NOT EXISTS idx_runs_created_at ON runs(created_at);
+
+    CREATE TABLE IF NOT EXISTS run_metrics (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+      key TEXT NOT NULL,
+      value REAL NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL,
+      confidence TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_run_metrics_run_id ON run_metrics(run_id);
+    CREATE INDEX IF NOT EXISTS idx_run_metrics_key ON run_metrics(key);
+
+    CREATE TABLE IF NOT EXISTS analyses (
+      id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL,
+      run_ids TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      skill TEXT,
+      report_id TEXT,
+      error TEXT,
+      created_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_analyses_mode ON analyses(mode);
+    CREATE INDEX IF NOT EXISTS idx_analyses_status ON analyses(status);
+    CREATE INDEX IF NOT EXISTS idx_analyses_created_at ON analyses(created_at);
+
+    CREATE TABLE IF NOT EXISTS analysis_reports (
+      id TEXT PRIMARY KEY,
+      analysis_id TEXT NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+      headline TEXT,
+      markdown TEXT,
+      insights_json TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_analysis_reports_analysis_id ON analysis_reports(analysis_id);
+  `);
 }
 
 function ensureColumn(sqlite: Database.Database, table: string, column: string, type: string) {

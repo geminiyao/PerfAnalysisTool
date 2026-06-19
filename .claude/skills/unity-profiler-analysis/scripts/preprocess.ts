@@ -26,7 +26,7 @@ import { detectAllSpikes, SpikeCategory } from './lib/profiler/spike-detector'
 
 // ============ Types ============
 
-interface Config {
+export interface Config {
   targetFps: number
   projectPath: string
   outputDir?: string
@@ -38,17 +38,18 @@ interface Config {
   filter: { minSelfTimeMs: number }
 }
 
-interface PreprocessResult {
+export interface PreprocessResult {
   config: { targetFps: number; frameBudgetMs: number }
   frameSummary: FrameSummaryOutput
   markers: MarkerOutput[]
   markerSpikes: MarkerSpikeOutput[]
   jankFrames: JankFrameOutput[]
   frameTrees: FrameTreeOutput[]
+  frameTimings: number[]
   threads: ThreadOutput[]
 }
 
-interface FrameSummaryOutput {
+export interface FrameSummaryOutput {
   count: number
   actualFps: number
   mean: number
@@ -63,7 +64,7 @@ interface FrameSummaryOutput {
   bigJankCount: number
 }
 
-interface MarkerOutput {
+export interface MarkerOutput {
   name: string
   msSelfMean: number
   msSelfMedian: number
@@ -81,7 +82,7 @@ interface MarkerOutput {
   mustReportReason: string
 }
 
-interface MarkerSpikeOutput {
+export interface MarkerSpikeOutput {
   name: string
   msSelfMean: number
   msSelfMedian: number
@@ -93,7 +94,7 @@ interface MarkerSpikeOutput {
   spikeFrameIndices: number[]
 }
 
-interface JankFrameOutput {
+export interface JankFrameOutput {
   frameIndex: number
   msFrame: number
   prevThreeAvg: number
@@ -107,7 +108,7 @@ interface JankFrameOutput {
   mustReportReason: string
 }
 
-interface FrameTreeOutput {
+export interface FrameTreeOutput {
   frameIndex: number
   label: string
   msFrame: number
@@ -115,7 +116,7 @@ interface FrameTreeOutput {
   hotPathText: string
 }
 
-interface ThreadOutput {
+export interface ThreadOutput {
   name: string
   msMedian: number
   msMax: number
@@ -149,7 +150,7 @@ function parseArgs(): { input: string; targetFps?: number; outputDir: string } {
 
 // ============ Load Config ============
 
-function loadConfig(scriptDir: string): Config {
+export function loadConfig(scriptDir: string): Config {
   const configPath = path.join(scriptDir, '..', 'config.json')
   try {
     const raw = fs.readFileSync(configPath, 'utf-8')
@@ -171,7 +172,7 @@ function loadConfig(scriptDir: string): Config {
 
 // ============ Load Profile Data ============
 
-function loadProfileData(inputPath: string, outputDir: string): ProfileData {
+export function loadProfileData(inputPath: string, outputDir: string): ProfileData {
   const ext = path.extname(inputPath).toLowerCase()
 
   if (ext === '.pdata') {
@@ -544,26 +545,19 @@ function shouldMustReport(
   return { mustReport: false, reason: '' }
 }
 
-// ============ Main ============
+// ============ Reusable analysis core (shared by CLI main() and UnityProfilerProvider) ============
 
-function main(): void {
-  const { input, targetFps: cliTargetFps, outputDir: cliOutputDir } = parseArgs()
-  const scriptDir = __dirname
-  const config = loadConfig(scriptDir)
-
-  // CLI target-fps overrides config
-  const targetFps = cliTargetFps ?? config.targetFps
+/**
+ * Run the full deterministic preprocessing analysis on parsed ProfileData.
+ * Pure: no file IO. The CLI main() and the platform Provider both call this so the
+ * analysis logic (markers / jank / spikes / call chains / frame trees) stays single-sourced.
+ */
+export function buildPreprocessResult(
+  profileData: ProfileData,
+  config: Config,
+  targetFps: number
+): PreprocessResult {
   const frameBudgetMs = 1000 / targetFps
-
-  // Determine output directory: CLI > config > default
-  // Relative paths are resolved relative to cwd (where the command is run)
-  const rawOutputDir = cliOutputDir || config.outputDir || './output'
-  const outputDir = path.resolve(rawOutputDir)
-  fs.mkdirSync(outputDir, { recursive: true })
-
-  // Load and parse data
-  const profileData = loadProfileData(path.resolve(input), outputDir)
-  console.error(`[preprocess] Loaded ${profileData.frames.length} frames, ${profileData.markerNames.length} markers`)
 
   // Run statistical analysis (total time, for call chains and frame summary)
   const analysis = analyzeProfileData(profileData)
@@ -697,6 +691,31 @@ function main(): void {
     threads: threadsOutput
   }
 
+  return result
+}
+
+// ============ Main ============
+
+function main(): void {
+  const { input, targetFps: cliTargetFps, outputDir: cliOutputDir } = parseArgs()
+  const scriptDir = __dirname
+  const config = loadConfig(scriptDir)
+
+  // CLI target-fps overrides config
+  const targetFps = cliTargetFps ?? config.targetFps
+
+  // Determine output directory: CLI > config > default
+  // Relative paths are resolved relative to cwd (where the command is run)
+  const rawOutputDir = cliOutputDir || config.outputDir || './output'
+  const outputDir = path.resolve(rawOutputDir)
+  fs.mkdirSync(outputDir, { recursive: true })
+
+  // Load and parse data
+  const profileData = loadProfileData(path.resolve(input), outputDir)
+  console.error(`[preprocess] Loaded ${profileData.frames.length} frames, ${profileData.markerNames.length} markers`)
+
+  const result = buildPreprocessResult(profileData, config, targetFps)
+
   // Write full output file (for web frontend, query-frame, etc.)
   const outputPath = path.join(outputDir, 'preprocess-result.json')
   const jsonOutput = JSON.stringify(result, null, 2)
@@ -705,6 +724,8 @@ function main(): void {
 
   // Write summary file (for AI consumption — small, ~15-20KB)
   // AI MUST read this file instead of preprocess-result.json to avoid 100K+ token waste
+  const markersOutput = result.markers
+  const markerSpikes = result.markerSpikes
   const mustReportMarkers = markersOutput.filter(m => m.mustReport)
   const top20Markers = markersOutput.slice(0, 20)
   // Merge: top20 + any mustReport markers not already in top20
@@ -742,7 +763,7 @@ function main(): void {
       spikeFrameCount: s.spikeFrameCount,
       totalFrameCount: s.totalFrameCount
     })),
-    jankFrames: jankResult.jankFrames.map(j => ({
+    jankFrames: result.jankFrames.map(j => ({
       frameIndex: j.frameIndex,
       msFrame: j.msFrame,
       prevThreeAvg: j.prevThreeAvg,
@@ -774,4 +795,7 @@ function main(): void {
   console.log(summaryJson)
 }
 
-main()
+// 仅当作为 CLI 直接执行时才跑 main(); 被 Provider import 时不触发副作用。
+if (require.main === module) {
+  main()
+}

@@ -13,6 +13,7 @@ web/data/db.sqlite-wal
 web/data/uploads/
 web/data/results/
 web/data/server.pid
+web/data/maple-compare/
 
 # Python 编译缓存
 **/__pycache__/
@@ -31,5 +32,3 @@ output/
 # 其他临时文件
 .cost-monitor-state.json
 todo/
-marker-source-map.json
-{console.error(e.message)

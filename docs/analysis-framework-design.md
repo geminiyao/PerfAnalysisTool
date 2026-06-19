@@ -193,6 +193,42 @@ type SourceId = 'unity_profiler' | 'simpleperf' | 'perfetto' | string;
 - **core 不是为对比而存**：对比要明细时回读 detail/raw 现算（或读已缓存的 detail）。core 真正服务于 **单次展示 / Runs 列表 / Dashboard / 趋势**——其中**趋势是唯一硬依赖 core 的场景**（N 个版本不可能每次重解析）。
 - 概念区分（仅作说明）：**浅层 = 两个数相减**（core 即可）；**深层 = 两边明细逐项配对/对齐整棵调用树**（需 detail/raw）。落地按"对比统一深层"。
 
+### 5.4 为什么 core / detail 要分开（取舍记录）
+
+> 常见疑问："为什么不只用一个指标袋，趋势和报告都按需从里面拿？"
+
+对**标量**而言，这正是 core 现在的样子——core 就是"按源构建的指标袋"，报告/趋势确实按需取。分出 detail 的理由不是"为分而分"，而是两条硬约束：
+
+1. **指标袋一行只能装一个数**（`key, value:number, unit`）。调用树（上千节点的嵌套结构）、folded 栈文件（MB 级）、火焰图、完整函数表、SQL 结果**物理上装不进** `value:number`。即使只想要"一个袋子"，也得给这些富数据另找归处——那就是 detail。**detail 是"袋子装不下的东西"的归处，不是多余设计。**
+
+2. **把树拍平塞进袋子 = "压扁"反模式**（见 §3.4）：
+   - **基数爆炸**：一个 run 几千函数 × 多线程 → 上万行；而 core 的职责是"跨几十个版本廉价查趋势"，必须小。
+   - **结构丢失**：anchor 子树、差分火焰图全靠父子边；拍平成标量后边没了，重建不出子树、做不了差分树。
+   - **多数不可跨源比 / 不可趋势**：`cpu.func.<某native函数>.selfPct` 别的源没有，且函数名随 build 内联而变，不是稳定趋势对象。
+
+**结论**：真正的分界是**两种访问模式**——
+
+| | core（指标袋 + frame/threads/system） | detail |
+|---|---|---|
+| 装什么 | 小、标量、归一化、可跨源比 | 大、富结构/文件、各源专属 |
+| 服务谁 | 趋势/列表/Dashboard——跨很多 run 廉价查 | 单次下钻/对比深层联合——只钻一个 run |
+| 为何物化 | **趋势硬依赖**：N 个版本不可能每次重解析 raw | 按需回读即可，不常驻 |
+
+砍掉 detail 只会二选一：要么丢掉火焰图/调用树/差分（报告退回"只列数"），要么把树灌进 core 拖垮趋势。core/detail 分开，是为了**两个都不丢**。raw 始终是真相源，core 只是那批可跨源比标量的**物化缓存**。
+
+### 5.5 raw 是唯一真相源；detail 里的树是"可重建缓存"，剪枝不预先拍板
+
+> 落地时反复纠结的两点，在此说死，避免每次重议。
+
+**(1) 原始文件不入库，只登记为 Asset（指针 + 元数据），最好放 CDN。**
+- `.pdata` / `perf.data`（34MB）/ `.pftrace`（64MB）**本体留在存储**，DB 的 `assets` 表只存一行：`sha256 / fileSize / source / storageBackend / localPath / remoteKey`。业务全程只认 `assetId`。
+- Asset 抽象**已为 CDN 留好钩子**：`storageBackend` + `remoteKey` 两字段即为此设计。当前仅实现 `LocalAssetStorage`（`storageBackend='local'`）；接 CDN = 加一个 `CdnAssetStorage` 后端、置 `storageBackend='cdn'` + `remoteKey`，`localPath` 可空，上层零改动。raw 归 CDN 是推荐终态。
+
+**(2) `detail.callTrees` 是从 raw 可重建的缓存，剪枝阈值是"可丢弃的软参数"，不是永久决策。**
+- 现状：Provider 把 callTree **剪枝后**（如 simpleperf 0.3% / perfetto 0.5%）随 `detail` 物化进 `runs.detailJson`，作为"够看的概览缓存"。
+- **因为 raw 完整留存，剪枝多少都不丢东西**：换阈值、新下钻路径、或**游戏后续版本冒出原阈值以下的新热点**，一律**回读 raw 重算**，无需迁移、无需预先猜对阈值。
+- 因此**不要现在把剪枝阈值当成要拍板的架构决策**：DB 里放概览即可（甚至可只放指针），"全 / 深 / 定制 / 新热点"的需求统一回读 raw（perfetto `trace_processor` SQL 任意下钻；simpleperf folded / RecordData 按函数前缀聚合）。这与 §5.3"对比统一走深层、回读 raw 现算"是同一条原则。
+
 ---
 
 ## 6. 分析层与 skill 架构

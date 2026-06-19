@@ -117,6 +117,36 @@ export type SimpleperfStage =
 
 export type MapleCompareStage = SimpleperfStage;
 
+/** 采集入库 Tab 异步任务 */
+export type IngestJobKind = 'unity' | 'simpleperf' | 'perfetto' | 'merge' | 'unified';
+export type IngestJobStatus = 'processing' | 'done' | 'failed';
+
+export interface IngestJobEvent {
+  jobId: string;
+  type: 'connected' | 'stage' | 'log' | 'done' | 'error';
+  stage?: SimpleperfStage | 'queued';
+  message?: string;
+  progress?: number;
+  logLine?: string;
+  runId?: string;
+  sources?: string[];
+  label?: string;
+  error?: string;
+  createdAt: number;
+}
+
+export interface IngestRunResponse {
+  runId: string;
+  sources: string[];
+  label?: string;
+  url: string;
+}
+
+export interface IngestJobStartResponse {
+  jobId: string;
+  status: 'processing';
+}
+
 /** simpleperf 可观测分析事件 */
 export interface SimpleperfProgressEvent {
   sessionId: string;
