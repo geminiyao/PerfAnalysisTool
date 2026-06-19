@@ -98,7 +98,7 @@ export async function runsRoutes(app: FastifyInstance) {
 
 
 
-  /** POST /runs/:id/generate-analysis — Unity skill / 多源 cross / 单源占位 */
+  /** POST /runs/:id/generate-analysis — 三源 skill / 多源 cross */
 
   app.post('/runs/:id/generate-analysis', async (request, reply) => {
 

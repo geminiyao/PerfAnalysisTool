@@ -112,13 +112,27 @@ function jobWorkDir(jobId: string): string {
   return dir;
 }
 
-/** build-profile 产出的 preprocess-result.json → results/<runId>/ (供问题列表 UI 即时展示) */
-function seedPreprocessArtifacts(workDir: string, runId: string): void {
-  const src = path.join(workDir, 'preprocess-result.json');
-  if (!fs.existsSync(src)) return;
+function seedProfileArtifacts(
+  workDir: string,
+  runId: string,
+  kind: 'unity_profiler' | 'perfetto' | 'simpleperf',
+): void {
   const destDir = path.join(getConfig().dataDir, 'results', runId);
   fs.mkdirSync(destDir, { recursive: true });
-  fs.copyFileSync(src, path.join(destDir, 'preprocess-result.json'));
+  const byKind: Record<'unity_profiler' | 'perfetto' | 'simpleperf', string[]> = {
+    unity_profiler: ['preprocess-result.json', 'unity-profile-summary.json'],
+    perfetto: ['perfetto-profile-summary.json'],
+    simpleperf: ['simpleperf-profile-summary.json'],
+  };
+  for (const name of byKind[kind]) {
+    const src = path.join(workDir, name);
+    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(destDir, name));
+  }
+}
+
+/** @deprecated 使用 seedProfileArtifacts */
+function seedPreprocessArtifacts(workDir: string, runId: string): void {
+  seedProfileArtifacts(workDir, runId, 'unity_profiler');
 }
 
 function readProfileJson(profilePath: string): ProfileWithMeta {
@@ -356,26 +370,30 @@ export async function ingestUnifiedFiles(
     onLog?.('[unified] 构建 unity_profiler…');
     const unityDir = path.join(workRoot, 'unity');
     profiles.push(await buildUnityProfile(detected.unity, meta, unityDir, onLog));
-    seedPreprocessArtifacts(unityDir, runId);
+    seedProfileArtifacts(unityDir, runId, 'unity_profiler');
   }
   if (detected.simpleperf) {
     onLog?.('[unified] 构建 simpleperf…');
+    const spDir = path.join(workRoot, 'simpleperf');
     profiles.push(await buildSimpleperfProfile(
       detected.simpleperf,
       { ...meta, binaryCachePath: opts.binaryCachePath },
-      path.join(workRoot, 'simpleperf'),
+      spDir,
       onLog,
     ));
+    seedProfileArtifacts(spDir, runId, 'simpleperf');
   }
   if (detected.perfetto) {
     onLog?.('[unified] 构建 perfetto…');
+    const pfDir = path.join(workRoot, 'perfetto');
     profiles.push(await buildPerfettoProfile(
       detected.perfetto,
       meta,
       opts.perfetto ?? {},
-      path.join(workRoot, 'perfetto'),
+      pfDir,
       onLog,
     ));
+    seedProfileArtifacts(pfDir, runId, 'perfetto');
   }
 
   const merged = profiles.length === 1 ? profiles[0] : mergeProfiles(profiles);

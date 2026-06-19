@@ -1,8 +1,8 @@
-// Run 入库后的 skill 分析 (Unity CLI skill / 多源 cross builder)
+// Run 入库后的 skill 分析 (三源 CLI skill + 多源 cross builder)
 
 import fs from 'fs';
 import path from 'path';
-import type { Run } from '../../shared/perf-model.js';
+import type { Run, SourceId } from '../../shared/perf-model.js';
 import type { CliProvider } from '../../shared/types.js';
 import { getConfig } from '../utils/config.js';
 import { executeCli } from './cli-executor.js';
@@ -11,115 +11,176 @@ import { saveAnalysisWithReport } from './analysis-store.js';
 import { saveReportMarkdown } from './report-export.js';
 import { saveAnalysisLogs, readPreprocessJson } from './report-artifacts.js';
 import {
-  findMatchingPerformanceReport,
   frameCountFromMarkdown,
   resolveUnityTargetFps,
-  runUnityPreprocessScript,
 } from './unity-preprocess-runner.js';
+import {
+  runSourceProfileBuild,
+  resolveSimpleperfBinaryCache,
+} from './source-profile-runner.js';
+import { getSkillConfig, type SkillKind, normalizeReportInOutputDir } from './skill-config.js';
 import { getRun } from './run-store.js';
 import { defaultCliProvider, isCliAvailable, cliUnavailableHint } from '../utils/cli-resolver.js';
+import type { PerfettoIngestOptions } from './run-ingest-service.js';
 
 export interface RunAnalysisOptions {
   cliProvider?: CliProvider;
   targetFps?: number;
+  perfetto?: PerfettoIngestOptions;
+  binaryCachePath?: string;
   onLog?: (line: string) => void;
 }
 
-function findRawPath(run: Run, roleHint: string): string | undefined {
+const SINGLE_SOURCE_SKILL_KINDS = ['unity_profiler', 'perfetto', 'simpleperf'] as const;
+
+function isSingleSourceSkill(source: SourceId): source is SkillKind {
+  return (SINGLE_SOURCE_SKILL_KINDS as readonly string[]).includes(source);
+}
+const SINGLE_SOURCE_SKILLS: Record<SkillKind, { skill: string; exportDir: string }> = {
+  unity_profiler: { skill: 'unity-profiler-analysis', exportDir: 'p-web-unity' },
+  perfetto: { skill: 'perfetto-trace-analysis', exportDir: 'p-web-perfetto' },
+  simpleperf: { skill: 'simpleperf-native-analysis', exportDir: 'p-web-simpleperf' },
+};
+
+function findRawPath(run: Run, source: SourceId): string | undefined {
   const ref = run.profile.raw?.find(r =>
-    r.localPath && (r.role?.includes(roleHint) || r.fileName?.includes(roleHint)),
+    r.source === source && r.localPath && fs.existsSync(r.localPath),
   );
-  if (ref?.localPath && fs.existsSync(ref.localPath)) return ref.localPath;
-  const bySource = run.profile.raw?.find(r => r.localPath && fs.existsSync(r.localPath));
-  return bySource?.localPath;
+  return ref?.localPath;
 }
 
-function extractHeadline(markdown: string): string {
+function extractHeadline(markdown: string, fallback: string): string {
   const line = markdown.split('\n').find(l => l.startsWith('#'));
-  return line ? line.replace(/^#+\s*/, '').trim() : 'Unity Profiler 分析报告';
+  return line ? line.replace(/^#+\s*/, '').trim() : fallback;
 }
 
-/** Unity 单源: 走与旧 session 相同的 unity-profiler-analysis CLI skill → performance-report.md */
-export async function runUnityProfilerSkillAnalysis(
+async function runSingleSourceSkillAnalysis(
   runId: string,
+  source: SkillKind,
   opts: RunAnalysisOptions = {},
 ): Promise<{ markdownPath: string; outputDir: string }> {
   const run = getRun(runId);
   if (!run) throw new Error(`Run 不存在: ${runId}`);
 
-  const pdataPath = run.profile.raw?.find(r => r.source === 'unity_profiler' && r.localPath)?.localPath
-    ?? findRawPath(run, 'pdata');
-  if (!pdataPath || !fs.existsSync(pdataPath)) {
-    throw new Error('Run 无 unity .pdata 路径, 无法执行 skill');
-  }
+  const inputPath = findRawPath(run, source);
+  if (!inputPath) throw new Error(`Run 无 ${source} 原始文件路径`);
 
   const config = getConfig();
   const outputDir = path.join(config.dataDir, 'results', runId);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const targetFps = resolveUnityTargetFps(opts.targetFps, run.meta);
+  const meta = { label: run.label, device: run.meta?.device, scene: run.meta?.scene };
+  const skillMeta = SINGLE_SOURCE_SKILLS[source];
+  const cfg = getSkillConfig(source);
+
   let cliProvider = opts.cliProvider ?? defaultCliProvider(config.cliPaths);
   if (cliProvider !== 'mock' && !isCliAvailable(cliProvider, config.cliPaths?.[cliProvider])) {
     opts.onLog?.(`[warn] ${cliUnavailableHint(cliProvider)} 已回退 Mock 模式`);
     cliProvider = 'mock';
   }
 
-  opts.onLog?.(`[skill] 重建 preprocess (targetFps=${targetFps})…`);
-  await runUnityPreprocessScript(pdataPath, outputDir, targetFps, opts.onLog);
-
-  opts.onLog?.(`[skill] Unity Profiler skill (${cliProvider}) → ${outputDir}`);
-
-  const result = await executeCli({
-    sessionId: runId,
-    pdataPath,
-    outputDir,
-    cliProvider,
-    params: { targetFps },
+  opts.onLog?.(`[skill] 重建 ${source} profile → ${outputDir}`);
+  await runSourceProfileBuild(source, inputPath, outputDir, {
+    targetFps: resolveUnityTargetFps(opts.targetFps, run.meta),
+    perfetto: opts.perfetto,
+    binaryCachePath: opts.binaryCachePath ?? resolveSimpleperfBinaryCache(run.profile.raw),
+    meta,
     onLog: opts.onLog,
   });
 
-  if (result.logs?.length) {
-    saveAnalysisLogs(runId, result.logs);
+  if (source === 'unity_profiler') {
+    const preSrc = path.join(outputDir, 'preprocess-result.json');
+    if (!fs.existsSync(preSrc)) {
+      const unitySummary = path.join(outputDir, 'unity-profile-summary.json');
+      if (fs.existsSync(unitySummary)) {
+        opts.onLog?.('[skill] 使用 build-profile 产出 (无 preprocess-result.json 副本)');
+      }
+    }
   }
+
+  opts.onLog?.(`[skill] ${skillMeta.skill} (${cliProvider}) → ${outputDir}`);
+
+  const result = await executeCli({
+    sessionId: runId,
+    skill: source,
+    inputPath,
+    outputDir,
+    cliProvider,
+    params: { targetFps: resolveUnityTargetFps(opts.targetFps, run.meta) },
+    onLog: opts.onLog,
+  });
+
+  if (result.logs?.length) saveAnalysisLogs(runId, result.logs);
 
   if (!result.success) {
-    throw new Error(result.error || 'Unity skill 分析失败');
+    throw new Error(result.error || `${skillMeta.skill} 分析失败`);
   }
 
+  normalizeReportInOutputDir(outputDir);
   const reportPath = path.join(outputDir, 'performance-report.md');
   if (!fs.existsSync(reportPath)) {
     throw new Error('skill 未产出 performance-report.md');
   }
 
   const markdown = fs.readFileSync(reportPath, 'utf-8');
-  const pre = readPreprocessJson(runId);
-  const reportFrames = frameCountFromMarkdown(markdown);
-  const preFrames = pre?.frameSummary && typeof (pre.frameSummary as { count?: number }).count === 'number'
-    ? (pre.frameSummary as { count: number }).count
-    : null;
-  if (reportFrames != null && preFrames != null && reportFrames !== preFrames) {
-    opts.onLog?.(`[warn] 报告帧数 ${reportFrames} ≠ preprocess ${preFrames}，Mock/旧报告可能不匹配当前 pdata`);
+
+  if (source === 'unity_profiler') {
+    const pre = readPreprocessJson(runId);
+    const reportFrames = frameCountFromMarkdown(markdown);
+    const preFrames = pre?.frameSummary && typeof (pre.frameSummary as { count?: number }).count === 'number'
+      ? (pre.frameSummary as { count: number }).count
+      : null;
+    if (reportFrames != null && preFrames != null && reportFrames !== preFrames) {
+      opts.onLog?.(`[warn] 报告帧数 ${reportFrames} ≠ preprocess ${preFrames}，Mock/旧报告可能不匹配`);
+    }
   }
-  const headline = extractHeadline(markdown);
-  const exportedPath = saveReportMarkdown('p-web-unity', `performance-report_${runId}`, markdown);
+
+  const headline = extractHeadline(markdown, cfg.reportTitleFallback);
+  const exportedPath = saveReportMarkdown(
+    skillMeta.exportDir,
+    `performance-report_${runId}`,
+    markdown,
+  );
 
   saveAnalysisWithReport(
     {
-      id: `analysis_${runId}_unity`,
+      id: `analysis_${runId}_${source}`,
       mode: 'single',
       runIds: [runId],
       status: 'completed',
-      skill: 'unity-profiler-analysis',
+      skill: skillMeta.skill,
     },
     { headline, markdown, insights: [] },
-    { analysisId: `analysis_${runId}_unity`, skill: 'unity-profiler-analysis' },
+    { analysisId: `analysis_${runId}_${source}`, skill: skillMeta.skill },
   );
 
   opts.onLog?.(`[skill] 报告已入库并落盘: ${exportedPath}`);
   return { markdownPath: exportedPath, outputDir };
 }
 
-/** 入库后自动分析: unity 单源 → skill; 多源 → cross builder; 其它单源 → 占位说明 */
+/** @deprecated 使用 runSingleSourceSkillAnalysis(runId, 'unity_profiler') */
+export async function runUnityProfilerSkillAnalysis(
+  runId: string,
+  opts: RunAnalysisOptions = {},
+): Promise<{ markdownPath: string; outputDir: string }> {
+  return runSingleSourceSkillAnalysis(runId, 'unity_profiler', opts);
+}
+
+export async function runPerfettoSkillAnalysis(
+  runId: string,
+  opts: RunAnalysisOptions = {},
+): Promise<{ markdownPath: string; outputDir: string }> {
+  return runSingleSourceSkillAnalysis(runId, 'perfetto', opts);
+}
+
+export async function runSimpleperfSkillAnalysis(
+  runId: string,
+  opts: RunAnalysisOptions = {},
+): Promise<{ markdownPath: string; outputDir: string }> {
+  return runSingleSourceSkillAnalysis(runId, 'simpleperf', opts);
+}
+
+/** 入库后自动分析: 单源 → 对应 skill; 多源 → cross builder */
 export async function runPostIngestAnalysis(
   runId: string,
   opts: RunAnalysisOptions = {},
@@ -135,27 +196,14 @@ export async function runPostIngestAnalysis(
     return { skill: 'cross-source-analysis', markdownPath: res.markdownPath };
   }
 
-  if (sources.length === 1 && sources[0] === 'unity_profiler') {
-    const res = await runUnityProfilerSkillAnalysis(runId, {
+  if (sources.length === 1 && isSingleSourceSkill(sources[0])) {
+    const source = sources[0];
+    const res = await runSingleSourceSkillAnalysis(runId, source, {
       ...opts,
       targetFps: resolveUnityTargetFps(opts.targetFps, run.meta),
     });
-    return { skill: 'unity-profiler-analysis', markdownPath: res.markdownPath };
+    return { skill: SINGLE_SOURCE_SKILLS[source].skill, markdownPath: res.markdownPath };
   }
 
-  // simpleperf / perfetto 单源: 报告加厚留下一阶段
-  const note = `# ${sources[0]} 单源 Run\n\n> 数据已入库。单源 AI 厚报告 (${sources[0]}) 将在下一阶段接入对应 skill。\n\n请在 Run 详情「分析概览」查看 metrics / callTree。`;
-  saveAnalysisWithReport(
-    {
-      id: `analysis_${runId}_pending`,
-      mode: 'single',
-      runIds: [runId],
-      status: 'completed',
-      skill: `${sources[0]}-analysis-pending`,
-    },
-    { headline: `${sources[0]} 已入库 (skill 待接入)`, markdown: note, insights: [] },
-    { analysisId: `analysis_${runId}_pending` },
-  );
-  opts.onLog?.(`[skill] ${sources[0]} 单源: 跳过 AI skill (下阶段)`);
-  return { skill: `${sources[0]}-pending` };
+  throw new Error(`不支持的 Run 源: ${sources.join(', ')}`);
 }

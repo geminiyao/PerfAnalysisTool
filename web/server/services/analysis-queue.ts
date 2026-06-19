@@ -124,6 +124,8 @@ class AnalysisQueue {
     // 执行 CLI 分析
     const job: AnalysisJob = {
       sessionId,
+      skill: 'unity_profiler',
+      inputPath: session.filePath,
       pdataPath: session.filePath,
       outputDir,
       cliProvider,

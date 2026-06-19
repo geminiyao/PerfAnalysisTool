@@ -150,7 +150,12 @@ export function runSimpleperfIngestJob(
     try {
       emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在解析 perf.data…', progress: 15 });
       const run = await buildAndIngestSimpleperf(perfPath, meta, progressLogger(jobId));
-      finishJob(job, run);
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在运行 simpleperf skill…', progress: 65 });
+      const analysis = await runPostIngestAnalysis(run.id, {
+        binaryCachePath: meta.binaryCachePath,
+        onLog: progressLogger(jobId),
+      });
+      finishJob(job, run, { analysisSkill: analysis.skill, reportPath: analysis.markdownPath });
     } catch (e: any) {
       failJob(job, e.message || String(e));
     }
@@ -169,7 +174,12 @@ export function runPerfettoIngestJob(
     try {
       emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在解析 trace…', progress: 15 });
       const run = await buildAndIngestPerfetto(tracePath, meta, options, progressLogger(jobId));
-      finishJob(job, run);
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在运行 perfetto skill…', progress: 65 });
+      const analysis = await runPostIngestAnalysis(run.id, {
+        perfetto: options,
+        onLog: progressLogger(jobId),
+      });
+      finishJob(job, run, { analysisSkill: analysis.skill, reportPath: analysis.markdownPath });
     } catch (e: any) {
       failJob(job, e.message || String(e));
     }
@@ -241,6 +251,8 @@ export function runUnifiedIngestJob(jobId: string, params: UnifiedIngestJobParam
       const analysis = await runPostIngestAnalysis(run.id, {
         cliProvider: params.cliProvider,
         targetFps,
+        binaryCachePath: params.binaryCachePath,
+        perfetto: params.perfetto,
         onLog: log,
       });
       finishJob(job, run, { analysisSkill: analysis.skill, reportPath: analysis.markdownPath });
