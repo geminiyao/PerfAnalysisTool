@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { assetService } from './asset-service.js';
 import { saveRun, getRun } from './run-store.js';
 import { getConfig } from '../utils/config.js';
-import type { FrameStat, Metric, PerfProfile, Run, SourceId, SystemStat, ThreadStat } from '../../shared/perf-model.js';
+import type { DeviceTier, FrameStat, Metric, PerfProfile, Run, SourceId, SystemStat, ThreadStat } from '../../shared/perf-model.js';
 import { DEFAULT_TARGET_FPS } from './unity-preprocess-runner.js';
 
 export interface IngestMeta {
@@ -59,8 +59,39 @@ function resolvePythonBin(): string {
 }
 
 function deriveFrameCount(profile: PerfProfile): number | undefined {
+  for (const src of Object.keys(profile.detail ?? {})) {
+    const fa = (profile.detail as Record<string, { frameAnalysis?: { summary?: { count?: number } } }>)[src]?.frameAnalysis;
+    if (fa?.summary?.count) return fa.summary.count;
+  }
   const unity = profile.detail?.unity_profiler as { frameSummary?: { count?: number } } | undefined;
   return unity?.frameSummary?.count;
+}
+
+function resolveDeviceTierFromProfile(profile: ProfileWithMeta, meta: IngestMeta): DeviceTier | undefined {
+  const fromProfile = profile.meta?.deviceTier as DeviceTier | undefined;
+  if (fromProfile) return fromProfile;
+  const device = meta.device ?? (profile.meta?.device as string | undefined);
+  if (!device) return undefined;
+  const mapPath = path.join(getConfig().skillProjectPath, 'docs', 'device-tier-map.json');
+  if (!fs.existsSync(mapPath)) return undefined;
+  try {
+    const map = JSON.parse(fs.readFileSync(mapPath, 'utf-8')) as {
+      defaultTier?: DeviceTier;
+      tiers?: Record<string, { devices?: string[]; patterns?: string[] }>;
+    };
+    for (const tier of ['high', 'mid', 'low'] as DeviceTier[]) {
+      const cfg = map.tiers?.[tier];
+      if (!cfg) continue;
+      if (cfg.devices?.includes(device)) return tier;
+      for (const pat of cfg.patterns ?? []) {
+        const re = new RegExp('^' + pat.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+        if (re.test(device)) return tier;
+      }
+    }
+    return map.defaultTier ?? 'unknown';
+  } catch {
+    return undefined;
+  }
 }
 
 function runCommand(
@@ -162,6 +193,7 @@ export async function ingestProfile(profile: ProfileWithMeta, meta: IngestMeta =
   const sources = (Object.keys(profile.detail ?? {}) as SourceId[]);
   const runId = meta.runId || `run_${Date.now()}_${uuid().slice(0, 8)}`;
   const now = Date.now();
+  const deviceTier = resolveDeviceTierFromProfile(profile, meta);
   const run: Run = {
     id: runId,
     label: meta.label ?? meta.scene ?? profile.raw?.[0]?.fileName ?? runId,
@@ -169,12 +201,13 @@ export async function ingestProfile(profile: ProfileWithMeta, meta: IngestMeta =
     status: 'ready',
     meta: {
       device: meta.device ?? (profile.meta?.device as string | undefined),
-      scene: meta.scene,
+      scene: meta.scene ?? (profile.meta?.scene as string | undefined),
       projectName: meta.projectName,
       version: meta.version,
       notes: meta.notes,
       frameCount: deriveFrameCount(profile),
       targetFps: meta.targetFps,
+      deviceTier,
     },
     profile,
     createdAt: now,
@@ -258,6 +291,8 @@ export async function buildUnityProfile(
   const args = ['tsx', script, '--input', pdataPath, '--out-dir', dir];
   const fps = meta.targetFps ?? DEFAULT_TARGET_FPS;
   args.push('--target-fps', String(fps));
+  if (meta.device) args.push('--device', meta.device);
+  if (meta.scene) args.push('--scene', meta.scene);
 
   const result = await runCommand('npx', args, config.skillProjectPath, 600_000, onLog);
   if (result.code !== 0) {
@@ -290,6 +325,67 @@ export async function buildSimpleperfProfile(
     throw new Error(result.output.slice(-1500) || `simpleperf build 失败 (code ${result.code})`);
   }
   return readProfileJson(path.join(dir, 'simpleperf-profile.json'));
+}
+
+/** 运行项目内 Python 脚本（相对 skillProjectPath） */
+export async function runProjectPython(
+  scriptRelative: string,
+  args: string[] = [],
+  onLog?: (line: string) => void,
+  timeoutMs = 600_000,
+): Promise<void> {
+  const config = getConfig();
+  const script = path.join(config.skillProjectPath, scriptRelative);
+  if (!fs.existsSync(script)) {
+    throw new Error(`脚本不存在: ${script}`);
+  }
+  const python = resolvePythonBin();
+  const result = await runCommand(python, [script, ...args], config.skillProjectPath, timeoutMs, onLog);
+  if (result.code !== 0) {
+    throw new Error(result.output.slice(-2000) || `${scriptRelative} 失败 (code ${result.code})`);
+  }
+}
+
+/** 双采集 base+cur：产出 base/cur profile、diff JSON、v4 报告 markdown */
+export async function buildSimpleperfDiffProfile(
+  basePerfPath: string,
+  curPerfPath: string,
+  meta: IngestMeta & { binaryCachePath?: string; sceneBase?: string; sceneCur?: string; subjectiveFps?: string },
+  workDir?: string,
+  onLog?: (line: string) => void,
+): Promise<{
+  profile: ProfileWithMeta;
+  diffPath: string;
+  reportPath: string;
+  workDir: string;
+}> {
+  const config = getConfig();
+  const dir = workDir ?? jobWorkDir(uuid());
+  const script = path.join(config.skillProjectPath, 'simpleperf/build_simpleperf_profile.py');
+  const bcache = meta.binaryCachePath || DEFAULT_SIMPLEPERF_BINARY_CACHE;
+  const python = resolvePythonBin();
+  const args = [script, '--base', basePerfPath, '--perf', curPerfPath, '--out', dir];
+  if (bcache && fs.existsSync(bcache)) args.push('--binary-cache', bcache);
+  if (meta.sceneBase) args.push('--scene-base', meta.sceneBase);
+  if (meta.sceneCur) args.push('--scene-cur', meta.sceneCur);
+  if (meta.device) args.push('--device', meta.device);
+  if (meta.subjectiveFps) args.push('--subjective-fps', meta.subjectiveFps);
+
+  if (!fs.existsSync(script)) {
+    throw new Error(`simpleperf 构建脚本不存在: ${script}`);
+  }
+
+  const result = await runCommand(python, args, config.skillProjectPath, 900_000, onLog);
+  if (result.code !== 0) {
+    throw new Error(result.output.slice(-1500) || `simpleperf diff build 失败 (code ${result.code})`);
+  }
+  const profile = readProfileJson(path.join(dir, 'cur', 'simpleperf-profile.json'));
+  return {
+    profile,
+    diffPath: path.join(dir, 'diff', 'simpleperf-diff.json'),
+    reportPath: path.join(dir, 'report', 'performance-report_simpleperf_v4.md'),
+    workDir: dir,
+  };
 }
 
 export async function buildPerfettoProfile(
@@ -413,7 +509,7 @@ export async function buildAndIngestUnity(
   const ingestMeta = { ...meta, runId, targetFps: meta.targetFps ?? DEFAULT_TARGET_FPS };
   const profile = await buildUnityProfile(pdataPath, ingestMeta, workDir, onLog);
   seedPreprocessArtifacts(workDir, runId);
-  return ingestProfile(profile, ingestMeta);
+  return ingestProfile(profile, { ...ingestMeta, scene: ingestMeta.scene ?? (profile.meta?.scene as string | undefined) });
 }
 
 export async function buildAndIngestSimpleperf(
@@ -423,6 +519,27 @@ export async function buildAndIngestSimpleperf(
 ): Promise<Run> {
   const profile = await buildSimpleperfProfile(perfPath, meta, undefined, onLog);
   return ingestProfile(profile, meta);
+}
+
+export async function ingestPerfettoSampleDir(
+  sampleDir: string,
+  meta: IngestMeta = {},
+  options: PerfettoIngestOptions = {},
+  onLog?: (line: string) => void,
+): Promise<Run> {
+  const trace = fs.readdirSync(sampleDir)
+    .map(name => path.join(sampleDir, name))
+    .find(fp => fs.statSync(fp).isFile() && ['.pftrace', '.perfetto-trace', '.trace'].includes(path.extname(fp).toLowerCase()));
+  if (!trace) throw new Error(`sample 目录未找到 perfetto trace: ${sampleDir}`);
+  const runId = meta.runId || `run_${Date.now()}_${uuid().slice(0, 8)}`;
+  const workDir = jobWorkDir(runId);
+  const stagedDir = path.join(workDir, path.basename(sampleDir));
+  fs.cpSync(sampleDir, stagedDir, { recursive: true });
+  const stagedTrace = path.join(stagedDir, path.basename(trace));
+  const ingestMeta = { ...meta, runId };
+  const profile = await buildPerfettoProfile(stagedTrace, ingestMeta, options, path.join(workDir, 'perfetto'), onLog);
+  seedProfileArtifacts(path.join(workDir, 'perfetto'), runId, 'perfetto');
+  return ingestProfile(profile, ingestMeta);
 }
 
 export async function buildAndIngestPerfetto(

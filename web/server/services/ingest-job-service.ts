@@ -15,6 +15,13 @@ import {
 import { detectSourcesFromPaths } from './ingest-detect.js';
 import { runPostIngestAnalysis } from './run-analysis-service.js';
 import { DEFAULT_TARGET_FPS } from './unity-preprocess-runner.js';
+import { buildPerfettoTriadReport, type PerfettoTriadInput } from './perfetto-triad-service.js';
+import {
+  buildSimpleperfDiffReport,
+  ingestSimpleperfDiffBundle,
+  type SimpleperfDiffBundleInput,
+  type SimpleperfDiffInput,
+} from './simpleperf-diff-service.js';
 
 export interface IngestJobRecord {
   id: string;
@@ -98,7 +105,7 @@ export function unsubscribeIngestJob(jobId: string, client: NodeJS.WritableStrea
 function finishJob(
   job: IngestJobRecord,
   run: { id: string; sources: string[]; label?: string },
-  extra?: { analysisSkill?: string; reportPath?: string },
+  extra?: { analysisSkill?: string; reportPath?: string; reportMarkdown?: string; runIds?: string[]; triadId?: string; diffId?: string },
 ) {
   job.status = 'done';
   job.runId = run.id;
@@ -113,6 +120,11 @@ function finishJob(
       : '入库完成',
     progress: 100,
     runId: run.id,
+    runIds: extra?.runIds,
+    triadId: extra?.triadId,
+    diffId: extra?.diffId,
+    reportPath: extra?.reportPath,
+    reportMarkdown: extra?.reportMarkdown,
     sources: run.sources,
     label: run.label,
   });
@@ -256,6 +268,115 @@ export function runUnifiedIngestJob(jobId: string, params: UnifiedIngestJobParam
         onLog: log,
       });
       finishJob(job, run, { analysisSkill: analysis.skill, reportPath: analysis.markdownPath });
+    } catch (e: any) {
+      failJob(job, e.message || String(e));
+    }
+  })();
+}
+
+export interface PerfettoTriadIngestJobParams {
+  samples: PerfettoTriadInput[];
+  meta: IngestMeta;
+  perfetto?: PerfettoIngestOptions;
+  cliProvider?: import('../../shared/types.js').CliProvider;
+}
+
+export function runPerfettoTriadIngestJob(jobId: string, params: PerfettoTriadIngestJobParams) {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const log = progressLogger(jobId);
+  void (async () => {
+    try {
+      emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在构建三份 perfetto profile…', progress: 15 });
+      const result = await buildPerfettoTriadReport(params.samples, {
+        meta: params.meta,
+        perfetto: params.perfetto,
+        cliProvider: params.cliProvider,
+        onLog: log,
+      });
+      finishJob(
+        job,
+        { id: result.triadId, sources: ['perfetto'], label: params.meta.label ?? result.triadId },
+        {
+          analysisSkill: 'perfetto-trace-analysis+triad',
+          reportPath: result.reportPath,
+          runIds: result.runIds,
+          triadId: result.triadId,
+        },
+      );
+    } catch (e: any) {
+      failJob(job, e.message || String(e));
+    }
+  })();
+}
+
+export interface SimpleperfDiffIngestJobParams {
+  input: SimpleperfDiffInput;
+  meta: IngestMeta;
+  binaryCachePath?: string;
+  sceneBase?: string;
+  sceneCur?: string;
+  cliProvider?: import('../../shared/types.js').CliProvider;
+  skipAiEnrich?: boolean;
+}
+
+export function runSimpleperfDiffIngestJob(jobId: string, params: SimpleperfDiffIngestJobParams) {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const log = progressLogger(jobId);
+  void (async () => {
+    try {
+      emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在构建 base+cur simpleperf diff…', progress: 15 });
+      const result = await buildSimpleperfDiffReport(params.input, {
+        meta: params.meta,
+        binaryCachePath: params.binaryCachePath,
+        sceneBase: params.sceneBase,
+        sceneCur: params.sceneCur,
+        cliProvider: params.cliProvider,
+        skipAiEnrich: params.skipAiEnrich,
+        onLog: log,
+      });
+      finishJob(
+        job,
+        { id: result.diffId, sources: ['simpleperf'], label: params.meta.label ?? result.diffId },
+        {
+          analysisSkill: result.usedAi ? 'simpleperf-diff-analysis+enriched' : 'simpleperf-diff-analysis',
+          reportPath: result.reportPath,
+          reportMarkdown: result.markdown,
+          runIds: [result.runId],
+          diffId: result.diffId,
+        },
+      );
+    } catch (e: any) {
+      failJob(job, e.message || String(e));
+    }
+  })();
+}
+
+export interface SimpleperfDiffBundleIngestJobParams {
+  bundle: SimpleperfDiffBundleInput;
+  meta: IngestMeta;
+}
+
+export function runSimpleperfDiffBundleIngestJob(jobId: string, params: SimpleperfDiffBundleIngestJobParams) {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const log = progressLogger(jobId);
+  void (async () => {
+    try {
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在校验上传的 v4 差分报告…', progress: 40 });
+      const result = await ingestSimpleperfDiffBundle(params.bundle, { meta: params.meta, onLog: log });
+      finishJob(
+        job,
+        { id: result.diffId, sources: ['simpleperf'], label: params.meta.label ?? result.diffId },
+        {
+          analysisSkill: 'simpleperf-diff-analysis',
+          reportPath: result.reportPath,
+          reportMarkdown: result.markdown,
+          runIds: [result.runId],
+          diffId: result.diffId,
+        },
+      );
     } catch (e: any) {
       failJob(job, e.message || String(e));
     }

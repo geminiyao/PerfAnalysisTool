@@ -14,12 +14,16 @@ import {
   getIngestJobEvents,
   runMergeIngestJob,
   runPerfettoIngestJob,
+  runPerfettoTriadIngestJob,
+  runSimpleperfDiffBundleIngestJob,
+  runSimpleperfDiffIngestJob,
   runSimpleperfIngestJob,
   runUnifiedIngestJob,
   runUnityIngestJob,
   subscribeIngestJob,
   unsubscribeIngestJob,
 } from '../services/ingest-job-service.js';
+import type { PerfettoTriadInput, PerfettoTriadRole } from '../services/perfetto-triad-service.js';
 
 function parseMultipartFields(fields: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {};
@@ -68,6 +72,51 @@ async function saveUpload(fileStream: NodeJS.ReadableStream, destPath: string): 
   await pipeline(fileStream, createWriteStream(destPath));
 }
 
+function safeUploadPath(rootDir: string, filename: string): string {
+  const normalized = filename.replace(/\\/g, '/').replace(/^\/+/, '');
+  const parts = normalized.split('/').filter(p => p && p !== '.' && p !== '..');
+  const safe = parts.length ? path.join(...parts) : 'upload.bin';
+  const dest = path.resolve(rootDir, safe);
+  const root = path.resolve(rootDir);
+  if (!dest.startsWith(root + path.sep) && dest !== root) {
+    throw new Error(`非法上传路径: ${filename}`);
+  }
+  return dest;
+}
+
+const PERFETTO_TRACE_EXTS = new Set(['.pftrace', '.perfetto-trace', '.trace']);
+const SIDECAR_NAMES = new Set(['collection-manifest.json', 'thermal_before.txt', 'thermal_after.txt', 'cpuinfo_max_freq.txt', 'meta.json']);
+
+function listFilesRecursive(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    const fp = path.join(dir, name);
+    const st = fs.statSync(fp);
+    if (st.isDirectory()) out.push(...listFilesRecursive(fp));
+    else out.push(fp);
+  }
+  return out;
+}
+
+function findPerfettoTrace(files: string[]): string | null {
+  return files.find(fp => PERFETTO_TRACE_EXTS.has(path.extname(fp).toLowerCase())) ?? null;
+}
+
+function sampleDirForTrace(tracePath: string): string {
+  return path.dirname(tracePath);
+}
+
+function buildTriadSampleFromDir(role: PerfettoTriadRole, sampleDir: string, label?: string): PerfettoTriadInput {
+  const root = path.resolve(sampleDir);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    throw new Error(`${role} sample 目录不存在: ${sampleDir}`);
+  }
+  const allFiles = listFilesRecursive(root);
+  const tracePath = findPerfettoTrace(allFiles);
+  if (!tracePath) throw new Error(`${role} 未找到 .pftrace / .perfetto-trace / .trace: ${sampleDir}`);
+  return { role, tracePath, sampleDir: sampleDirForTrace(tracePath), label: label || role };
+}
+
 function jobPayload(jobId: string) {
   return { jobId, status: 'processing' as const };
 }
@@ -92,6 +141,8 @@ export async function runIngestRoutes(app: FastifyInstance) {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': request.headers.origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
     });
 
     const client = reply.raw as NodeJS.WritableStream;
@@ -145,24 +196,41 @@ export async function runIngestRoutes(app: FastifyInstance) {
     return reply.status(202).send(jobPayload(job.id));
   });
 
-  /** perfetto .pftrace → build → runs */
+  /** perfetto sample 目录/多文件/.pftrace → build → runs；旁路文件需与 trace 同目录 */
   app.post('/runs/ingest/perfetto', async (request, reply) => {
-    const data = await request.file();
-    if (!data) return reply.status(400).send({ error: '需要上传 trace 文件' });
-    const ext = path.extname(data.filename).toLowerCase();
-    if (!['.pftrace', '.perfetto-trace', '.trace'].includes(ext)) {
-      return reply.status(400).send({ error: '仅支持 .pftrace / .perfetto-trace 文件' });
+    const parts = request.parts();
+    const fields: Record<string, string> = {};
+    const savedPaths: string[] = [];
+    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        const name = part.filename || part.fieldname || 'upload.bin';
+        const dest = safeUploadPath(jobDir, name);
+        await saveUpload(part.file, dest);
+        savedPaths.push(dest);
+      } else if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+      }
     }
 
-    const fields = parseMultipartFields((data.fields ?? {}) as Record<string, unknown>);
+    if (savedPaths.length === 0) return reply.status(400).send({ error: '需要上传 trace 文件或 sample 目录' });
+    const allFiles = listFilesRecursive(jobDir);
+    const tracePath = findPerfettoTrace(allFiles);
+    if (!tracePath) return reply.status(400).send({ error: '仅支持 .pftrace / .perfetto-trace / .trace 文件' });
+
+    const traceDir = sampleDirForTrace(tracePath);
+    const sidecars = allFiles.filter(fp => SIDECAR_NAMES.has(path.basename(fp).toLowerCase()));
+    for (const fp of sidecars) {
+      const dest = path.join(traceDir, path.basename(fp));
+      if (path.resolve(fp) !== path.resolve(dest) && !fs.existsSync(dest)) fs.copyFileSync(fp, dest);
+    }
+
     const meta = metaFromFields(fields);
     const pfOptions = perfettoOptionsFromFields(fields);
-    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
-    const dest = path.join(jobDir, data.filename);
-    await saveUpload(data.file, dest);
-
     const job = createIngestJob('perfetto');
-    runPerfettoIngestJob(job.id, dest, meta, pfOptions);
+    runPerfettoIngestJob(job.id, tracePath, meta, pfOptions);
     return reply.status(202).send(jobPayload(job.id));
   });
 
@@ -177,7 +245,7 @@ export async function runIngestRoutes(app: FastifyInstance) {
     for await (const part of parts) {
       if (part.type === 'file') {
         const name = part.filename || part.fieldname || 'upload.bin';
-        const dest = path.join(jobDir, name);
+        const dest = safeUploadPath(jobDir, name);
         await saveUpload(part.file, dest);
         savedPaths.push(dest);
       } else if (part.type === 'field') {
@@ -203,6 +271,253 @@ export async function runIngestRoutes(app: FastifyInstance) {
       cliProvider,
       targetFps: meta.targetFps,
       skipAnalysis,
+    });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** Perfetto 三态: base/cur/throttle 三份 sample 目录/文件 → v5.2 三态对比报告 */
+  app.post('/runs/ingest/perfetto-triad', async (request, reply) => {
+    const parts = request.parts();
+    const fields: Record<string, string> = {};
+    const byRole: Record<PerfettoTriadRole, string[]> = { base: [], cur: [], throttle: [] };
+    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        const role = part.fieldname as PerfettoTriadRole;
+        if (!['base', 'cur', 'throttle'].includes(role)) {
+          await part.file.resume?.();
+          continue;
+        }
+        const name = part.filename || 'upload.bin';
+        const dest = safeUploadPath(path.join(jobDir, role), name);
+        await saveUpload(part.file, dest);
+        byRole[role].push(dest);
+      } else if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+      }
+    }
+
+    const samples: PerfettoTriadInput[] = [];
+    for (const role of ['base', 'cur', 'throttle'] as PerfettoTriadRole[]) {
+      if (!byRole[role].length) return reply.status(400).send({ error: `需要上传 ${role} sample` });
+      const root = path.join(jobDir, role);
+      const allFiles = listFilesRecursive(root);
+      const tracePath = findPerfettoTrace(allFiles);
+      if (!tracePath) return reply.status(400).send({ error: `${role} 未找到 .pftrace / .perfetto-trace / .trace` });
+      const traceDir = sampleDirForTrace(tracePath);
+      const sidecars = allFiles.filter(fp => SIDECAR_NAMES.has(path.basename(fp).toLowerCase()));
+      for (const fp of sidecars) {
+        const dest = path.join(traceDir, path.basename(fp));
+        if (path.resolve(fp) !== path.resolve(dest) && !fs.existsSync(dest)) fs.copyFileSync(fp, dest);
+      }
+      samples.push({ role, tracePath, sampleDir: traceDir, label: fields[`${role}Label`] || role });
+    }
+
+    const meta = metaFromFields(fields);
+    const pfOptions = perfettoOptionsFromFields(fields);
+    const cliProvider = (fields.cliProvider as 'codebuddy' | 'claude' | 'mock' | undefined) || undefined;
+    const job = createIngestJob('perfetto_triad');
+    runPerfettoTriadIngestJob(job.id, { samples, meta, perfetto: pfOptions, cliProvider });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** Perfetto 三态本地路径模式: 仅提交 sample 目录路径，后端直接读取本机目录，绕过大文件上传 */
+  app.post('/runs/ingest/perfetto-triad/local', async (request, reply) => {
+    const body = request.body as {
+      paths?: Partial<Record<PerfettoTriadRole, string>>;
+      labels?: Partial<Record<PerfettoTriadRole, string>>;
+      cliProvider?: 'codebuddy' | 'claude' | 'mock';
+      runId?: string;
+      label?: string;
+      device?: string;
+      scene?: string;
+      projectName?: string;
+      version?: string;
+      notes?: string;
+      targetFps?: number;
+      profileName?: string;
+      sliceTreeMinPct?: number;
+      sliceTreeMaxDepth?: number;
+      summaryMinPct?: number;
+      summaryMaxDepth?: number;
+    };
+    const samples: PerfettoTriadInput[] = [];
+    try {
+      for (const role of ['base', 'cur', 'throttle'] as PerfettoTriadRole[]) {
+        const dir = body.paths?.[role];
+        if (!dir) return reply.status(400).send({ error: `需要填写 ${role} sample 目录路径` });
+        samples.push(buildTriadSampleFromDir(role, dir, body.labels?.[role]));
+      }
+    } catch (e: any) {
+      return reply.status(400).send({ error: e.message || String(e) });
+    }
+
+    const meta: IngestMeta = {
+      runId: body.runId || undefined,
+      label: body.label || undefined,
+      device: body.device || undefined,
+      scene: body.scene || undefined,
+      projectName: body.projectName || undefined,
+      version: body.version || undefined,
+      notes: body.notes || undefined,
+      targetFps: body.targetFps !== undefined ? Number(body.targetFps) : undefined,
+    };
+    const pfOptions = {
+      profileName: body.profileName || undefined,
+      sliceTreeMinPct: body.sliceTreeMinPct !== undefined ? Number(body.sliceTreeMinPct) : undefined,
+      sliceTreeMaxDepth: body.sliceTreeMaxDepth !== undefined ? Number(body.sliceTreeMaxDepth) : undefined,
+      summaryMinPct: body.summaryMinPct !== undefined ? Number(body.summaryMinPct) : undefined,
+      summaryMaxDepth: body.summaryMaxDepth !== undefined ? Number(body.summaryMaxDepth) : undefined,
+    };
+    const job = createIngestJob('perfetto_triad');
+    runPerfettoTriadIngestJob(job.id, { samples, meta, perfetto: pfOptions, cliProvider: body.cliProvider });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** simpleperf base+cur 差分 → v4 标准报告（Provider + 可选 AI 润色） */
+  app.post('/runs/ingest/simpleperf-diff', async (request, reply) => {
+    const parts = request.parts();
+    const fields: Record<string, string> = {};
+    const byRole: Record<'base' | 'cur', string | null> = { base: null, cur: null };
+    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        const role = part.fieldname as 'base' | 'cur';
+        if (!['base', 'cur'].includes(role)) {
+          await part.file.resume?.();
+          continue;
+        }
+        const dest = safeUploadPath(path.join(jobDir, role), part.filename || 'perf.data');
+        await saveUpload(part.file, dest);
+        byRole[role] = dest;
+      } else if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+      }
+    }
+
+    if (!byRole.base || !byRole.cur) {
+      return reply.status(400).send({ error: '需要上传 base 与 cur 两份 perf.data' });
+    }
+
+    const meta = metaFromFields(fields);
+    const cliProvider = (fields.cliProvider as 'codebuddy' | 'claude' | 'mock' | undefined) || undefined;
+    // Web 默认跳过可选 CLI boost（Python enrich 始终执行）；显式 skipAiEnrich=false 才启用 CLI
+    const skipAiEnrich = fields.skipAiEnrich !== 'false' && fields.skipAiEnrich !== '0';
+    const job = createIngestJob('simpleperf_diff');
+    runSimpleperfDiffIngestJob(job.id, {
+      input: { basePerfPath: byRole.base, curPerfPath: byRole.cur },
+      meta,
+      binaryCachePath: fields.binaryCacheLocalPath || undefined,
+      sceneBase: fields.sceneBase || undefined,
+      sceneCur: fields.sceneCur || undefined,
+      cliProvider,
+      skipAiEnrich,
+    });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** simpleperf 差分本地路径：base.data + cur.data + binary_cache */
+  app.post('/runs/ingest/simpleperf-diff/local', async (request, reply) => {
+    const body = request.body as {
+      basePath?: string;
+      curPath?: string;
+      binaryCachePath?: string;
+      sceneBase?: string;
+      sceneCur?: string;
+      cliProvider?: 'codebuddy' | 'claude' | 'mock';
+      skipAiEnrich?: boolean;
+      runId?: string;
+      label?: string;
+      device?: string;
+      scene?: string;
+      projectName?: string;
+      version?: string;
+      notes?: string;
+      targetFps?: number;
+    };
+    if (!body.basePath || !body.curPath) {
+      return reply.status(400).send({ error: '需要填写 basePath 与 curPath' });
+    }
+    for (const [label, fp] of [['base', body.basePath], ['cur', body.curPath]] as const) {
+      if (!fs.existsSync(fp)) {
+        return reply.status(400).send({ error: `${label} 文件不存在: ${fp}` });
+      }
+    }
+
+    const meta: IngestMeta = {
+      runId: body.runId || undefined,
+      label: body.label || undefined,
+      device: body.device || undefined,
+      scene: body.scene || undefined,
+      projectName: body.projectName || undefined,
+      version: body.version || undefined,
+      notes: body.notes || undefined,
+      targetFps: body.targetFps !== undefined ? Number(body.targetFps) : undefined,
+    };
+    const job = createIngestJob('simpleperf_diff');
+    runSimpleperfDiffIngestJob(job.id, {
+      input: {
+        basePerfPath: body.basePath,
+        curPerfPath: body.curPath,
+        binaryCachePath: body.binaryCachePath,
+        sceneBase: body.sceneBase,
+        sceneCur: body.sceneCur,
+      },
+      meta,
+      binaryCachePath: body.binaryCachePath,
+      sceneBase: body.sceneBase,
+      sceneCur: body.sceneCur,
+      cliProvider: body.cliProvider,
+      skipAiEnrich: body.skipAiEnrich !== false,
+    });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** 客户端本地已分析：上传 v4 markdown（+ 可选 diff JSON） */
+  app.post('/runs/ingest/simpleperf-diff/bundle', async (request, reply) => {
+    const parts = request.parts();
+    const fields: Record<string, string> = {};
+    let reportPath: string | null = null;
+    let diffJsonPath: string | null = null;
+    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        const dest = safeUploadPath(jobDir, part.filename || 'upload.bin');
+        await saveUpload(part.file, dest);
+        if (part.fieldname === 'report' || part.fieldname === 'reportMarkdown') {
+          reportPath = dest;
+        } else if (part.fieldname === 'diffJson' || part.fieldname === 'simpleperf-diff.json') {
+          diffJsonPath = dest;
+        } else if (!reportPath && /\.md$/i.test(part.filename || '')) {
+          reportPath = dest;
+        } else if (!diffJsonPath && /\.json$/i.test(part.filename || '')) {
+          diffJsonPath = dest;
+        }
+      } else if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+      }
+    }
+
+    if (!reportPath) {
+      return reply.status(400).send({ error: '需要上传 performance-report.md 或 v4 差分报告' });
+    }
+
+    const markdown = fs.readFileSync(reportPath, 'utf-8');
+    const meta = metaFromFields(fields);
+    const job = createIngestJob('simpleperf_diff');
+    runSimpleperfDiffBundleIngestJob(job.id, {
+      bundle: {
+        reportMarkdown: markdown,
+        diffJsonPath: diffJsonPath || undefined,
+        providerReportPath: reportPath,
+      },
+      meta,
     });
     return reply.status(202).send(jobPayload(job.id));
   });

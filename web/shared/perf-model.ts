@@ -130,12 +130,252 @@ export interface CallTree {
 // detail —— schemaless 各源富数据 (不归一化)
 // ============================================================
 
+export interface PerfettoThreadSchedEntry {
+  name?: string;
+  count?: number;
+  runningPct?: number;
+  runnablePct?: number;
+  sleepingPct?: number;
+  totalNs?: number;
+  tid?: number;
+  commName?: string;
+  identifiedBy?: string;
+  [k: string]: unknown;
+}
+
+export interface PerfettoAoeHotSlice {
+  label?: string;
+  pattern?: string;
+  count?: number;
+  totalMs?: number;
+  avgMs?: number;
+  maxMs?: number;
+  totalPct?: number;
+  selfMs?: number;
+  selfPct?: number;
+  [k: string]: unknown;
+}
+
+export interface PerfettoThermalInfo {
+  beforeC?: number | null;
+  afterC?: number | null;
+  deltaC?: number | null;
+  [k: string]: unknown;
+}
+
+export interface PerfettoCpuThrottlingEntry {
+  cpu?: number;
+  avgMhz?: number | null;
+  maxMhz?: number | null;
+  cpuinfoMaxMhz?: number | null;
+  reachVsCpuinfoPct?: number | null;
+  reachPct?: number | null;
+  [k: string]: unknown;
+}
+
+export interface PerfettoThrottling {
+  level?: string;
+  confirmedAvailable?: boolean;
+  thermal?: PerfettoThermalInfo | null;
+  collectionManifest?: Record<string, unknown> | null;
+  perCpu?: PerfettoCpuThrottlingEntry[];
+  bigCoreReachPct?: number | null;
+  [k: string]: unknown;
+}
+
+export interface PerfettoBinderPeerEntry {
+  name?: string;
+  serverProcess?: string;
+  count?: number;
+  avgMs?: number;
+  maxMs?: number;
+  totalMs?: number;
+  [k: string]: unknown;
+}
+
+export interface PerfettoBinderPeers {
+  byTxnName?: PerfettoBinderPeerEntry[];
+  byServerProcess?: PerfettoBinderPeerEntry[];
+  [k: string]: unknown;
+}
+
+export interface PerfettoGcAllocModule {
+  module?: string;
+  pattern?: string;
+  moduleSliceCount?: number;
+  allocCount?: number;
+  allocBytes?: number;
+  allocMb?: number;
+  allocPerFrame?: number;
+  topAllocSlices?: Array<Record<string, unknown>>;
+  [k: string]: unknown;
+}
+
+export interface PerfettoOffCpuAttribution {
+  totalOffCpuMs?: number;
+  byState?: Array<Record<string, unknown>>;
+  blockedReasonTopK?: Array<Record<string, unknown>>;
+  wakerTopK?: Array<Record<string, unknown>>;
+  [k: string]: unknown;
+}
+
+export interface PerfettoDetail {
+  profileWindow?: { startNs?: string; endNs?: string; durMs?: number; [k: string]: unknown };
+  parseOptions?: Record<string, unknown>;
+  threadsSched?: Record<string, PerfettoThreadSchedEntry>;
+  threadsSchedList?: PerfettoThreadSchedEntry[];
+  threadSchedView?: {
+    primary?: PerfettoThreadSchedEntry[];
+    jobWorkerPool?: PerfettoThreadSchedEntry | null;
+    jobWorkers?: PerfettoThreadSchedEntry[];
+    others?: PerfettoThreadSchedEntry[];
+    [k: string]: unknown;
+  };
+  aoeHotSlices?: PerfettoAoeHotSlice[];
+  throttling?: PerfettoThrottling | null;
+  binderPeers?: PerfettoBinderPeers;
+  gcAllocByModule?: PerfettoGcAllocModule[];
+  offCpuAttribution?: PerfettoOffCpuAttribution;
+  frameAnalysis?: FrameAnalysis;
+  frameTimeline?: unknown;
+  machineState?: Record<string, unknown>;
+  offCpu?: Record<string, unknown>;
+  callTrees?: CallTree[];
+  [k: string]: unknown;
+}
+
 /** 各源专属富数据/产物指针。新维度进这里, 永不撑爆 core。 */
 export interface SourceDetail {
-  unity_profiler?: unknown; // topMarkers / callTree / frameDist …
+  unity_profiler?: unknown; // frameAnalysis / markers / callTree …
   simpleperf?: unknown;     // folded / flamegraphPath / 完整函数表 …
-  perfetto?: unknown;       // sqlResults / surfaceFlinger …
+  perfetto?: PerfettoDetail; // frameAnalysis / sqlResults / surfaceFlinger …
   [k: string]: unknown;
+}
+
+// ============================================================
+// frameAnalysis — L1–L3 帧分析（ingest 契约，见 docs/frame-analysis-data-contract.md）
+// ============================================================
+
+export type DeviceTier = 'high' | 'mid' | 'low' | 'unknown';
+
+export interface FrameAnalysisSummary {
+  count: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  fps: number;
+  slowFrameRate33?: number;
+  slowFrameRate50?: number;
+  worstFrameIndex?: number;
+  medianFrameIndex?: number;
+  p95FrameIndex?: number;
+  frameIndexOffset?: number;
+}
+
+export interface SlowFrameEntry {
+  frameIndex: number;
+  ms: number;
+  rank: number;
+}
+
+export interface TraceSegment {
+  startFrame: number;
+  endFrame: number;
+  label: string;
+  source: 'marker' | 'meta' | 'inferred' | 'manual' | 'combined-profile';
+  confidence?: 'high' | 'medium' | 'low';
+}
+
+export interface FrameContext {
+  frameIndex: number;
+  labels: Record<string, string>;
+  evidence?: Array<{
+    classifierId: string;
+    markers?: string[];
+    confidence?: 'high' | 'inferred';
+  }>;
+}
+
+export interface ContextSummary {
+  byClassifier: Record<string, number>;
+  segments?: TraceSegment[];
+}
+
+export interface WatchTargetMatch {
+  type: 'marker' | 'slice';
+  patterns: string[];
+}
+
+export interface WatchRule {
+  id?: string;
+  ref?: string;
+  when?: string;
+  expr?: string;
+  params?: Record<string, number>;
+  severity?: 'warn' | 'critical';
+  message?: string;
+}
+
+export interface WatchTarget {
+  id: string;
+  knowledgeRef?: string;
+  match: {
+    unity?: WatchTargetMatch;
+    perfetto?: WatchTargetMatch;
+  };
+  playerLoopPhase?: string[];
+  callPath?: string[];
+  notes?: string;
+  rules: WatchRule[];
+}
+
+export interface WatchSpec {
+  version: number;
+  schemaRef: string;
+  preset?: string;
+  deviceTier?: DeviceTier;
+  frameBudgetMs: number;
+  targets: WatchTarget[];
+  specPath?: string;
+}
+
+export interface MarkerFrameSeries {
+  targetId: string;
+  timings: (number | null)[];
+  presentCount: number;
+  summary?: {
+    medianMs: number;
+    p95Ms: number;
+    maxMs: number;
+  };
+}
+
+export interface FlaggedFrame {
+  frameIndex: number;
+  targetId: string;
+  ruleId: string;
+  severity: 'warn' | 'critical';
+  actualMs: number;
+  frameMs?: number;
+  context?: Record<string, string>;
+  deviceTier?: DeviceTier;
+  message: string;
+}
+
+/** detail.<source>.frameAnalysis — L1 帧基础设施 + L1.5 context + L2 watchSpec 快照 + L3 派生 */
+export interface FrameAnalysis {
+  frameDefinition: FrameDefinition;
+  thread?: string;
+  summary: FrameAnalysisSummary;
+  timings: number[];
+  slowFrames?: SlowFrameEntry[];
+  frameTrees?: CallTree[];
+  segments?: TraceSegment[];
+  contextByFrame?: FrameContext[];
+  contextSummary?: ContextSummary;
+  watchSpec?: WatchSpec;
+  series?: MarkerFrameSeries[];
+  flags?: FlaggedFrame[];
 }
 
 // ============================================================
@@ -185,6 +425,8 @@ export interface RunMeta {
   /** clock_monotonic 对齐窗口 (text 存 bigint)。 */
   monoNsStart?: string;
   monoNsEnd?: string;
+  /** 高端 / 中端 / 低端 / unknown — 见 docs/device-tier-map.json */
+  deviceTier?: DeviceTier;
 }
 
 export interface Run {

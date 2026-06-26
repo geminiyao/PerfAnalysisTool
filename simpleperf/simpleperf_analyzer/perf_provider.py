@@ -21,10 +21,15 @@ import os
 import re
 
 from . import config, single_profile, anchor_compare
+from .stack_selfcheck import run_stack_selfcheck
+from .v4_extensions import build_v4_extensions
 
 SOURCE = "simpleperf"
 SCHEMA_VERSION = 1  # 必须与 web/shared/perf-model.ts 的 PERF_PROFILE_SCHEMA_VERSION 一致
 SCALE = config.TIME_SCALE_NS  # ns -> ms
+
+
+from .naming import sanitize_func, sanitize_lib, sanitize_thread, thread_key as _thread_key
 
 # ------------------------------------------------------------
 # 分层 (决策 8): 节点按所属 .so 归类 业务/引擎/运行时/噪音
@@ -68,30 +73,6 @@ def classify_layer(lib_basename):
 # ------------------------------------------------------------
 # 命名 (metric-key-naming-spec §2: 实体段保留大小写, 含 '.' 改 '_')
 # ------------------------------------------------------------
-_LIB_EXT = re.compile(r"\.(so|odex|vdex|oat|apk|dex)(\[|$)")
-
-
-def sanitize_lib(lib_basename):
-    """libil2cpp.so -> libil2cpp; lib含其他点 -> 下划线。"""
-    name = lib_basename
-    # 去常见扩展名 (与命名规范示例 cpu.lib.libil2cpp.pct 对齐)
-    m = _LIB_EXT.search(name)
-    if m:
-        name = name[: m.start()]
-    name = name.strip("[]")
-    return re.sub(r"[^A-Za-z0-9_]+", "_", name).strip("_") or "unknown"
-
-
-def sanitize_thread(name):
-    return re.sub(r"[^A-Za-z0-9_]+", "_", name or "unknown").strip("_") or "unknown"
-
-
-def sanitize_func(name, max_len=80):
-    s = re.sub(r"[^A-Za-z0-9_]+", "_", name or "").strip("_")
-    if len(s) > max_len:
-        s = s[:max_len].rstrip("_")
-    return s or "anon"
-
 
 _UNSYM = re.compile(r"\[\+(0x)?[0-9a-fA-F]+\]|\[unknown\]")
 
@@ -278,7 +259,7 @@ def _thread_call_trees(profile, grand_total_ec, top_threads, min_pct, max_depth)
             "children": children,
         }
         trees.append({
-            "thread": tname,
+            "thread": _thread_key(thread),
             "label": "thread-total",
             "root": root,
         })
@@ -352,6 +333,7 @@ def build_profile_dict(
     tree_min_pct=0.15,
     tree_max_depth=40,
     anchors=None,
+    base_ctx=None,
 ):
     """构建 PerfProfile dict + AI 摘要。out_dir 给定时写 folded stacks 并设 foldedPath。"""
     top_func = top_func or config.DEFAULT_TOP_N
@@ -421,6 +403,16 @@ def build_profile_dict(
 
     # 符号化校验
     symbol_check = _symbol_check(profile, anchors_resolved, len(anchors))
+    if out_dir and raw_path:
+        stack_chk = run_stack_selfcheck(raw_path, binary_cache, out_dir)
+        symbol_check["stackUnwind"] = stack_chk
+        if stack_chk.get("status") == "FAIL":
+            symbol_check["status"] = "FAIL"
+            symbol_check["notes"].append(
+                "栈 unwind 自检 FAIL: 外层帧未到 __start_thread，见 stackUnwind / SIMPLEPERF_TROUBLESHOOTING.md",
+            )
+        elif stack_chk.get("status") == "PASS" and symbol_check["status"] == "WARN":
+            symbol_check["notes"].append("栈 unwind 自检 PASS (__start_thread 可达)。")
 
     # 分层占比 (业务/引擎/运行时/噪音) —— 报告"结论先行"用
     layer_self = {"business": 0.0, "engine": 0.0, "runtime": 0.0, "noise": 0.0}
@@ -437,10 +429,12 @@ def build_profile_dict(
     # 统一 callTrees (top 线程, 全量树剪到 tree_min_pct)
     call_trees = _thread_call_trees(profile, grand_total_ec, top_tree_threads, tree_min_pct, tree_max_depth)
 
-    # threadCpuMs
+    # threadCpuMs — key = "{comm}#{tid}" to avoid same-name thread overwrite
     thread_cpu_ms = {}
     for _p, th in profile.iter_threads():
-        thread_cpu_ms[th["thread_name"]] = round(th["event_count"] / SCALE, 1)
+        if th["event_count"] <= 0:
+            continue
+        thread_cpu_ms[_thread_key(th)] = round(th["event_count"] / SCALE, 1)
 
     # folded stacks -> 文件 (foldedPath)
     folded_path = None
@@ -468,6 +462,10 @@ def build_profile_dict(
         "threadCpuMs": thread_cpu_ms,
         "totalSamples": profile.total_samples,
     }
+
+    # v4 extensions (thread identity, modules, probes, etc.)
+    v4_ext = build_v4_extensions(profile, {"core": {"metrics": metrics}}, base_ctx=base_ctx)
+    detail.update(v4_ext)
 
     profile_dict = {
         "raw": [{

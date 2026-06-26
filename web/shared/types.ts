@@ -118,7 +118,7 @@ export type SimpleperfStage =
 export type MapleCompareStage = SimpleperfStage;
 
 /** 采集入库 Tab 异步任务 */
-export type IngestJobKind = 'unity' | 'simpleperf' | 'perfetto' | 'merge' | 'unified';
+export type IngestJobKind = 'unity' | 'simpleperf' | 'perfetto' | 'merge' | 'unified' | 'perfetto_triad' | 'simpleperf_diff';
 export type IngestJobStatus = 'processing' | 'done' | 'failed';
 
 export interface IngestJobEvent {
@@ -129,6 +129,11 @@ export interface IngestJobEvent {
   progress?: number;
   logLine?: string;
   runId?: string;
+  runIds?: string[];
+  triadId?: string;
+  diffId?: string;
+  reportPath?: string;
+  reportMarkdown?: string;
   sources?: string[];
   label?: string;
   error?: string;
@@ -140,6 +145,11 @@ export interface IngestRunResponse {
   sources: string[];
   label?: string;
   url: string;
+  runIds?: string[];
+  triadId?: string;
+  diffId?: string;
+  reportPath?: string;
+  reportMarkdown?: string;
 }
 
 export interface IngestJobStartResponse {

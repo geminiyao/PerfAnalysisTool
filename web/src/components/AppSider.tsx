@@ -9,6 +9,8 @@ import {
   SettingOutlined,
   DatabaseOutlined,
   PartitionOutlined,
+  BranchesOutlined,
+  DiffOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -19,6 +21,8 @@ const menuItems = [
   { key: '/upload', icon: <UploadOutlined />, label: '采集上传' },
   { key: '/runs', icon: <PartitionOutlined />, label: 'Runs' },
   { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
+  { key: '/perfetto-triad', icon: <BranchesOutlined />, label: 'Perfetto 三态' },
+  { key: '/simpleperf-diff', icon: <DiffOutlined />, label: 'Simpleperf 差分' },
   { key: '/trends', icon: <LineChartOutlined />, label: '趋势' },
   { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
@@ -27,6 +31,8 @@ const menuItems = [
 function selectedMenuKey(pathname: string): string {
   if (pathname.startsWith('/runs')) return '/runs';
   if (pathname.startsWith('/compare')) return '/compare';
+  if (pathname.startsWith('/perfetto-triad')) return '/perfetto-triad';
+  if (pathname.startsWith('/simpleperf-diff')) return '/simpleperf-diff';
   return pathname;
 }
 

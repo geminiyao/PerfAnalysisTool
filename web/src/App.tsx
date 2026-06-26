@@ -10,6 +10,8 @@ import Assets from './pages/Assets';
 import Runs from './pages/Runs';
 import RunDetail from './pages/RunDetail';
 import RunComparePage from './pages/RunComparePage';
+import PerfettoTriad from './pages/PerfettoTriad';
+import SimpleperfDiff from './pages/SimpleperfDiff';
 import Settings from './pages/Settings';
 
 const { Content } = Layout;
@@ -26,6 +28,8 @@ const App: React.FC = () => {
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
             <Route path="/compare" element={<RunComparePage />} />
+            <Route path="/perfetto-triad" element={<PerfettoTriad />} />
+            <Route path="/simpleperf-diff" element={<SimpleperfDiff />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings" element={<Settings />} />

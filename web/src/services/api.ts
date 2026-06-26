@@ -3,7 +3,14 @@ import type {
   IngestJobEvent, IngestRunResponse, IngestJobStartResponse,
 } from '../../shared/types';
 
-const BASE_URL = '/cpu/api';
+function apiBaseUrl(): string {
+  if (typeof window !== 'undefined' && window.location.port === '5173') {
+    return 'http://localhost:3000/cpu/api';
+  }
+  return '/cpu/api';
+}
+
+const BASE_URL = apiBaseUrl();
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {
@@ -200,13 +207,17 @@ export async function generateRunAnalysis(
 /** @deprecated 使用 generateRunAnalysis */
 export const generateCrossSourceAnalysis = generateRunAnalysis;
 
+function uploadFileName(f: File): string {
+  return ((f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name).replace(/\\/g, '/');
+}
+
 export function ingestUnifiedRun(
   files: File[],
   meta: Record<string, string> & { cliProvider?: string },
   onEvent?: (event: IngestJobEvent) => void,
 ) {
   const fd = new FormData();
-  for (const f of files) fd.append('files', f);
+  for (const f of files) fd.append('files', f, uploadFileName(f));
   Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
   return ingestWithProgress(() => postIngestMultipart('/runs/ingest/unified', fd), onEvent);
 }
@@ -233,27 +244,58 @@ async function postIngestJson(url: string, body: unknown): Promise<IngestJobStar
   return res.json();
 }
 
+function ingestDoneResponse(event: IngestJobEvent): IngestRunResponse | null {
+  if (event.type !== 'done' || !event.runId) return null;
+  return {
+    runId: event.runId,
+    sources: event.sources ?? [],
+    label: event.label,
+    url: `/runs/${event.runId}`,
+    runIds: event.runIds,
+    triadId: event.triadId,
+    diffId: event.diffId,
+    reportPath: event.reportPath,
+    reportMarkdown: event.reportMarkdown,
+  };
+}
+
+async function pollIngestJob(jobId: string, onEvent?: (event: IngestJobEvent) => void): Promise<IngestRunResponse> {
+  let seen = 0;
+  while (true) {
+    const data = await request<{ job: { status: string; error?: string }; events: IngestJobEvent[] }>(`/runs/ingest/jobs/${jobId}`);
+    for (const event of data.events.slice(seen)) onEvent?.(event);
+    seen = data.events.length;
+    const lastDone = [...data.events].reverse().map(ingestDoneResponse).find(Boolean);
+    if (lastDone) return lastDone;
+    if (data.job.status === 'failed') throw new Error(data.job.error || '入库失败');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+}
+
 export function waitIngestJob(
   jobId: string,
   onEvent?: (event: IngestJobEvent) => void,
 ): Promise<IngestRunResponse> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const fallback = () => {
+      if (settled) return;
+      void pollIngestJob(jobId, onEvent).then(resolve, reject).finally(() => { settled = true; });
+    };
     const es = new EventSource(`${BASE_URL}/runs/ingest/jobs/${jobId}/events`);
     es.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data) as IngestJobEvent;
         if (data.type === 'connected') return;
         onEvent?.(data);
-        if (data.type === 'done' && data.runId) {
+        const done = ingestDoneResponse(data);
+        if (done) {
+          settled = true;
           es.close();
-          resolve({
-            runId: data.runId,
-            sources: data.sources ?? [],
-            label: data.label,
-            url: `/runs/${data.runId}`,
-          });
+          resolve(done);
         }
         if (data.type === 'error') {
+          settled = true;
           es.close();
           reject(new Error(data.error || data.message || '入库失败'));
         }
@@ -263,7 +305,7 @@ export function waitIngestJob(
     };
     es.onerror = () => {
       es.close();
-      reject(new Error('进度连接中断，请查看 Runs 列表或重试'));
+      fallback();
     };
   });
 }
@@ -304,9 +346,66 @@ export function ingestPerfettoRun(
   onEvent?: (event: IngestJobEvent) => void,
 ) {
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', file, uploadFileName(file));
   Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
   return ingestWithProgress(() => postIngestMultipart('/runs/ingest/perfetto', fd), onEvent);
+}
+
+export function ingestPerfettoTriadRun(
+  files: { base: File[]; cur: File[]; throttle: File[] },
+  meta: Record<string, string> & { cliProvider?: string },
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  for (const role of ['base', 'cur', 'throttle'] as const) {
+    for (const f of files[role]) fd.append(role, f, uploadFileName(f));
+  }
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/perfetto-triad', fd), onEvent);
+}
+
+export function ingestPerfettoTriadLocalRun(
+  paths: { base: string; cur: string; throttle: string },
+  meta: Record<string, string> & { cliProvider?: string },
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  return ingestWithProgress(() => postIngestJson('/runs/ingest/perfetto-triad/local', {
+    paths,
+    labels: { base: 'base', cur: 'cur', throttle: 'throttle' },
+    ...meta,
+  }), onEvent);
+}
+
+export function ingestSimpleperfDiffRun(
+  files: { base: File; cur: File },
+  meta: Record<string, string> & { cliProvider?: string; skipAiEnrich?: string },
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('base', files.base, uploadFileName(files.base));
+  fd.append('cur', files.cur, uploadFileName(files.cur));
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/simpleperf-diff', fd), onEvent);
+}
+
+export function ingestSimpleperfDiffLocalRun(
+  paths: { basePath: string; curPath: string; binaryCachePath?: string },
+  meta: Record<string, string> & { cliProvider?: string; skipAiEnrich?: boolean; sceneBase?: string; sceneCur?: string },
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  return ingestWithProgress(() => postIngestJson('/runs/ingest/simpleperf-diff/local', { ...paths, ...meta }), onEvent);
+}
+
+export function ingestSimpleperfDiffBundleRun(
+  files: { report: File; diffJson?: File },
+  meta: Record<string, string> = {},
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('report', files.report, uploadFileName(files.report));
+  if (files.diffJson) fd.append('diffJson', files.diffJson, uploadFileName(files.diffJson));
+  Object.entries(meta).forEach(([k, v]) => { if (v) fd.append(k, v); });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/simpleperf-diff/bundle', fd), onEvent);
 }
 
 export function mergeRuns(
