@@ -1,6 +1,6 @@
 # 性能报告生成方法论：LLM 灵活参与 + 质量可控
 
-> 沉淀自 simpleperf v4 差分报告流水线（commit `1faea84` / `c1d0d1b` 阶段）
+> 沉淀自 simpleperf v4 差分报告流水线（commit `1faea84` / `c1d0d1b` / `22599c9` 阶段）
 > 适用对象：perfetto / simpleperf / Unity Profiler 等性能数据源的报告 agent
 > 目标：让 LLM 写出业务语境深的叙事，同时保证数字、表格、调用树**永不失真**
 
@@ -337,6 +337,50 @@ schedAnalysis:
 
 Web 应有显式 `reportTier: L1 | L2` 开关，不要默认 L2 而隐式调 LLM。
 
+### 6.1 LLM 不参与时报告长什么样
+
+很多人以为"不跑 LLM = 报告不完整不能看"，**错**。骨架渲染（Provider/enrich 模板）已经包含：
+
+- ✅ 所有数字（systemPressure / 探针值 / Top-N 表 / 反查表）
+- ✅ 所有表格 + Mermaid 图
+- ✅ 主线程 / URP / RHI 调用树（带 wrapper 标记 / 颜色标记 / 跨章节引用）
+- ✅ §5.3 红线扫描表
+- ❌ **业务语境解读段落**（"为什么 cur 比 base 涨了 30%" / "建议..."）
+  — 这些位置在不跑 LLM 时是 `<!-- LLM_FILL: ... -->` HTML 注释
+
+**关键设计**：HTML 注释在 markdown 渲染层（GitHub / VSCode 预览 / web 前端 markdown 组件）
+**不可见**——肉眼看不出来叙事是空的。这是把"灵活叙事"和"刚性数据"完美解耦的工程技巧：
+
+```markdown
+### 4.4 动态 UI 子树（MeshUI 等）（Top-N #4，🔴）
+
+[这里是规则渲染的表格 + 数字]
+| 函数 | self | global% |
+|---|---|---|
+| MUIControlManager.OnLateUpdate | 360 | 0.76% |
+| ...                            | ... | ... |
+
+**业务含义**：<!-- LLM_FILL: 解读 base→cur 数字变化（用本节表格中的数据），结合采集场景说明业务原因；60-120 字 -->
+
+**调用入口**：<!-- LLM_FILL: 用 §5.2 主线程调用树中实际出现的节点串成 1 句调用链描述 -->
+
+**优化方向**：<!-- LLM_FILL: 3-5 条具体优化建议 -->
+```
+
+跑 LLM（L2）：3 个占位符被填成实际段落。
+不跑 LLM（L1）：3 个占位符仍是 HTML 注释，渲染时不可见，**用户只看到表格/数字+空标题**，
+够 CI 监测，但不够给人深度解读。
+
+### 6.2 控制开关 `skipAiEnrich` 的语义
+
+| 字段值 | 骨架渲染（确定性）| codebuddy CLI（LLM）|
+|---|---|---|
+| `skipAiEnrich=true`（web 默认）| ✅ 总是跑 | ❌ 跳过 |
+| `skipAiEnrich=false`（要 LLM 时显式传）| ✅ 总是跑 | ✅ 跑（填占位符）|
+
+变量命名有点歧义——叫 "AiEnrich" 但实际控制的只是 codebuddy CLI 那一段。骨架渲染（包括
+`enrich_v4_report.py`）**永远跑**，因为表/数字/树没它就没了。
+
 ---
 
 ## 7. 参考实现
@@ -344,8 +388,101 @@ Web 应有显式 `reportTier: L1 | L2` 开关，不要默认 L2 而隐式调 LLM
 - 加载器：`simpleperf/simpleperf_analyzer/project_pack.py`
 - 骨架渲染：`simpleperf/simpleperf_analyzer/v4_report_renderer.py`
 - LLM 触发：`scripts/cli_enrich_v4.py` / `web/server/services/simpleperf-diff-service.ts`
+- 快速回归测试：`web/server/scripts/quick-cli-test.mjs`（仅 LLM 阶段）
+- 完整 E2E：`web/server/scripts/e2e-simpleperf-diff.ts`
 - 质量门：`scripts/validate_v4_report.py` / `scripts/compare_v4_report_quality.py`
 - 项目知识包样例：`projects/aoeyz/*.yaml` / `projects/_generic/*.yaml`
+
+---
+
+## 8. 血的教训：从 simpleperf 项目学到的事故
+
+> 这一节记录实际开发中踩的坑。看完能少走半天弯路。
+
+### 8.1 "我能跑通" ≠ "正式流程能跑通"
+
+我（Claude）在做剥离重构时用 `python scripts/cli_enrich_v4.py` 跑出 0.98× 金标准就报告成功，
+直到用户坚持跑 web e2e 才发现 web 流程**完全跑不通**——虽然两边"理论上调同一个 codebuddy CLI"。
+
+实际差异：
+
+| 阶段 | CLI 直跑 | Web e2e |
+|---|---|---|
+| perf.data 解析 | ❌ 跳过（用现成 diff JSON）| ✅ 从零跑 |
+| Provider 渲染 | ❌ 跳过 | ✅ 跑（这里漏了项目识别）|
+| Prompt 来源 | `cli_enrich_v4.py`（新格式带占位符）| `simpleperf-diff-service.ts`（**老格式**）|
+| Prompt 传输 | stdin pipe | `-p prompt` 位置参数（**Windows .cmd 截断**）|
+
+**教训**：流程有两个入口（CLI / Web）就一定有两套独立踩坑路径。**唯一验收口径**应是用户实际用的入口
+（这里是 web），不是研发图省事的 CLI。
+
+### 8.2 三个独立 bug 同时爆破
+
+剥离配置后，web 第一次跑出来的报告**所有 18 个 LLM_FILL 占位符原样保留**，但质量门 0.92× PASS。
+拆解三个 bug：
+
+**Bug 1 — pack.yaml 缺字段**
+- 现象：web 跑 488 行 / 0.74× FAIL，§4.4 / §4.5 章节缺失
+- 根因：`projects/aoeyz/pack.yaml` 没写 `androidPackages: [com.tencent.aoeyz]`
+- binary_cache 里**没有** libAOENative（自研 native 通常只在 /data/data/<pkg>，simpleperf 不会拷出来），
+  但路径段里包含 `com.tencent.aoeyz`。靠 selfDeveloperSoNames 检测自研 .so 走不通；必须额外用
+  androidPackages 匹配路径段。
+- 教训：**项目识别必须有多重信号**（自研 .so + 包名 + 库名子串），任何单一信号都可能在某些环境下扑空。
+
+**Bug 2 — Prompt 形态不一致**
+- 现象：LLM 跑了 8 分钟，输出报告里占位符原样保留，但行数撑住质量门 PASS
+- 根因：`simpleperf-diff-service.ts:buildDiffEnrichPrompt` 是老格式（"在 §0 加段落"），
+  跟 `scripts/cli_enrich_v4.py` 的新格式（"替换每个 LLM_FILL 占位符"）不一致。
+  LLM 看老 prompt → 不知道该填占位符 → 新增了段落但占位符没动。
+- 教训：**同一 LLM 任务的 prompt 不能在两个地方维护两份**。要么提取到共享 .txt 模板文件，
+  要么 web 直接调 cli_enrich_v4.py 而不是自己再实现一遍。
+- 隐藏陷阱：质量门只数行数 + 结构锚点，**HTML 注释行也算行**——所以占位符没填的报告
+  仍能 0.92× PASS。质量门检查必须加上"`grep -c LLM_FILL` 必须为 0"这条。
+
+**Bug 3 — Windows .cmd stdin pipe**
+- 现象：codebuddy 进程启动了，但 LLM 回复 "No task content was provided after the colon"
+- 根因：args 写 `'-p', longMultiLinePrompt` 在 Windows 通过 .cmd 包装层时，cmd.exe 把 prompt
+  截断在第一个换行字符。LLM 收到空 prompt 自然不知道该干什么。
+- 修复：args 只传 `'-p'`，prompt 通过 `child.stdin.write(prompt); child.stdin.end()` 注入。
+  匹配 `cli_enrich_v4.py` 的方案。
+- 教训：**Windows + 多行字符串 + .cmd 包装** 是一个高危组合。任何长 prompt（>80 字符 或 含换行）
+  都用 stdin。不要图方便 `-p prompt` 直接拼。
+
+### 8.3 验收顺序教训
+
+错误顺序：byte-equal Provider → 自我感觉良好 → 报告 LLM 也跑通 → commit & push
+
+正确顺序：
+1. **byte-equal Provider 层**（证规则没坏）
+2. **CLI 端到端跑 LLM**（证 prompt 能填占位符）
+3. **完整 web e2e 跑一遍**（证 web 集成层没踩 .cmd / stdin / 检测时机的坑）
+4. **重复 N 次 web e2e 看 PASS 率**（证 LLM 抽样波动可控）
+5. **commit & push**
+
+**任一阶段跳过都可能导致"我以为跑通了"，实际上有 3 个独立 bug 等着用户发现**。
+
+### 8.4 质量门必加的 sanity check
+
+原版 compare_v4_report_quality.py 只数行数 + 结构锚点。**少这两条会放走假 PASS**：
+
+```python
+# Hard fail 条件（不计入分数，直接 FAIL）
+assert grep_count("LLM_FILL", report) == 0, "占位符未全部填空"
+assert grep_count("<!--", report) <= 5, "HTML 注释残留过多"
+assert "**业务含义**" not in 同一段落两次, "重复段落 bug 征兆"
+```
+
+行数撑住 + 结构锚点对 ≠ 报告内容真有叙事；这三条加上后才挡得住 LLM 没跑 / prompt 错的情况。
+
+### 8.5 对 perfetto agent 的具体提醒
+
+| simpleperf 踩的坑 | perfetto 等价场景 |
+|---|---|
+| binary_cache 自研 .so 不在 → 用包名匹配 | trace 里如果没自研 atrace tag → 用 process name / package name 兜底 |
+| Web prompt 跟 CLI prompt 维护两份不一致 | 务必把 prompt 提取成 `prompt.txt` 文件，所有入口 readFileSync 同一份 |
+| Windows .cmd 多行 prompt 截断 | 跑 codebuddy CLI 时无脑用 stdin pipe，不用 `-p prompt` |
+| 质量门只数行 / 结构 → LLM 没跑也 PASS | 加 `grep -c LLM_FILL == 0` hard fail |
+| 我以为 byte-equal 就 OK → 没跑 web | 一定要跑用户实际用的入口的 e2e |
 
 ---
 
