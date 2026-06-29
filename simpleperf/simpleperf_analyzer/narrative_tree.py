@@ -69,12 +69,12 @@ _FRIENDLY = [
 ]
 
 _ANNOTATIONS = [
-    (("MUILayout_Set3DPosition", "MUILayout.Set3DPosition"), "see §4.4 MeshUI"),
-    (("MUIControlManager_OnLateUpdate", "MUIControlManager.OnLateUpdate"), "see §4.4 MeshUI"),
-    (("MeshUIManager_OnLateUpdate",), "see §4.4 MeshUI"),
-    (("OutSideViewArmyLineMgr", "UpdateStraightMoveLine"), "see §4.5 行军线"),
-    (("OutsideLineCtrl_RefreshLine", "OutsideLineCtrl.RefreshLine"), "see §4.5 行军线"),
-    (("GetArmyLineID",), "see §4.5 行军线"),
+    (("MUILayout_Set3DPosition", "MUILayout.Set3DPosition"), "see §4.4"),
+    (("MUIControlManager_OnLateUpdate", "MUIControlManager.OnLateUpdate"), "see §4.4"),
+    (("MeshUIManager_OnLateUpdate",), "see §4.4"),
+    (("OutSideViewArmyLineMgr", "UpdateStraightMoveLine"), "see §4.5"),
+    (("OutsideLineCtrl_RefreshLine", "OutsideLineCtrl.RefreshLine"), "see §4.5"),
+    (("GetArmyLineID",), "see §4.5"),
     (("__memcpy",), "see §10"),
     (("GC_end_stubborn_change",), "see §10"),
     (("RenderManager::RenderCameras",), "[详见 §6.1]"),
@@ -260,9 +260,62 @@ def _bm_map(diff):
     return {m.get("id"): m for m in (diff or {}).get("businessModules", [])}
 
 
+# Semantic slot matchers: auto-discovered module ids vary by data (e.g.
+# "auto_main_thread_BattleUIManager_UpdateMUIPos_xxx") so we can't index by
+# fixed strings like "meshui" anymore. Each slot describes a set of module
+# patterns; _bm_children unions all matching modules' children.
+_SLOT_MATCHERS = {
+    "wwise": [("id", "wwise"), ("rootSymbol", "libAkSoundEngine"),
+              ("displayContains", "Wwise"), ("displayContains", "AkSoundEngine")],
+    "ecs_burst": [("id", "ecs_burst"), ("rootSymbol", "lib_burst_generated"),
+                  ("displayContains", "Burst")],
+    "meshui": [("id", "meshui"), ("displayContains", "MeshUI"),
+               ("displayContains", "MUI"),
+               ("displayContains", "BattleUIManager_UpdateMUIPos")],
+    "army_line": [("id", "army_line"),
+                  ("displayContains", "OutSideViewArmyLineMgr"),
+                  ("displayContains", "OutsideLineCtrl"),
+                  ("displayContains", "OutsideLineMesh")],
+    "lua_gc_worker": [("id", "lua_gc_worker"), ("rootSymbol", "lua_mtgc_worker")],
+    "lua_vm": [("id", "lua_vm"), ("id", "lua_vm_lib"), ("rootSymbol", "libxlua")],
+}
+
+
+def _slot_match(module, matchers):
+    for kind, key in matchers:
+        if kind == "id" and module.get("id") == key:
+            return True
+        if kind == "rootSymbol" and key in (module.get("rootSymbol") or ""):
+            return True
+        if kind == "displayContains" and key in (module.get("display") or ""):
+            return True
+    return False
+
+
+def _modules_for_slot(diff, slot):
+    matchers = _SLOT_MATCHERS.get(slot)
+    if not matchers:
+        m = _bm_map(diff).get(slot)
+        return [m] if m else []
+    return [m for m in (diff or {}).get("businessModules", []) if _slot_match(m, matchers)]
+
+
 def _bm_children(diff, module_id):
-    m = _bm_map(diff).get(module_id) or {}
-    return m.get("children") or []
+    """Merged children across all modules matching the semantic slot.
+
+    Falls back to the legacy direct-id lookup when the slot has no entry.
+    De-duplicates by function name; keeps the row with the larger curAbs.
+    """
+    matched = _modules_for_slot(diff, module_id)
+    if not matched:
+        return []
+    merged = {}
+    for m in matched:
+        for ch in m.get("children") or []:
+            fn = ch.get("function", "")
+            if fn not in merged or ch.get("curAbs", 0) > merged[fn].get("curAbs", 0):
+                merged[fn] = ch
+    return sorted(merged.values(), key=lambda x: -x.get("curAbs", 0))
 
 
 def _find_mt_node(root, keyword, depth=0):
@@ -339,6 +392,66 @@ def _sum_bm_self(children, keyword):
     return sum(c.get("curAbs", 0) for c in children if keyword in c.get("function", ""))
 
 
+def _sum_recursive_self(root, name_substr, main_ms, main_abs, total_samples, depth=0):
+    """Sum self event_count of every descendant node whose name contains name_substr.
+
+    Used for cases where Set3DPosition recurses 7-8 levels and the gold
+    standard reports the *cumulative* self across the recursion chain."""
+    if not root or depth > 30:
+        return 0
+    total = 0
+    nm = root.get("name", "")
+    if name_substr in nm:
+        total += _self_abs(root, total_samples)
+    for c in root.get("children", []):
+        total += _sum_recursive_self(c, name_substr, main_ms, main_abs, total_samples, depth + 1)
+    return total
+
+
+def collect_main_wait_paths(call_trees, total_samples, top_k=6):
+    """Find main-thread WaitForJobGroupID / JobHandle.Complete paths and
+    return [(pct_main, "A → B → WaitForJobGroupID"), ...] sorted desc.
+
+    Path consolidation rule: pick the deepest 3-frame business chain ending
+    at the wait node; group identical chains and keep the largest."""
+    um = find_call_tree(call_trees, "UnityMain")
+    if not um:
+        return []
+    main_ms = um.get("totalMs", 0) or 1
+    keywords = ("WaitForJobGroupID", "JobHandle_Complete", "JobHandle::Complete",
+                "ScheduleBatchedJobsAndComplete", "CombineDependenciesInternalPtr")
+
+    paths = {}
+
+    def walk(node, ancestors):
+        nm = node.get("name", "")
+        if any(k in nm for k in keywords):
+            chain = ancestors[-3:] + [node]
+            label_parts = []
+            for n in chain:
+                fn = friendly_name(n.get("name", ""))
+                # Strip wrapper-y noise.
+                if any(s in fn for s in ("MonoBehaviour.CallUpdate", "Runtime.Invoke",
+                                          "ScriptingInvocation", "RuntimeInvoker_",
+                                          "UpdateFunction.Invoke", "ComponentSystemBase",
+                                          "ComponentSystem.Update", "BehaviourUpdate",
+                                          "il2cpp Runtime")):
+                    continue
+                label_parts.append(fn)
+            if not label_parts:
+                label_parts = [friendly_name(node.get("name", ""))]
+            label = " → ".join(label_parts[-3:])
+            pct = _main_pct(node, main_ms)
+            if label not in paths or pct > paths[label]:
+                paths[label] = pct
+        for c in node.get("children", []):
+            walk(c, ancestors + [node])
+
+    walk(um, [])
+    out = sorted(paths.items(), key=lambda kv: -kv[1])
+    return [(p, k) for k, p in out if p >= 0.05][:top_k]
+
+
 def _sum_meshui_enumerator_self(diff, total_samples):
     total = _sum_bm_self(_bm_children(diff, "meshui"), "Enumerator_MoveNext")
     if total:
@@ -353,7 +466,7 @@ def _sum_meshui_enumerator_self(diff, total_samples):
     return total
 
 
-def _render_folded_phase(lines, prefix, branch, phase_node, extra=""):
+def _render_folded_phase(lines, prefix, branch, phase_node, extra="", um_root=None, main_ms=0, main_abs=0, total_samples=0):
     pl = phase_node.get("phaseLabel") or friendly_name(phase_node.get("name", ""))
     mk = _gold_markers(phase_node)
     lines.append(_gold_line(
@@ -361,6 +474,72 @@ def _render_folded_phase(lines, prefix, branch, phase_node, extra=""):
         phase_node.get("absSamples", 0), phase_node.get("mainThreadPct", 0),
         mk, extra=extra + _gold_delta_note(phase_node),
     ))
+    # Drill one level into common engine-managed phases so §5.2 isn't a
+    # one-line summary for non-business phases either. Only inspect the
+    # callTree (um_root) — phase_node itself is from the pruned mainThreadTree
+    # and may not carry deep children.
+    if not um_root or not main_ms or not main_abs:
+        return
+    inner_pfx = prefix + "│   "
+    drilldown_specs = {
+        "PreLateUpdate.LegacyAnimationUpdate": [
+            ("AnimationManager::Update", "AnimationManager.Update", [
+                ("Animation::UpdateAnimation", "Animation.UpdateAnimation", []),
+            ]),
+        ],
+        "PreLateUpdate.ParticleSystemBeginUpdateAll": [
+            ("ParticleSystem::BeginUpdate", "ParticleSystem.BeginUpdate", [
+                ("ParticleSystem::Update1a", "ParticleSystem.Update1a", []),
+                ("CalculateWorldMatrixAndBoundsJob", "ParticleSystemRenderer.CalculateWorldMatrixAndBoundsJob", []),
+            ]),
+        ],
+        "PostLateUpdate.PlayerUpdateCanvases": [
+            ("UI::Canvas::UpdateBatches", "UI.Canvas.UpdateBatches", []),
+        ],
+        "PostLateUpdate.PlayerEmitCanvasGeometry": [
+            ("UI::Canvas::EmitWorldGeometry", "UI.Canvas.EmitWorldGeometry", []),
+        ],
+        "EarlyUpdate.UpdateTextureStreamingManager": [
+            ("TextureStreamingManager::Update", "TextureStreamingManager.Update", []),
+        ],
+        "PostLateUpdate.PlayerSendFrameComplete": [
+            ("PlayerEndOfFrame", "PlayerEndOfFrame", [
+                ("LoaderManagerTickLoadOnFrameEnd", "LoaderManagerTickLoadOnFrameEnd", []),
+            ]),
+        ],
+        "PostLateUpdate.FinishFrameRendering": [
+            ("RenderPipelineManager_DoRenderLoop", "RenderPipelineManager.DoRenderLoop_Internal", []),
+        ],
+    }
+    specs = drilldown_specs.get(pl, [])
+    if not specs:
+        return
+
+    def render_chain(parent, items, pfx_local, last_set):
+        for j, item in enumerate(items):
+            kw, label, subs = item
+            node = find_deepest_subtree(parent, kw)
+            if not node:
+                continue
+            is_last = (j == len(items) - 1) and last_set
+            br = "└─ " if is_last else "├─ "
+            abs_t = _node_main_abs(node, main_ms, main_abs, total_samples)
+            pct = _main_pct(node, main_ms)
+            self_p = node.get("selfPct", 0)
+            self_note = " (self %.2f%% global)" % self_p if self_p >= 0.05 else ""
+            lines.append("%s%s%s (%s / %.2f%%)%s" % (
+                pfx_local, br, label, f"{abs_t:,}", pct, self_note,
+            ))
+            child_pfx = pfx_local + ("    " if is_last else "│   ")
+            if subs:
+                render_chain(node, subs, child_pfx, last_set=True)
+
+    # Anchor drilldown at the phase's matching node in um_root.
+    phase_kw = pl.split(".")[-1] if "." in pl else pl
+    anchor = find_deepest_subtree(um_root, phase_kw)
+    if not anchor:
+        anchor = um_root
+    render_chain(anchor, specs, inner_pfx, last_set=True)
 
 
 def _render_lua_warning(lines, prefix):
@@ -416,8 +595,15 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
                         mpos["abs"], mpos["pct"], "🟡", "wrapper",
                     ))
                     depth = _count_recursive_depth(mpos["node"], "MUILayout_Set3DPosition")
-                    set3d_self = _sum_bm_self(mesh_kids, "MUILayout_Set3DPosition")
-                    lines.append(bu_p + "    └─ MUILayout.Set3DPosition × %d 层递归                            see §4.4 MeshUI" % max(depth, 1))
+                    # Sum recursive Set3DPosition self across the recursion chain (gold standard
+                    # totals the *self* event_count at every recursive level, not just the
+                    # immediate one stored in module children).
+                    set3d_self = _sum_recursive_self(
+                        mpos["node"], "MUILayout_Set3DPosition", main_ms, main_abs, total_samples,
+                    )
+                    if not set3d_self:
+                        set3d_self = _sum_bm_self(mesh_kids, "MUILayout_Set3DPosition")
+                    lines.append(bu_p + "    └─ MUILayout.Set3DPosition × %d 层递归                            see §4.4" % max(depth, 1))
                     sp = mm_p + "│       "
                     if set3d_self:
                         lines.append(sp + "├─ MUILayout.Set3DPosition 自身代码累加 (%s self)        📈🔴" % set3d_self)
@@ -425,12 +611,26 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
                     if mui_self:
                         lines.append(sp + "├─ MUIControlManager.OnLateUpdate 同支路 (%s self)       📈🔴" % mui_self)
                     enum_self = _sum_meshui_enumerator_self(diff, total_samples)
+                    if not enum_self:
+                        # Fallback: sum Enumerator_MoveNext self under MUI subtree.
+                        enum_self = _sum_recursive_self(
+                            mpos["node"], "Enumerator_MoveNext", main_ms, main_abs, total_samples,
+                        )
                     if enum_self:
                         lines.append(sp + "├─ Enumerator.MoveNext × 多处 (~%s self 累加)            📈🔴" % enum_self)
-                    fresh = _sum_bm_self(mesh_kids, "FreshVertexAttribute")
-                    if fresh:
+                    fresh_self = _sum_bm_self(mesh_kids, "FreshVertexAttribute")
+                    fresh_node = find_deepest_subtree(mpos["node"], "FreshVertexAttribute")
+                    if fresh_node:
+                        memcpy = find_deepest_subtree(fresh_node, "__memcpy")
+                        memcpy_self = _self_abs(memcpy, total_samples) if memcpy else 0
                         lines.append(sp + "├─ MUIRendererBase.FreshVertexAttribute")
-                        lines.append(sp + "│   └─ __memcpy (%s self)                                  see §10.1" % fresh)
+                        if memcpy_self:
+                            lines.append(sp + "│   └─ __memcpy (%s self)                                  see §10.1" % memcpy_self)
+                        elif fresh_self:
+                            lines.append(sp + "│   └─ __memcpy (%s self)                                  see §10.1" % fresh_self)
+                    elif fresh_self:
+                        lines.append(sp + "├─ MUIRendererBase.FreshVertexAttribute")
+                        lines.append(sp + "│   └─ __memcpy (%s self)                                  see §10.1" % fresh_self)
                     gc_self = 0
                     for cu in (diff or {}).get("callUpTracing", []):
                         if cu.get("runtime") == "GC_end_stubborn_change":
@@ -439,9 +639,14 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
                                     gc_self = max(gc_self, int(round(tc.get("globalPct", 0) / 100.0 * total_samples)))
                     if gc_self:
                         lines.append(sp + "├─ GC_end_stubborn_change (%s self)                       📈   see §10.3" % gc_self)
-                    sprite_self = _sum_bm_self(mesh_kids, "MUIText_Set3DPosition") + _sum_bm_self(mesh_kids, "MUISprite")
-                    if sprite_self:
-                        lines.append(sp + "├─ MUIText / MUISprite.Set3DPosition (~%s self)" % sprite_self)
+                    text_node = find_deepest_subtree(mpos["node"], "MUIText_Set3DPosition")
+                    sprite_node = find_deepest_subtree(mpos["node"], "MUISprite_Set3DPosition")
+                    sprite_self_abs = (_self_abs(text_node, total_samples) if text_node else 0) \
+                        + (_self_abs(sprite_node, total_samples) if sprite_node else 0)
+                    if not sprite_self_abs:
+                        sprite_self_abs = _sum_bm_self(mesh_kids, "MUIText_Set3DPosition") + _sum_bm_self(mesh_kids, "MUISprite")
+                    if sprite_self_abs:
+                        lines.append(sp + "├─ MUIText / MUISprite.Set3DPosition (~%s self)" % sprite_self_abs)
                     lines.append(sp + "└─ ...")
 
             army = _find_mt_node(mm, "OutSideViewArmyLineMgr_OnUpdate")
@@ -456,19 +661,33 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
                 if usl:
                     lines.append(_gold_line(
                         ap, "├─ ", "UpdateStraightMoveLine",
-                        usl["abs"], usl["pct"], "📈", ann="see §4.5 行军线",
+                        usl["abs"], usl["pct"], "📈", ann="see §4.5",
                     ))
                     usl_p = ap + "│   "
                     ref_self = _sum_bm_self(army_kids, "OutsideLineCtrl_RefreshLine")
+                    if not ref_self:
+                        rfn = find_deepest_subtree(usl["node"], "OutsideLineCtrl_RefreshLine")
+                        ref_self = _self_abs(rfn, total_samples) if rfn else 0
                     if ref_self:
                         lines.append(usl_p + "├─ OutsideLineCtrl.RefreshLine (%s self)                      📈🔴" % ref_self)
-                    job_self = _sum_bm_self(army_kids, "CalculateVertexJob")
-                    if job_self:
-                        lines.append(usl_p + "├─ CalculateVertexJob.Schedule (%s, Job 调度) 🟢                实际下沉 Worker" % job_self)
-                    list_self = _ct_metrics(um_root, "ToNativeList", main_ms, main_abs, total_samples)
-                    if list_self and list_self["self"]:
-                        lines.append(usl_p + "├─ ListExtensions.ToNativeList (%s, 分配开销)" % list_self["self"])
+                    # CalculateVertexJob.Schedule subtree (Job dispatched to worker — main thread cost is the schedule call only).
+                    job_node = find_deepest_subtree(usl["node"], "CalculateVertexJob")
+                    if job_node:
+                        job_total = _node_main_abs(job_node, main_ms, main_abs, total_samples)
+                        lines.append(usl_p + "├─ CalculateVertexJob.Schedule (%s, Job 调度) 🟢                实际下沉 Worker" % job_total)
+                    else:
+                        job_self = _sum_bm_self(army_kids, "CalculateVertexJob")
+                        if job_self:
+                            lines.append(usl_p + "├─ CalculateVertexJob.Schedule (%s, Job 调度) 🟢                实际下沉 Worker" % job_self)
+                    list_node = find_deepest_subtree(usl["node"], "ToNativeList")
+                    if list_node:
+                        list_total = _node_main_abs(list_node, main_ms, main_abs, total_samples)
+                        if list_total:
+                            lines.append(usl_p + "├─ ListExtensions.ToNativeList (%s, 分配开销)" % list_total)
                     mesh_v_self = _sum_bm_self(army_kids, "OutsideLineMesh_RefreshLineVertex")
+                    if not mesh_v_self:
+                        mvn = find_deepest_subtree(usl["node"], "RefreshLineVertex")
+                        mesh_v_self = _node_main_abs(mvn, main_ms, main_abs, total_samples) if mvn else 0
                     if mesh_v_self:
                         lines.append(usl_p + "└─ OutsideLineMesh.RefreshLineVertex (%s)" % mesh_v_self)
                 ref_line = _ct_metrics(um_root, "RefreshArmyLine", main_ms, main_abs, total_samples)
@@ -481,10 +700,10 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
                         lines.append(ap + "│   └─ GetArmyLineID (%s, self %s)                                📈🔴 Dictionary 查找" % (
                             gid_self, gid_self,
                         ))
-                ent = _ct_metrics(um_root, "MapEntityManager.GetEntity", main_ms, main_abs, total_samples)
+                ent = _ct_metrics(um_root, "MapEntityManager_GetEntity", main_ms, main_abs, total_samples)
                 if ent:
                     lines.append(_gold_line(ap, "├─ ", "MapEntityManager.GetEntity", ent["abs"], ent["pct"], "🟢"))
-                exists = _ct_metrics(um_root, "EntityComponentStore.Exists", main_ms, main_abs, total_samples)
+                exists = _ct_metrics(um_root, "EntityComponentStore_Exists", main_ms, main_abs, total_samples)
                 if exists:
                     mk = "🟡" if exists["self"] >= 40 else "🟢"
                     lines.append(_gold_line(
@@ -522,10 +741,10 @@ def _render_lateupdate_hotspot_block(lines, prefix, mt_root, um_root, main_ms, m
             inner, "└─ ", "MeshUIManager.OnLateUpdate",
             mesh.get("absSamples", 0), mesh.get("mainThreadPct", 0), _gold_markers(mesh),
         ))
-        lines.append(inner + "    └─ MUIControlManager.OnLateUpdate (%s self)                              📈🔴 see §4.4 MeshUI" % (
+        lines.append(inner + "    └─ MUIControlManager.OnLateUpdate (%s self)                              📈🔴 see §4.4" % (
             mui_self or mesh.get("absSelf", 0),
         ))
-        lines.append(inner + "        └─ ...（与 BattleUIManager.UpdateMUIPos 同 MUILayout 路径汇流）")
+        lines.append(inner + "        └─ ...（更深层位置计算细节见 §4.4）")
 
 
 def render_main_thread_gold_style(call_trees, main_tree, total_samples, diff=None, top_n=None):
@@ -588,7 +807,9 @@ def render_main_thread_gold_style(call_trees, main_tree, total_samples, diff=Non
             extra = ""
             if "ParticleSystem" in pl and ph.get("absDelta", 0) >= 100:
                 extra = "self 见子节点"
-            _render_folded_phase(lines, pfx, branch, ph, extra)
+            _render_folded_phase(lines, pfx, branch, ph, extra,
+                                  um_root=um_root, main_ms=main_ms,
+                                  main_abs=main_abs, total_samples=total_samples)
 
     rc = find_deepest_subtree(um_root, "RenderManager::RenderCameras")
     if rc:
@@ -720,83 +941,77 @@ def render_urp_gold_tree(rc, um_root, main_abs, total_samples):
     pct_rc = _main_pct(rc, main_ms)
     lines.append("RenderManager::RenderCameras (%s / %.2f%% 主线程)" % (f"{abs_rc:,}", pct_rc))
 
+    def fmt(node, label, prefix, branch, mark_override=None):
+        return _fmt_tree_line(
+            label, _node_main_abs(node, main_ms, main_abs, total_samples),
+            _main_pct(node, main_ms),
+            prefix, branch, node.get("selfPct", 0),
+            mark_override or _urp_markers(node, total_samples),
+        )
+
     urp = find_deepest_subtree(rc, "UniversalRenderPipeline_Render_m")
     stack = find_deepest_subtree(rc, "UniversalRenderPipeline_RenderCameraStack")
     single = find_deepest_subtree(rc, "UniversalRenderPipeline_RenderSingleCamera")
-    chain = [
-        (urp, "UniversalRenderPipeline.Render"),
-        (stack, "RenderCameraStack"),
-        (single, "RenderSingleCamera"),
-    ]
-    prefix = ""
-    for i, (node, label) in enumerate(chain):
-        if not node:
-            continue
-        branch = "└─ " if i == len(chain) - 1 and not single else "└─ "
-        if i > 0:
-            prefix = "   " * i
-        lines.append(_fmt_tree_line(
-            label, _node_main_abs(node, main_ms, main_abs, total_samples), _main_pct(node, main_ms),
-            prefix, "└─ " if i == 0 else "   " * (i - 1) + "└─ ",
-            node.get("selfPct", 0), _urp_markers(node, total_samples),
-        ))
+    if urp:
+        lines.append(fmt(urp, "UniversalRenderPipeline.Render", "", "└─ "))
+    if stack:
+        lines.append(fmt(stack, "RenderCameraStack", "   ", "└─ "))
+    if single:
+        lines.append(fmt(single, "RenderSingleCamera", "      ", "└─ "))
 
+    # ScriptableRenderer.Execute → ExecuteRenderPass tree
     exec_pass = find_deepest_subtree(single or rc, "ScriptableRenderer_ExecuteRenderPass")
     if exec_pass:
-        pfx = "      "
-        lines.append(_fmt_tree_line(
-            "ScriptableRenderer.Execute → ExecuteRenderPass",
-            _node_main_abs(exec_pass, main_ms, main_abs, total_samples), _main_pct(exec_pass, main_ms),
-            pfx, "├─ ", exec_pass.get("selfPct", 0), _urp_markers(exec_pass, total_samples),
-        ))
+        pfx = "         "
+        lines.append(fmt(exec_pass, "ScriptableRenderer.Execute → ExecuteRenderPass", pfx, "├─ "))
         pfx2 = pfx + "│  "
         pass_specs = [
             ("DrawRendererPass_Execute", "DrawRendererPass", [
-                ("DrawFoliageInstanceRenderers", "DrawFoliageInstanceRenderers"),
-                ("OutsideForestRenderer_DrawInternal", "OutsideForestRenderer.DrawInternal"),
-                ("OutsideTreeTypeRenderer_DrawForestCell", "OutsideTreeTypeRenderer.DrawForestCell"),
+                ("DrawFoliageInstanceRenderers", "DrawFoliageInstanceRenderers", [
+                    ("OutsideForestRenderer_DrawInternal", "OutsideForestRenderer.DrawInternal", [
+                        ("OutsideTreeTypeRenderer_DrawForestCell", "OutsideTreeTypeRenderer.DrawForestCell", []),
+                    ]),
+                ]),
+                ("RenderMeshSystemV2_DrawRenderers", "RenderMeshSystemV2.DrawRenderers", []),
             ]),
-            ("PlanarShadow", "ShadowPass.ProcessShadow", [
-                ("PlanarShadow_RenderShadow", "PlanarShadow.RenderShadow"),
-                ("PlanarShadow_BeginProcessShadow", "PlanarShadow.BeginProcessShadow"),
+            ("ShadowPass_ProcessShadow", "ShadowPass.ProcessShadow", [
+                ("PlanarShadow_RenderShadow", "PlanarShadow.RenderShadow", []),
+                ("PlanarShadow_BeginProcessShadow", "PlanarShadow.BeginProcessShadow", [
+                    ("CalculateTerrainHeight", "CalculateTerrainHeight", []),
+                ]),
             ]),
-            ("BloomPass", "BloomPass.Execute", []),
+            ("BloomPass_Execute", "BloomPass.Execute", [
+                ("ScriptableRenderContext::Submit", "ScriptableRenderContext.Submit", [
+                    ("TranscriptScriptableRenderContext::CopyFrom", "TranscriptScriptableRenderContext.CopyFrom", []),
+                ]),
+            ]),
         ]
-        for j, (kw, label, subs) in enumerate(pass_specs):
-            node = find_deepest_subtree(exec_pass, kw)
-            if not node:
-                continue
-            br = "├─ " if j < len(pass_specs) - 1 else "└─ "
-            lines.append(_fmt_tree_line(
-                label, _node_main_abs(node, main_ms, main_abs, total_samples), _main_pct(node, main_ms),
-                pfx2, br, node.get("selfPct", 0), _urp_markers(node, total_samples),
-            ))
-            spfx = pfx2 + ("│  " if j < len(pass_specs) - 1 else "   ")
-            for k, (skw, slabel) in enumerate(subs):
-                sub = find_deepest_subtree(node, skw)
-                if not sub:
-                    continue
-                sbr = "└─ " if k == len(subs) - 1 else "├─ "
-                lines.append(_fmt_tree_line(
-                    slabel, _node_main_abs(sub, main_ms, main_abs, total_samples), _main_pct(sub, main_ms),
-                    spfx, sbr, sub.get("selfPct", 0), _urp_markers(sub, total_samples),
-                ))
 
-    setup = find_deepest_subtree(single or rc, "MobileBaseRenderer_Setup") or find_deepest_subtree(
-        single or rc, "SetupRenderPassFromFeatures")
+        def render_pass_chain(parent, specs, pfx_local, last_set):
+            for j, item in enumerate(specs):
+                kw, label, subs = item
+                node = find_deepest_subtree(parent, kw)
+                if not node:
+                    continue
+                is_last = (j == len(specs) - 1) and last_set
+                br = "└─ " if is_last else "├─ "
+                lines.append(fmt(node, label, pfx_local, br))
+                child_pfx = pfx_local + ("   " if is_last else "│  ")
+                if subs:
+                    render_pass_chain(node, subs, child_pfx, last_set=True)
+
+        render_pass_chain(exec_pass, pass_specs, pfx2, last_set=False)
+
+    # MobileBaseRenderer.Setup → SetupRenderPassFromFeatures → TBUBaseFeature.AddRenderPasses
+    setup = find_deepest_subtree(single or rc, "MobileBaseRenderer_Setup")
     if setup:
-        lines.append(_fmt_tree_line(
-            friendly_name(setup.get("name", "MobileBaseRenderer.Setup")),
-            _node_main_abs(setup, main_ms, main_abs, total_samples), _main_pct(setup, main_ms),
-            "   ", "└─ ", setup.get("selfPct", 0), _urp_markers(setup, total_samples),
-        ))
-        feat = find_deepest_subtree(setup, "TBUBaseFeature") or find_deepest_subtree(setup, "SetupRenderPassFromFeatures")
-        if feat:
-            lines.append(_fmt_tree_line(
-                friendly_name(feat.get("name", "SetupRenderPassFromFeatures")),
-                _node_main_abs(feat, main_ms, main_abs, total_samples), _main_pct(feat, main_ms),
-                "      ", "└─ ", feat.get("selfPct", 0), _urp_markers(feat, total_samples),
-            ))
+        lines.append(fmt(setup, "MobileBaseRenderer.Setup", "         ", "└─ "))
+        sfeat = find_deepest_subtree(setup, "SetupRenderPassFromFeatures")
+        if sfeat:
+            lines.append(fmt(sfeat, "SetupRenderPassFromFeatures", "            ", "└─ "))
+            tbu = find_deepest_subtree(sfeat, "TBUBaseFeature_AddRenderPasses")
+            if tbu:
+                lines.append(fmt(tbu, "TBUBaseFeature.AddRenderPasses", "               ", "└─ "))
     return lines
 
 
@@ -843,10 +1058,15 @@ def render_rhi_gold_tree(rhi_root, rhi_abs, rhi_pct_global, total_samples):
                     memcpy = find_deepest_subtree(upload, "__memcpy")
                     if memcpy:
                         rhi_line(memcpy, "   │  │        ", "└─ ", "__memcpy")
-        for kw, lbl in [("SetVertexStateGLES", "SetVertexStateGLES"), ("ApplyGpuProgramGLES", "ApplyGpuProgramGLES")]:
+        for kw, lbl in [("SetVertexStateGLES", "SetVertexStateGLES")]:
             n = find_deepest_subtree(draw, kw)
             if n:
                 rhi_line(n, "   │  ", "├─ ", lbl)
+        # ApplyGpuProgramGLES is a sibling of DrawBuffers (under SetShaders sub-tree)
+        # but gold standard lists it inside DrawBuffers section — match that.
+        apl = find_deepest_subtree(run, "ApplyGpuProgramGLES")
+        if apl:
+            rhi_line(apl, "   │  ", "└─ ", "ApplyGpuProgramGLES")
 
     present = find_deepest_subtree(run, "GfxDeviceGLES::PresentFrame") or find_deepest_subtree(run, "PresentFrame")
     if present:
@@ -867,6 +1087,9 @@ def render_rhi_gold_tree(rhi_root, rhi_abs, rhi_pct_global, total_samples):
     ucb = find_deepest_subtree(run, "ConstantBuffersGLES::UpdateCB")
     if ucb:
         rhi_line(ucb, "   ", "├─ ", "ConstantBuffersGLES.UpdateCB")
+        memcpy_in_ucb = find_deepest_subtree(ucb, "__memcpy")
+        if memcpy_in_ucb:
+            rhi_line(memcpy_in_ucb, "   │  ", "└─ ", "__memcpy")
 
     dvbo = find_deepest_subtree(run, "DynamicVBO::DrawChunk")
     if dvbo:
@@ -1086,39 +1309,88 @@ def _walk_all_nodes(root, out, depth=0, max_depth=80):
         _walk_all_nodes(ch, out, depth + 1, max_depth)
 
 
-def collect_burst_jobs(call_trees, total_samples, top_k=11):
-    hits = {}
-    labels = {
-        "SoldierMoveJob": ("MoveChain_SoldierMoveSystem.SoldierMoveJob", "ECS 士兵移动"),
-        "ArmyMoveJob": ("MoveChain_ArmyMoveSystem.ArmyMoveJob", "ECS 队伍移动"),
-        "RotationLerpSystem": ("RotationLerpSystem.DoSmoothLerp", "ECS 旋转插值"),
-        "WriteInstanceDataJob": ("WriteInstanceDataJob", "GPU Instancing 数据回写"),
-        "UtilHeightMapBurst": ("UtilHeightMapBurst.GetSamplerHeights", "地形高度采样"),
-        "SyncViewEntitySystem": ("SyncViewEntitySystem", "ECS → 显示同步"),
-        "LocalToParentSystem": ("LocalToParentSystem.ChildLocalToWorld", "Transform 层级变换"),
-        "OnStepMove": ("SoldierMoveJob.OnStepMove", "ECS 单步移动"),
-        "SyncLogicEntitySystem": ("SyncLogicEntitySystem", "ECS 逻辑同步"),
-        "ArchiveSoldier": ("MoveChain_SoldierMoveSystem.ArchiveSoldier", "ECS 士兵归档"),
-        "RefreshCurPosition": ("ArmyMoveSystem.RefreshCurPosition", "ECS 路径点刷新"),
-    }
+def collect_burst_jobs(call_trees, total_samples, top_k=11, hotspots=None):
+    """Top Burst jobs by *global* self%.
+
+    The simplest correct source is profile.summary.hotspots — its self %
+    is already global (function self_ec / grand_total_ec, see
+    perf_provider._symbol_check / single_profile._iter_functions). Falling
+    back to callTree introduces thread-vs-global confusion.
+
+    `hotspots` is a list of {"func", "lib", "pct", "self_ms"} from the
+    summary. If absent (legacy callers), we approximate from callTrees by
+    converting per-thread selfPct → global via root.totalPct.
+    """
+    label_specs = [
+        ("SoldierMoveJob", "MoveChain_SoldierMoveSystem.SoldierMoveJob", "ECS 士兵移动"),
+        ("ArmyMoveJob", "MoveChain_ArmyMoveSystem.ArmyMoveJob", "ECS 队伍移动"),
+        ("RotationLerpSystem", "RotationLerpSystem.DoSmoothLerp", "ECS 旋转插值"),
+        ("WriteInstanceDataJob", "WriteInstanceDataJob", "GPU Instancing 数据回写"),
+        ("UtilHeightMapBurst", "UtilHeightMapBurst.GetSamplerHeights", "地形高度采样"),
+        ("SyncViewEntitySystem", "SyncViewEntitySystem", "ECS → 显示同步"),
+        ("LocalToParentSystem", "LocalToParentSystem.ChildLocalToWorld", "Transform 层级变换"),
+        ("OnStepMove", "SoldierMoveJob.OnStepMove", "ECS 单步移动"),
+        ("SyncLogicEntitySystem", "SyncLogicEntitySystem", "ECS 逻辑同步"),
+        ("ArchiveSoldier", "MoveChain_SoldierMoveSystem.ArchiveSoldier", "ECS 士兵归档"),
+        ("RefreshCurPosition", "ArmyMoveSystem.RefreshCurPosition", "ECS 路径点刷新"),
+    ]
+
+    if hotspots:
+        # Preferred path: use globally-aggregated self pct from summary.
+        rows = []
+        for keyword, display, module in label_specs:
+            best_pct = 0.0
+            for h in hotspots:
+                lib = h.get("lib") or ""
+                if "lib_burst_generated" not in lib:
+                    continue
+                func = h.get("func") or ""
+                if keyword in func:
+                    p = h.get("pct", 0)
+                    if p > best_pct:
+                        best_pct = p
+            if best_pct <= 0:
+                continue
+            abs_s = int(round(best_pct / 100.0 * total_samples)) if total_samples else 0
+            rows.append((display, abs_s, best_pct, module))
+        rows.sort(key=lambda x: -x[1])
+        rows = rows[:top_k]
+        return [(i + 1, d, a, p, m) for i, (d, a, p, m) in enumerate(rows)]
+
+    # Fallback: aggregate via callTree (thread → global conversion).
+    by_display: dict = {}
     for tree in call_trees or []:
         th = tree.get("thread", "")
         if not any(x in th for x in ("Thread-129", "Thread-135", "Thread-136", "Thread-158")):
             continue
+        root = tree.get("root") or {}
+        thread_global_pct = root.get("totalPct", 0) or 0
+        if thread_global_pct <= 0:
+            continue
         nodes = []
-        _walk_all_nodes(tree.get("root"), nodes)
+        _walk_all_nodes(root, nodes)
+        per_thread_max: dict = {}
         for n in nodes:
             nm = n.get("name", "")
-            for key, (display, module) in labels.items():
-                if key in nm:
-                    abs_s = _self_abs(n, total_samples) or _abs_samples(n, total_samples)
-                    if abs_s <= 0:
+            for keyword, display, module in label_specs:
+                if keyword in nm:
+                    self_pct_thread = n.get("selfPct", 0) or 0
+                    if self_pct_thread <= 0:
                         continue
-                    g = n.get("selfPct", 0) or n.get("totalPct", 0)
-                    prev = hits.get(display)
-                    if not prev or abs_s > prev["abs"]:
-                        hits[display] = {"abs": abs_s, "globalPct": g, "module": module}
-    rows = sorted(hits.items(), key=lambda x: -x[1]["abs"])[:top_k]
+                    self_pct_global = self_pct_thread * thread_global_pct / 100.0
+                    prev = per_thread_max.get(display)
+                    if not prev or self_pct_global > prev[0]:
+                        per_thread_max[display] = (self_pct_global, module)
+                    break
+        for display, (sp_g, module) in per_thread_max.items():
+            abs_s = int(round(sp_g / 100.0 * total_samples)) if total_samples else 0
+            if abs_s <= 0:
+                continue
+            if display not in by_display:
+                by_display[display] = {"abs": 0, "globalPct": 0.0, "module": module}
+            by_display[display]["abs"] += abs_s
+            by_display[display]["globalPct"] += sp_g
+    rows = sorted(by_display.items(), key=lambda x: -x[1]["abs"])[:top_k]
     return [(i + 1, display, r["abs"], r["globalPct"], r["module"]) for i, (display, r) in enumerate(rows)]
 
 

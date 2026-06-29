@@ -405,8 +405,9 @@ export async function runIngestRoutes(app: FastifyInstance) {
 
     const meta = metaFromFields(fields);
     const cliProvider = (fields.cliProvider as 'codebuddy' | 'claude' | 'mock' | undefined) || undefined;
-    // Web 默认跳过可选 CLI boost（Python enrich 始终执行）；显式 skipAiEnrich=false 才启用 CLI
-    const skipAiEnrich = fields.skipAiEnrich !== 'false' && fields.skipAiEnrich !== '0';
+    // Web 默认开启 CLI 润色（覆盖 §0 / §4.3-§4.6 / §6.2 / §9 narrative gaps）
+    // 显式 skipAiEnrich=true 才跳过；Python enrich 始终执行
+    const skipAiEnrich = fields.skipAiEnrich === 'true' || fields.skipAiEnrich === '1';
     const job = createIngestJob('simpleperf_diff');
     runSimpleperfDiffIngestJob(job.id, {
       input: { basePerfPath: byRole.base, curPerfPath: byRole.cur },
@@ -472,7 +473,7 @@ export async function runIngestRoutes(app: FastifyInstance) {
       sceneBase: body.sceneBase,
       sceneCur: body.sceneCur,
       cliProvider: body.cliProvider,
-      skipAiEnrich: body.skipAiEnrich !== false,
+      skipAiEnrich: body.skipAiEnrich === true,
     });
     return reply.status(202).send(jobPayload(job.id));
   });

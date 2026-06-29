@@ -16,12 +16,15 @@ from simpleperf_analyzer.v4_report_renderer import render_v4_report
 
 def _load_meta(out_dir: str, diff: dict) -> dict:
     summary_path = os.path.join(out_dir, "simpleperf-diff-summary.json")
+    # Project-agnostic defaults: real labels come from the upload payload
+    # (web ingest passes sceneBase/sceneCur via meta). Keep the fallback empty
+    # so missing user input is visible rather than masked by a stale default.
     meta = {
-        "device": "MateXs2 (PAL-AL00, aarch64)",
-        "sceneBase": "野外空场景",
-        "sceneCur": "stressmove 行军线压测（约 300 队）",
+        "device": "—",
+        "sceneBase": "base 采集",
+        "sceneCur": "cur 采集",
         "durationSec": diff.get("cur", {}).get("durationSec", 20),
-        "subjectiveFps": "~45 fps",
+        "subjectiveFps": None,
     }
     if os.path.isfile(summary_path):
         try:
@@ -41,19 +44,58 @@ def main():
         "detail"]["simpleperf"]
     cur_sp = json.load(open(os.path.join(out_dir, "cur", "simpleperf-profile.json"), encoding="utf-8"))[
         "detail"]["simpleperf"]
+    # Pull globally-aggregated hotspots from the summary file (Burst Top-N
+    # uses these for correct global-self %; callTree-level selfPct is per
+    # thread and would mis-scale.)
+    cur_summary_path = os.path.join(out_dir, "cur", "simpleperf-profile-summary.json")
+    if os.path.isfile(cur_summary_path):
+        try:
+            cur_summary = json.load(open(cur_summary_path, encoding="utf-8"))
+            cur_sp["hotspots"] = cur_summary.get("hotspots", [])
+        except OSError:
+            cur_sp.setdefault("hotspots", [])
     meta = _load_meta(out_dir, diff)
     top_n = compute_top_n(diff["businessModules"], diff["probes"])
     md = render_v4_report(diff, top_n, base_sp, cur_sp, meta=meta, enriched=True)
+
+    # NOTE: LLM enrichment for §0 / §4.3-§4.6 / §6.2 / §9 is NOT called here.
+    # It runs at the web layer via codebuddy CLI (see
+    # web/server/services/simpleperf-diff-service.ts:runCliDiffEnrich) which
+    # consumes this enriched-template output, patches narrative sections,
+    # then runs the quality gate. CLI failures fall back to this template.
+
+    # Single canonical deliverable. The Provider draft is kept in .provider/
+    # for debugging only; users should read performance-report.md.
     report_dir = os.path.join(out_dir, "report")
     os.makedirs(report_dir, exist_ok=True)
-    ai_path = os.path.join(report_dir, "performance-report_simpleperf_AI_v4.md")
-    with open(ai_path, "w", encoding="utf-8") as f:
+    debug_dir = os.path.join(report_dir, ".provider")
+    os.makedirs(debug_dir, exist_ok=True)
+
+    final_path = os.path.join(report_dir, "performance-report.md")
+    with open(final_path, "w", encoding="utf-8") as f:
         f.write(md)
+
+    # Mirror to out_dir root for legacy web export pickup.
     web = os.path.join(out_dir, "performance-report.md")
     with open(web, "w", encoding="utf-8") as f:
         f.write(md)
+
+    # Provider draft (un-enriched) lands under .provider/ for diff/debug.
+    md_provider = render_v4_report(diff, top_n, base_sp, cur_sp, meta=meta, enriched=False)
+    provider_path = os.path.join(debug_dir, "provider-draft.md")
+    with open(provider_path, "w", encoding="utf-8") as f:
+        f.write(md_provider)
+
+    # Legacy filenames kept (symlink-equivalent copies) so existing tooling
+    # that hard-codes them still finds the deliverable. Remove once tooling
+    # migrates to performance-report.md.
+    for legacy in ("performance-report_simpleperf_AI_v4.md", "performance-report_simpleperf_v4.md"):
+        with open(os.path.join(report_dir, legacy), "w", encoding="utf-8") as f:
+            f.write(md if "AI" in legacy else md_provider)
+
     print(json.dumps({
-        "enrichedPath": ai_path,
+        "deliverable": final_path,
+        "providerDraft": provider_path,
         "bytes": len(md),
         "lines": md.count("\n") + 1,
     }, ensure_ascii=False))

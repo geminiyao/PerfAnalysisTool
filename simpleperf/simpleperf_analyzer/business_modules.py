@@ -1,9 +1,20 @@
-"""Business module aggregation per knowledge base v2.1 §4 / card A.3."""
+"""Business module aggregation — auto-discovery via onion peel + common ancestor merge.
 
-from .tree_utils import collect_self_hits, sum_self_global, thread_global_pct
+Replaces the previous hardcoded BUSINESS_MODULES dict with a data-driven
+discovery pipeline (see auto_module_discovery.py for the algorithm). Output
+schema unchanged so the rest of the pipeline (probes, top_n_engine,
+v4_report_renderer) is not affected.
+
+Legacy hardcoded path kept as `compute_business_modules_legacy` for regression
+diff during the migration.
+"""
+
+from .auto_module_discovery import discover_business_modules
+from .tree_utils import collect_self_hits, sum_self_global
 from .naming import sanitize_lib
 
-BUSINESS_MODULES = {
+# Legacy hardcoded definitions retained for regression / fallback only.
+BUSINESS_MODULES_LEGACY = {
     "wwise": {
         "mode": "lib_match",
         "lib": "libAkSoundEngine",
@@ -102,8 +113,19 @@ def _lib_pct(metrics, lib_name):
 
 
 def compute_business_modules(profile, grand_total_ec, tagged_threads, metrics, total_samples):
+    """Auto-discover business modules from callTree (onion peel + common-ancestor merge).
+
+    Project-agnostic: no hardcoded keywords. Modules emerge from the data.
+    """
+    return discover_business_modules(
+        profile, grand_total_ec, tagged_threads, metrics, total_samples,
+    )
+
+
+def compute_business_modules_legacy(profile, grand_total_ec, tagged_threads, metrics, total_samples):
+    """Legacy hardcoded keyword path — kept for regression diff during migration."""
     modules = []
-    for mod_id, cfg in BUSINESS_MODULES.items():
+    for mod_id, cfg in BUSINESS_MODULES_LEGACY.items():
         mode = cfg["mode"]
         if mode == "lib_match":
             g_pct = _lib_pct(metrics, cfg["lib"])

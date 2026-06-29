@@ -135,6 +135,8 @@ def compute_diff(base_ext, cur_ext, base_label="base", cur_label="cur", duration
         row["runtime"] = rt
         row["baseTotalGlobalPct"] = b.get("totalGlobalPct", 0)
         row["curTotalGlobalPct"] = c.get("totalGlobalPct", 0)
+        row["baseTotalHits"] = b.get("totalHits", 0)
+        row["curTotalHits"] = c.get("totalHits", 0)
         row["topCallers"] = c.get("topCallers", [])
         cus.append(row)
     diff["callUpTracing"] = sorted(cus, key=lambda x: -abs(x["absDelta"]))

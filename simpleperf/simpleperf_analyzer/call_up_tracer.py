@@ -81,15 +81,21 @@ def compute_call_up_tracing(profile, grand_total_ec, tagged_threads):
     output = []
     for target in CALL_UP_TARGETS:
         hits = results[target]
+        raw_hit_count = len(hits)
         dedup = {}
         for h in hits:
             k = (h["callerChain"], h["thread"])
             if k not in dedup or h["globalPct"] > dedup[k]["globalPct"]:
                 dedup[k] = h
         top = sorted(dedup.values(), key=lambda x: -x["globalPct"])[:10]
+        # totalGlobalPct: sum across ALL dedup entries (not just top 10) so the
+        # report's "global X%" reflects the full footprint.
+        full_total = round(sum(h["globalPct"] for h in dedup.values()), 4)
         output.append({
             "runtime": target,
-            "totalGlobalPct": round(sum(h["globalPct"] for h in top), 4),
+            "totalGlobalPct": full_total,
+            "totalHits": raw_hit_count,
+            "uniqueCallChains": len(dedup),
             "topCallers": top,
         })
     return output
