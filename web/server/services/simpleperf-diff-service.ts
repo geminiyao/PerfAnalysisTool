@@ -80,6 +80,77 @@ function sanitizeId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 80);
 }
 
+/**
+ * Scan diff JSON libs for any project pack's identify.selfDeveloperSoNames
+ * and set PERFTOOL_PROJECT env var so the Python pipeline activates the
+ * matching pack. Mirrors detect_project_from_libs() in
+ * simpleperf_analyzer/project_pack.py.
+ */
+function detectAndSetProjectPack(workDir: string, onLog?: (line: string) => void): void {
+  // Allow explicit overrides (env var, /etc) to win.
+  if (process.env.PERFTOOL_PROJECT) {
+    onLog?.(`[diff] PERFTOOL_PROJECT 已显式设置=${process.env.PERFTOOL_PROJECT}，跳过自动检测`);
+    return;
+  }
+  try {
+    const diffPath = path.join(workDir, 'diff', 'simpleperf-diff.json');
+    if (!fs.existsSync(diffPath)) return;
+    const diff = JSON.parse(fs.readFileSync(diffPath, 'utf8'));
+    const libNames: string[] = (diff.libs ?? [])
+      .map((l: { lib?: string; name?: string }) => l.lib || l.name || '')
+      .filter(Boolean);
+
+    const config = getConfig();
+    const projectsDir = path.join(config.skillProjectPath, 'projects');
+    if (!fs.existsSync(projectsDir)) return;
+    const dirEntries = fs.readdirSync(projectsDir, { withFileTypes: true });
+
+    for (const entry of dirEntries) {
+      if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+      const packYaml = path.join(projectsDir, entry.name, 'pack.yaml');
+      if (!fs.existsSync(packYaml)) continue;
+      // Cheap parse: scan the lines under selfDeveloperSoNames: for `- foo`.
+      const text = fs.readFileSync(packYaml, 'utf8');
+      const markers = extractSelfDevSoNames(text);
+      if (markers.length === 0) continue;
+      const hit = markers.some(m => libNames.some(lib => lib.includes(m)));
+      if (hit) {
+        process.env.PERFTOOL_PROJECT = entry.name;
+        onLog?.(`[diff] 自动检测项目包: ${entry.name}（命中 ${markers.find(m => libNames.some(l => l.includes(m)))}）`);
+        return;
+      }
+    }
+    onLog?.('[diff] 未匹配项目包，回退 _generic');
+  } catch (err) {
+    onLog?.(`[diff] 项目包检测失败: ${(err as Error).message}`);
+  }
+}
+
+function extractSelfDevSoNames(yamlText: string): string[] {
+  const out: string[] = [];
+  const lines = yamlText.split(/\r?\n/);
+  let inBlock = false;
+  for (const raw of lines) {
+    const line = raw.replace(/\r$/, '');
+    if (/^\s*selfDeveloperSoNames\s*:/.test(line)) {
+      inBlock = true;
+      continue;
+    }
+    if (inBlock) {
+      const m = /^\s+-\s+(\S+)/.exec(line);
+      if (m) {
+        out.push(m[1].replace(/['"]/g, ''));
+        continue;
+      }
+      // End of block when we hit a non-list non-indented line.
+      if (line.trim() && !/^\s+-/.test(line) && !/^\s+#/.test(line)) {
+        inBlock = false;
+      }
+    }
+  }
+  return out;
+}
+
 function goldenReportPath(projectRoot: string): string {
   return path.join(projectRoot, 'docs', 'report', 'performance-report_simpleperf_ULTIMATE_v4.md');
 }
@@ -274,6 +345,12 @@ async function finalizeDeliverable(
 ): Promise<{ markdown: string; usedAi: boolean }> {
   const dest = path.join(workDir, 'performance-report.md');
   const enrichedReport = path.join(workDir, 'report', 'performance-report_simpleperf_AI_v4.md');
+
+  // Detect the project pack from the diff JSON's libs (matches the rule
+  // used by enrich_v4_report.py auto-detect). Setting PERFTOOL_PROJECT
+  // makes the Python pipeline pick the right yaml pack instead of falling
+  // back to _generic.
+  detectAndSetProjectPack(workDir, onLog);
 
   onLog?.('[diff] enrich_v4_report（叙事润色）…');
   await runProjectPython('scripts/enrich_v4_report.py', [workDir], onLog, 120_000);
