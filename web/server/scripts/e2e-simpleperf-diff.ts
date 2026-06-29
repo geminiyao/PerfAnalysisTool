@@ -46,7 +46,7 @@ async function runServiceE2e() {
         device: 'MateXs2 (PAL-AL00, aarch64)',
         targetFps: 45,
       },
-      skipAiEnrich: true,
+      skipAiEnrich: false,
       onLog: line => console.log(`  ${line}`),
     },
   );

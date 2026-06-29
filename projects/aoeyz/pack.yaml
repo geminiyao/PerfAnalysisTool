@@ -7,6 +7,9 @@ identify:
     - libAOENative
     - libTBUNative
     - libGameNative
+  # APK 包名（binary_cache 路径里包含此字符串即可识别）
+  androidPackages:
+    - com.tencent.aoeyz
 
 stack:
   renderPipeline: URP_Mobile
