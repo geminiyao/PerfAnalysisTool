@@ -1,0 +1,111 @@
+# projects/aoeyz/annotations.yaml
+# 替代 narrative_tree.py _FRIENDLY 表 + _ANNOTATIONS 表
+# 也替代 v4_report_renderer.py CHILD_FN_HINTS
+
+# substring 匹配 → 报告中显示的友好名（剥 _m{hash} 后再过这表）
+labelRewrites:
+  # ===== 通用 Unity 帧（也可放 _generic，但当前阶段保留这里以不漏）=====
+  - { match: "UniversalRenderPipeline_Render_m", display: "UniversalRenderPipeline.Render" }
+  - { match: "UniversalRenderPipeline_RenderCameraStack_m", display: "UniversalRenderPipeline.RenderCameraStack" }
+  - { match: "UniversalRenderPipeline_RenderSingleCamera_m", display: "UniversalRenderPipeline.RenderSingleCamera" }
+  - { match: "ConstantBuffersGLES::UpdateBuffers", display: "ConstantBuffersGLES.UpdateBuffers" }
+  - { match: "ConstantBuffersGLES::UpdateCB", display: "ConstantBuffersGLES.UpdateCB" }
+  - { match: "DrawBuffersStereo", display: "DrawBuffersStereo" }
+  - { match: "BeforeDrawCall", display: "BeforeDrawCall" }
+  - { match: "SetVertexStateGLES", display: "SetVertexStateGLES" }
+  - { match: "ApplyGpuProgramGLES", display: "ApplyGpuProgramGLES" }
+  - { match: "PresentFrame", display: "PresentFrame" }
+  - { match: "eglSwapBuffers", display: "eglSwapBuffers" }
+
+  # ===== 项目特化 C# 入口名 =====
+  - { match: "FrameworkCore_OnUpdate_m", display: "Core.Update → FrameworkCore_OnUpdate" }
+  - { match: "FrameworkCore_OnLateUpdate_m", display: "Core.LateUpdate" }
+  - { match: "MapManager_OnUpdate_m", display: "MapManager_OnUpdate" }
+  - { match: "BattleUIManager_OnUpdate_m", display: "BattleUIManager_OnUpdate" }
+  - { match: "OutSideViewArmyLineMgr_OnUpdate_m", display: "OutSideViewArmyLineMgr_OnUpdate" }
+  - { match: "OutSideViewArmyLineMgr_UpdateStraightMoveLine_m", display: "UpdateStraightMoveLine" }
+  - { match: "OutsideLineCtrl_RefreshLine_m", display: "OutsideLineCtrl.RefreshLine" }
+  - { match: "OutSideViewArmyLineMgr_GetArmyLineID_m", display: "GetArmyLineID" }
+  - { match: "MUIControlManager_OnLateUpdate_m", display: "MUIControlManager.OnLateUpdate" }
+  - { match: "MUILayout_Set3DPosition_m", display: "MUILayout.Set3DPosition" }
+  - { match: "MeshUIManager_OnLateUpdate_m", display: "MeshUIManager.OnLateUpdate" }
+  - { match: "LuaMgr_OnUpdate_m", display: "LuaMgr_OnUpdate" }
+  - { match: "GameLauncher_Update_m", display: "GameLauncher.Update" }
+  - { match: "GameLauncher_LateUpdate_m", display: "GameLauncher.LateUpdate" }
+  - { match: "MoveChain_SoldierMoveSystem.SoldierMoveJob", display: "MoveChain_SoldierMoveSystem.SoldierMoveJob" }
+  - { match: "RotationLerpSystem", display: "RotationLerpSystem.DoSmoothLerp" }
+  - { match: "WriteInstanceDataJob", display: "WriteInstanceDataJob" }
+  - { match: "UtilHeightMapBurst", display: "UtilHeightMapBurst.GetSamplerHeights" }
+  - { match: "SyncViewEntitySystem", display: "SyncViewEntitySystem" }
+  - { match: "DrawFoliageInstanceRenderers", display: "DrawFoliageInstanceRenderers" }
+  - { match: "OutsideForestRenderer", display: "OutsideForestRenderer.DrawInternal" }
+  - { match: "PlanarShadow", display: "PlanarShadow" }
+  - { match: "BloomPass", display: "BloomPass.Execute" }
+  - { match: "MobileBaseRenderer_Setup", display: "MobileBaseRenderer.Setup" }
+  - { match: "TBUBaseFeature", display: "TBUBaseFeature.AddRenderPasses" }
+
+# 调用栈节点旁注（substring 匹配 → 注释）
+annotations:
+  - { keys: [MUILayout_Set3DPosition, "MUILayout.Set3DPosition"], note: "see §4.4" }
+  - { keys: [MUIControlManager_OnLateUpdate, "MUIControlManager.OnLateUpdate"], note: "see §4.4" }
+  - { keys: [MeshUIManager_OnLateUpdate], note: "see §4.4" }
+  - { keys: [OutSideViewArmyLineMgr, UpdateStraightMoveLine], note: "see §4.5" }
+  - { keys: [OutsideLineCtrl_RefreshLine, "OutsideLineCtrl.RefreshLine"], note: "see §4.5" }
+  - { keys: [GetArmyLineID], note: "see §4.5" }
+  - { keys: [__memcpy], note: "see §10" }
+  - { keys: [GC_end_stubborn_change], note: "see §10" }
+  - { keys: ["RenderManager::RenderCameras"], note: "[详见 §6.1]" }
+  - { keys: [ScriptRunBehaviourLateUpdate], note: "" }
+  - { keys: [luaV_execute, lua_pcall], note: "Lua VM" }
+
+# §5.2 子函数表/Top-N 表「说明」列友好释义
+childHints: {}
+
+# Top-N 表「子函数」列里的"看起来像 _m... 后缀"短名重写
+# 输入是已剥掉 _m{hash} 后的字符串，按 startswith 匹配
+shortFnRewrites:
+  - { startswith: "MUIControlManager_OnLateUpdate", display: "MUIControlManager.OnLateUpdate" }
+  - { startswith: "MUILayout_Set3DPosition", display: "MUILayout.Set3DPosition" }
+  - { startswith: "MUILayoutManager_OnUpdate", display: "MUILayoutManager.OnUpdate" }
+  - { startswith: "MUIRenderable_get_m_pos", display: "MUIRenderable.get_m_pos" }
+  - { startswith: "MUILayoutRoot_UpdateDirtyNodes", display: "MUILayoutRoot.UpdateDirtyNodes" }
+  - { startswith: "MUIText_Set3DPosition", display: "MUIText.Set3DPosition" }
+  - { startswith: "MUIRendererBase_FreshVertexAttribute", display: "MUIRendererBase.FreshVertexAttribute" }
+  - { startswith: "MUISprite_Set3DPosition", display: "MUISprite.Set3DPosition" }
+  - { startswith: "MeshUIManager_OnLateUpdate", display: "MeshUIManager.OnLateUpdate" }
+  - { startswith: "OutsideLineCtrl_RefreshLine", display: "OutsideLineCtrl.RefreshLine" }
+  - { startswith: "OutSideViewArmyLineMgr_GetArmyLineID", display: "OutSideViewArmyLineMgr.GetArmyLineID" }
+  - { startswith: "OutSideViewArmyLineMgr_UpdateStraightMoveLine", display: "OutSideViewArmyLineMgr.UpdateStraightMoveLine" }
+  - { startswith: "OutsideLineMesh_RefreshLineVertex", display: "OutsideLineMesh.RefreshLineVertex" }
+  - { startswith: "OutsideLineMesh_RefreshMesh", display: "OutsideLineMesh.RefreshMesh" }
+
+# 在调用树渲染时识别为「业务关键字」（保留即使总耗时低）
+businessKeywords:
+  - FrameworkCore
+  - MapManager
+  - BattleUI
+  - OutSideViewArmyLine
+  - OutsideLine
+  - MeshUI
+  - MUILayout
+  - MUIControl
+  - LuaMgr
+  - TServer
+  - GameLauncher
+  - ScriptRunBehaviour
+  - PlayerLoop
+  - TextureStreaming
+  - ParticleSystem
+  - PlayerUpdateCanvases
+  - LegacyAnimation
+  - RenderManager
+  - UniversalRenderPipeline
+  - DrawRendererPass
+  - ShadowPass
+  - BloomPass
+  - GfxDevice
+  - DrawBuffers
+  - ConstantBuffers
+  - SoldierMoveJob
+  - ArmyMoveJob
+  - RotationLerp

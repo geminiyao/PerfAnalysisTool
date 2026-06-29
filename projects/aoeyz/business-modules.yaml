@@ -1,0 +1,147 @@
+# projects/aoeyz/business-modules.yaml
+# 替代 simpleperf/simpleperf_analyzer/business_modules.py BUSINESS_MODULES_LEGACY
+# 同时提供 §4 报告章节槽位定义（替代 v4_report_renderer.py MODULE_SECTIONS）
+
+modules:
+  # ========== 通用模块（项目无关，所有 Unity 项目都有）==========
+  - id: wwise
+    display: Wwise 音频中间件
+    section: "4.3"
+    sectionTitle: 音频中间件（Wwise）
+    discoverMode: lib_match
+    libMatch: libAkSoundEngine
+    threadHint: "Wwise 工作线程 + 主线程"
+    topNRemark: "战斗音效暴涨，独占一整条线程"
+    probeId: probe.middleware.wwise
+    sectionFriendlyName: Wwise 音频
+    roiTitle: "Wwise 音频中间件审视"
+
+  - id: ecs_burst
+    display: ECS Burst Job 工作量
+    section: "4.6"
+    sectionTitle: ECS Burst Job 工作量
+    discoverMode: lib_match
+    libMatch: lib_burst_generated
+    threadHint: "Job Worker × 4"
+    topNRemark: "已下沉 Worker 并行，主线程不受影响"
+    probeId: null
+    sectionFriendlyName: ECS Burst
+    roiTitle: "ECS Burst Job"
+
+  - id: lua_vm
+    display: Lua VM 解释执行
+    discoverMode: sum_self
+    scope: all_threads
+    keywords: [luaV_execute, luaD_call, lua_pcall, luaH_get, propagatemark, luaC_step]
+    threadHint: "主线程 + Lua GC"
+    topNRemark: "Lua VM 解释执行"
+
+  - id: lua_gc_worker
+    display: Lua GC 工作线程
+    section: "9"
+    discoverMode: subtree_sum_self
+    scope: lua_mtgc_worker
+    keywords: [LuaMultiThreadGC_LuaGCThreadProc, lua_execute_mtgc, do_realgc]
+    threadHint: "LuaMtGc Worker"
+    topNRemark: "Lua GC 工作线程"
+    probeId: probe.lua.mtgc.worker
+
+  # ========== 项目特化模块（aoeyz 业务）==========
+  - id: meshui
+    display: MeshUI 迭代位置刷新
+    section: "4.4"
+    sectionTitle: 动态 UI 子树（MeshUI 等）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - MUIControlManager
+      - MUILayout
+      - MUIRendererBase
+      - MUIText
+      - MUISprite
+      - MeshUIManager
+      - MUIRenderable
+      - MUIDefaultRenderer
+      - MUISpriteSliced
+      - MUILayoutRoot
+      - MUILayoutManager
+    threadHint: "主线程（LateUpdate）"
+    topNRemark: "MUIControlManager + MUILayout.Set3DPosition 等"
+    probeId: probe.csharp.meshUI
+    sectionFriendlyName: MeshUI
+    roiTitle: "MeshUI 子树优化"
+
+  - id: army_line
+    display: 行军线刷新（OutSideViewArmyLineMgr）
+    section: "4.5"
+    sectionTitle: C# 业务管理器（行军/路径刷新等）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - OutSideViewArmyLineMgr
+      - OutsideLineCtrl
+      - OutsideLineMesh
+      - CalculateVertexJob
+    threadHint: "主线程（Update）"
+    topNRemark: "OutsideLineCtrl.RefreshLine / GetArmyLineID 等"
+    probeId: probe.csharp.outsideViewArmyLine
+    sectionFriendlyName: 行军线
+    roiTitle: "行军线/路径刷新增量化"
+
+  - id: urp_main_render
+    display: URP 主线程渲染配置
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    threadHint: "主线程"
+    topNRemark: "URP 主线程渲染配置"
+    keywords:
+      - UniversalRenderPipeline
+      - RenderCameraStack
+      - RenderSingleCamera
+      - ScriptableRenderer_Execute
+      - ExecuteRenderPass
+      - ShadowPass
+      - PlanarShadow
+      - DrawRendererPass
+      - BloomPass
+      - MobileBaseRenderer
+      - DrawFoliageInstanceRenderers
+      - OutsideForestRenderer
+      - OutsideTreeTypeRenderer
+      - TBUBaseFeature
+      - TBURenderGraph
+
+  - id: rhi_const_upload
+    display: RHI 常量缓冲上传
+    discoverMode: subtree_sum_self
+    scope: rhi_thread
+    keywords: [ConstantBuffersGLES]
+    threadHint: "RHI 线程"
+    topNRemark: "RHI 常量缓冲上传"
+
+  - id: rhi_drawcall
+    display: RHI DrawCall 提交
+    discoverMode: subtree_sum_self
+    scope: rhi_thread
+    keywords:
+      - "GfxDeviceGLES::DrawBuffers"
+      - DrawBuffersStereo
+      - BeforeDrawCall
+      - SetVertexStateGLES
+      - ApplyGpuProgramGLES
+    threadHint: "RHI 线程"
+    topNRemark: "RHI DrawCall 命令吞吐"
+
+  - id: network
+    display: 网络消息处理
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - TServerManager
+      - TServer_Tick
+      - TServer_DecodeMessages
+      - TServer_RecvMessages
+      - TServer_HandleMessages
+    threadHint: "主线程"
+    topNRemark: "网络消息处理"
+    probeId: probe.net.tserver

@@ -1,0 +1,49 @@
+# projects/aoeyz/caller-modules.yaml
+# 替代 simpleperf/simpleperf_analyzer/call_up_tracer.py CALLER_MODULE_RULES
+
+# 反查时，看运行时函数（如 __memcpy）的 caller 链，按 keyword 分类到业务模块
+callerModuleRules:
+  # ===== 通用规则 =====
+  - { keywords: [ConstantBuffersGLES, InstancingBatcher, MapConstantBuffers], module: "RHI / GPU Instancing" }
+  - { keywords: [PlanarShadow, ShadowPass], module: "URP / 阴影" }
+  - { keywords: [BloomPass, PostProcess], module: "URP / 后处理" }
+  - { keywords: [OutsideForestRenderer, DrawFoliage, OutsideTreeTypeRenderer], module: "URP / 树木 Instancing" }
+  - { keywords: [RenderingCommandBuffer, ScriptableRenderContext, TranscriptScriptableRenderContext], module: "URP / 命令缓冲" }
+  - { keywords: [UIGeometryJob], module: "UGUI 几何 Job" }
+  - { keywords: [Adreno], module: "GPU 驱动黑盒" }
+  - { keywords: [libAkSoundEngine], module: "Wwise" }
+  - { keywords: [Enumerator, MoveNext], module: "C# 迭代器" }
+
+  # ===== 项目特化规则 =====
+  - { keywords: ["Mesh::SetVertexData", MUIRendererBase, MUIDefaultRenderer], module: "MeshUI 顶点上传" }
+  - { keywords: [MUIControlManager, MUILayout, MUIText, MUISprite, MUIRenderable], module: "MeshUI" }
+  - { keywords: [TServer, TServerManager], module: "网络消息处理" }
+  - { keywords: [LuaMgr, XLua, luaV_execute, lua_pcall], module: "Lua" }
+  - { keywords: [OutSideViewArmyLineMgr, OutsideLineCtrl], module: "行军线" }
+  - { keywords: [BattleUIManager], module: "战斗 UI" }
+
+unclassified: 未分类
+
+# 反查目标列表（替代 CALL_UP_TARGETS — 大多数是通用 native runtime function）
+callUpTargets:
+  - __memcpy
+  - __memset
+  - memmove
+  - __ieee754_powf
+  - __ieee754_sqrtf
+  - __ieee754_atan2f
+  - GC_end_stubborn_change
+  - GC_mark_from
+  - GC_push_all
+  - tlsf_memalign
+  - tlsf_malloc
+  - tlsf_free
+  - je_malloc
+  - je_free
+  - "il2cpp::vm::Object::NewAllocSpecific"
+  - il2cpp_alloc
+  - "ThreadsafeLinearAllocator::Allocate"
+  - "MemoryManager::Allocate"
+  - "BucketAllocator::Allocate"
+  - XXH32
+  - XXH64

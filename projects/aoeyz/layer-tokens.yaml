@@ -1,0 +1,10 @@
+# projects/aoeyz/layer-tokens.yaml
+# 替代 simpleperf/simpleperf_analyzer/perf_provider.py _LAYER_TOKENS
+# 仅项目特化的部分；通用 .so 在 _generic 包
+
+# layer = business（游戏自身代码 — 项目自研 native + IL2CPP 转译 C# + Lua + Burst）
+# 通用 native 已在 _generic/layer-tokens.yaml；这里只列项目自研的 native
+businessSelfDeveloperNatives:
+  - libAOENative
+  - libTBUNative
+  - libGameNative

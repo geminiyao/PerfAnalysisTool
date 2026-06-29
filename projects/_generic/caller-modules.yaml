@@ -1,0 +1,37 @@
+# projects/_generic/caller-modules.yaml — 通用反查归类规则（无项目特化）
+
+callerModuleRules:
+  - { keywords: [ConstantBuffersGLES, InstancingBatcher, MapConstantBuffers], module: "RHI / GPU Instancing" }
+  - { keywords: [ShadowPass], module: "URP / 阴影" }
+  - { keywords: [BloomPass, PostProcess], module: "URP / 后处理" }
+  - { keywords: [RenderingCommandBuffer, ScriptableRenderContext], module: "URP / 命令缓冲" }
+  - { keywords: [UIGeometryJob], module: "UGUI 几何 Job" }
+  - { keywords: [Adreno], module: "GPU 驱动黑盒" }
+  - { keywords: [libAkSoundEngine], module: "Wwise" }
+  - { keywords: [Enumerator, MoveNext], module: "C# 迭代器" }
+  - { keywords: [luaV_execute, lua_pcall], module: "Lua" }
+
+unclassified: 未分类
+
+callUpTargets:
+  - __memcpy
+  - __memset
+  - memmove
+  - __ieee754_powf
+  - __ieee754_sqrtf
+  - __ieee754_atan2f
+  - GC_end_stubborn_change
+  - GC_mark_from
+  - GC_push_all
+  - tlsf_memalign
+  - tlsf_malloc
+  - tlsf_free
+  - je_malloc
+  - je_free
+  - "il2cpp::vm::Object::NewAllocSpecific"
+  - il2cpp_alloc
+  - "ThreadsafeLinearAllocator::Allocate"
+  - "MemoryManager::Allocate"
+  - "BucketAllocator::Allocate"
+  - XXH32
+  - XXH64

@@ -30,6 +30,7 @@ SCALE = config.TIME_SCALE_NS  # ns -> ms
 
 
 from .naming import sanitize_func, sanitize_lib, sanitize_thread, thread_key as _thread_key
+from .project_pack import load_project_pack
 
 # ------------------------------------------------------------
 # 分层 (决策 8): 节点按所属 .so 归类 业务/引擎/运行时/噪音
@@ -38,33 +39,42 @@ from .naming import sanitize_func, sanitize_lib, sanitize_thread, thread_key as 
 # engine:   Unity 引擎 + 中间件
 # runtime:  C/C++ 运行时、ART、GPU 驱动、系统库
 # noise:    内核、未知、空转 (不可优化或非应用代码)
-_LAYER_TOKENS = {
-    "business": [
-        "libil2cpp.so", "libxlua.so", "lib_burst_generated.so",
-        "libAOENative", "libTBUNative", "libGameNative",
-        "base.odex", "base.vdex", "base.oat", "classes",
-    ],
-    "engine": [
-        "libunity.so", "libmain.so", "libAkSoundEngine", "libUE", "libfmod",
-    ],
-    "runtime": [
-        "libc.so", "libm.so", "libc++", "libstdc++", "libdl", "liblog",
-        "libart", "libandroid_runtime", "libnativehelper",
-        "libGLESv2", "libEGL", "libgsl", "libadreno", "libutils", "libutilscallstack",
-        "libz.so", "libssl", "libcrypto", "libbinder", "libcutils",
-    ],
-    "noise": [
-        "[kernel.kallsyms]", "[unknown]", "swapper", "[vdso]", "/system/bin",
-    ],
-}
+#
+# Tokens come from the active project pack (projects/<name>/layer-tokens.yaml).
+# Project-specific natives (libAOENative/libTBUNative/...) are now under the
+# project's businessSelfDeveloperNatives — _generic gets an empty list.
+
+_LAYER_TOKENS_CACHE: dict = {}
 
 
-def classify_layer(lib_basename):
+def _get_layer_tokens(binary_cache=None):
+    cache_key = binary_cache or "_default"
+    if cache_key in _LAYER_TOKENS_CACHE:
+        return _LAYER_TOKENS_CACHE[cache_key]
+    pack = load_project_pack(binary_cache=binary_cache)
+    # Generic baselines ALWAYS come from _generic (so a project pack only
+    # needs to declare the project-specific natives, not the universal Unity
+    # libs). Fall back to the project pack's own values if it overrides.
+    generic = load_project_pack("_generic")
+    business = list(pack.business_core_libs or generic.business_core_libs)
+    business += list(pack.business_self_developer_natives or [])
+    tokens = {
+        "business": business,
+        "engine": list(pack.engine_libs or generic.engine_libs),
+        "runtime": list(pack.runtime_libs or generic.runtime_libs),
+        "noise": list(pack.noise_libs or generic.noise_libs),
+    }
+    _LAYER_TOKENS_CACHE[cache_key] = tokens
+    return tokens
+
+
+def classify_layer(lib_basename, binary_cache=None):
     """按 .so basename 归一化到 业务/引擎/运行时/噪音 之一。默认 runtime。"""
     if not lib_basename:
         return "noise"
-    for layer, tokens in _LAYER_TOKENS.items():
-        for tok in tokens:
+    tokens = _get_layer_tokens(binary_cache)
+    for layer, layer_tokens in tokens.items():
+        for tok in layer_tokens:
             if tok in lib_basename:
                 return layer
     return "runtime"

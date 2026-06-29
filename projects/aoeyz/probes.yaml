@@ -1,0 +1,214 @@
+# projects/aoeyz/probes.yaml
+# 替代 simpleperf/simpleperf_analyzer/probes.py PROBE_DEFS
+
+# §5.3 主线程红线扫描表的固定项目（项目特化的 12 项观察点）。
+# 排序按这里给出的列表渲染；每条引用上面 probes 中的 id。
+mainProbeScan:
+  - { id: probe.net.tserver, unit: "主线程%", threshold: ">15%", display: "网络消息（TServerManager 子树）" }
+  - { id: probe.lua.totalLoad, unit: "全局%", threshold: ">10%", display: "Lua 总负载" }
+  - { id: probe.lua.luaMgrOnUpdate, unit: "主线程%", threshold: ">20%", display: "LuaMgr_OnUpdate（主入口）" }
+  - { id: probe.csharp.mapManager, unit: "主线程%", threshold: ">10%", display: "MapManager_OnUpdate（C# 总入口）" }
+  - { id: probe.csharp.battleUIManager, unit: "主线程%", threshold: ">3%", display: "BattleUIManager_OnUpdate" }
+  - { id: probe.csharp.outsideViewArmyLine, unit: "主线程%", threshold: ">3%", display: "OutSideViewArmyLineMgr_OnUpdate" }
+  - { id: probe.csharp.meshUI, unit: "主线程%", threshold: ">3%", display: "MeshUI 子树" }
+  - { id: probe.anim.legacy, unit: "ms/帧", threshold: ">1ms/帧", display: "LegacyAnimationUpdate" }
+  - { id: probe.fx.particle, unit: "ms/帧", threshold: ">1ms/帧", display: "ParticleSystem 合计" }
+  - { id: probe.ui.canvas, unit: "ms/帧", threshold: ">1ms/帧", display: "PlayerUpdateCanvases（UGUI）" }
+  - { id: probe.ecs.mainwait, unit: "全局%", threshold: ">2%", display: "主线程 Job 等待" }
+  - { id: probe.gc.boehmBackground, unit: "全局%", threshold: ">2%", display: "Boehm GC 后台标记" }
+
+probes:
+  # ===== 通用探针 =====
+  - id: probe.gpu.bound
+    display: GPU bound 主信号
+    kind: keywords_global_dedup
+    scope: main_thread
+    keywords:
+      - "GfxDeviceClient::WaitForPendingPresent"
+      - "GfxDeviceClient::PresentFrame"
+    thresholds: { green: 2, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.gpu.bound.eglSwap
+    display: eglSwapBuffers（辅助）
+    kind: keywords_rhi
+    keywords: [eglSwapBuffers]
+    thresholds: { green: 10, yellow: 15, red: 100 }
+    knowledgeRef: "v2.1 §4.7"
+
+  - id: probe.ecs.mainwait
+    display: 主线程 Job 等待
+    kind: keywords_global_dedup
+    scope: main_thread
+    keywords:
+      - WaitForJobGroupID
+      - "JobHandle::Complete"
+      - JobHandle_Complete
+      - ScheduleBatchedJobsAndComplete
+      - CombineDependenciesInternalPtr
+    thresholds: { green: 0.5, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.5"
+
+  - id: probe.ecs.jobworker.balance
+    display: Job Worker 均衡度
+    kind: thread_balance
+    threadIdentity: job_worker
+    thresholds: { green: 20, yellow: 30, red: 100 }
+    knowledgeRef: "v2.1 §4.5"
+
+  - id: probe.middleware.wwise
+    display: Wwise 音频中间件
+    kind: module
+    module: wwise
+    thresholds: { green: 3, yellow: 7, red: 100 }
+    knowledgeRef: "v2.1 §4.10"
+
+  - id: probe.gc.boehmBackground
+    display: Boehm GC 后台
+    kind: keywords_global_self
+    keywords: [GC_end_stubborn_change, GC_mark_from, GC_push_all]
+    thresholds: { green: 1, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.11"
+
+  - id: probe.lua.totalLoad
+    display: Lua 总负载
+    kind: keywords_global
+    keywords: [luaV_execute, luaD_call, lua_pcall, LuaMgr, XLua]
+    thresholds: { green: 8, yellow: 10, red: 100 }
+    knowledgeRef: "v2.1 §4.1.2"
+
+  - id: probe.lua.mtgc.worker
+    display: Lua GC worker
+    kind: module
+    module: lua_gc_worker
+    thresholds: { green: 1, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.9"
+
+  - id: probe.anim.legacy
+    display: LegacyAnimationUpdate
+    kind: phase_ms
+    phaseLabel: PreLateUpdate.LegacyAnimationUpdate
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.3"
+
+  - id: probe.fx.particle
+    display: ParticleSystem 合计
+    kind: phase_ms_combined
+    phaseLabels:
+      - PreLateUpdate.ParticleSystemBeginUpdateAll
+      - PostLateUpdate.ParticleSystemEndUpdateAll
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.3"
+
+  - id: probe.ui.canvas
+    display: PlayerUpdateCanvases
+    kind: phase_ms
+    phaseLabel: PostLateUpdate.PlayerUpdateCanvases
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.4"
+
+  - id: probe.render.urp.shadow
+    display: URP ShadowPass
+    kind: keywords_main
+    keywords: [ShadowPass, PlanarShadow]
+    thresholds: { green: 5, yellow: 8, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.render.urp.foliage
+    display: URP Foliage/Tree
+    kind: keywords_main
+    keywords: [DrawFoliage, OutsideForestRenderer]
+    thresholds: { green: 3, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.render.urp.postfx
+    display: URP 后处理
+    kind: keywords_main
+    keywords: [BloomPass, PostProcessPass]
+    thresholds: { green: 3, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.render.urp.setup
+    display: MobileBaseRenderer Setup
+    kind: keywords_main
+    keywords: [MobileBaseRenderer]
+    thresholds: { green: 2, yellow: 3, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.rhi.constUpload
+    display: RHI 常量缓冲上传
+    kind: keywords_rhi
+    keywords: [ConstantBuffersGLES]
+    thresholds: { green: 25, yellow: 40, red: 100 }
+    knowledgeRef: "v2.1 §4.7"
+
+  - id: probe.rhi.drawcall
+    display: RHI DrawCall
+    kind: keywords_rhi_observe
+    keywords: ["GfxDeviceGLES::DrawBuffers"]
+    thresholds: { green: 999, yellow: 999, red: 100 }
+    knowledgeRef: "v2.1 §4.7"
+
+  - id: probe.res.loader
+    display: 资源加载平均
+    kind: keywords_main_ms
+    keywords: [LoaderManagerTickLoadOnFrameEnd]
+    thresholds: { green: 1, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.8"
+
+  # ===== 项目特化探针（aoeyz 业务管理器红线）=====
+  - id: probe.net.tserver
+    display: 网络消息（TServerManager 子树）
+    kind: module_main
+    module: network
+    thresholds: { green: 8, yellow: 15, red: 100 }
+    knowledgeRef: "v2.1 §4.1.1"
+
+  - id: probe.lua.luaMgrOnUpdate
+    display: LuaMgr OnUpdate
+    kind: keywords_main
+    keywords: [LuaMgr_OnUpdate, "LuaMgr.OnUpdate"]
+    thresholds: { green: 12, yellow: 20, red: 100 }
+    knowledgeRef: "v2.1 §4.1.2"
+
+  - id: probe.csharp.mapManager
+    display: MapManager OnUpdate
+    kind: keywords_main
+    keywords: [MapManager_OnUpdate]
+    thresholds: { green: 8, yellow: 10, red: 100 }
+    knowledgeRef: "v2.1 §4.1.3"
+
+  - id: probe.csharp.battleUIManager
+    display: BattleUIManager OnUpdate
+    kind: keywords_main
+    keywords: [BattleUIManager_OnUpdate]
+    thresholds: { green: 2, yellow: 3, red: 100 }
+    knowledgeRef: "v2.1 §4.1.3"
+
+  - id: probe.csharp.outsideViewArmyLine
+    display: OutSideViewArmyLineMgr
+    kind: keywords_main
+    keywords: [OutSideViewArmyLineMgr]
+    thresholds: { green: 2, yellow: 3, red: 100 }
+    knowledgeRef: "v2.1 §4.1.3"
+
+  - id: probe.csharp.mapManager.lateUpdate
+    display: MapManager LateUpdate
+    kind: keywords_main
+    keywords: [MapManager_OnLateUpdate, "Outside.MapManager.LateUpdate"]
+    thresholds: { green: 5, yellow: 8, red: 100 }
+    knowledgeRef: "v2.1 §4.2.1"
+
+  - id: probe.lua.luaMgrOnLateUpdate
+    display: LuaMgr OnLateUpdate
+    kind: keywords_main
+    keywords: [LuaMgr_OnLateUpdate]
+    thresholds: { green: 5, yellow: 8, red: 100 }
+    knowledgeRef: "v2.1 §4.2.1"
+
+  - id: probe.csharp.meshUI
+    display: MeshUI 子树
+    kind: module_main
+    module: meshui
+    thresholds: { green: 3, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.2.2"

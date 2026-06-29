@@ -1,59 +1,59 @@
-"""Probe detection engine per knowledge base v2.1 §6 / card A.5."""
+"""Probe detection engine per knowledge base v2.1 §6 / card A.5.
+
+Probe definitions (PROBE_DEFS) are loaded from the active project pack
+(projects/<name>/probes.yaml). The legacy hardcoded PROBE_DEFS list is gone;
+all probe metadata, including project-specific keywords, lives in YAML.
+"""
 
 from .playerloop_phases import find_main_thread_cg
+from .project_pack import load_project_pack
 from .tree_utils import max_subtree_pct_for_keywords, sum_line_global_dedup, sum_self_global
 
-PROBE_DEFS = [
-    ("probe.net.tserver", "网络消息（TServerManager 子树）", "module_main", {"green": 8, "yellow": 15, "red": 100}, "network", "v2.1 §4.1.1"),
-    ("probe.lua.totalLoad", "Lua 总负载", "keywords_global", {"green": 8, "yellow": 10, "red": 100},
-     ["luaV_execute", "luaD_call", "lua_pcall", "LuaMgr", "XLua"], "v2.1 §4.1.2"),
-    ("probe.lua.luaMgrOnUpdate", "LuaMgr OnUpdate", "keywords_main", {"green": 12, "yellow": 20, "red": 100},
-     ["LuaMgr_OnUpdate", "LuaMgr.OnUpdate"], "v2.1 §4.1.2"),
-    ("probe.csharp.mapManager", "MapManager OnUpdate", "keywords_main", {"green": 8, "yellow": 10, "red": 100},
-     ["MapManager_OnUpdate"], "v2.1 §4.1.3"),
-    ("probe.csharp.battleUIManager", "BattleUIManager OnUpdate", "keywords_main", {"green": 2, "yellow": 3, "red": 100},
-     ["BattleUIManager_OnUpdate"], "v2.1 §4.1.3"),
-    ("probe.csharp.outsideViewArmyLine", "OutSideViewArmyLineMgr", "keywords_main", {"green": 2, "yellow": 3, "red": 100},
-     ["OutSideViewArmyLineMgr"], "v2.1 §4.1.3"),
-    ("probe.csharp.mapManager.lateUpdate", "MapManager LateUpdate", "keywords_main", {"green": 5, "yellow": 8, "red": 100},
-     ["MapManager_OnLateUpdate", "Outside.MapManager.LateUpdate"], "v2.1 §4.2.1"),
-    ("probe.lua.luaMgrOnLateUpdate", "LuaMgr OnLateUpdate", "keywords_main", {"green": 5, "yellow": 8, "red": 100},
-     ["LuaMgr_OnLateUpdate"], "v2.1 §4.2.1"),
-    ("probe.csharp.meshUI", "MeshUI 子树", "module_main", {"green": 3, "yellow": 5, "red": 100}, "meshui", "v2.1 §4.2.2"),
-    ("probe.anim.legacy", "LegacyAnimationUpdate", "phase_ms", {"green": 0.6, "yellow": 1.0, "red": 100},
-     "PreLateUpdate.LegacyAnimationUpdate", "v2.1 §4.3"),
-    ("probe.fx.particle", "ParticleSystem 合计", "phase_ms_combined", {"green": 0.6, "yellow": 1.0, "red": 100}, "v2.1 §4.3"),
-    ("probe.ui.canvas", "PlayerUpdateCanvases", "phase_ms", {"green": 0.6, "yellow": 1.0, "red": 100},
-     "PostLateUpdate.PlayerUpdateCanvases", "v2.1 §4.4"),
-    ("probe.ecs.mainwait", "主线程 Job 等待", "keywords_global_dedup", {"green": 0.5, "yellow": 2, "red": 100},
-     ["WaitForJobGroupID", "JobHandle::Complete", "JobHandle_Complete",
-      "ScheduleBatchedJobsAndComplete", "CombineDependenciesInternalPtr"],
-     "main_thread", "v2.1 §4.5"),
-    ("probe.ecs.jobworker.balance", "Job Worker 均衡度", "thread_balance", {"green": 20, "yellow": 30, "red": 100},
-     "job_worker", "v2.1 §4.5"),
-    ("probe.render.urp.shadow", "URP ShadowPass", "keywords_main", {"green": 5, "yellow": 8, "red": 100},
-     ["ShadowPass", "PlanarShadow"], "v2.1 §4.6"),
-    ("probe.render.urp.foliage", "URP Foliage/Tree", "keywords_main", {"green": 3, "yellow": 5, "red": 100},
-     ["DrawFoliage", "OutsideForestRenderer"], "v2.1 §4.6"),
-    ("probe.render.urp.postfx", "URP 后处理", "keywords_main", {"green": 3, "yellow": 5, "red": 100},
-     ["BloomPass", "PostProcessPass"], "v2.1 §4.6"),
-    ("probe.render.urp.setup", "MobileBaseRenderer Setup", "keywords_main", {"green": 2, "yellow": 3, "red": 100},
-     ["MobileBaseRenderer"], "v2.1 §4.6"),
-    ("probe.gpu.bound", "GPU bound 主信号", "keywords_global_dedup", {"green": 2, "yellow": 5, "red": 100},
-     ["GfxDeviceClient::WaitForPendingPresent", "GfxDeviceClient::PresentFrame"], "main_thread", "v2.1 §4.6"),
-    ("probe.gpu.bound.eglSwap", "eglSwapBuffers（辅助）", "keywords_rhi", {"green": 10, "yellow": 15, "red": 100},
-     ["eglSwapBuffers"], "v2.1 §4.7"),
-    ("probe.rhi.constUpload", "RHI 常量缓冲上传", "keywords_rhi", {"green": 25, "yellow": 40, "red": 100},
-     ["ConstantBuffersGLES"], "v2.1 §4.7"),
-    ("probe.rhi.drawcall", "RHI DrawCall", "keywords_rhi_observe", {"green": 999, "yellow": 999, "red": 100},
-     ["GfxDeviceGLES::DrawBuffers"], "v2.1 §4.7"),
-    ("probe.res.loader", "资源加载平均", "keywords_main_ms", {"green": 1, "yellow": 2, "red": 100},
-     ["LoaderManagerTickLoadOnFrameEnd"], "v2.1 §4.8"),
-    ("probe.lua.mtgc.worker", "Lua GC worker", "module", {"green": 1, "yellow": 2, "red": 100}, "lua_gc_worker", "v2.1 §4.9"),
-    ("probe.middleware.wwise", "Wwise 音频中间件", "module", {"green": 3, "yellow": 7, "red": 100}, "wwise", "v2.1 §4.10"),
-    ("probe.gc.boehmBackground", "Boehm GC 后台", "keywords_global_self", {"green": 1, "yellow": 2, "red": 100},
-     ["GC_end_stubborn_change", "GC_mark_from", "GC_push_all"], "v2.1 §4.11"),
-]
+
+def _probe_defs(pack):
+    """Convert YAML probe entries to runtime tuples used by compute_probes.
+
+    Output schema preserves the legacy positional format so existing readers
+    in the function below stay unchanged:
+        (id, display, kind, thresholds, *kind_specific_args, knowledge_ref)
+    """
+    defs = []
+    for p in pack.probes:
+        pid = p["id"]
+        display = p.get("display") or pid
+        kind = p["kind"]
+        thresholds = p.get("thresholds") or {"green": 0, "yellow": 0, "red": 100}
+        kref = p.get("knowledgeRef", "")
+
+        if kind == "module":
+            defs.append((pid, display, kind, thresholds, p["module"], kref))
+        elif kind == "module_main":
+            defs.append((pid, display, kind, thresholds, p["module"], kref))
+        elif kind == "keywords_main":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "keywords_global":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "keywords_global_self":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "keywords_global_dedup":
+            defs.append((pid, display, kind, thresholds, p["keywords"], p.get("scope", "main_thread"), kref))
+        elif kind == "keywords_rhi":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "keywords_rhi_observe":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "phase_ms":
+            defs.append((pid, display, kind, thresholds, p["phaseLabel"], kref))
+        elif kind == "phase_ms_combined":
+            defs.append((pid, display, kind, thresholds, kref))
+            # phaseLabels are stored on the dict and looked up below.
+        elif kind == "keywords_main_ms":
+            defs.append((pid, display, kind, thresholds, p["keywords"], kref))
+        elif kind == "thread_balance":
+            defs.append((pid, display, kind, thresholds, p["threadIdentity"], kref))
+        else:
+            # Unknown kind — skip with warning.
+            continue
+    return defs
 
 
 def _verdict(value, thresholds):
@@ -73,7 +73,12 @@ def _ms_per_frame(abs_samples, duration_sec=20, fps=60):
     return abs_samples / (duration_sec * fps) if abs_samples else 0.0
 
 
-def compute_probes(profile, grand_total_ec, tagged_threads, business_modules, playerloop_stages, total_samples):
+def compute_probes(profile, grand_total_ec, tagged_threads, business_modules, playerloop_stages, total_samples,
+                   project_pack=None, binary_cache=None):
+    pack = project_pack or load_project_pack(binary_cache=binary_cache)
+    probe_defs = _probe_defs(pack)
+    probes_yaml_by_id = {p["id"]: p for p in pack.probes}
+
     mod_map = {m["id"]: m for m in business_modules}
     main_g = next((t["globalPct"] for t in tagged_threads if t["identity"] == "main_thread"), 0.0)
     phase_map = {s["label"]: s for s in playerloop_stages}
@@ -86,7 +91,7 @@ def compute_probes(profile, grand_total_ec, tagged_threads, business_modules, pl
         return None, 0
 
     probes = []
-    for pdef in PROBE_DEFS:
+    for pdef in probe_defs:
         pid, display, kind, thresholds = pdef[:4]
         rest = pdef[4:]
         knowledge_ref = rest[-1]
@@ -153,10 +158,8 @@ def compute_probes(profile, grand_total_ec, tagged_threads, business_modules, pl
             value = _ms_per_frame(abs_samples)
             unit = "ms/帧"
         elif kind == "phase_ms_combined":
-            abs_samples = (
-                phase_map.get("PreLateUpdate.ParticleSystemBeginUpdateAll", {}).get("absSamples", 0)
-                + phase_map.get("PostLateUpdate.ParticleSystemEndUpdateAll", {}).get("absSamples", 0)
-            )
+            phase_labels = (probes_yaml_by_id.get(pid) or {}).get("phaseLabels") or []
+            abs_samples = sum(phase_map.get(lbl, {}).get("absSamples", 0) for lbl in phase_labels)
             value = _ms_per_frame(abs_samples)
             unit = "ms/帧"
         elif kind == "keywords_main_ms":

@@ -1,0 +1,87 @@
+# projects/aoeyz/analyst-rules.yaml
+# 替代 web/server/services/objective-report-utils.ts AOE_WATCH_HINTS
+
+watchHints:
+  - id: MapSignificanceMgr
+    patterns: [MapSignificanceMgr]
+    knowledgeRef: "§3 重要度管理器"
+    note: "任务多时易接近每帧 3ms 顶格，反映整体负载"
+    warnAvgMs: 0.8
+    action: "排查实体增删洪峰与网络消息驱动的重要度任务；考虑降频更新或分批处理 MapEntity"
+
+  - id: OutSideViewArmyLineMgr
+    patterns: [OutSideViewArmyLineMgr]
+    knowledgeRef: "§4 行军线"
+    note: "压测场景常见高负载"
+    warnAvgMs: 0.5
+    action: "检查行军线刷新频率与 Burst Job（CalculateVertexJob）规模；静止场景应明显降低"
+
+  - id: BattleHeadMgr
+    patterns: [BattleHeadMgr]
+    knowledgeRef: "§3 头像管理器"
+    action: "与 BattleUIManager 交叉看；检查同屏头像数量与 Lua tick 频率"
+
+  - id: MeshUIManager
+    patterns: [MeshUIManager]
+    knowledgeRef: "§5 MeshUI"
+    action: "压测悬浮 UI 多时应重点看；减少每帧 MeshUI 重建/布局"
+
+  - id: MapCameraCtrl
+    patterns: [MapCameraCtrl]
+    knowledgeRef: "§5 视野拖动"
+    note: "拖动时可高；静止时应低"
+    action: "区分是否在拖视野：静止时仍高 → 查视野更新逻辑；拖动时高 → 查 MapSignificance 联动"
+
+  - id: PlayerUpdateCanvases
+    patterns: [PlayerUpdateCanvases]
+    knowledgeRef: "§7 UGUI"
+    note: "主场景悬浮 UI 已 MeshUI 化，>1ms/次不合理"
+    warnAvgMs: 1.0
+    action: "拆分动静 Canvas、减少每帧 Rebuild；确认是否仍有 UGUI 头顶字未迁移"
+
+  - id: InitializationSystemGroup
+    patterns: [InitializationSystemGroup]
+    knowledgeRef: "§8 ECS Initialization"
+    warnAvgMs: 1.0
+    action: "主线程 ECS 组应仅分发 job；>1ms 或 Complete 等待 → 查 ECS 依赖与 job 阻塞"
+
+  - id: SimulationSystemGroup
+    patterns: [SimulationSystemGroup]
+    knowledgeRef: "§8 ECS Simulation"
+    warnAvgMs: 1.0
+    action: "同上；确认 Simulation job 是否在 JobWorker 执行而非主线程等待"
+
+  - id: PresentationSystemGroup
+    patterns: [PresentationSystemGroup]
+    knowledgeRef: "§8 ECS Presentation"
+    warnAvgMs: 1.0
+    action: "Presentation 分发异常时查 ECS 依赖可视化工具"
+
+  - id: TServer
+    patterns: [TServer]
+    knowledgeRef: "§2 网络消息"
+    action: "压测网络洪峰时查 Recv/Decode/Handle 分布；考虑限流或合并消息"
+
+  - id: WaitForPresent
+    patterns: [WaitForPresent, "Gfx.WaitForPresent"]
+    knowledgeRef: "§9 渲染等 GPU"
+    action: "出现 WaitForPresent 说明渲染提交在等 GPU；结合 Gfx 线程 Running% 判断是否 GPU 压力"
+
+  - id: ResManager
+    patterns: [ResManager, LoaderManager]
+    knowledgeRef: "§10 资源加载"
+    action: "实体洪峰/切视野时常见；查异步加载队列与 EndOfFrame 集中加载"
+
+  - id: LuaMultiThreadGC
+    patterns: [LuaMultiThreadGC]
+    knowledgeRef: "§11 Lua GC"
+    warnAvgMs: 3.0
+    action: "单次尖刺 >3ms 表明 Lua GC 压力；查 Lua 分配与 GC 策略"
+
+# 业务热点分类规则（替代 classifySimpleperfHotspot 中的 lib/func 关键字）
+classifyBusinessLibs:
+  - libil2cpp
+  - libxlua
+  - lib_burst
+classifyBusinessFuncPrefixes:
+  - aoe_

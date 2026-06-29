@@ -1,0 +1,13 @@
+name: _generic
+displayName: Generic Unity Mobile Project
+description: 通用 Unity 手游兜底配置，无任何项目特化关键字
+
+identify:
+  selfDeveloperSoNames: []  # 不绑定特定 .so
+
+stack:
+  renderPipeline: URP_Mobile
+  uiFrameworks: [UGUI]
+  scriptingEngine: il2cpp
+  ecs: optional
+  middleware: []

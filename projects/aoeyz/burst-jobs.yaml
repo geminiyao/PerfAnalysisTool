@@ -1,0 +1,16 @@
+# projects/aoeyz/burst-jobs.yaml
+# 替代 narrative_tree.py collect_burst_jobs.label_specs
+
+# 一行 = (callTree 子串匹配, 友好显示名, 业务模块标签)
+burstJobs:
+  - { keyword: SoldierMoveJob, display: "MoveChain_SoldierMoveSystem.SoldierMoveJob", module: "ECS 士兵移动" }
+  - { keyword: ArmyMoveJob, display: "MoveChain_ArmyMoveSystem.ArmyMoveJob", module: "ECS 队伍移动" }
+  - { keyword: RotationLerpSystem, display: "RotationLerpSystem.DoSmoothLerp", module: "ECS 旋转插值" }
+  - { keyword: WriteInstanceDataJob, display: "WriteInstanceDataJob", module: "GPU Instancing 数据回写" }
+  - { keyword: UtilHeightMapBurst, display: "UtilHeightMapBurst.GetSamplerHeights", module: "地形高度采样" }
+  - { keyword: SyncViewEntitySystem, display: "SyncViewEntitySystem", module: "ECS → 显示同步" }
+  - { keyword: LocalToParentSystem, display: "LocalToParentSystem.ChildLocalToWorld", module: "Transform 层级变换" }
+  - { keyword: OnStepMove, display: "SoldierMoveJob.OnStepMove", module: "ECS 单步移动" }
+  - { keyword: SyncLogicEntitySystem, display: "SyncLogicEntitySystem", module: "ECS 逻辑同步" }
+  - { keyword: ArchiveSoldier, display: "MoveChain_SoldierMoveSystem.ArchiveSoldier", module: "ECS 士兵归档" }
+  - { keyword: RefreshCurPosition, display: "ArmyMoveSystem.RefreshCurPosition", module: "ECS 路径点刷新" }

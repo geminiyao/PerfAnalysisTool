@@ -1,32 +1,50 @@
-"""Top-N business module ranking — card A.8."""
+"""Top-N business module ranking — card A.8.
 
-# Map auto-discovered module ids → probe ids by semantic substrings.
-# Auto ids look like "auto_main_thread_BattleUIManager_UpdateMUIPos_xxx", so
-# we test substring/display for slot membership instead of exact id match.
-PROBE_MODULE_MAP_LEGACY = {
-    "wwise": "probe.middleware.wwise",
-    "meshui": "probe.csharp.meshUI",
-    "army_line": "probe.csharp.outsideViewArmyLine",
-    "ecs_burst": None,
-    "network": "probe.net.tserver",
-}
+Slot matchers, probe→slot mapping, and per-slot effective-verdict rules
+come from the active project pack (projects/<name>/slot-matchers.yaml +
+business-modules.yaml). Module → slot resolution uses the same SLOT_MATCHERS
+shape as v4_report_renderer / narrative_tree.
+"""
 
-SLOT_PROBE_MATCHERS = [
-    # (substring matcher tested against id+display+rootSymbol, slot)
-    (("libAkSoundEngine", "Wwise", "wwise"), "wwise"),
-    (("lib_burst_generated", "ECS Burst", "ecs_burst"), "ecs_burst"),
-    (("MUI", "MeshUI", "BattleUIManager_UpdateMUIPos"), "meshui"),
-    (("OutSideViewArmyLineMgr", "OutsideLineCtrl", "OutsideLineMesh", "army_line"), "army_line"),
-    (("TServer", "network"), "network"),
-    (("lua_mtgc_worker", "Lua GC"), "lua_gc_worker"),
-]
+from .project_pack import load_project_pack
+
+
+def _pack():
+    return load_project_pack()
+
+
+def _slot_matchers_substr():
+    """Convert YAML slot matchers into [(substr-tuple, slot), ...] form
+    used by Top-N's `id+display+rootSymbol` haystack matching.
+
+    Each YAML rule contributes one substring per (kind, value) — kind
+    metadata is dropped because the haystack mixes all three fields.
+    """
+    rules = []
+    matchers = _pack().slot_matchers or {}
+    for slot, entries in matchers.items():
+        keys = []
+        for entry in entries:
+            v = entry.get("value")
+            if v:
+                keys.append(v)
+        if keys:
+            rules.append((tuple(keys), slot))
+    return rules
+
+
+def _probe_for_slot(slot):
+    for m in _pack().business_modules:
+        if m.get("id") == slot:
+            return m.get("probeId")
+    return None
 
 
 def _slot_for_module(module):
     haystack = " ".join([
         module.get("id", ""), module.get("display", ""), module.get("rootSymbol", ""),
     ])
-    for keys, slot in SLOT_PROBE_MATCHERS:
+    for keys, slot in _slot_matchers_substr():
         if any(k in haystack for k in keys):
             return slot
     return None
@@ -34,25 +52,27 @@ def _slot_for_module(module):
 
 def _probe_id_for_module(module):
     slot = _slot_for_module(module)
-    return PROBE_MODULE_MAP_LEGACY.get(slot)
+    return _probe_for_slot(slot) if slot else None
 
 
 def _effective_verdict(module, slot, probe_verdict):
     """Align Top-N 判定 with gold narrative.
 
-    Auto-discovery may split a logical module across multiple ids, so the
-    slot-derived rules consider the full module subtree. NEW (no base) and
-    large absDelta also trigger red even when the probe is green (probe is a
+    Auto-discovery may split a logical module across multiple ids, so slot-
+    derived rules look at the full module subtree. NEW (no base) and large
+    absDelta also trigger red even when the probe is green (probe is a
     %-based signal; new business hotspots should still be flagged).
+
+    Project pack hotModuleIds (slot-matchers.yaml) drives which slots get
+    the elevated NEW/Δ→red treatment.
     """
     d = module.get("absDelta", 0)
     cur = module.get("curAbs", 0)
-    if slot == "army_line":
+    hot = _pack().hot_module_ids
+    if slot == "army_line" and "army_line" in hot:
         if d == "NEW" or (isinstance(d, (int, float)) and d >= 150):
             return "red"
-    if slot == "meshui":
-        # Per-knowledge §6 阈值 >5% main, but auto-split modules each report
-        # their own %main; if combined cur is large or it's NEW, surface red.
+    if slot == "meshui" and "meshui" in hot:
         if probe_verdict == "red":
             return "red"
         if d == "NEW" or (isinstance(d, (int, float)) and d >= 500):
@@ -69,16 +89,16 @@ def compute_top_n(business_modules_diff, probes_diff, top_k=12):
         if m.get("absDelta", 0) == 0 and m.get("curAbs", 0) == 0:
             continue
         slot = _slot_for_module(m)
-        probe_id = PROBE_MODULE_MAP_LEGACY.get(slot) if slot else None
+        probe_id = _probe_for_slot(slot) if slot else None
         raw = probe_verdict.get(probe_id, "green") if probe_id else "green"
         verdict = _effective_verdict(m, slot, raw)
-        thread_hint = {
-            "ecs_burst": "job_worker × 4",
-            "wwise": "wwise_worker",
-            "lua_gc_worker": "lua_mtgc_worker",
-            "meshui": "main_thread",
-            "army_line": "main_thread",
-        }.get(slot, "")
+        # Look up the slot's threadHint from the project pack.
+        thread_hint = ""
+        if slot:
+            for cfg in _pack().business_modules:
+                if cfg.get("id") == slot:
+                    thread_hint = cfg.get("threadHint", "")
+                    break
         rows.append({
             "rank": 0,
             "verdict": verdict,

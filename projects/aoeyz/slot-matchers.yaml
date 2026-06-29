@@ -1,0 +1,38 @@
+# projects/aoeyz/slot-matchers.yaml
+# 替代 narrative_tree.py _SLOT_MATCHERS + v4_report_renderer.py SLOT_MATCHERS / SLOT_PROBE_MATCHERS
+
+# 自动发现的模块 id 不固定（如 auto_main_thread_BattleUIManager_UpdateMUIPos_xxx）
+# 通过下面的语义匹配把它归到 fixed slot
+slotMatchers:
+  wwise:
+    - { kind: id, value: wwise }
+    - { kind: rootSymbol, value: libAkSoundEngine }
+    - { kind: displayContains, value: Wwise }
+    - { kind: displayContains, value: AkSoundEngine }
+  ecs_burst:
+    - { kind: id, value: ecs_burst }
+    - { kind: rootSymbol, value: lib_burst_generated }
+    - { kind: displayContains, value: Burst }
+  meshui:
+    - { kind: id, value: meshui }
+    - { kind: displayContains, value: MeshUI }
+    - { kind: displayContains, value: MUI }
+    - { kind: displayContains, value: BattleUIManager_UpdateMUIPos }
+  army_line:
+    - { kind: id, value: army_line }
+    - { kind: displayContains, value: OutSideViewArmyLineMgr }
+    - { kind: displayContains, value: OutsideLineCtrl }
+    - { kind: displayContains, value: OutsideLineMesh }
+  network:
+    - { kind: id, value: network }
+    - { kind: displayContains, value: TServer }
+  lua_gc_worker:
+    - { kind: id, value: lua_gc_worker }
+    - { kind: rootSymbol, value: lua_mtgc_worker }
+  lua_vm:
+    - { kind: id, value: lua_vm }
+    - { kind: id, value: lua_vm_lib }
+    - { kind: rootSymbol, value: libxlua }
+
+# §5.2 §0 §4 红色判定规则（slot → 探针 verdict 检查 + 自动加红条件）
+hotModuleIds: [meshui, army_line]

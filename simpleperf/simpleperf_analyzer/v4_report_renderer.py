@@ -1,6 +1,13 @@
-"""Render v4.1 simpleperf diff report markdown from structured JSON (gold-aligned skeleton)."""
+"""Render v4.1 simpleperf diff report markdown from structured JSON (gold-aligned skeleton).
+
+Project-specific module sections, slot matchers, child-function rewrites, and
+business-layer .so substrings are loaded from the active project pack
+(projects/<name>/*.yaml). The legacy module-level constants are gone; helpers
+delegate to ProjectPack accessors.
+"""
 
 from . import narrative_tree as nt
+from .project_pack import load_project_pack
 
 VERDICT_EMOJI = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
 
@@ -15,55 +22,70 @@ IDENTITY_DISPLAY = {
     "choreographer": "Choreographer",
 }
 
-THREAD_HINT = {
-    "ecs_burst": "Job Worker × 4",
-    "wwise": "Wwise 工作线程 + 主线程",
-    "meshui": "主线程（LateUpdate）",
-    "army_line": "主线程（Update）",
-    "rhi_const_upload": "RHI 线程",
-    "rhi_drawcall": "RHI 线程",
-    "lua_gc_worker": "LuaMtGc Worker",
-    "lua_vm": "主线程 + Lua GC",
-    "urp_main_render": "主线程",
-    "network": "主线程",
-}
 
-TOP_N_REMARK = {
-    "ecs_burst": "已下沉 Worker 并行，主线程不受影响",
-    "wwise": "战斗音效暴涨，独占一整条线程",
-    "meshui": "MUIControlManager + MUILayout.Set3DPosition 等",
-    "army_line": "OutsideLineCtrl.RefreshLine / GetArmyLineID 等",
-    "rhi_const_upload": "RHI 常量缓冲上传",
-    "rhi_drawcall": "RHI DrawCall 命令吞吐",
-    "lua_gc_worker": "Lua GC 工作线程",
-    "lua_vm": "Lua VM 解释执行",
-    "urp_main_render": "URP 主线程渲染配置",
-    "network": "网络消息处理",
-}
+def _pack():
+    return load_project_pack()
 
-MODULE_SECTIONS = [
-    ("wwise", "4.3", "音频中间件（Wwise）"),
-    ("meshui", "4.4", "动态 UI 子树（MeshUI 等）"),
-    ("army_line", "4.5", "C# 业务管理器（行军/路径刷新等）"),
-    ("ecs_burst", "4.6", "ECS Burst Job 工作量"),
-]
 
-# Semantic matchers: when business modules are auto-discovered, their ids
-# look like "auto_main_thread_BattleUIManager_UpdateMUIPos_xxx" instead of
-# the legacy "meshui". We map a fixed slot (used by MODULE_SECTIONS, callup
-# helpers, validate scripts) to one or more matchers. Each matcher is a
-# tuple (kind, key) where kind is "id" / "rootSymbol" / "display" /
-# "displayContains".
-SLOT_MATCHERS = {
-    "wwise": [("id", "wwise"), ("rootSymbol", "libAkSoundEngine"), ("displayContains", "Wwise"), ("displayContains", "AkSoundEngine")],
-    "ecs_burst": [("id", "ecs_burst"), ("rootSymbol", "lib_burst_generated"), ("displayContains", "Burst")],
-    "meshui": [("id", "meshui"), ("displayContains", "MeshUI"), ("displayContains", "MUI"),
-               ("displayContains", "BattleUIManager_UpdateMUIPos")],
-    "army_line": [("id", "army_line"), ("displayContains", "OutSideViewArmyLineMgr"),
-                  ("displayContains", "OutsideLineCtrl"), ("displayContains", "OutsideLineMesh")],
-    "lua_gc_worker": [("id", "lua_gc_worker"), ("rootSymbol", "lua_mtgc_worker")],
-    "lua_vm": [("id", "lua_vm"), ("id", "lua_vm_lib"), ("rootSymbol", "libxlua")],
-}
+def _module_cfg(mod_id):
+    for m in _pack().business_modules:
+        if m.get("id") == mod_id:
+            return m
+    return {}
+
+
+def _thread_hint(mod_id):
+    return _module_cfg(mod_id).get("threadHint", "")
+
+
+def _top_n_remark(mod_id):
+    return _module_cfg(mod_id).get("topNRemark", "")
+
+
+def _module_sections():
+    """List of (slot_id, section_number, section_title) loaded from pack — only
+    §4.x business modules (4.3-4.6 in the canonical layout). §9 lua_gc_worker
+    has its own dedicated renderer."""
+    out = []
+    for m in _pack().business_modules:
+        sec = m.get("section")
+        title = m.get("sectionTitle")
+        if not sec or not title:
+            continue
+        if not str(sec).startswith("4."):
+            continue
+        out.append((m["id"], sec, title))
+    def _section_key(entry):
+        sec = entry[1]
+        try:
+            parts = [int(p) for p in str(sec).split(".") if p.isdigit()]
+            return tuple(parts) or (999,)
+        except (TypeError, ValueError):
+            return (999,)
+    out.sort(key=_section_key)
+    return out
+
+
+def _slot_matchers():
+    """Convert YAML slot-matchers into runtime dict {slot: [(kind,key), ...]}."""
+    out = {}
+    for slot, rules in (_pack().slot_matchers or {}).items():
+        out[slot] = [(r.get("kind"), r.get("value")) for r in rules]
+    return out
+
+
+# Backwards-compat module-level views (some tools/scripts still read these).
+def _proxy_module_sections():
+    return _module_sections()
+
+
+# Public-but-dynamic accessors (callers may still reference module attrs).
+THREAD_HINT = type("_LazyThreadHint", (), {"__getitem__": lambda _self, k: _thread_hint(k),
+                                            "get": lambda _self, k, d="": _thread_hint(k) or d})()
+TOP_N_REMARK = type("_LazyTopNRemark", (), {"__getitem__": lambda _self, k: _top_n_remark(k),
+                                              "get": lambda _self, k, d="": _top_n_remark(k) or d})()
+MODULE_SECTIONS = _proxy_module_sections  # callers use MODULE_SECTIONS() now (or via helper)
+SLOT_MATCHERS = _slot_matchers
 
 
 def _module_match(module, matchers):
@@ -81,7 +103,7 @@ def _module_match(module, matchers):
 
 def _module_for_slot(diff, slot):
     """Return the single best module for a slot, or None."""
-    matchers = SLOT_MATCHERS.get(slot)
+    matchers = _slot_matchers().get(slot)
     if not matchers:
         return _module_by_id(diff, slot)
     candidates = [m for m in diff.get("businessModules", []) if _module_match(m, matchers)]
@@ -93,7 +115,7 @@ def _module_for_slot(diff, slot):
 
 def _modules_for_slot(diff, slot):
     """Return all modules matching a slot (e.g. MeshUI may match 2 auto-discovered ones)."""
-    matchers = SLOT_MATCHERS.get(slot)
+    matchers = _slot_matchers().get(slot)
     if not matchers:
         m = _module_by_id(diff, slot)
         return [m] if m else []
@@ -180,36 +202,22 @@ def _short_fn(name):
     if not name:
         return "—"
     s = name.split("_m")[0].split("_gshared")[0]
-    for old, new in (
-        ("MUIControlManager_OnLateUpdate", "MUIControlManager.OnLateUpdate"),
-        ("MUILayout_Set3DPosition", "MUILayout.Set3DPosition"),
-        ("MUILayoutManager_OnUpdate", "MUILayoutManager.OnUpdate"),
-        ("MUIRenderable_get_m_pos", "MUIRenderable.get_m_pos"),
-        ("MUILayoutRoot_UpdateDirtyNodes", "MUILayoutRoot.UpdateDirtyNodes"),
-        ("MUIText_Set3DPosition", "MUIText.Set3DPosition"),
-        ("MUIRendererBase_FreshVertexAttribute", "MUIRendererBase.FreshVertexAttribute"),
-        ("MUISprite_Set3DPosition", "MUISprite.Set3DPosition"),
-        ("MeshUIManager_OnLateUpdate", "MeshUIManager.OnLateUpdate"),
-        ("OutsideLineCtrl_RefreshLine", "OutsideLineCtrl.RefreshLine"),
-        ("OutSideViewArmyLineMgr_GetArmyLineID", "OutSideViewArmyLineMgr.GetArmyLineID"),
-        ("OutSideViewArmyLineMgr_UpdateStraightMoveLine", "OutSideViewArmyLineMgr.UpdateStraightMoveLine"),
-        ("OutsideLineMesh_RefreshLineVertex", "OutsideLineMesh.RefreshLineVertex"),
-        ("OutsideLineMesh_RefreshMesh", "OutsideLineMesh.RefreshMesh"),
-    ):
-        if s.startswith(old):
-            return new
+    for entry in _pack().short_fn_rewrites:
+        prefix = entry.get("startswith")
+        display = entry.get("display")
+        if prefix and display and s.startswith(prefix):
+            return display
     return s.replace("_", ".")[:64]
 
 
 def _biz_layer_stats(diff):
-    """Sum business-layer deltas. Aligned with perf_provider._LAYER_TOKENS so
-    libAOENative / libTBUNative / libGameNative / base.odex etc. are also
-    counted (gold reports +86.5% which includes these self-developed natives,
-    not just il2cpp/xlua/burst)."""
-    biz_substrings = (
-        "libil2cpp", "libxlua", "lib_burst_generated",
-        "libAOENative", "libTBUNative", "libGameNative",
-        "base.odex", "base.vdex", "base.oat", "classes",
+    """Sum business-layer deltas. Aligned with project pack layer-tokens.yaml so
+    project-self-developed natives + il2cpp/xlua/burst + base.* are counted."""
+    pack = _pack()
+    generic = load_project_pack("_generic")
+    biz_substrings = tuple(
+        list(pack.business_core_libs or generic.business_core_libs)
+        + list(pack.business_self_developer_natives or [])
     )
     rows = []
     total = 0
@@ -299,12 +307,8 @@ def render_conclusion(diff, top_n, meta, enriched=False):
         if enriched and item.get("baseAbs", 0) == 0 and item.get("curAbs", 0) > 0:
             pct_s = "NEW"
         # Use friendly module label per slot (not the ugly auto_xxx id).
-        friendly = {
-            "ecs_burst": "ECS Burst Job 工作量",
-            "wwise": "Wwise 音频中间件",
-            "meshui": "MeshUI 迭代位置刷新",
-            "army_line": "行军线刷新（OutSideViewArmyLineMgr）",
-        }.get(slot, item["display"])
+        # Pack `display` is the canonical friendly name for each slot.
+        friendly = _module_cfg(slot).get("display") or item.get("display", slot)
         lines.append(
             "  - %s +%s samples（%s）—— %s" % (
                 friendly, delta_s, pct_s, note,
@@ -348,13 +352,14 @@ def render_conclusion(diff, top_n, meta, enriched=False):
         "",
     ])
     for i, (slot, item) in enumerate(roi_slots, 1):
-        # Use neutral display label keyed by slot (project-agnostic).
-        title = {
-            "wwise": "Wwise 音频中间件审视",
-            "meshui": "MeshUI 子树优化",
-            "army_line": "行军线/路径刷新增量化",
-            "ecs_burst": "ECS Burst Job",
-        }.get(slot, item.get("display", slot))
+        cfg = _module_cfg(slot)
+        # roiTitle in YAML wins; otherwise sectionFriendlyName + " 优化"; else display.
+        if cfg.get("roiTitle"):
+            title = cfg["roiTitle"]
+        elif cfg.get("sectionFriendlyName"):
+            title = cfg["sectionFriendlyName"] + " 优化"
+        else:
+            title = cfg.get("display") or item.get("display", slot)
         lines.append("%d. **%s** —— Top-N #%s（增量 +%s samples）" % (
             i, title, item.get("rank", "?"), _fmt_samples(item.get("absDelta", 0)),
         ))
@@ -690,7 +695,7 @@ def render_top_n_section(diff, top_n, cur_prof_detail=None, enriched=False):
     slot_rank_map = {x.get("slot"): x["rank"] for x in top_n if x.get("slot")}
     slot_verdict_map = {x.get("slot"): x["verdict"] for x in top_n if x.get("slot")}
 
-    for mid, sec, title in MODULE_SECTIONS:
+    for mid, sec, title in _module_sections():
         m = _module_for_slot(diff, mid)
         if not m:
             continue
@@ -994,20 +999,15 @@ def render_main_probes(diff, cur_prof_detail):
         "| 检测项 | 实测 | 单位 | 阈值（红线）| 判定 | 说明 |",
         "|---|---|---|---|---|---|",
     ]
-    scan = [
-        ("probe.net.tserver", "主线程%", ">15%", "网络消息（TServerManager 子树）"),
-        ("probe.lua.totalLoad", "全局%", ">10%", "Lua 总负载"),
-        ("probe.lua.luaMgrOnUpdate", "主线程%", ">20%", "LuaMgr_OnUpdate（主入口）"),
-        ("probe.csharp.mapManager", "主线程%", ">10%", "MapManager_OnUpdate（C# 总入口）"),
-        ("probe.csharp.battleUIManager", "主线程%", ">3%", "BattleUIManager_OnUpdate"),
-        ("probe.csharp.outsideViewArmyLine", "主线程%", ">3%", "OutSideViewArmyLineMgr_OnUpdate"),
-        ("probe.csharp.meshUI", "主线程%", ">3%", "MeshUI 子树"),
-        ("probe.anim.legacy", "ms/帧", ">1ms/帧", "LegacyAnimationUpdate"),
-        ("probe.fx.particle", "ms/帧", ">1ms/帧", "ParticleSystem 合计"),
-        ("probe.ui.canvas", "ms/帧", ">1ms/帧", "PlayerUpdateCanvases（UGUI）"),
-        ("probe.ecs.mainwait", "全局%", ">2%", "主线程 Job 等待"),
-        ("probe.gc.boehmBackground", "全局%", ">2%", "Boehm GC 后台标记"),
-    ]
+    # Use the §5.3 main probe scan list from the project pack. This is the
+    # project-specific 12-row scan table; rows that don't apply (no probe
+    # generated for the id) are skipped silently.
+    scan = []
+    for entry in _pack().main_probe_scan:
+        pid = entry.get("id")
+        if not pid:
+            continue
+        scan.append((pid, entry.get("unit", "%"), entry.get("threshold", ""), entry.get("display", pid)))
     pmap = {p["id"]: p for p in diff.get("probes", [])}
     pass_count = 0
     for pid, unit, thresh, note in scan:

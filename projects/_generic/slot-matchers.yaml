@@ -1,0 +1,21 @@
+# projects/_generic/slot-matchers.yaml — 通用 slot 匹配（无项目特化）
+
+slotMatchers:
+  wwise:
+    - { kind: id, value: wwise }
+    - { kind: rootSymbol, value: libAkSoundEngine }
+    - { kind: displayContains, value: Wwise }
+    - { kind: displayContains, value: AkSoundEngine }
+  ecs_burst:
+    - { kind: id, value: ecs_burst }
+    - { kind: rootSymbol, value: lib_burst_generated }
+    - { kind: displayContains, value: Burst }
+  lua_gc_worker:
+    - { kind: id, value: lua_gc_worker }
+    - { kind: rootSymbol, value: lua_mtgc_worker }
+  lua_vm:
+    - { kind: id, value: lua_vm }
+    - { kind: id, value: lua_vm_lib }
+    - { kind: rootSymbol, value: libxlua }
+
+hotModuleIds: []

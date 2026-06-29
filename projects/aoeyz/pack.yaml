@@ -1,0 +1,16 @@
+name: aoeyz
+displayName: AOEYZ
+description: 大世界手游（自研 native libAOENative/libTBUNative）
+
+identify:
+  selfDeveloperSoNames:
+    - libAOENative
+    - libTBUNative
+    - libGameNative
+
+stack:
+  renderPipeline: URP_Mobile
+  uiFrameworks: [MeshUI, UGUI]
+  scriptingEngine: il2cpp_xlua
+  ecs: enabled
+  middleware: [Wwise]

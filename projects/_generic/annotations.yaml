@@ -1,0 +1,40 @@
+# projects/_generic/annotations.yaml — 通用 Unity 帧名称重写
+
+labelRewrites:
+  - { match: "UniversalRenderPipeline_Render_m", display: "UniversalRenderPipeline.Render" }
+  - { match: "UniversalRenderPipeline_RenderCameraStack_m", display: "UniversalRenderPipeline.RenderCameraStack" }
+  - { match: "UniversalRenderPipeline_RenderSingleCamera_m", display: "UniversalRenderPipeline.RenderSingleCamera" }
+  - { match: "ConstantBuffersGLES::UpdateBuffers", display: "ConstantBuffersGLES.UpdateBuffers" }
+  - { match: "ConstantBuffersGLES::UpdateCB", display: "ConstantBuffersGLES.UpdateCB" }
+  - { match: "DrawBuffersStereo", display: "DrawBuffersStereo" }
+  - { match: "BeforeDrawCall", display: "BeforeDrawCall" }
+  - { match: "SetVertexStateGLES", display: "SetVertexStateGLES" }
+  - { match: "ApplyGpuProgramGLES", display: "ApplyGpuProgramGLES" }
+  - { match: "PresentFrame", display: "PresentFrame" }
+  - { match: "eglSwapBuffers", display: "eglSwapBuffers" }
+
+annotations:
+  - { keys: [__memcpy], note: "see §10" }
+  - { keys: [GC_end_stubborn_change], note: "see §10" }
+  - { keys: ["RenderManager::RenderCameras"], note: "[详见 §6.1]" }
+  - { keys: [luaV_execute, lua_pcall], note: "Lua VM" }
+
+childHints: {}
+
+shortFnRewrites: []
+
+businessKeywords:
+  - PlayerLoop
+  - TextureStreaming
+  - ParticleSystem
+  - PlayerUpdateCanvases
+  - LegacyAnimation
+  - RenderManager
+  - UniversalRenderPipeline
+  - DrawRendererPass
+  - ShadowPass
+  - BloomPass
+  - GfxDevice
+  - DrawBuffers
+  - ConstantBuffers
+  - ScriptRunBehaviour

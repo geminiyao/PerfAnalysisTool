@@ -1,0 +1,69 @@
+# projects/_generic/business-modules.yaml
+# 通用 fallback：只配通用模块（项目无关），不带项目特化关键字
+
+modules:
+  - id: wwise
+    display: Wwise 音频中间件
+    section: "4.3"
+    sectionTitle: 音频中间件（Wwise）
+    discoverMode: lib_match
+    libMatch: libAkSoundEngine
+    threadHint: wwise_worker
+    probeId: probe.middleware.wwise
+    sectionFriendlyName: Wwise 音频
+
+  - id: ecs_burst
+    display: ECS Burst Job 工作量
+    section: "4.6"
+    sectionTitle: ECS Burst Job 工作量
+    discoverMode: lib_match
+    libMatch: lib_burst_generated
+    threadHint: 4 个 job_worker
+    probeId: null
+    sectionFriendlyName: ECS Burst
+
+  - id: lua_vm
+    display: Lua VM 解释执行
+    discoverMode: sum_self
+    scope: all_threads
+    keywords: [luaV_execute, luaD_call, lua_pcall, luaH_get, propagatemark, luaC_step]
+
+  - id: lua_gc_worker
+    display: Lua GC 工作线程
+    section: "9"
+    discoverMode: subtree_sum_self
+    scope: lua_mtgc_worker
+    keywords: [LuaMultiThreadGC_LuaGCThreadProc, lua_execute_mtgc, do_realgc]
+    probeId: probe.lua.mtgc.worker
+
+  - id: urp_main_render
+    display: URP 主线程渲染配置
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - UniversalRenderPipeline
+      - RenderCameraStack
+      - RenderSingleCamera
+      - ScriptableRenderer_Execute
+      - ExecuteRenderPass
+      - ShadowPass
+      - DrawRendererPass
+      - BloomPass
+      - MobileBaseRenderer
+
+  - id: rhi_const_upload
+    display: RHI 常量缓冲上传
+    discoverMode: subtree_sum_self
+    scope: rhi_thread
+    keywords: [ConstantBuffersGLES]
+
+  - id: rhi_drawcall
+    display: RHI DrawCall 提交
+    discoverMode: subtree_sum_self
+    scope: rhi_thread
+    keywords:
+      - "GfxDeviceGLES::DrawBuffers"
+      - DrawBuffersStereo
+      - BeforeDrawCall
+      - SetVertexStateGLES
+      - ApplyGpuProgramGLES

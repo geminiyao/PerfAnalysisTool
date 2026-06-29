@@ -10,6 +10,7 @@ ROOT = os.path.dirname(HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "simpleperf"))
 
+from simpleperf_analyzer.project_pack import detect_project_from_libs, load_project_pack
 from simpleperf_analyzer.top_n_engine import compute_top_n
 from simpleperf_analyzer.v4_report_renderer import render_v4_report
 
@@ -44,6 +45,23 @@ def main():
         "detail"]["simpleperf"]
     cur_sp = json.load(open(os.path.join(out_dir, "cur", "simpleperf-profile.json"), encoding="utf-8"))[
         "detail"]["simpleperf"]
+    # Auto-detect the project pack:
+    #   1. PERFTOOL_PROJECT env var (explicit)
+    #   2. Substring of out_dir path (e.g. aoeyz_diff → aoeyz)
+    #   3. Scan diff.libs for any pack's identify.selfDeveloperSoNames
+    #   4. Fallback to _generic
+    if not os.environ.get("PERFTOOL_PROJECT"):
+        # Try out_dir path-based detection.
+        from simpleperf_analyzer.project_pack import _list_real_projects
+        for project_name in _list_real_projects():
+            if project_name in out_dir:
+                os.environ["PERFTOOL_PROJECT"] = project_name
+                break
+    detected = detect_project_from_libs(diff.get("libs") or [])
+    active = load_project_pack().name
+    print("[enrich] active project pack: %s (env=%s, lib-detect=%s)" % (
+        active, os.environ.get("PERFTOOL_PROJECT", ""), detected or "—",
+    ), flush=True)
     # Pull globally-aggregated hotspots from the summary file (Burst Top-N
     # uses these for correct global-self %; callTree-level selfPct is per
     # thread and would mis-scale.)

@@ -1,0 +1,31 @@
+# projects/_generic/analyst-rules.yaml — 通用观察提示（无项目特化）
+
+watchHints:
+  - id: PlayerUpdateCanvases
+    patterns: [PlayerUpdateCanvases]
+    knowledgeRef: "§7 UGUI"
+    note: ">1ms/次提示 Canvas Rebuild 偏重"
+    warnAvgMs: 1.0
+    action: "拆分动静 Canvas、减少每帧 Rebuild"
+
+  - id: WaitForPresent
+    patterns: [WaitForPresent, "Gfx.WaitForPresent"]
+    knowledgeRef: "§9 渲染等 GPU"
+    action: "出现 WaitForPresent 说明渲染提交在等 GPU；结合 Gfx 线程 Running% 判断是否 GPU 压力"
+
+  - id: ResManager
+    patterns: [ResManager, LoaderManager]
+    knowledgeRef: "§10 资源加载"
+    action: "实体洪峰/切视野时常见；查异步加载队列与 EndOfFrame 集中加载"
+
+  - id: LuaMultiThreadGC
+    patterns: [LuaMultiThreadGC]
+    knowledgeRef: "§11 Lua GC"
+    warnAvgMs: 3.0
+    action: "单次尖刺 >3ms 表明 Lua GC 压力；查 Lua 分配与 GC 策略"
+
+classifyBusinessLibs:
+  - libil2cpp
+  - libxlua
+  - lib_burst
+classifyBusinessFuncPrefixes: []

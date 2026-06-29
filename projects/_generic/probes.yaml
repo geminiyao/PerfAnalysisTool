@@ -1,0 +1,121 @@
+# projects/_generic/probes.yaml — 通用探针（不带项目特化业务管理器红线）
+
+# §5.3 主线程红线扫描表 — 通用空列表，由各项目自己的 yaml 覆盖
+mainProbeScan: []
+
+probes:
+  - id: probe.gpu.bound
+    display: GPU bound 主信号
+    kind: keywords_global_dedup
+    scope: main_thread
+    keywords:
+      - "GfxDeviceClient::WaitForPendingPresent"
+      - "GfxDeviceClient::PresentFrame"
+    thresholds: { green: 2, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.gpu.bound.eglSwap
+    display: eglSwapBuffers（辅助）
+    kind: keywords_rhi
+    keywords: [eglSwapBuffers]
+    thresholds: { green: 10, yellow: 15, red: 100 }
+    knowledgeRef: "v2.1 §4.7"
+
+  - id: probe.ecs.mainwait
+    display: 主线程 Job 等待
+    kind: keywords_global_dedup
+    scope: main_thread
+    keywords:
+      - WaitForJobGroupID
+      - "JobHandle::Complete"
+      - JobHandle_Complete
+      - ScheduleBatchedJobsAndComplete
+      - CombineDependenciesInternalPtr
+    thresholds: { green: 0.5, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.5"
+
+  - id: probe.ecs.jobworker.balance
+    display: Job Worker 均衡度
+    kind: thread_balance
+    threadIdentity: job_worker
+    thresholds: { green: 20, yellow: 30, red: 100 }
+    knowledgeRef: "v2.1 §4.5"
+
+  - id: probe.middleware.wwise
+    display: Wwise 音频中间件
+    kind: module
+    module: wwise
+    thresholds: { green: 3, yellow: 7, red: 100 }
+    knowledgeRef: "v2.1 §4.10"
+
+  - id: probe.gc.boehmBackground
+    display: Boehm GC 后台
+    kind: keywords_global_self
+    keywords: [GC_end_stubborn_change, GC_mark_from, GC_push_all]
+    thresholds: { green: 1, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.11"
+
+  - id: probe.lua.totalLoad
+    display: Lua 总负载
+    kind: keywords_global
+    keywords: [luaV_execute, luaD_call, lua_pcall]
+    thresholds: { green: 8, yellow: 10, red: 100 }
+    knowledgeRef: "v2.1 §4.1.2"
+
+  - id: probe.lua.mtgc.worker
+    display: Lua GC worker
+    kind: module
+    module: lua_gc_worker
+    thresholds: { green: 1, yellow: 2, red: 100 }
+    knowledgeRef: "v2.1 §4.9"
+
+  - id: probe.anim.legacy
+    display: LegacyAnimationUpdate
+    kind: phase_ms
+    phaseLabel: PreLateUpdate.LegacyAnimationUpdate
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.3"
+
+  - id: probe.fx.particle
+    display: ParticleSystem 合计
+    kind: phase_ms_combined
+    phaseLabels:
+      - PreLateUpdate.ParticleSystemBeginUpdateAll
+      - PostLateUpdate.ParticleSystemEndUpdateAll
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.3"
+
+  - id: probe.ui.canvas
+    display: PlayerUpdateCanvases
+    kind: phase_ms
+    phaseLabel: PostLateUpdate.PlayerUpdateCanvases
+    thresholds: { green: 0.6, yellow: 1.0, red: 100 }
+    knowledgeRef: "v2.1 §4.4"
+
+  - id: probe.render.urp.shadow
+    display: URP ShadowPass
+    kind: keywords_main
+    keywords: [ShadowPass]
+    thresholds: { green: 5, yellow: 8, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.render.urp.postfx
+    display: URP 后处理
+    kind: keywords_main
+    keywords: [BloomPass, PostProcessPass]
+    thresholds: { green: 3, yellow: 5, red: 100 }
+    knowledgeRef: "v2.1 §4.6"
+
+  - id: probe.rhi.constUpload
+    display: RHI 常量缓冲上传
+    kind: keywords_rhi
+    keywords: [ConstantBuffersGLES]
+    thresholds: { green: 25, yellow: 40, red: 100 }
+    knowledgeRef: "v2.1 §4.7"
+
+  - id: probe.rhi.drawcall
+    display: RHI DrawCall
+    kind: keywords_rhi_observe
+    keywords: ["GfxDeviceGLES::DrawBuffers"]
+    thresholds: { green: 999, yellow: 999, red: 100 }
+    knowledgeRef: "v2.1 §4.7"

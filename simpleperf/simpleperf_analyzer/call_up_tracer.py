@@ -1,57 +1,40 @@
-"""Runtime function call-up tracing per knowledge base v2.1 §5 / card A.4."""
+"""Runtime function call-up tracing per knowledge base v2.1 §5 / card A.4.
 
+CALL_UP_TARGETS and CALLER_MODULE_RULES come from the active project pack
+(projects/<name>/caller-modules.yaml). The legacy hardcoded lists are gone.
+"""
+
+from .project_pack import load_project_pack
 from .tree_utils import iter_cg_nodes, norm_symbol, thread_global_pct, walk_cg_with_ancestors
 
-CALL_UP_TARGETS = [
-    "__memcpy", "__memset", "memmove",
-    "__ieee754_powf", "__ieee754_sqrtf", "__ieee754_atan2f",
-    "GC_end_stubborn_change", "GC_mark_from", "GC_push_all",
-    "tlsf_memalign", "tlsf_malloc", "tlsf_free",
-    "je_malloc", "je_free",
-    "il2cpp::vm::Object::NewAllocSpecific", "il2cpp_alloc",
-    "ThreadsafeLinearAllocator::Allocate",
-    "MemoryManager::Allocate", "BucketAllocator::Allocate",
-    "XXH32", "XXH64",
-]
 
-CALLER_MODULE_RULES = [
-    (["ConstantBuffersGLES", "InstancingBatcher", "MapConstantBuffers"], "RHI / GPU Instancing"),
-    (["Mesh::SetVertexData", "MUIRendererBase", "MUIDefaultRenderer"], "MeshUI 顶点上传"),
-    (["MUIControlManager", "MUILayout", "MUIText", "MUISprite", "MUIRenderable"], "MeshUI"),
-    (["PlanarShadow", "ShadowPass"], "URP / 阴影"),
-    (["BloomPass", "PostProcess"], "URP / 后处理"),
-    (["OutsideForestRenderer", "DrawFoliage", "OutsideTreeTypeRenderer"], "URP / 树木 Instancing"),
-    (["RenderingCommandBuffer", "ScriptableRenderContext", "TranscriptScriptableRenderContext"], "URP / 命令缓冲"),
-    (["TServer", "TServerManager"], "网络消息处理"),
-    (["LuaMgr", "XLua", "luaV_execute", "lua_pcall"], "Lua"),
-    (["UIGeometryJob"], "UGUI 几何 Job"),
-    (["Adreno"], "GPU 驱动黑盒"),
-    (["libAkSoundEngine"], "Wwise"),
-    (["Enumerator", "MoveNext"], "C# 迭代器"),
-    (["OutSideViewArmyLineMgr", "OutsideLineCtrl"], "行军线"),
-    (["BattleUIManager"], "战斗 UI"),
-]
-
-
-def _classify_module(chain_names):
-    for keywords, module in CALLER_MODULE_RULES:
+def _classify_module(chain_names, rules, unclassified_label):
+    for entry in rules:
+        keywords = entry.get("keywords") or []
+        module = entry.get("module") or unclassified_label
         for name in chain_names:
             for kw in keywords:
                 if kw in name:
                     return module
-    return "未分类"
+    return unclassified_label
 
 
-def _match_target(fn):
-    for t in CALL_UP_TARGETS:
+def _match_target(fn, targets):
+    for t in targets:
         if t in fn or fn == t:
             return t
     return None
 
 
-def compute_call_up_tracing(profile, grand_total_ec, tagged_threads):
+def compute_call_up_tracing(profile, grand_total_ec, tagged_threads,
+                            project_pack=None, binary_cache=None):
+    pack = project_pack or load_project_pack(binary_cache=binary_cache)
+    targets = list(pack.call_up_targets)
+    rules = list(pack.caller_module_rules)
+    unclassified_label = pack.caller_unclassified_label
+
     tid_identity = {t["tid"]: t["identity"] for t in tagged_threads}
-    results = {t: [] for t in CALL_UP_TARGETS}
+    results = {t: [] for t in targets}
 
     for _p, th in profile.iter_threads():
         ec = th["event_count"] or 1
@@ -60,7 +43,7 @@ def compute_call_up_tracing(profile, grand_total_ec, tagged_threads):
 
         def on_node(node, ancestors):
             fn = node.get("func_name") or ""
-            target = _match_target(fn)
+            target = _match_target(fn, targets)
             if not target:
                 return
             chain = ancestors[-3:]
@@ -68,7 +51,7 @@ def compute_call_up_tracing(profile, grand_total_ec, tagged_threads):
             chain_key = " < ".join(reversed([n[:60] for n in chain_names if n]))
             line_pct = node["subtree_event_count"] / ec * 100.0 if ec else 0.0
             g_pct = line_pct * tg / 100.0
-            module = _classify_module(chain_names + [norm_symbol(fn)])
+            module = _classify_module(chain_names + [norm_symbol(fn)], rules, unclassified_label)
             results[target].append({
                 "callerChain": chain_key or fn[:60],
                 "thread": thread_id,
@@ -79,7 +62,7 @@ def compute_call_up_tracing(profile, grand_total_ec, tagged_threads):
         walk_cg_with_ancestors(th["call_graph"], [], on_node)
 
     output = []
-    for target in CALL_UP_TARGETS:
+    for target in targets:
         hits = results[target]
         raw_hit_count = len(hits)
         dedup = {}

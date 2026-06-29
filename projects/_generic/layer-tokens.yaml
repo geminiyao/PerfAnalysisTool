@@ -1,0 +1,52 @@
+# projects/_generic/layer-tokens.yaml — 通用 .so 分层规则
+# 项目自研 native 在每个项目自己的 layer-tokens.yaml 里
+
+# === business 层（统一规则，所有 Unity 项目通用）===
+businessCoreLibs:
+  - libil2cpp
+  - libxlua
+  - lib_burst_generated
+  - base.odex
+  - base.vdex
+  - base.oat
+  - classes
+businessSelfDeveloperNatives: []  # 项目特化：每个项目自己的 yaml 覆盖
+
+# === engine 层 ===
+engineLibs:
+  - libunity.so
+  - libmain.so
+  - libAkSoundEngine
+  - libUE
+  - libfmod
+
+# === runtime 层 ===
+runtimeLibs:
+  - libc.so
+  - libm.so
+  - libc++
+  - libstdc++
+  - libdl
+  - liblog
+  - libart
+  - libandroid_runtime
+  - libnativehelper
+  - libGLESv2
+  - libEGL
+  - libgsl
+  - libadreno
+  - libutils
+  - libutilscallstack
+  - libz.so
+  - libssl
+  - libcrypto
+  - libbinder
+  - libcutils
+
+# === noise 层 ===
+noiseLibs:
+  - "[kernel.kallsyms]"
+  - "[unknown]"
+  - swapper
+  - "[vdso]"
+  - "/system/bin"

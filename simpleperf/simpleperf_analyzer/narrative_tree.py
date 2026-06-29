@@ -1,9 +1,17 @@
-"""Gold-style narrative call trees from Provider callTrees JSON (readable names, skip il2cpp noise)."""
+"""Gold-style narrative call trees from Provider callTrees JSON (readable names, skip il2cpp noise).
+
+All project-specific symbol/label tables (label rewrites, annotations, business
+keywords, slot matchers, hot-module ids, burst-job labels) are loaded from the
+active project pack (projects/<name>/*.yaml). The legacy hardcoded constants
+were promoted to default-fallbacks via the project pack `_generic` package.
+"""
 
 import re
+from .project_pack import load_project_pack
 from .tree_utils import norm_symbol
 
-# Nodes to skip entirely (promote children)
+# Nodes to skip entirely (promote children) — these are universal Unity engine
+# wrappers, NOT project-specific, so they remain hardcoded here.
 _SKIP_RES = [
     re.compile(r"^__start_thread"),
     re.compile(r"^__pthread_start"),
@@ -28,75 +36,46 @@ _SKIP_RES = [
 # IL2CPP hash suffix on C# methods
 _HASH_SUFFIX = re.compile(r"(_m[0-9A-F]{32}(_gshared)?|_356fe412ab5d279ecb02e1e6360be035)$")
 
-# Friendly renames (substring match)
-_FRIENDLY = [
-    (r"UniversalRenderPipeline_Render_m", "UniversalRenderPipeline.Render"),
-    (r"UniversalRenderPipeline_RenderCameraStack_m", "UniversalRenderPipeline.RenderCameraStack"),
-    (r"UniversalRenderPipeline_RenderSingleCamera_m", "UniversalRenderPipeline.RenderSingleCamera"),
-    (r"FrameworkCore_OnUpdate_m", "Core.Update → FrameworkCore_OnUpdate"),
-    (r"FrameworkCore_OnLateUpdate_m", "Core.LateUpdate"),
-    (r"MapManager_OnUpdate_m", "MapManager_OnUpdate"),
-    (r"BattleUIManager_OnUpdate_m", "BattleUIManager_OnUpdate"),
-    (r"OutSideViewArmyLineMgr_OnUpdate_m", "OutSideViewArmyLineMgr_OnUpdate"),
-    (r"OutSideViewArmyLineMgr_UpdateStraightMoveLine_m", "UpdateStraightMoveLine"),
-    (r"OutsideLineCtrl_RefreshLine_m", "OutsideLineCtrl.RefreshLine"),
-    (r"OutSideViewArmyLineMgr_GetArmyLineID_m", "GetArmyLineID"),
-    (r"MUIControlManager_OnLateUpdate_m", "MUIControlManager.OnLateUpdate"),
-    (r"MUILayout_Set3DPosition_m", "MUILayout.Set3DPosition"),
-    (r"MeshUIManager_OnLateUpdate_m", "MeshUIManager.OnLateUpdate"),
-    (r"LuaMgr_OnUpdate_m", "LuaMgr_OnUpdate"),
-    (r"GameLauncher_Update_m", "GameLauncher.Update"),
-    (r"GameLauncher_LateUpdate_m", "GameLauncher.LateUpdate"),
-    (r"MoveChain_SoldierMoveSystem\.SoldierMoveJob", "MoveChain_SoldierMoveSystem.SoldierMoveJob"),
-    (r"RotationLerpSystem", "RotationLerpSystem.DoSmoothLerp"),
-    (r"WriteInstanceDataJob", "WriteInstanceDataJob"),
-    (r"UtilHeightMapBurst", "UtilHeightMapBurst.GetSamplerHeights"),
-    (r"SyncViewEntitySystem", "SyncViewEntitySystem"),
-    (r"DrawFoliageInstanceRenderers", "DrawFoliageInstanceRenderers"),
-    (r"OutsideForestRenderer", "OutsideForestRenderer.DrawInternal"),
-    (r"PlanarShadow", "PlanarShadow"),
-    (r"BloomPass", "BloomPass.Execute"),
-    (r"MobileBaseRenderer_Setup", "MobileBaseRenderer.Setup"),
-    (r"TBUBaseFeature", "TBUBaseFeature.AddRenderPasses"),
-    (r"ConstantBuffersGLES::UpdateBuffers", "ConstantBuffersGLES.UpdateBuffers"),
-    (r"ConstantBuffersGLES::UpdateCB", "ConstantBuffersGLES.UpdateCB"),
-    (r"DrawBuffersStereo", "DrawBuffersStereo"),
-    (r"BeforeDrawCall", "BeforeDrawCall"),
-    (r"SetVertexStateGLES", "SetVertexStateGLES"),
-    (r"ApplyGpuProgramGLES", "ApplyGpuProgramGLES"),
-    (r"PresentFrame", "PresentFrame"),
-    (r"eglSwapBuffers", "eglSwapBuffers"),
-]
 
-_ANNOTATIONS = [
-    (("MUILayout_Set3DPosition", "MUILayout.Set3DPosition"), "see §4.4"),
-    (("MUIControlManager_OnLateUpdate", "MUIControlManager.OnLateUpdate"), "see §4.4"),
-    (("MeshUIManager_OnLateUpdate",), "see §4.4"),
-    (("OutSideViewArmyLineMgr", "UpdateStraightMoveLine"), "see §4.5"),
-    (("OutsideLineCtrl_RefreshLine", "OutsideLineCtrl.RefreshLine"), "see §4.5"),
-    (("GetArmyLineID",), "see §4.5"),
-    (("__memcpy",), "see §10"),
-    (("GC_end_stubborn_change",), "see §10"),
-    (("RenderManager::RenderCameras",), "[详见 §6.1]"),
-    (("ScriptRunBehaviourLateUpdate",), ""),
-    (("luaV_execute", "lua_pcall"), "Lua VM"),
-]
+def _pack():
+    return load_project_pack()
 
-_BUSINESS_KW = (
-    "FrameworkCore", "MapManager", "BattleUI", "OutSideViewArmyLine", "OutsideLine",
-    "MeshUI", "MUILayout", "MUIControl", "LuaMgr", "TServer", "GameLauncher",
-    "ScriptRunBehaviour", "PlayerLoop", "TextureStreaming", "ParticleSystem",
-    "PlayerUpdateCanvases", "LegacyAnimation", "RenderManager", "UniversalRenderPipeline",
-    "DrawRendererPass", "ShadowPass", "BloomPass", "GfxDevice", "DrawBuffers",
-    "ConstantBuffers", "SoldierMoveJob", "ArmyMoveJob", "RotationLerp",
-)
+
+def _label_rewrites():
+    return [(item.get("match", ""), item.get("display", "")) for item in _pack().label_rewrites if item.get("match")]
+
+
+def _annotations_pairs():
+    """List of (tuple_of_keys, note_string)."""
+    out = []
+    for entry in _pack().annotations:
+        keys = entry.get("keys") or []
+        out.append((tuple(keys), entry.get("note", "")))
+    return out
+
+
+def _business_kw():
+    return tuple(_pack().business_keywords or ())
+
+
+def _hot_module_ids():
+    return _pack().hot_module_ids
+
+
+def _slot_matchers_dict():
+    """Convert slot-matchers YAML into {slot: [(kind, key), ...]}."""
+    out = {}
+    for slot, rules in (_pack().slot_matchers or {}).items():
+        out[slot] = [(r.get("kind"), r.get("value")) for r in rules]
+    return out
+
 
 
 def friendly_name(raw):
     s = raw.split("→")[-1].strip() if "→" in raw else raw
     s = _HASH_SUFFIX.sub("", s)
     s = norm_symbol(s)
-    for pat, repl in _FRIENDLY:
+    for pat, repl in _label_rewrites():
         if pat in s or re.search(pat, s):
             return repl
     # Strip C# generic noise
@@ -192,7 +171,7 @@ def _render_pruned_children(node, lines, prefix, main_abs, total_samples, depth,
                 visible.extend(sub)
             continue
         if ch.get("mainThreadPct", 0) < min_main_pct and ch.get("selfPctGlobal", 0) < 0.05:
-            if not any(k in ch.get("name", "") for k in _BUSINESS_KW):
+            if not any(k in ch.get("name", "") for k in _business_kw()):
                 continue
         visible.append(ch)
     for i, ch in enumerate(visible[:12]):
@@ -253,7 +232,7 @@ _GOLD_PHASE_ORDER = [
     "PostLateUpdate.PlayerSendFrameComplete",
 ]
 
-_HOT_MODULE_IDS = frozenset({"meshui", "army_line"})
+_HOT_MODULE_IDS = frozenset()  # legacy fallback; real value comes from project pack via _hot_module_ids()
 
 
 def _bm_map(diff):
@@ -264,21 +243,7 @@ def _bm_map(diff):
 # "auto_main_thread_BattleUIManager_UpdateMUIPos_xxx") so we can't index by
 # fixed strings like "meshui" anymore. Each slot describes a set of module
 # patterns; _bm_children unions all matching modules' children.
-_SLOT_MATCHERS = {
-    "wwise": [("id", "wwise"), ("rootSymbol", "libAkSoundEngine"),
-              ("displayContains", "Wwise"), ("displayContains", "AkSoundEngine")],
-    "ecs_burst": [("id", "ecs_burst"), ("rootSymbol", "lib_burst_generated"),
-                  ("displayContains", "Burst")],
-    "meshui": [("id", "meshui"), ("displayContains", "MeshUI"),
-               ("displayContains", "MUI"),
-               ("displayContains", "BattleUIManager_UpdateMUIPos")],
-    "army_line": [("id", "army_line"),
-                  ("displayContains", "OutSideViewArmyLineMgr"),
-                  ("displayContains", "OutsideLineCtrl"),
-                  ("displayContains", "OutsideLineMesh")],
-    "lua_gc_worker": [("id", "lua_gc_worker"), ("rootSymbol", "lua_mtgc_worker")],
-    "lua_vm": [("id", "lua_vm"), ("id", "lua_vm_lib"), ("rootSymbol", "libxlua")],
-}
+# Active rules come from project pack slot-matchers.yaml via _slot_matchers_dict().
 
 
 def _slot_match(module, matchers):
@@ -293,7 +258,7 @@ def _slot_match(module, matchers):
 
 
 def _modules_for_slot(diff, slot):
-    matchers = _SLOT_MATCHERS.get(slot)
+    matchers = _slot_matchers_dict().get(slot)
     if not matchers:
         m = _bm_map(diff).get(slot)
         return [m] if m else []
@@ -548,6 +513,16 @@ def _render_lua_warning(lines, prefix):
 
 
 def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_abs, total_samples, diff):
+    """§5.2 update-phase hotspot block.
+
+    NOTE: This template currently embeds aoeyz-specific business manager
+    names (FrameworkCore / MapManager / BattleUIManager / OutSideViewArmy*
+    / TServerManager / MUI*). It only kicks in when those symbols exist in
+    the callTree, so other projects fall back gracefully to the parent
+    chain renderer. Plan: future hotspot-tree YAML DSL would let each
+    project pack express its own "PlayerLoop hotspot" template — see
+    docs/refactor-progress.md.
+    """
     mesh_kids = _bm_children(diff, "meshui")
     army_kids = _bm_children(diff, "army_line")
 
@@ -720,6 +695,8 @@ def _render_update_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_
 
 
 def _render_lateupdate_hotspot_block(lines, prefix, mt_root, um_root, main_ms, main_abs, total_samples, diff):
+    """§5.2 late-update hotspot block — aoeyz-shaped template, see
+    _render_update_hotspot_block docstring for migration notes."""
     mesh_kids = _bm_children(diff, "meshui")
     fc = _find_mt_node(mt_root, "FrameworkCore_OnLateUpdate")
     if not fc:
@@ -759,7 +736,7 @@ def render_main_thread_gold_style(call_trees, main_tree, total_samples, diff=Non
     main_ms = um_root.get("totalMs", 1)
 
     hot_ids = {item.get("moduleId") or item.get("id") for item in (top_n or []) if item.get("verdict") == "red"}
-    hot_ids |= _HOT_MODULE_IDS
+    hot_ids |= _hot_module_ids()
 
     phases = []
     _collect_phase_nodes(mt_root, phases)
@@ -858,14 +835,14 @@ def render_main_thread_from_pruned_tree(main_tree, call_trees, total_samples, en
 
 
 def _annotation(name):
-    for keys, note in _ANNOTATIONS:
+    for keys, note in _annotations_pairs():
         if any(k in name for k in keys):
             return note
     return ""
 
 
 def _is_interesting(name, total_pct, self_pct):
-    if any(k in name for k in _BUSINESS_KW):
+    if any(k in name for k in _business_kw()):
         return True
     if total_pct >= 0.35:
         return True
@@ -1321,19 +1298,7 @@ def collect_burst_jobs(call_trees, total_samples, top_k=11, hotspots=None):
     summary. If absent (legacy callers), we approximate from callTrees by
     converting per-thread selfPct → global via root.totalPct.
     """
-    label_specs = [
-        ("SoldierMoveJob", "MoveChain_SoldierMoveSystem.SoldierMoveJob", "ECS 士兵移动"),
-        ("ArmyMoveJob", "MoveChain_ArmyMoveSystem.ArmyMoveJob", "ECS 队伍移动"),
-        ("RotationLerpSystem", "RotationLerpSystem.DoSmoothLerp", "ECS 旋转插值"),
-        ("WriteInstanceDataJob", "WriteInstanceDataJob", "GPU Instancing 数据回写"),
-        ("UtilHeightMapBurst", "UtilHeightMapBurst.GetSamplerHeights", "地形高度采样"),
-        ("SyncViewEntitySystem", "SyncViewEntitySystem", "ECS → 显示同步"),
-        ("LocalToParentSystem", "LocalToParentSystem.ChildLocalToWorld", "Transform 层级变换"),
-        ("OnStepMove", "SoldierMoveJob.OnStepMove", "ECS 单步移动"),
-        ("SyncLogicEntitySystem", "SyncLogicEntitySystem", "ECS 逻辑同步"),
-        ("ArchiveSoldier", "MoveChain_SoldierMoveSystem.ArchiveSoldier", "ECS 士兵归档"),
-        ("RefreshCurPosition", "ArmyMoveSystem.RefreshCurPosition", "ECS 路径点刷新"),
-    ]
+    label_specs = [(j["keyword"], j["display"], j["module"]) for j in _pack().burst_jobs]
 
     if hotspots:
         # Preferred path: use globally-aggregated self pct from summary.
