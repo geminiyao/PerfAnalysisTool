@@ -145,3 +145,81 @@ modules:
     threadHint: "主线程"
     topNRemark: "网络消息处理"
     probeId: probe.net.tserver
+
+  # ========== Lua 业务管理器（aoeyz 业务热点）==========
+  - id: map_significance
+    display: 重要度管理器（MapSignificanceMgr）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - MapSignificanceMgr
+    threadHint: "主线程（Lua tick / Update）"
+    topNRemark: "实体增删洪峰; 任务多时易顶到 3ms/帧上限"
+    probeId: probe.lua.mapSignificance
+
+  - id: battle_head
+    display: 头像管理器（BattleHeadMgr）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - BattleHeadMgr
+    threadHint: "主线程（Lua tick）"
+    topNRemark: "同屏头像数量驱动; 与 BattleUIManager 联动看"
+
+  - id: map_camera
+    display: 拖动视野相机（MapCameraCtrl）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - MapCameraCtrl
+    threadHint: "主线程（LateUpdate）"
+    topNRemark: "拖动手势触发; 静止场景应低"
+
+  - id: lua_mgr_dispatcher
+    display: Lua 主入口分发（LuaMgr.OnTick&UpdateSchedule）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - LuaMgr.OnTick
+      - LuaMgr.OnLateUpdateSchedule
+    threadHint: "主线程"
+    topNRemark: "Lua 主入口分发开销; 子函数热点查 MapSig/BattleHead/Hud_Common"
+
+  - id: ugui_canvas
+    display: UGUI Canvas 重建（PlayerUpdateCanvases）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - PlayerUpdateCanvases
+    threadHint: "主线程（PostLateUpdate）"
+    topNRemark: "主场景悬浮 UI 已 MeshUI 化; >1ms/次警戒"
+    probeId: probe.ugui.canvas
+
+  - id: ecs_simulation_dispatch
+    display: ECS Simulation 分发（SimulationSystemGroup）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - SimulationSystemGroup
+    threadHint: "主线程"
+    topNRemark: "主线程仅分发 job; >1ms 警戒（参考 ECSDependencyVisualizer）"
+
+  - id: ecs_init_dispatch
+    display: ECS Initialization 分发（InitializationSystemGroup）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - InitializationSystemGroup
+    threadHint: "主线程"
+    topNRemark: "主线程仅分发 job; >1ms 警戒"
+
+  - id: res_loader
+    display: 资源加载（ResManager / LoaderManagerOnFrameEnd）
+    discoverMode: subtree_sum_self
+    scope: main_thread
+    keywords:
+      - ResManager
+      - LoaderManagerdOnFrameEnd
+      - LoaderManagerOnFrameEnd
+    threadHint: "主线程（PostLateUpdate.PlayerSendFrameComplete 子树）"
+    topNRemark: "实体增删/切视野时常见; 异步加载队列与 EndOfFrame 集中加载"

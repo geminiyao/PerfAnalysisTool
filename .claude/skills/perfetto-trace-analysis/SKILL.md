@@ -60,6 +60,8 @@ cd <out_dir> && node -e "const p=require('./perfetto-profile.json'); const t=p.d
 
 ### Step 3: 分析(依据 report-spec §4)
 
+> **三态对比 / 多份 diff 报告**：Web 与手工 CLI 共用 `prompts/triad-prompt.txt` 模板（变量 `{{SKILL_DIR}}` / `{{OUTPUT_DIR}}` / `{{TEMPLATE_PATH}}` / `{{GOLDEN_PATH}}` / `{{FACTS_PATH}}` / `{{SAMPLE_LINES}}`）。手工跑时把变量替换好，stdin 注入 codebuddy CLI；Web 端 `perfetto-triad-service.ts.buildTriadPrompt()` 走同一份模板，**不再各自维护一套指令**。
+
 1. **瓶颈类型定性(核心结论)**:综合主线程 Running vs Sleeping + GPU 忙 → 判 **CPU-bound / 等待型(等 GPU/锁/binder/vsync)**。这是 perfetto 对单次分析最大贡献。
 2. **off-CPU 归因**(独占):主线程 Sleeping 高时拆「在等什么」;数据不足时明说。
 3. **调度树**:关键线程 atrace slice 树(PlayerLoop→各阶段)+ 占比,看一帧「算 vs 等」分布。

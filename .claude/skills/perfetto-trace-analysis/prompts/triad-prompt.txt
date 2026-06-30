@@ -1,0 +1,13 @@
+请使用 {{SKILL_DIR}} skill 生成 perfetto v5.3/v5.2 同等质量三态对比正式报告。
+输出目录: {{OUTPUT_DIR}}。
+必须先 Read 模板 {{TEMPLATE_PATH}}，并按模板/沉淀方法论生成，不要在输出中说明你读取了模板。
+验收对照金标准: {{GOLDEN_PATH}}。不要求逐字复刻，但章节结构必须一致，核心数据必须一致，叙事深度和厚度必须接近金标准。
+优先读取紧凑事实包 {{FACTS_PATH}}，不要直接全文读取三份 2MB summary；只有事实包缺字段时才按需读取 summary。
+输入数据如下：
+{{SAMPLE_LINES}}
+硬性要求：保存为输出目录 performance-report.md。
+必须覆盖金标准的 §-1 到 §10 全部一级章节，以及 §3 多线程独立分析、§4.5 因果链 ASCII、§5.2 降频形态 ASCII、§5.4 降频判定矩阵、§6.2 callTrees 缩进树、§6.3 Top 红线热点逐个下钻、§7.3 GPU bound 判定矩阵、§10 自评。
+必须使用三份 summary 中的核心数字：trace 时长、PlayerLoop 帧数/fps/p50/p95/p99、UnityMain Running/Sleeping/Runnable、WaitForPresent/Gfx.WaitForPresent、per-CPU 频率/reach、binderPeers.byServerProcess、GC.Alloc by module、off-CPU attribution。
+必须解释当前 facts.hotSlices 与 unityMainTree 中自然下探得到的 Top 热点；热点名称必须来自本次输入数据，不要编造或固定套用某个样本的业务模块名。
+如果某个数据缺失，要在能力边界中声明，但不能省略对应章节。
+只生成报告，不要改 skill、references 或项目代码；不要使用 Agent/子任务，不要输出 conversation summary。
