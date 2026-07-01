@@ -25,6 +25,7 @@ async function main() {
   check('perf.data exists', fs.existsSync(PERF), PERF);
 
   const t0 = Date.now();
+  const skipAi = process.argv.includes('--skip-ai');
   const result = await buildSimpleperfSingleReport(
     {
       perfPath: PERF,
@@ -33,14 +34,18 @@ async function main() {
       scene: 'outside-stressmove',
       device: 'PAL-AL00',
     },
-    { skipAiEnrich: false, onLog: line => console.log(`[+${((Date.now() - t0) / 1000).toFixed(1)}s] ${line}`) },
+    { skipAiEnrich: skipAi, onLog: line => console.log(`[+${((Date.now() - t0) / 1000).toFixed(1)}s] ${line}`) },
   );
 
   check('pipeline done', Boolean(result.markdown), `${((Date.now() - t0) / 1000).toFixed(1)}s`);
-  check('deliverSource ai-authored', result.deliverSource === 'ai-authored', result.deliverSource);
+  if (skipAi) {
+    check('deliverSource enriched/provider', ['enriched', 'provider'].includes(result.deliverSource), result.deliverSource);
+  } else {
+    check('deliverSource ai-authored', result.deliverSource === 'ai-authored', result.deliverSource);
+    check('LLM_FILL == 0', !(result.markdown.match(/LLM_FILL/g) ?? []).length);
+  }
   check('§0 present', result.markdown.includes('## §0'));
   check('§2 libil2cpp', result.markdown.includes('libil2cpp'));
-  check('LLM_FILL == 0', !(result.markdown.match(/LLM_FILL/g) ?? []).length);
   check('exported', fs.existsSync(result.reportPath), result.reportPath);
 
   const sampleSrc = path.join(ROOT, 'output/p-web-simpleperf/performance-report_sp_single_e2e_ai_thickened.md');

@@ -34,9 +34,9 @@ const PIPELINES = {
     note: 'Sprint 7 三态 e2e L3（base/cur/throttle）',
   },
   'simpleperf-single': {
-    source: 'output/p-web-simpleperf/performance-report_run_sp_1782834926499_d83857_20260701000112.md',
-    destSuffix: 'web-stressmove',
-    note: 'Web 落盘，stressmove 场景单次',
+    source: 'output/p-web-simpleperf/performance-report_sp_single_e2e_ai_thickened.md',
+    destSuffix: 'ai-thickened',
+    note: 'hybrid single: Provider + enrich + CLI + quality gate',
   },
   'simpleperf-diff': {
     source: 'output/p-web-simpleperf-diff/performance-report_spdiff_1782740117775_0c520744_20260629214732.md',
