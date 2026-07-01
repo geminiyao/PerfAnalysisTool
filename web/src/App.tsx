@@ -12,6 +12,7 @@ import RunDetail from './pages/RunDetail';
 import RunComparePage from './pages/RunComparePage';
 import PerfettoTriad from './pages/PerfettoTriad';
 import SimpleperfDiff from './pages/SimpleperfDiff';
+import UnityProfilerCompare from './pages/UnityProfilerCompare';
 import Settings from './pages/Settings';
 
 const { Content } = Layout;
@@ -30,6 +31,8 @@ const App: React.FC = () => {
             <Route path="/compare" element={<RunComparePage />} />
             <Route path="/perfetto-triad" element={<PerfettoTriad />} />
             <Route path="/simpleperf-diff" element={<SimpleperfDiff />} />
+            <Route path="/unity-compare" element={<UnityProfilerCompare />} />
+            <Route path="/unity-compare" element={<UnityProfilerCompare />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings" element={<Settings />} />

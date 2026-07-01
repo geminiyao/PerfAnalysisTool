@@ -209,6 +209,9 @@ export function analyzeProfileData(
 
   const threadMap = new Map<string, ThreadDataResult>()
   const markerMap = new Map<string, MarkerWork>()
+  // Phase X.1: 同时维护每线程的 markerMap，输出 markersByThread 字段；
+  // 不破坏现有 markerMap 的跨线程聚合，只新增数据维度。
+  const markerMapByThread = new Map<string, Map<string, MarkerWork>>()
   const allMarkerNames = new Set<string>()
   let maxMarkerDepthFound = 0
 
@@ -317,6 +320,22 @@ export function analyzeProfileData(
           }
         }
 
+        // Phase X.1: 同步累加到每线程独立的 markerMap (双写, 不动 marker)
+        let byThread = markerMapByThread.get(threadNameWithIndex)
+        if (!byThread) {
+          byThread = new Map()
+          markerMapByThread.set(threadNameWithIndex, byThread)
+        }
+        let perThreadMarker = byThread.get(markerName)
+        if (!perThreadMarker) {
+          perThreadMarker = createMarkerWork(markerName)
+          perThreadMarker.firstFrameIndex = frameIndex
+          perThreadMarker.minDepth = markerDepth
+          perThreadMarker.maxDepth = markerDepth
+          perThreadMarker.threads.push(threadNameWithIndex)
+          byThread.set(markerName, perThreadMarker)
+        }
+
         marker.count++
         marker.msTotal += ms
 
@@ -343,6 +362,33 @@ export function analyzeProfileData(
             count: last.count + 1
           }
         }
+
+        // Phase X.1: 同步累加到 perThreadMarker
+        perThreadMarker.count++
+        perThreadMarker.msTotal += ms
+        if (ms < perThreadMarker.msMinIndividual) {
+          perThreadMarker.msMinIndividual = ms
+          perThreadMarker.minIndividualFrameIndex = frameIndex
+        }
+        if (ms > perThreadMarker.msMaxIndividual) {
+          perThreadMarker.msMaxIndividual = ms
+          perThreadMarker.maxIndividualFrameIndex = frameIndex
+        }
+        if (markerDepth < perThreadMarker.minDepth) perThreadMarker.minDepth = markerDepth
+        if (markerDepth > perThreadMarker.maxDepth) perThreadMarker.maxDepth = markerDepth
+
+        if (frameIndex !== perThreadMarker.lastFrame) {
+          perThreadMarker.presentOnFrameCount++
+          perThreadMarker.frames.push({ frameIndex, ms, count: 1 })
+          perThreadMarker.lastFrame = frameIndex
+        } else {
+          const last = perThreadMarker.frames[perThreadMarker.frames.length - 1]
+          perThreadMarker.frames[perThreadMarker.frames.length - 1] = {
+            frameIndex: last.frameIndex,
+            ms: last.ms + ms,
+            count: last.count + 1
+          }
+        }
       }
 
       if (include) {
@@ -357,12 +403,19 @@ export function analyzeProfileData(
   // Finalize markers
   const markers = finalizeMarkers(Array.from(markerMap.values()), frameSummary)
 
+  // Phase X.1: Finalize per-thread markers (使用同一份 finalizeMarkers 算法)
+  const markersByThread: Record<string, MarkerDataResult[]> = {}
+  for (const [threadName, byThread] of markerMapByThread.entries()) {
+    markersByThread[threadName] = finalizeMarkers(Array.from(byThread.values()), frameSummary)
+  }
+
   // Finalize threads
   const threads = finalizeThreads(Array.from(threadMap.values()))
 
   return {
     frameSummary,
     markers,
+    markersByThread,
     threads,
     frameTimeline,
     threadNames: profileData.threadNames,

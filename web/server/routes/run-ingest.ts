@@ -19,6 +19,7 @@ import {
   runSimpleperfDiffIngestJob,
   runSimpleperfIngestJob,
   runUnifiedIngestJob,
+  runUnityCompareIngestJob,
   runUnityIngestJob,
   subscribeIngestJob,
   unsubscribeIngestJob,
@@ -521,6 +522,54 @@ export async function runIngestRoutes(app: FastifyInstance) {
       meta,
     });
     return reply.status(202).send(jobPayload(job.id));
+  });
+
+  /** Phase A.4: Unity 双版本对比 — 本地路径模式 */
+  app.post('/runs/ingest/unity-compare/local', async (request, reply) => {
+    const body = request.body as {
+      basePath?: string;
+      curPath?: string;
+      baseLabel?: string;
+      curLabel?: string;
+      device?: string;
+      scene?: string;
+      targetFps?: number;
+      cliProvider?: 'codebuddy' | 'claude' | 'mock';
+      skipAiEnrich?: boolean;
+      runId?: string;
+      label?: string;
+    };
+    if (!body.basePath || !body.curPath) {
+      return reply.status(400).send({ error: '需要填写 basePath 与 curPath' });
+    }
+    for (const [tag, fp] of [['base', body.basePath], ['cur', body.curPath]] as const) {
+      if (!fs.existsSync(fp)) {
+        return reply.status(400).send({ error: `${tag} 文件不存在: ${fp}` });
+      }
+    }
+    const meta: IngestMeta = {
+      runId: body.runId || undefined,
+      label: body.label || undefined,
+      device: body.device || undefined,
+      scene: body.scene || undefined,
+      targetFps: body.targetFps !== undefined ? Number(body.targetFps) : undefined,
+    };
+    const job = createIngestJob('unity_compare');
+    runUnityCompareIngestJob(job.id, {
+      input: {
+        basePdataPath: body.basePath,
+        curPdataPath: body.curPath,
+        baseLabel: body.baseLabel,
+        curLabel: body.curLabel,
+        device: body.device,
+        scene: body.scene,
+        targetFps: meta.targetFps,
+      },
+      meta,
+      cliProvider: body.cliProvider,
+      skipAiEnrich: body.skipAiEnrich,
+    });
+    return { jobId: job.id };
   });
 
   /** 合并已有单源 Run → 多源 Run */

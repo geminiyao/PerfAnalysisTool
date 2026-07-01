@@ -408,6 +408,15 @@ export function ingestSimpleperfDiffBundleRun(
   return ingestWithProgress(() => postIngestMultipart('/runs/ingest/simpleperf-diff/bundle', fd), onEvent);
 }
 
+/** Phase A.4: Unity 双版本对比 — 本地路径模式 */
+export function ingestUnityCompareLocalRun(
+  paths: { basePath: string; curPath: string },
+  meta: Record<string, string | number | boolean | undefined> = {},
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  return ingestWithProgress(() => postIngestJson('/runs/ingest/unity-compare/local', { ...paths, ...meta }), onEvent);
+}
+
 export function mergeRuns(
   runIds: string[],
   meta: Record<string, string> = {},

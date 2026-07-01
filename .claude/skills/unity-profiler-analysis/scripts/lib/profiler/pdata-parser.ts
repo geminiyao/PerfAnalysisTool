@@ -5,6 +5,8 @@
 import * as fs from 'fs'
 import { BinaryReader } from './binary-reader'
 import { ProfileData, ProfileFrame, ProfileThread, ProfileMarker } from './types'
+import { loadCountersSidecar } from './counters-loader'
+import { loadCountersSidecar } from './counters-loader'
 
 const LATEST_VERSION = 7
 
@@ -166,6 +168,10 @@ export function parsePdataFile(filePath: string): ProfileData {
 
   // Post-process: calculate child marker times
   calculateMarkerChildTimes(data)
+
+  // Optional: load Render/Memory counters from same-name sidecar
+  const counters = loadCountersSidecar(filePath, frameIndexOffset)
+  if (counters) data.counters = counters
 
   return data
 }

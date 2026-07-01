@@ -23,6 +23,7 @@ const menuItems = [
   { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
   { key: '/perfetto-triad', icon: <BranchesOutlined />, label: 'Perfetto 三态' },
   { key: '/simpleperf-diff', icon: <DiffOutlined />, label: 'Simpleperf 差分' },
+  { key: '/unity-compare', icon: <DiffOutlined />, label: 'Unity 差分' },
   { key: '/trends', icon: <LineChartOutlined />, label: '趋势' },
   { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
@@ -33,6 +34,7 @@ function selectedMenuKey(pathname: string): string {
   if (pathname.startsWith('/compare')) return '/compare';
   if (pathname.startsWith('/perfetto-triad')) return '/perfetto-triad';
   if (pathname.startsWith('/simpleperf-diff')) return '/simpleperf-diff';
+  if (pathname.startsWith('/unity-compare')) return '/unity-compare';
   return pathname;
 }
 

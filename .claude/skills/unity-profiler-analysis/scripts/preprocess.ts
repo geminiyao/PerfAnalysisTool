@@ -12,7 +12,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { parsePdataFile } from './lib/profiler/pdata-parser'
 import { analyzeProfileData } from './lib/profiler/profile-analyzer'
-import { ProfileData, ProfileAnalysisResult } from './lib/profiler/types'
+import { ProfileData, ProfileAnalysisResult, MarkerDataResult, RenderingSummary, MemorySummary, FrameCounters } from './lib/profiler/types'
 import {
   getFrameCallTree,
   buildCallTree,
@@ -20,7 +20,9 @@ import {
   findCallChain,
   formatCallTree,
   formatHotPath,
-  formatCallChain
+  formatCallChain,
+  aggregateCallTrees,
+  type AggregatedCallTree
 } from './lib/profiler/call-tree'
 import { detectAllSpikes, SpikeCategory } from './lib/profiler/spike-detector'
 
@@ -42,11 +44,21 @@ export interface PreprocessResult {
   config: { targetFps: number; frameBudgetMs: number }
   frameSummary: FrameSummaryOutput
   markers: MarkerOutput[]
+  /** Phase X.1: 每线程独立的 marker 列表（key = threadNameWithIndex）。
+   *  用于跨源对位、多线程分析。markers[] 字段保持原状（跨线程聚合），不互相替代。 */
+  markersByThread?: Record<string, MarkerOutput[]>
+  /** Phase X.2: 每线程的全 trace 聚合 callTree（洋葱剥离用真实 ms/帧）。
+   *  阻塞 cross-source §3 主循环阶段 + unity diff + 三源对位。 */
+  aggregatedCallTrees?: AggregatedCallTree[]
   markerSpikes: MarkerSpikeOutput[]
   jankFrames: JankFrameOutput[]
   frameTrees: FrameTreeOutput[]
   frameTimings: number[]
   threads: ThreadOutput[]
+  /** Render counters 聚合（缺 sidecar 时 undefined） */
+  rendering?: RenderingSummary
+  /** Memory counters 聚合（缺 sidecar 时 undefined） */
+  memory?: MemorySummary
 }
 
 export interface FrameSummaryOutput {
@@ -58,6 +70,11 @@ export interface FrameSummaryOutput {
   max: number
   q1: number
   q3: number
+  /** Phase X.4: 90/95/99/999 percentiles (ms/帧) */
+  p90?: number
+  p95?: number
+  p99?: number
+  p999?: number
   worstFrameIndex: number
   medianFrameIndex: number
   jankCount: number
@@ -106,6 +123,8 @@ export interface JankFrameOutput {
   callTreeSummary: string
   mustReport: boolean
   mustReportReason: string
+  /** Phase X.5: 此 jank 帧的 top 3 markers，便于跨场景 diff 时直接看哪些 marker 触发了 jank */
+  topMarkers?: { name: string; msSelf: number; thread: string }[]
 }
 
 export interface FrameTreeOutput {
@@ -120,6 +139,10 @@ export interface ThreadOutput {
   name: string
   msMedian: number
   msMax: number
+  /** Phase X.6: 全 trace 平均 ms/帧（与 aggregatedCallTrees.msPerFrameTotal 对账）*/
+  msPerFrameTotal?: number
+  /** Phase X.6: 该线程上 top 5 markers（按 selfMean）*/
+  topMarkers?: { name: string; msSelfMean: number; percentOfFrame: number }[]
 }
 
 // ============ CLI Argument Parsing ============
@@ -327,7 +350,10 @@ function computeMarkerSelfTimes(
   selfAnalysis: ProfileAnalysisResult,
   totalAnalysis: ProfileAnalysisResult,
   profileData: ProfileData,
-  config: Config
+  config: Config,
+  /** Phase X.1: 可选——指定 markers 来源（默认是 selfAnalysis.markers, 跨线程聚合）。
+   *  传入特定线程的 markers 数组时，本函数对该线程单独算 selfTime/spike */
+  markersOverride?: MarkerDataResult[]
 ): MarkerSelfTimeInfo[] {
   const blacklistSet = new Set(config.blacklist.map(b => b.toLowerCase()))
 
@@ -352,7 +378,9 @@ function computeMarkerSelfTimes(
 
   const results: MarkerSelfTimeInfo[] = []
 
-  for (const marker of selfAnalysis.markers) {
+  const sourceMarkers = markersOverride ?? selfAnalysis.markers
+
+  for (const marker of sourceMarkers) {
     // Skip blacklisted markers
     if (blacklistSet.has(marker.name.toLowerCase())) continue
     // Skip very low impact markers (use self-time for filtering)
@@ -545,6 +573,276 @@ function shouldMustReport(
   return { mustReport: false, reason: '' }
 }
 
+// ============ Render / Memory aggregation ============
+
+interface CounterSeries {
+  /** 与 frames 同长，缺测项为 NaN */
+  values: number[]
+  frameIndices: number[]
+}
+
+function pickSeries(frames: FrameCounters[], field: keyof FrameCounters): CounterSeries {
+  const values: number[] = []
+  const frameIndices: number[] = []
+  for (const f of frames) {
+    const v = f[field]
+    if (typeof v === 'number') {
+      values.push(v)
+      frameIndices.push(f.frameIndex)
+    }
+  }
+  return { values, frameIndices }
+}
+
+function statsOf(series: CounterSeries): { mean: number; median: number; max: number; p95: number; maxFrameIndex: number } {
+  if (series.values.length === 0) {
+    return { mean: 0, median: 0, max: 0, p95: 0, maxFrameIndex: 0 }
+  }
+  let max = -Infinity
+  let maxFrameIndex = 0
+  let sum = 0
+  for (let i = 0; i < series.values.length; i++) {
+    const v = series.values[i]
+    sum += v
+    if (v > max) {
+      max = v
+      maxFrameIndex = series.frameIndices[i]
+    }
+  }
+  const sorted = [...series.values].sort((a, b) => a - b)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  const p95Idx = Math.min(Math.floor(sorted.length * 0.95), sorted.length - 1)
+  const p95 = sorted[p95Idx]
+  return {
+    mean: sum / series.values.length,
+    median,
+    max,
+    p95,
+    maxFrameIndex
+  }
+}
+
+function meanMax(series: CounterSeries): { mean: number; max: number } {
+  if (series.values.length === 0) return { mean: 0, max: 0 }
+  let max = -Infinity
+  let sum = 0
+  for (const v of series.values) {
+    sum += v
+    if (v > max) max = v
+  }
+  return { mean: sum / series.values.length, max }
+}
+
+function meanMedianMax(series: CounterSeries): { mean: number; median: number; max: number } {
+  if (series.values.length === 0) return { mean: 0, median: 0, max: 0 }
+  let max = -Infinity
+  let sum = 0
+  for (const v of series.values) {
+    sum += v
+    if (v > max) max = v
+  }
+  const sorted = [...series.values].sort((a, b) => a - b)
+  return { mean: sum / series.values.length, median: sorted[Math.floor(sorted.length / 2)], max }
+}
+
+/**
+ * 用首尾帧线性回归近似 growth rate（bytes/sec）。
+ * 假设帧均匀分布在 totalDurationMs 内。
+ * totalDurationMs 由 ProfileData 的首尾 frame.msStartTime 推断。
+ */
+function growthRateBytesPerSec(series: CounterSeries, totalDurationMs: number): number {
+  if (series.values.length < 2 || totalDurationMs <= 0) return 0
+  const first = series.values[0]
+  const last = series.values[series.values.length - 1]
+  return ((last - first) / totalDurationMs) * 1000
+}
+
+function gcAllocStats(series: CounterSeries): { mean: number; median: number; max: number; p95: number; allocFrames: number } {
+  if (series.values.length === 0) return { mean: 0, median: 0, max: 0, p95: 0, allocFrames: 0 }
+  const allocFrames = series.values.filter(v => v > 0).length
+  const s = statsOf(series)
+  return {
+    mean: s.mean,
+    median: s.median,
+    max: s.max,
+    p95: s.p95,
+    allocFrames
+  }
+}
+
+/**
+ * 抽样 perFrame 序列：worst（max draw calls 帧）+ median + 等距抽样，最多 50 帧。
+ */
+function sampleRenderingPerFrame(frames: FrameCounters[]): { frameIndex: number; drawCalls: number; batches: number }[] {
+  if (frames.length === 0) return []
+  const dcSeries = pickSeries(frames, 'drawCalls')
+  if (dcSeries.values.length === 0) return []
+  const dcStats = statsOf(dcSeries)
+  const wantedSet = new Set<number>()
+  wantedSet.add(dcStats.maxFrameIndex)
+  // 中位帧
+  const sortedIdx = dcSeries.values
+    .map((v, i) => ({ v, idx: dcSeries.frameIndices[i] }))
+    .sort((a, b) => a.v - b.v)
+  wantedSet.add(sortedIdx[Math.floor(sortedIdx.length / 2)].idx)
+  // 等距抽样 ~48 帧（加上 worst+median 共 50）
+  const sampleStep = Math.max(1, Math.floor(frames.length / 48))
+  for (let i = 0; i < frames.length; i += sampleStep) {
+    wantedSet.add(frames[i].frameIndex)
+  }
+  const out: { frameIndex: number; drawCalls: number; batches: number }[] = []
+  for (const f of frames) {
+    if (!wantedSet.has(f.frameIndex)) continue
+    out.push({
+      frameIndex: f.frameIndex,
+      drawCalls: typeof f.drawCalls === 'number' ? f.drawCalls : 0,
+      batches: typeof f.batches === 'number' ? f.batches : 0
+    })
+  }
+  return out
+}
+
+function sampleMemoryPerFrame(frames: FrameCounters[]): { frameIndex: number; gcAllocatedInFrame: number; totalUsedMemory: number }[] {
+  if (frames.length === 0) return []
+  const wantedSet = new Set<number>()
+  // worst GC alloc 帧
+  let maxGc = -Infinity
+  let maxGcIdx = 0
+  for (const f of frames) {
+    const v = typeof f.gcAllocatedInFrame === 'number' ? f.gcAllocatedInFrame : 0
+    if (v > maxGc) {
+      maxGc = v
+      maxGcIdx = f.frameIndex
+    }
+  }
+  wantedSet.add(maxGcIdx)
+  // 等距抽样
+  const sampleStep = Math.max(1, Math.floor(frames.length / 49))
+  for (let i = 0; i < frames.length; i += sampleStep) {
+    wantedSet.add(frames[i].frameIndex)
+  }
+  const out: { frameIndex: number; gcAllocatedInFrame: number; totalUsedMemory: number }[] = []
+  for (const f of frames) {
+    if (!wantedSet.has(f.frameIndex)) continue
+    out.push({
+      frameIndex: f.frameIndex,
+      gcAllocatedInFrame: typeof f.gcAllocatedInFrame === 'number' ? f.gcAllocatedInFrame : 0,
+      totalUsedMemory: typeof f.totalUsedMemory === 'number' ? f.totalUsedMemory : 0
+    })
+  }
+  return out
+}
+
+function round(n: number, dp: number = 0): number {
+  const m = Math.pow(10, dp)
+  return Math.round(n * m) / m
+}
+
+function computeRenderingMemory(
+  profileData: ProfileData
+): { rendering?: RenderingSummary; memory?: MemorySummary } {
+  const sidecar = profileData.counters
+  if (!sidecar || sidecar.frames.length === 0) return {}
+
+  const frames = sidecar.frames
+
+  // ----- Rendering -----
+  const drawCalls = pickSeries(frames, 'drawCalls')
+  const batches = pickSeries(frames, 'batches')
+  const setPass = pickSeries(frames, 'setPassCalls')
+  const triangles = pickSeries(frames, 'triangles')
+  const vertices = pickSeries(frames, 'vertices')
+  const usedTexBytes = pickSeries(frames, 'usedTexturesBytes')
+  const usedTexCount = pickSeries(frames, 'usedTexturesCount')
+
+  let rendering: RenderingSummary | undefined
+  if (drawCalls.values.length > 0 || batches.values.length > 0) {
+    const dcStats = statsOf(drawCalls)
+    const bStats = statsOf(batches)
+    const spStats = statsOf(setPass)
+    rendering = {
+      drawCalls: { mean: round(dcStats.mean, 1), median: round(dcStats.median), max: round(dcStats.max), p95: round(dcStats.p95), maxFrameIndex: dcStats.maxFrameIndex },
+      batches: { mean: round(bStats.mean, 1), median: round(bStats.median), max: round(bStats.max), p95: round(bStats.p95), maxFrameIndex: bStats.maxFrameIndex },
+      setPassCalls: { mean: round(spStats.mean, 1), median: round(spStats.median), max: round(spStats.max), p95: round(spStats.p95), maxFrameIndex: spStats.maxFrameIndex },
+      triangles: (() => {
+        const s = meanMedianMax(triangles)
+        return { mean: round(s.mean), median: round(s.median), max: round(s.max) }
+      })(),
+      vertices: (() => {
+        const s = meanMedianMax(vertices)
+        return { mean: round(s.mean), median: round(s.median), max: round(s.max) }
+      })(),
+      usedTexturesBytes: (() => {
+        const s = meanMax(usedTexBytes)
+        return { mean: round(s.mean), max: round(s.max) }
+      })(),
+      usedTexturesCount: (() => {
+        const s = meanMax(usedTexCount)
+        return { mean: round(s.mean, 1), max: round(s.max) }
+      })(),
+      perFrame: sampleRenderingPerFrame(frames)
+    }
+  }
+
+  // ----- Memory -----
+  const totalReserved = pickSeries(frames, 'totalReservedMemory')
+  const totalUsed = pickSeries(frames, 'totalUsedMemory')
+  const gcAlloc = pickSeries(frames, 'gcAllocatedInFrame')
+  const gcReserved = pickSeries(frames, 'gcReservedMemory')
+  const sysUsed = pickSeries(frames, 'systemUsedMemory')
+  const particleMem = pickSeries(frames, 'particleMemory')
+  const meshMem = pickSeries(frames, 'meshMemory')
+  const materialCount = pickSeries(frames, 'materialCount')
+  const objectCount = pickSeries(frames, 'objectCount')
+
+  // 推算 trace 总时长 (ms)：用 ProfileData.frames 首尾 msStartTime
+  let traceDurationMs = 0
+  if (profileData.frames.length >= 2) {
+    const firstStart = profileData.frames[0].msStartTime
+    const lastFrame = profileData.frames[profileData.frames.length - 1]
+    traceDurationMs = (lastFrame.msStartTime + lastFrame.msFrame) - firstStart
+  }
+
+  let memory: MemorySummary | undefined
+  if (totalReserved.values.length > 0 || gcAlloc.values.length > 0 || totalUsed.values.length > 0) {
+    const trMM = meanMax(totalReserved)
+    const tuMM = meanMax(totalUsed)
+    const grMM = meanMax(gcReserved)
+    const suMM = meanMax(sysUsed)
+    const gcStats = gcAllocStats(gcAlloc)
+    const optionalMM = (s: CounterSeries) =>
+      s.values.length > 0 ? (() => { const m = meanMax(s); return { mean: round(m.mean), max: round(m.max) } })() : undefined
+    memory = {
+      totalReservedMemory: {
+        mean: round(trMM.mean),
+        max: round(trMM.max),
+        growthRate: round(growthRateBytesPerSec(totalReserved, traceDurationMs))
+      },
+      totalUsedMemory: {
+        mean: round(tuMM.mean),
+        max: round(tuMM.max),
+        growthRate: round(growthRateBytesPerSec(totalUsed, traceDurationMs))
+      },
+      gcAllocatedInFrame: {
+        mean: round(gcStats.mean, 1),
+        median: round(gcStats.median),
+        max: round(gcStats.max),
+        p95: round(gcStats.p95),
+        allocFrames: gcStats.allocFrames
+      },
+      gcReservedMemory: { mean: round(grMM.mean), max: round(grMM.max) },
+      systemUsedMemory: { mean: round(suMM.mean), max: round(suMM.max) },
+      particleMemory: optionalMM(particleMem),
+      meshMemory: optionalMM(meshMem),
+      materialCount: optionalMM(materialCount),
+      objectCount: optionalMM(objectCount),
+      perFrame: sampleMemoryPerFrame(frames)
+    }
+  }
+
+  return { rendering, memory }
+}
+
 // ============ Reusable analysis core (shared by CLI main() and UnityProfilerProvider) ============
 
 /**
@@ -619,6 +917,46 @@ export function buildPreprocessResult(
     }
   })
 
+  // Phase X.1: 构造 markersByThread —— 同名 marker 在每条线程上的独立统计
+  const markersByThread: Record<string, MarkerOutput[]> = {}
+  if (selfAnalysis.markersByThread) {
+    for (const [threadName, threadMarkers] of Object.entries(selfAnalysis.markersByThread)) {
+      // 用同样的 computeMarkerSelfTimes + map 逻辑，但用该线程的 markers 数据
+      const totalAnalysisForThread = analysis.markersByThread?.[threadName]
+      // totalAnalysis 缺时 fallback 用全局，msTotalMean 会偏差但不致命
+      const fakeTotalAnalysis = totalAnalysisForThread
+        ? { ...analysis, markers: totalAnalysisForThread }
+        : analysis
+      const fakeSelfAnalysis = { ...selfAnalysis, markers: threadMarkers }
+      const threadInfos = computeMarkerSelfTimes(fakeSelfAnalysis, fakeTotalAnalysis, profileData, config, threadMarkers)
+      markersByThread[threadName] = threadInfos.map(info => {
+        const denominator = info.msFrameMeanPresent > 0 ? info.msFrameMeanPresent : fs2.msMean
+        const percentOfFrame = denominator > 0 ? (info.msSelfMean / denominator) * 100 : 0
+        const callsPerFrame = info.presentOnFrameCount > 0 ? info.count / info.presentOnFrameCount : 0
+        return {
+          name: info.name,
+          msSelfMean: parseFloat(info.msSelfMean.toFixed(3)),
+          msSelfMedian: parseFloat(info.msSelfMedian.toFixed(3)),
+          msSelfMax: parseFloat(info.msSelfMax.toFixed(3)),
+          msTotalMean: parseFloat(info.msTotalMean.toFixed(3)),
+          percentOfFrame: parseFloat(percentOfFrame.toFixed(1)),
+          count: info.count,
+          presentOnFrameCount: info.presentOnFrameCount,
+          callsPerFrame: parseFloat(callsPerFrame.toFixed(2)),
+          depth: info.depth,
+          thread: threadName,
+          callChain: '',  // per-thread 不重复算 callChain (用 markers[].callChain 就够了)
+          spikeRatio: info.msSelfMedian > 0 ? parseFloat((info.msSelfMax / info.msSelfMedian).toFixed(1)) : 0,
+          mustReport: false,  // mustReport 仍以全局 markers 为准
+          mustReportReason: ''
+        }
+      })
+    }
+    const threadCount = Object.keys(markersByThread).length
+    const totalMarkerLines = Object.values(markersByThread).reduce((s, arr) => s + arr.length, 0)
+    console.error(`[preprocess] markersByThread: ${threadCount} threads, ${totalMarkerLines} marker lines`)
+  }
+
   // Build frame trees (worst + median)
   const frameTrees: FrameTreeOutput[] = []
   const maxDepth = config.callTree.maxDepth
@@ -651,20 +989,106 @@ export function buildPreprocessResult(
     })
   }
 
+  // Phase X.2 + X.3: 全 trace 聚合 callTree per-thread + GC.Alloc 业务子树归因
+  // 选 msMedian > 1ms 的线程做聚合，其它线程负载太低不值得
+  const targetThreads = analysis.threads
+    .filter(t => t.msMedian > 1)
+    .sort((a, b) => b.msMedian - a.msMedian)
+    .slice(0, 8)  // 最多 8 条线程，避免输出爆炸
+  // 识别 GC.Alloc marker（[[methodology_gc_alloc_attribution]]）
+  const gcAllocSet = new Set<string>()
+  for (const name of profileData.markerNames) {
+    if (/GC\.Alloc/i.test(name)) gcAllocSet.add(name)
+  }
+  const aggregatedCallTrees: AggregatedCallTree[] = []
+  for (const t of targetThreads) {
+    const aggTree = aggregateCallTrees(profileData, t.threadNameWithIndex, { gcAllocMarkerNames: gcAllocSet })
+    if (aggTree) aggregatedCallTrees.push(aggTree)
+  }
+  console.error(`[preprocess] aggregatedCallTrees: ${aggregatedCallTrees.length} threads (gcAlloc markers: ${gcAllocSet.size})`)
+
   // Build threads output
+  // Phase X.6: 加 msPerFrameTotal + topMarkers
   const threadsOutput: ThreadOutput[] = analysis.threads
     .filter(t => t.msMedian > 0.5)
     .sort((a, b) => b.msMedian - a.msMedian)
-    .map(t => ({
-      name: t.threadGroupName || t.threadNameWithIndex,
-      msMedian: parseFloat(t.msMedian.toFixed(2)),
-      msMax: parseFloat(t.msMax.toFixed(2))
-    }))
+    .map(t => {
+      const threadName = t.threadGroupName || t.threadNameWithIndex
+      // 从 markersByThread 取 top 5
+      const threadMarkers = markersByThread[t.threadNameWithIndex] ?? []
+      const topMarkers = threadMarkers
+        .filter(m => !/^Idle$|Sleep|Wait/i.test(m.name))
+        .sort((a, b) => b.msSelfMean - a.msSelfMean)
+        .slice(0, 5)
+        .map(m => ({ name: m.name, msSelfMean: m.msSelfMean, percentOfFrame: m.percentOfFrame }))
+      // 从 aggregatedCallTrees 取该线程的 msPerFrameTotal
+      const aggTree = aggregatedCallTrees.find(a => a.threadName === t.threadNameWithIndex)
+      return {
+        name: threadName,
+        msMedian: parseFloat(t.msMedian.toFixed(2)),
+        msMax: parseFloat(t.msMax.toFixed(2)),
+        msPerFrameTotal: aggTree?.msPerFrameTotal,
+        topMarkers,
+      }
+    })
+
+  // Phase X.5: 给 jankFrames 挂 topMarkers — 该 jank 帧 self-time top 3 marker
+  if (jankResult.jankFrames.length) {
+    for (const jank of jankResult.jankFrames) {
+      const offset = jank.frameIndex - profileData.frameIndexOffset
+      if (offset < 0 || offset >= profileData.frames.length) continue
+      const frame = profileData.frames[offset]
+      // 简易算 self：父子按 depth 关系，self = own msMarkerTotal - 直接子节点 total
+      const allEntries: { name: string; msSelf: number; thread: string }[] = []
+      for (const thread of frame.threads) {
+        const tn = profileData.threadNames[thread.threadIndex] || ''
+        const selfMs = thread.markers.map(m => m.msMarkerTotal)
+        // 减去直接子节点：扫描 stack
+        const stack: number[] = []  // 存索引
+        for (let i = 0; i < thread.markers.length; i++) {
+          const m = thread.markers[i]
+          while (stack.length > 0 && thread.markers[stack[stack.length - 1]].depth >= m.depth) stack.pop()
+          if (stack.length > 0) selfMs[stack[stack.length - 1]] -= m.msMarkerTotal
+          stack.push(i)
+        }
+        for (let i = 0; i < thread.markers.length; i++) {
+          if (selfMs[i] < 0.5) continue  // 噪声过滤
+          allEntries.push({
+            name: profileData.markerNames[thread.markers[i].nameIndex] || '?',
+            msSelf: parseFloat(selfMs[i].toFixed(2)),
+            thread: tn,
+          })
+        }
+      }
+      jank.topMarkers = allEntries
+        .filter(e => !/^Idle$|^Sleep$|WaitFor/i.test(e.name))
+        .sort((a, b) => b.msSelf - a.msSelf)
+        .slice(0, 3)
+    }
+  }
 
   // Build per-frame timings array for timeline visualization
   const frameTimings: number[] = profileData.frames.map(f =>
     parseFloat(f.msFrame.toFixed(2))
   )
+
+  // Phase X.4: 计算 frame 百分位数
+  const sortedFrameMs = [...frameTimings].sort((a, b) => a - b)
+  const pct = (p: number): number | undefined => {
+    if (sortedFrameMs.length === 0) return undefined
+    const idx = Math.min(Math.floor(sortedFrameMs.length * p), sortedFrameMs.length - 1)
+    return parseFloat(sortedFrameMs[idx].toFixed(2))
+  }
+
+  // Render/Memory 聚合（缺 sidecar 时返回空对象，rendering/memory 字段为 undefined）
+  const { rendering, memory } = computeRenderingMemory(profileData)
+  if (rendering || memory) {
+    console.error(
+      `[preprocess] counters loaded: ` +
+        `${rendering ? `rendering(drawCalls=${rendering.drawCalls.mean}/${rendering.drawCalls.max}) ` : ''}` +
+        `${memory ? `memory(reserved=${memory.totalReservedMemory.mean}B mean, growth=${memory.totalReservedMemory.growthRate}B/s)` : ''}`
+    )
+  }
 
   // Assemble final output
   const result: PreprocessResult = {
@@ -678,17 +1102,25 @@ export function buildPreprocessResult(
       max: parseFloat(fs2.msMax.toFixed(2)),
       q1: parseFloat(fs2.msLowerQuartile.toFixed(2)),
       q3: parseFloat(fs2.msUpperQuartile.toFixed(2)),
+      p90: pct(0.90),
+      p95: pct(0.95),
+      p99: pct(0.99),
+      p999: pct(0.999),
       worstFrameIndex: fs2.maxFrameIndex,
       medianFrameIndex: fs2.medianFrameIndex,
       jankCount: jankResult.jankCount,
       bigJankCount: jankResult.bigJankCount
     },
     markers: markersOutput,
+    markersByThread,
+    aggregatedCallTrees,
     markerSpikes,
     jankFrames: jankResult.jankFrames,
     frameTrees,
     frameTimings,
-    threads: threadsOutput
+    threads: threadsOutput,
+    rendering,
+    memory
   }
 
   return result
@@ -778,6 +1210,27 @@ function main(): void {
     })),
     frameTrees: result.frameTrees,
     threads: result.threads,
+    rendering: result.rendering ? {
+      drawCalls: result.rendering.drawCalls,
+      batches: result.rendering.batches,
+      setPassCalls: result.rendering.setPassCalls,
+      triangles: result.rendering.triangles,
+      vertices: result.rendering.vertices,
+      usedTexturesBytes: result.rendering.usedTexturesBytes,
+      usedTexturesCount: result.rendering.usedTexturesCount
+      // perFrame 不进 summary，体积控制
+    } : undefined,
+    memory: result.memory ? {
+      totalReservedMemory: result.memory.totalReservedMemory,
+      totalUsedMemory: result.memory.totalUsedMemory,
+      gcAllocatedInFrame: result.memory.gcAllocatedInFrame,
+      gcReservedMemory: result.memory.gcReservedMemory,
+      systemUsedMemory: result.memory.systemUsedMemory,
+      particleMemory: result.memory.particleMemory,
+      meshMemory: result.memory.meshMemory,
+      materialCount: result.memory.materialCount,
+      objectCount: result.memory.objectCount
+    } : undefined,
     _meta: {
       fullResultFile: 'preprocess-result.json',
       totalMarkerCount: markersOutput.length,

@@ -22,6 +22,10 @@ import {
   type SimpleperfDiffBundleInput,
   type SimpleperfDiffInput,
 } from './simpleperf-diff-service.js';
+import {
+  buildUnityCompareReport,
+  type UnityCompareInput,
+} from './unity-compare-service.js';
 
 export interface IngestJobRecord {
   id: string;
@@ -356,6 +360,43 @@ export function runSimpleperfDiffIngestJob(jobId: string, params: SimpleperfDiff
 export interface SimpleperfDiffBundleIngestJobParams {
   bundle: SimpleperfDiffBundleInput;
   meta: IngestMeta;
+}
+
+// === Phase A.4: unity_compare ingest job ===
+export interface UnityCompareIngestJobParams {
+  input: UnityCompareInput;
+  meta: IngestMeta;
+  cliProvider?: 'codebuddy' | 'claude' | 'mock';
+  skipAiEnrich?: boolean;
+}
+
+export function runUnityCompareIngestJob(jobId: string, params: UnityCompareIngestJobParams) {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const log = progressLogger(jobId);
+  void (async () => {
+    try {
+      emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在 preprocess base+cur unity 数据…', progress: 15 });
+      const result = await buildUnityCompareReport(params.input, {
+        cliProvider: params.cliProvider,
+        skipAiEnrich: params.skipAiEnrich,
+        onLog: log,
+      });
+      finishJob(
+        job,
+        { id: result.diffId, sources: ['unity_profiler'], label: params.meta.label ?? result.diffId },
+        {
+          analysisSkill: result.usedAi ? 'unity-profiler-compare+enriched' : 'unity-profiler-compare',
+          reportPath: result.reportPath,
+          reportMarkdown: result.markdown,
+          runIds: [],
+          diffId: result.diffId,
+        },
+      );
+    } catch (e: any) {
+      failJob(job, e.message || String(e));
+    }
+  })();
 }
 
 export function runSimpleperfDiffBundleIngestJob(jobId: string, params: SimpleperfDiffBundleIngestJobParams) {
