@@ -65,6 +65,56 @@ async function runSingleSourceSkillAnalysis(
   const inputPath = findRawPath(run, source);
   if (!inputPath) throw new Error(`Run 无 ${source} 原始文件路径`);
 
+  // perfetto 单次：Hybrid v6 骨架填空
+  if (source === 'perfetto') {
+    const { buildPerfettoSingleReport } = await import('./perfetto-single-service.js');
+    const result = await buildPerfettoSingleReport(
+      { tracePath: inputPath, label: run.label },
+      {
+        meta: {
+          runId,
+          label: run.label,
+          device: run.meta?.device,
+          scene: run.meta?.scene,
+          projectName: run.meta?.projectName,
+          version: run.meta?.version,
+        },
+        perfetto: opts.perfetto,
+        cliProvider: opts.cliProvider,
+        onLog: opts.onLog,
+      },
+    );
+    return { markdownPath: result.reportPath, outputDir: result.outputDir };
+  }
+
+  // simpleperf 单次：Hybrid v4 Provider → enrich → CLI
+  if (source === 'simpleperf') {
+    const { buildSimpleperfSingleReport } = await import('./simpleperf-single-service.js');
+    const result = await buildSimpleperfSingleReport(
+      {
+        perfPath: inputPath,
+        binaryCachePath: opts.binaryCachePath ?? resolveSimpleperfBinaryCache(run.profile.raw),
+        label: run.label,
+        device: run.meta?.device,
+        scene: run.meta?.scene,
+      },
+      {
+        meta: {
+          runId,
+          label: run.label,
+          device: run.meta?.device,
+          scene: run.meta?.scene,
+          projectName: run.meta?.projectName,
+          version: run.meta?.version,
+        },
+        cliProvider: opts.cliProvider,
+        skipAiEnrich: false,
+        onLog: opts.onLog,
+      },
+    );
+    return { markdownPath: result.reportPath, outputDir: result.outputDir };
+  }
+
   const config = getConfig();
   const outputDir = path.join(config.dataDir, 'results', runId);
   fs.mkdirSync(outputDir, { recursive: true });
@@ -192,7 +242,7 @@ export async function runPostIngestAnalysis(
 
   if (sources.length >= 2) {
     opts.onLog?.('[skill] 多源 Run → cross-source 报告…');
-    const res = generateCrossSourceAnalysisForRun(runId);
+    const res = await generateCrossSourceAnalysisForRun(runId, { onLog: opts.onLog });
     return { skill: 'cross-source-analysis', markdownPath: res.markdownPath };
   }
 

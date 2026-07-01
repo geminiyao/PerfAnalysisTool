@@ -315,6 +315,8 @@ export async function buildSimpleperfProfile(
   const args = [script, '--perf', perfPath, '--out', dir];
   if (bcache && fs.existsSync(bcache)) args.push('--binary-cache', bcache);
   if (meta.label) args.push('--label', meta.label);
+  if (meta.device) args.push('--device', meta.device);
+  if (meta.scene) args.push('--scene-cur', meta.scene);
 
   if (!fs.existsSync(script)) {
     throw new Error(`simpleperf 构建脚本不存在: ${script}`);

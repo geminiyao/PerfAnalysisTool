@@ -32,6 +32,7 @@ from simpleperf_analyzer.diff_engine import compute_diff
 from simpleperf_analyzer.top_n_engine import compute_top_n
 from simpleperf_analyzer.thread_tagger import tag_all_threads
 from simpleperf_analyzer.v4_report_renderer import render_v4_report
+from simpleperf_analyzer.v4_single_report_renderer import render_v4_single_report
 
 
 def _grand_total(profile):
@@ -155,12 +156,34 @@ def main():
     profile_path = os.path.join(out_dir, "simpleperf-profile.json")
     sc = result["profile"]["detail"]["simpleperf"]["symbolCheck"]
     lb = result["profile"]["detail"]["simpleperf"]["layerBreakdown"]
+
+    # 单次 Provider 骨架（hybrid N=1）
+    summary_path = os.path.join(out_dir, "simpleperf-profile-summary.json")
+    summary = json.load(open(summary_path, encoding="utf-8"))
+    report_meta = {
+        "device": args.device,
+        "scene": args.scene_cur or label,
+        "label": label,
+        "perfFile": os.path.basename(perf),
+    }
+    report_md = render_v4_single_report(summary, meta=report_meta, enriched=False)
+    report_dir = os.path.join(out_dir, "report")
+    os.makedirs(report_dir, exist_ok=True)
+    provider_report = os.path.join(report_dir, "performance-report_simpleperf_single_v4.md")
+    with open(provider_report, "w", encoding="utf-8") as f:
+        f.write(report_md)
+    web_report = os.path.join(out_dir, "performance-report.md")
+    with open(web_report, "w", encoding="utf-8") as f:
+        f.write(report_md)
+
     print("[OK] wrote %s" % profile_path, file=sys.stderr)
+    print("[OK] single skeleton → %s" % provider_report, file=sys.stderr)
     print("[OK] symbolCheck=%s" % sc["status"], file=sys.stderr)
     print("[OK] layers business=%(business).1f%% engine=%(engine).1f%%" % lb, file=sys.stderr)
     print(json.dumps({
         "profilePath": profile_path,
-        "summaryPath": os.path.join(out_dir, "simpleperf-profile-summary.json"),
+        "summaryPath": summary_path,
+        "providerReportPath": provider_report,
         "foldedPath": result["foldedPath"],
         "symbolCheck": sc["status"],
     }, ensure_ascii=False))
