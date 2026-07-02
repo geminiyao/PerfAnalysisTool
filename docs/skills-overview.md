@@ -20,12 +20,12 @@ simpleperf  ✅ 能跑                ✅ v4 diff 已完成
 
 | 流水线 | 矩阵格 | 能产出报告 | 高质量 hybrid | Provider 骨架 | LLM 角色 | 自评门 | 失败兜底 | Service 入口 |
 |---|---|:---:|:---:|---|---|---|---|---|
-| **unity diff** | unity 对比 | ✅ | ✅ | `unity-diff-builder` skeleton | enrich 确定性填占位 → CodeBuddy 在 enriched 上加厚 | `validateUnityDiffQuality` PASS | **正式验收** = ai-thickened；`skipAiEnrich` 时仅 enriched | `buildUnityCompareReport()` |
+| **unity diff** | unity 对比 | ✅ | ✅ | `unity-diff-builder` skeleton + `LLM_FILL`（§3.x 分析槽） | L1 enrich 填 `ENRICH_FILL`（§4/§5）→ L2 CLI 填 `LLM_FILL`（§3.3–§3.6 数据分析） | `validateUnityDiffQuality` PASS | **正式验收** = ai-thickened；`skipAiEnrich` 时仅 enriched | `buildUnityCompareReport()` |
 | **perfetto 单次** | perfetto 单次 | ✅ | ✅ | `render_perfetto_skeleton.py`（`LLM_FILL` 占位，N=1） | 只填占位符 | `validateSingleReport` | CLI/质量门 fail → 骨架 | `buildPerfettoSingleReport()` |
 | **perfetto diff** | perfetto 对比 | ✅ | ✅ | 同上（N≥2，任意角色名） | 只填占位符 | `validateDiffReport` | 同上（L1 骨架兜底） | `buildPerfettoDiffReport()` |
 | **simpleperf diff** | simpleperf 对比 | ✅ | ✅ | Provider 渲染 v4 骨架 | Python `enrich_v4_report` + 可选 CLI 加厚 | `compare_v4_report_quality.py`（0.82/0.92/0.95） | enriched → Provider 版 | `buildSimpleperfDiffReport()` |
 | **unity 单次** | unity 单次 | ✅ | ❌ | 无报告骨架 | `executeCli` 读 summary **整篇写报告** | 仅 `checkSkillOutput`（查文件存在） | CLI 失败直接抛错，无 L1 兜底 | `runSingleSourceSkillAnalysis('unity_profiler')` |
-| **simpleperf 单次** | simpleperf 单次 | ✅ | ❌ | 无报告骨架 | 同上 | 同上 | 同上 | `runSingleSourceSkillAnalysis('simpleperf')` |
+| **simpleperf 单次** | simpleperf 单次 | ✅ | ✅ | `v4_single_report_renderer.py`（`LLM_FILL` 占位，N=1） | Python `enrich_v4_single_report` 填大部分槽 → CLI 填 §4 等剩余 | `compare_v4_single_report_quality.py` | enriched → **provider**（L0） | `buildSimpleperfSingleReport()` |
 | **三源单次 cross** | 三源单次 | ✅ | 🟡 设计中 | `buildCrossSourceMarkdown` 程序拼装（非 v6 数字隔离） | AI 整篇改写（非 `LLM_FILL` 填空） | `validateCrossSourceQuality` | fallback builder 永远可交付 | `generateCrossSourceAnalysisForRun()` |
 | **三源 diff** | 三源对比 | ❌ | ❌ | — | — | — | — | Phase C 待建 `cross-source-compare-service` |
 
@@ -42,18 +42,18 @@ node scripts/sync-sample-reports.mjs
 | 子目录 | 流水线 | 正式样例 | 后缀含义 |
 |---|---|---|---|
 | `unity-single/` | unity 单次 | [`performance-report.cli-sourcemap.md`](../output/samples/unity-single/performance-report.cli-sourcemap.md) | CLI + marker→源码映射 |
-| `unity-diff/` | unity 对比 | [`performance-report.ai-thickened.md`](../output/samples/unity-diff/performance-report.ai-thickened.md) | Web 正式 ai-thickened（enrich + CLI + 质量门 PASS） |
+| `unity-diff/` | unity 对比 | [`performance-report.ai-thickened.md`](../output/samples/unity-diff/performance-report.ai-thickened.md) | Web 正式 ai-thickened（enrich + CLI 填 `LLM_FILL` + 质量门 PASS）；快验见 [`enriched-v2.md`](../output/samples/unity-diff/performance-report.enriched-v2.md) |
 | `perfetto-single/` | perfetto 单次 | [`performance-report.e2e-l3-filled.md`](../output/samples/perfetto-single/performance-report.e2e-l3-filled.md) | Sprint 7 单次 e2e L3，`LLM_FILL=0` |
 | `perfetto-diff/` | perfetto 对比 | [`performance-report.e2e-l3-triad.md`](../output/samples/perfetto-diff/performance-report.e2e-l3-triad.md) | Sprint 7 三态 e2e L3（673 行） |
-| `simpleperf-single/` | simpleperf 单次 | [`performance-report.web-stressmove.md`](../output/samples/simpleperf-single/performance-report.web-stressmove.md) | Web 落盘 stressmove 场景 |
+| `simpleperf-single/` | simpleperf 单次 | [`performance-report.ai-thickened.md`](../output/samples/simpleperf-single/performance-report.ai-thickened.md) | hybrid：Provider + enrich + CLI + 质量门（待正式 e2e 验收后 sync） |
 | `simpleperf-diff/` | simpleperf 对比 | [`performance-report.web-v4-diff.md`](../output/samples/simpleperf-diff/performance-report.web-v4-diff.md) | Web 落盘 v4 hybrid diff |
 | `cross-single/` | 三源单次 | [`performance-report.fallback-builder.md`](../output/samples/cross-single/performance-report.fallback-builder.md) | fallback builder（AI 路径待验收） |
 | `cross-diff/` | 三源对比 | — | Phase C 待实现，见 `cross-diff/README.md` |
 
 **读表要点**：
 
-- **已接入高质量四件套**（4 条）：unity diff、perfetto 单次、perfetto diff、simpleperf diff。其中 unity/simpleperf diff 多一层确定性 enrich（模板填占位），比 perfetto v6 的「数字物理隔离 `LLM_FILL`」稍弱，但同属 hybrid 范式。
-- **未接入**（2 条）：unity 单次、simpleperf 单次 — 仍走老式 `executeCli` 全 AI 写报告路径。
+- **已接入高质量 hybrid**（6 条）：unity diff、perfetto 单次、perfetto diff、simpleperf diff、**simpleperf 单次**（代码已接，样例待正式 e2e sync）。
+- **未接入 hybrid**（1 条）：unity 单次 — 仍走老式 `executeCli` 全 AI 写报告路径。
 - **三源单次 cross**：代码已接 AI 路径（Phase B），但 `output/p-web-cross/` 正式产出目前均为 fallback builder；架构也是「AI 改写」而非 v6 填空，**待验收 + 待升级**。
 - **三源 diff**：矩阵唯一空白格，Phase C 待开。
 
@@ -62,12 +62,236 @@ node scripts/sync-sample-reports.mjs
 | Phase | 内容 | 状态 |
 |---|---|---|
 | X | unity provider 数据加厚（多线程 markers / aggregatedCallTrees / GC 业务归因 ...）| ✅ 已完成 |
-| A | unity diff（hybrid 三层：Provider 骨架 + 确定性 enrich + AI 加厚可选）| ✅ 已完成（2026-06-30）|
+| A | unity diff（hybrid 三层：Provider + enrich + CLI 填 `LLM_FILL`；§3 数据分析 v2）| ✅ 已完成（2026-06-30，§3 LLM_FILL 2026-07）|
 | B | cross-source 接 AI-authored | 🟡 代码已完成，正式产出待验收（见上表） |
 | C | 三源 diff（提炼层）| ⏳ 待开 |
 | D | simpleperf 单源（SKILL + service 接线；**非** hybrid 四件套）| ✅ 能跑 |
 | **E** | **perfetto-diff-analysis（v6 N 列通用：单次 N=1 / 双份 N=2 / triad N=3 / 任意 N≥2 同源代码）+ 骨架填空模式** | **✅ 已完成（2026-06-30）** |
 | 待定 | unity provider 加 rendering/memory stat 字段（依赖项目侧 ProfilerRecorder 改造）| 🟡 暂缓 |
+| **探索** | **叙事三层（锚定/解读/探索）+ 三种演进做法试点** — 见下文 §「叙事架构演进」| 🟡 待讨论选型后开试点 |
+
+---
+
+## Hybrid 技术方案总览
+
+### 分层模型（所有 hybrid 流水线共用）
+
+```
+L0  Provider / 骨架     summary → 程序渲染：表格、callTree、Δ%、ASCII…（数字确定性）
+L1  Enriched（可选）    脚本按规则填叙事槽（不调用 LLM）
+L2  AI-thickened        CodeBuddy CLI：填剩余 LLM_FILL / 加厚 prose
+L3  质量门              占位符清零、厚度、表格行存在、关键数字 substring 校验
+失败兜底                交付更低一层（provider / skeleton / enriched），或正式路径抛错
+```
+
+**`deliverSource` 含义**（Service 返回字段，表示最终 `performance-report.md` 来自哪一层）：
+
+| 值 | 典型流水线 | 含义 |
+|---|---|---|
+| `ai-authored` | unity-diff、simpleperf-single | L2 通过质量门，正式验收目标 |
+| `enriched` | unity-diff（`--skip-ai`） | L1 脚本叙事已齐，无 CLI 加厚 |
+| `provider` | simpleperf-single | L0 原始骨架（叙事槽可能仍在） |
+| `skeleton` | unity-diff（类型保留） | L0 概念名；当前正式路径失败时多 **抛错** 而非静默交付 |
+
+### 两种叙事范式（不是优劣，是切分不同）
+
+| 维度 | **路线 A：ENRICH 两段式** | **路线 B：LLM_FILL 一段式** |
+|---|---|---|
+| 代表流水线 | unity-diff、simpleperf diff/single | perfetto 单次/diff（v6） |
+| L0 占位符 | `ENRICH_FILL`（§4/§5 等辅助叙事）+ `LLM_FILL`（§3.x 数据分析；simpleperf 亦用此名） | `<!-- LLM_FILL: 任务卡指令 -->` |
+| L1 enrich | **有** — TS/Python 规则引擎填槽 | **无** — 槽位直接留给 LLM |
+| L2 CLI 角色 | 在 enriched 上 **填 `LLM_FILL` 分析槽**（unity-diff §3.x；simpleperf 等亦可能加厚 prose） | **一次性填完**所有叙事槽 |
+| 脚本叙事本质 | 规则匹配（模块类型 / 线程名 / GC 口径）+ 数据字段，**不全是**固定话术换数字 | — |
+| LLM 自由度 | 槽内偏低，加厚段中等 | 槽内高（受任务卡约束） |
+| 稳定性 / 成本 | 同输入 enrich 近似 deterministic；CLI 负担小 | 措辞波动；CLI 负担大 |
+| 数字保护 | Provider 锁数字 + enrich 不碰表 | Provider **物理隔离**数字，LLM 只填注释槽 |
+
+> **unity diff**、**simpleperf 单次**均为路线 A 混合体：流程是 Provider → enrich → CLI，但**数据分析槽**使用 `LLM_FILL`（非纯 `ENRICH_FILL` 模板）。
+
+### 占位符机制（不是独立 template.md）
+
+没有运行时「母版 template.md」。Provider **用代码拼出整篇 markdown**，在叙事位置插入 HTML 注释占位符，再由 enrich 或 LLM 替换：
+
+```markdown
+| 1 | CS:AOE.MeshUIManager | +1.97ms | +11677 | 🔴 |   ← 程序渲染（Provider 锁定）
+
+**业务含义**：<!-- LLM_FILL:§3.5:业务含义: 60-120字… -->   ← L2 CLI 填（数据分析）
+**优化方向**：<!-- LLM_FILL:§3.5:优化方向: 3-5条bullet… -->
+
+<!-- ENRICH_FILL:§4:1:Job.Worker -->                        ← L1 enrich 填（辅助一句）
+> **1:Job.Worker**：Burst Job 调度加重 0.61ms（…）         ← enrich 填后
+```
+
+### 正式验收 vs 快验（Service E2E）
+
+| 级别 | 命令 | 通过标准 |
+|---|---|---|
+| **快验** | `npx tsx web/server/scripts/e2e-<流水线>.ts --skip-ai` | 到 L1 enriched（或 provider 兜底）；**非**正式验收 |
+| **正式验收（ai-thickened）** | 同上，**不要** `--skip-ai` | `deliverSource=ai-authored`、占位符清零、质量门 PASS → `node scripts/sync-sample-reports.mjs` |
+
+E2E 脚本直接调 Web 后端同一 `build*Report()`，与浏览器点按钮的报告生成逻辑同级（不经 HTTP）。
+
+### 矩阵：各流水线技术方案一览
+
+| 流水线 | 范式 | L0 Provider | L1 Enrich | L2 CLI | 占位符 | 质量门 | 失败兜底 | Service / E2E |
+|---|---|---|---|---|---|---|---|---|
+| **unity diff** | A* | `unity-diff-builder.ts` | `unity-diff-enrich.ts` | `unity-compare-service` | `ENRICH_FILL` + `LLM_FILL` | `validateUnityDiffQuality` | 正式路径抛错 | `buildUnityCompareReport` / `e2e-unity-diff.ts` |
+| **perfetto 单次** | B | `render_perfetto_skeleton.py` N=1 | — | `perfetto-single-service` | `LLM_FILL` | `validateSingleReport` | L0 skeleton | `buildPerfettoSingleReport` |
+| **perfetto diff** | B | 同上 N≥2 | — | `perfetto-diff-service` | `LLM_FILL` | `validate_perfetto_report.py` | L0 skeleton | `buildPerfettoDiffReport` |
+| **simpleperf diff** | A | `build_simpleperf_profile` v4 | `enrich_v4_report.py` | 可选 CLI 加厚 | `LLM_FILL` | `compare_v4_report_quality.py` | enriched → provider | `buildSimpleperfDiffReport` / `e2e-simpleperf-diff.ts` |
+| **simpleperf 单次** | A* | `v4_single_report_renderer.py` | `enrich_v4_single_report.py` | `simpleperf-single-service` | `LLM_FILL` | `compare_v4_single_report_quality.py` | enriched → provider | `buildSimpleperfSingleReport` / `e2e-simpleperf-single.ts` |
+| **unity 单次** | _legacy_ | `preprocess.ts`（仅 JSON） | — | `executeCli` 整篇写 | 无骨架槽 | `checkSkillOutput` | 无 L0 兜底 | `runSingleSourceSkillAnalysis('unity_profiler')` |
+| **cross 单次** | 混合 | `cross-source-digest` + builder | — | AI 整篇改写 | 无 v6 槽 | `validateCrossSourceQuality` | fallback builder | `generateCrossSourceAnalysisForRun` |
+| **cross diff** | — | 未建 | — | — | — | — | — | Phase C |
+
+---
+
+## 各流水线技术方案明细
+
+### unity diff（路线 A* · 真三层 hybrid，§3 数据分析用 LLM_FILL）
+
+| 项 | 内容 |
+|---|---|
+| 数据流 | `base/cur.pdata` → preprocess → `unity-diff-builder` → `unity-diff-summary.json` + skeleton.md → enrich → CLI |
+| L0 展示层 | §3：phase 总览树 / Top-N 帧预算表 / Top-N 驱动调用树（# 对齐）/ 出现帧明细 / §3.3–§3.6 身份+子函数表；§4/§5 表格；§8 ROI 索引 |
+| L0 占位符 | `LLM_FILL:§3.N:{业务含义\|调用入口\|优化方向\|探索}`（每热点 4 槽，**数据分析主战场**）；`ENRICH_FILL:§4:{thread}` / `ENRICH_FILL:§5要点`（辅助一句） |
+| L1 enrich | `unity-diff-enrich.ts`：填 `ENRICH_FILL`（§4 per-thread、§5 GC 要点）+ §0 场景对比/粗估优化空间；**不填** §3.x `LLM_FILL` |
+| L2 CLI | `runAiEnrichment()` 读 enriched + summary；**替换全部 `<!-- LLM_FILL:... -->`** → `performance-report_unity_diff_AI_v1.md` |
+| 质量门 | `ENRICH_FILL == 0`（enriched 层）+ `LLM_FILL == 0`（ai-thickened）；必备 §3 Top-N 驱动树 / phase 总览 / §3.3+ |
+| 数字保护 | 表格、Δ%、emoji、callTree 由 Provider 锁定；CLI prompt 禁止改 §2/§3 表与树 |
+| 项目特化 | Top-N 展示合并（`pb.decode` / `[res]` / `URP.*` pass）在 builder 展示层，不改 Δ 计算与通用流水线 |
+| 样例 | `output/samples/unity-diff/performance-report.ai-thickened.md`（L2）；`performance-report.enriched-v2.md`（L1，`LLM_FILL` 仍在） |
+
+### perfetto 单次 / diff（路线 B · v6 骨架填空）
+
+| 项 | 单次 (N=1) | diff (N≥2) |
+|---|---|---|
+| Provider | `render_perfetto_skeleton.py` | 同上，多列角色名参数化 |
+| 项目知识 | `projects/<name>/business-modules.yaml` 注入 threadHint / topNRemark |
+| 占位符 | `<!-- LLM_FILL: 任务卡（须引上面数字、禁止编造）-->` | 同左，~44 槽 |
+| LLM | 一次填完所有槽 | 同左 |
+| 质量门 | 占位符 0、表格行缺失 ≤5、厚度 ≥0.85×骨架 | + 三档 L1/L2/L3 |
+| 兜底 | CLI/质量门 fail → 交付 **skeleton.md**（数字在，叙事槽仍在） | 同左 |
+| Service | `perfetto-single-service.ts` | `perfetto-diff-service.ts` |
+
+### simpleperf diff（路线 A）
+
+| 项 | 内容 |
+|---|---|
+| Provider | `build_simpleperf_profile.py` → `performance-report_simpleperf_v4.md` |
+| Enrich | `scripts/enrich_v4_report.py` — 确定性填 §0–§5 等 `LLM_FILL` |
+| CLI | 可选加厚；prompt 禁止改表格数字 |
+| 质量门 | `compare_v4_report_quality.py`（0.82 / 0.92 / 0.95 厚度档） |
+| 兜底 | FAIL → Provider 版 |
+
+### simpleperf 单次（路线 A，占位符名同 perfetto）
+
+| 项 | 内容 |
+|---|---|
+| Provider | `v4_single_report_renderer.py`（N=1） |
+| Enrich | `enrich_v4_single_report.py` — §0 整块替换 + §1–§3/§5 规则句 + §4 兜底句 |
+| CLI | `single-prompt.txt` — 仅替换**残留** `LLM_FILL`（尤其 §4 主线程深度解读） |
+| 质量门 | `compare_v4_single_report_quality.py`；enriched 快验阈值 0.55× |
+| Service | `simpleperf-single-service.ts`；`run-analysis-service` simpleperf 分支 |
+| E2E | `web/server/scripts/e2e-simpleperf-single.ts` |
+
+### unity 单次（_legacy · 待 hybrid 化）
+
+| 项 | 内容 |
+|---|---|
+| 现状 | Provider 只产 JSON；`executeCli` 读 summary **整篇写** markdown |
+| 风险 | 数字漂移、结构/厚度不稳、无 L0 兜底 |
+| 改造方向 | 参照 simpleperf 单次或 perfetto v6 接入 Provider 骨架 + 质量门 |
+
+### cross 单次（混合 · 待升级 v6）
+
+| 项 | 内容 |
+|---|---|
+| 现状 | digest 程序拼装证据；AI 路径为整篇改写，非槽位填空 |
+| 兜底 | `buildCrossSourceMarkdown` 永远可交付 |
+| 改造方向 | 骨架化 digest 输出 + `LLM_FILL` 或事实清单双 pass |
+
+### cross diff（未建）
+
+Phase C：`cross-source-compare-service` 调度三底层 diff + 提炼层。
+
+---
+
+## 叙事架构演进（锚定 / 解读 / 探索）
+
+**设计矛盾**：既要 LLM 更高自由度（含「涌现」式跨章节联想），又不要整篇报告「飘」（编造数字、无依据断言）。
+
+**原则**（建议作为后续统一标尺）：
+
+> **数字与结构由程序锁定；解读由 LLM 在任务卡与事实清单约束下书写；跨模块假设单独成段并标注「待验证」。**
+
+### 报告三层语义（非文件分层）
+
+| 层 | 内容 | 谁写 | 读者预期 |
+|---|---|---|---|
+| **锚定层 Anchor** | 表格、callTree、Δ%、口径说明 | Provider（+ enrich 不改表） | 可当作事实 |
+| **解读层 Interpret** | 「意味着什么」「可能原因」「先查哪」 | enrich 和/或 LLM | 有依据的解释 |
+| **探索层 Explore** | 跨 § 关联假设、优化方向、风险提醒 | **建议专供 LLM** | 显式「可能 / 待验证」 |
+
+不必在「整篇自由」与「整篇死板」间二选一；**涌现应主要在探索层**，而非动锚定层数字。
+
+### 三种演进做法（由稳到野）
+
+#### 做法 1 · 锚 + 槽（在现有 hybrid 上提纯）
+
+在 Provider 骨架中划分槽位等级，不改主流程：
+
+- 解读槽：现有 `LLM_FILL` / enrich 规则
+- **探索槽**：新增 `<!-- LLM_FILL:§X探索 -->`，任务卡要求「1–2 条跨章节假设，每条标注依据 §?，允许待验证」
+
+| 优点 | 缺点 | 适合 |
+|---|---|---|
+| 改动小；与 perfetto v6 / unity-diff 兼容 | 涌现仍受任务卡篇幅限制 | **首选试点**；任何已有 hybrid 流水线 |
+| 质量门可加「探索段存在 + 含待验证」软规则 | 规则写在 HTML 注释，难外置维护 | unity-diff（章节多、已有「AI 补充」） |
+
+#### 做法 2 · 双 Pass（事实清单 → LLM 叙事）
+
+```
+Pass A（程序） summary → fact-bullets.json（仅可校验短句，带 factId）
+Pass B（LLM）  facts + rules.yaml / 知识库 → 填解读槽 + 探索槽
+```
+
+| 优点 | 缺点 | 适合 |
+|---|---|---|
+| 最接近「给数据+规则，AI 叙事」 | 需新建 fact 抽取与引用校验 | unity-single、cross（尚无 enrich） |
+| enrich 可逐步下线，规则外置 YAML | 工程量大于一槽位试点 | 新流水线默认架构 |
+| 结论可追溯到 factId | 两次 LLM 调用或更长 prompt | 对审计要求高的对比报告 |
+
+#### 做法 3 · 加厚段分级（unity 现状增强）
+
+保留 enrich 打底，CLI 输出分栏：
+
+- **AI 补充**（中自由度）：贴数字的解释
+- **AI 探索（待验证）**（高自由度）：跨模块假设，3–5 行限额
+
+| 优点 | 缺点 | 适合 |
+|---|---|---|
+| 与 unity-diff ai-thickened **几乎零骨架改动** | 探索段无独立占位符时难回归检测 | unity-diff、simpleperf-diff |
+| 读者心理预期清晰 | 仍依赖 CLI 自律遵守分级标题 | 快速出可读样例 |
+
+### 三种做法如何取舍（待讨论）
+
+| 决策因素 | 倾向做法 1 | 倾向做法 2 | 倾向做法 3 |
+|---|---|---|---|
+| 上线时间 | ✅ 最快 | ❌ 最慢 | ✅ 快 |
+| 与现有代码兼容 | ✅ | 🟡 需新模块 | ✅ |
+| 规则可维护（非写死在 TS） | 🟡 | ✅ | 🟡 |
+| LLM 涌现空间 | 🟡 中 | ✅ 高 | ✅ 高（探索段） |
+| 防飘（可自动化验收） | ✅ 易加槽位检测 | ✅ factId 校验最强 | 🟡 需标题/软规则 |
+| 推荐试点流水线 | **unity-diff**（有 enrich+加厚，易对比） | unity-single / cross | unity-diff |
+
+**建议讨论顺序**：
+
+1. 是否接受「探索层」进入正式报告（部分读者可能觉得冗长）？
+2. 试点流水线：**unity-diff**（做法 1 或 3 成本最低，样例已有 ai-thickened 可 A/B）
+3. 若试点 PASS，再决定是否对 perfetto v6 只加探索槽（做法 1），或对 unity-single 上新架构（做法 2）
+
+**试点验收**（与现网一致）：`npx tsx web/server/scripts/e2e-unity-diff.ts` 正式 ai-thickened + 人工读 §0/§5 探索段是否「有依据、不飘」。
 
 ---
 
@@ -85,16 +309,17 @@ node scripts/sync-sample-reports.mjs
 
 ```
                 单源单次              单源对比 (diff)
-unity         ✅ 能跑 / ❌ 非 hybrid   ✅ hybrid 三层
-perfetto      ✅ v6 单次 hybrid        ✅ v6 N 列 hybrid
-simpleperf    ✅ 能跑 / ❌ 非 hybrid   ✅ v4 hybrid
+unity         ✅ 能跑 / ❌ 非 hybrid   ✅ hybrid 三层 (A)
+perfetto      ✅ v6 单次 hybrid (B)   ✅ v6 N 列 hybrid (B)
+simpleperf    ✅ hybrid 单次 (A*)     ✅ v4 hybrid (A)
 三源          🟡 cross 能跑 / 待验收   ❌ Phase C 待做
 
 待补强（按优先级）：
 1. 三源 diff 提炼层（Phase C）—— 矩阵最后一格 + 终极对比入口
-2. 三源单次 cross — AI 路径验收 + 架构升级（v6 填空模式）
-3. simpleperf / unity 单次 — 接入 Provider 骨架 + 自评门 + L1 兜底
-4. unity provider 加 rendering/memory stat 字段（依赖项目侧 ProfilerRecorder 改造，暂缓）
+2. 三源单次 cross — AI 路径验收 + 架构升级（v6 填空 / 双 Pass）
+3. unity 单次 — 接入 Provider 骨架 + 自评门 + L1 兜底
+4. 叙事三层试点 — unity-diff 探索槽 / 加厚分级（见「叙事架构演进」）
+5. unity provider 加 rendering/memory stat 字段（依赖项目侧 ProfilerRecorder 改造，暂缓）
 ```
 
 ---
@@ -176,12 +401,12 @@ simpleperf    ✅ 能跑 / ❌ 非 hybrid   ✅ v4 hybrid
 | 输入 | `base.pdata` + `cur.pdata`（同设备、同场景、同 target FPS） |
 | Provider | `.claude/skills/unity-profiler-compare/scripts/unity-diff-builder.ts`（TypeScript）|
 | Provider 入口（service） | `buildUnityCompareReport()` (`web/server/services/unity-compare-service.ts`) |
-| 数据产物 | `unity-diff-summary.json` (~10MB Δ 数据) + `performance-report_unity_diff_skeleton.md` (含 `_待 AI 填充_` 占位) + `performance-report_unity_diff_enriched.md` (确定性叙事填充) + `performance-report_unity_diff_AI_v1.md` (AI 加厚, 可选) |
-| 关键字段 | `frameSummary Δ` (mean/median/p90/p95/p99/p999/fps/jank) / `callTreesDiff` (8 线程路径对位 ms/帧 Δ) / `markersByThreadDiff` (per-thread Top markers Δ) / `gcAttribution` (业务子树 alloc Δ，过滤泛阶段) / `spikes` (新增/解决 spike) / `presence` (新增/消失 marker) |
+| 数据产物 | `unity-diff-summary.json` + `performance-report_unity_diff_skeleton.md` + `performance-report_unity_diff_enriched.md`（`ENRICH_FILL=0`，残留 `LLM_FILL`）+ `performance-report_unity_diff_AI_v1.md`（`LLM_FILL=0`） |
+| 关键字段 | `frameSummary Δ` / `callTreesDiff` / `markersByThreadDiff` / `gcAttribution` / `topHotspots` / `topHotspotsPresent` / `spikes` / `presence` |
 | Skill | `.claude/skills/unity-profiler-compare/SKILL.md`（参照 simpleperf-diff hybrid v4 模式） |
-| 流水线（**真 hybrid 三层**）| 1. **Provider** (unity-diff-builder) skeleton + summary<br>2. **Enrich** (unity-diff-enrich.ts) §3 Top-N 要点 / §4 per-thread / §5 GC 要点 + §8 模板 — **必须成功**<br>3. **AI 加厚（正式验收）**：CodeBuddy 在 enriched 上加厚 → `validateUnityDiffQuality` PASS；失败 **抛错** |
-| AI 调度 | `runAiEnrichment()` 读 enriched + summary；禁止改数字/表/树 |
-| 质量门 | 必备 §0–§8 / ms/帧 + Δ% + emoji / §2 mean Δ 一致 / 无 ENRICH_FILL / 行数 ≥ 金标准 78% — **PASS = ai-authored** |
+| 流水线（**真 hybrid 三层**）| 1. **Provider** (unity-diff-builder)：表格/树 + `LLM_FILL`（§3.x）+ `ENRICH_FILL`（§4/§5）<br>2. **Enrich**：填 `ENRICH_FILL` + §0 扩写 — **必须成功**<br>3. **AI（正式验收）**：CLI 填全部 `LLM_FILL` → `validateUnityDiffQuality` PASS；失败 **抛错** |
+| AI 调度 | `runAiEnrichment()` 读 enriched + summary；替换 `<!-- LLM_FILL:§3.N:槽名:… -->`；禁止改数字/表/树 |
+| 质量门 | 必备 §0–§8 / Top-N 驱动树 / phase 总览 / §3.3+ / 无 `ENRICH_FILL` + 无 `<!-- LLM_FILL` / §2 mean Δ 一致 / 行数 ≥ 金标准 78% — **PASS = ai-authored** |
 | Web/CLI 入口 | `POST /runs/ingest/unity-compare/local`（页面 `/unity-compare`）/ `npx tsx web/server/scripts/e2e-unity-diff.ts` |
 | 金标准 | `docs/report/performance-report_unity_diff_GOLDEN.md` (~250 行) |
 | 真实输出示例 | `output/samples/unity-diff/performance-report.ai-thickened.md`（e2e outside pdata） |
@@ -332,7 +557,18 @@ const prompt = buildSkillPrompt(skill, projectPath, inputPath, job);
 
 ### Phase D · simpleperf-analysis（simpleperf 单源单次）
 
-参照 unity / perfetto 单源 skill 模板：
+> **2026-07 更新**：已升级为 **路线 A hybrid**（`v4_single_report_renderer` + `enrich_v4_single` + `simpleperf-single-service`）。下文为最初 Phase D 规划，部分已由 hybrid 实现替代。
+
+| 项 | 内容 |
+|---|---|
+| 输入 | `perf.data` + `binary_cache/` |
+| Provider | `build_simpleperf_profile.py` N=1 → `v4_single_report_renderer.py` |
+| Enrich | `scripts/enrich_v4_single_report.py` |
+| Service | `web/server/services/simpleperf-single-service.ts` → `buildSimpleperfSingleReport()` |
+| E2E | `web/server/scripts/e2e-simpleperf-single.ts` |
+| 待办 | 正式 ai-thickened e2e PASS + sync `output/samples/simpleperf-single/performance-report.ai-thickened.md` |
+
+参照 unity / perfetto 单源 skill 模板（**legacy 路径仍保留于 `runSingleSourceSkillAnalysis`**）：
 
 | # | 子项 | 工时 |
 |---|---|---|
@@ -415,10 +651,13 @@ Web 主入口三个：
 | **正式样例** | `output/samples/<pipeline>/performance-report.<后缀>.md` · 同步 `scripts/sync-sample-reports.mjs` |
 | Skill 定义 | `.claude/skills/<skill>/SKILL.md` |
 | Golden 报告 | `docs/report/performance-report_<source>_ULTIMATE_*.md`、`performance-report_perfetto_SINGLE_GOLDEN_v1.md`（单次形态）|
-| Web service 入口 | `web/server/services/run-analysis-service.ts` (单源)、`perfetto-triad-service.ts` (三态)、`perfetto-diff-service.ts` (v6 N 列)、`simpleperf-diff-service.ts` (双态)、`cross-source-analysis-service.ts` (三源单次) |
+| Web service 入口 | `run-analysis-service.ts`（单源分流）、`simpleperf-single-service.ts`、`unity-compare-service.ts`、`perfetto-single-service.ts`、`perfetto-diff-service.ts`、`simpleperf-diff-service.ts`、`cross-source-analysis-service.ts` |
+| Service E2E 脚本 | `web/server/scripts/e2e-unity-diff.ts`、`e2e-simpleperf-single.ts`、`e2e-simpleperf-diff.ts` |
+| Simpleperf 单次 enrich | `scripts/enrich_v4_single_report.py` |
+| Simpleperf 单次渲染 | `simpleperf/simpleperf_analyzer/v4_single_report_renderer.py` |
+| Unity diff enrich | `.claude/skills/unity-profiler-compare/scripts/unity-diff-enrich.ts` |
 | CLI executor | `web/server/services/cli-executor.ts`（统一 spawn AI CLI 的入口）|
 | 共享 prompt 模板 | `.claude/skills/perfetto-trace-analysis/prompts/single-prompt.txt`（单次专用）<br>`.claude/skills/perfetto-trace-analysis/prompts/triad-prompt.txt`（老 triad 流程）<br>`.claude/skills/perfetto-diff-analysis/prompts/diff-prompt.txt`（v6 N≥2 通用 diff）|
-| Digest 算法 | `web/server/services/cross-source-digest.ts`（三源对位、native 反向、能力矩阵 ...）|
 | Digest 算法 | `web/server/services/cross-source-digest.ts`（三源对位、native 反向、能力矩阵 ...）|
 | 报告 builder | `web/server/services/cross-source-report-builder.ts`（fallback 程序拼装）|
 | Insights 算法 | `web/server/services/cross-source-insights.ts`（共性/独有/建议规则）|

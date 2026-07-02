@@ -22,6 +22,8 @@ function check(name: string, ok: boolean, detail?: string) {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? `: ${detail}` : ''}`);
 }
 
+const skipAi = process.argv.includes('--skip-ai');
+
 async function runServiceE2e() {
   process.chdir(WEB_ROOT);
   const { buildUnityCompareReport } = await import('../services/unity-compare-service.js');
@@ -46,28 +48,44 @@ async function runServiceE2e() {
       targetFps: 60,
     },
     {
-      skipAiEnrich: false,
+      skipAiEnrich: skipAi,
       onLog,
     },
   );
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
   check('pipeline completed', Boolean(result.markdown), `${elapsed}s diffId=${result.diffId}`);
-  check('deliverSource ai-authored', result.deliverSource === 'ai-authored', result.deliverSource);
-  check('usedAi', result.usedAi === true, `usedAi=${result.usedAi}`);
+  if (!skipAi) {
+    check('deliverSource ai-authored', result.deliverSource === 'ai-authored', result.deliverSource);
+    check('usedAi', result.usedAi === true, `usedAi=${result.usedAi}`);
+  } else {
+    check('deliverSource enriched (skip-ai)', result.deliverSource === 'enriched', result.deliverSource);
+  }
 
   const md = result.markdown;
   const lines = md.split('\n').length;
   check('report has §0', md.includes('## §0'));
-  check('report has §3 Top-N table', md.includes('### Top-N 主线程热点'));
+  check('report has §3 Top-N table', md.includes('### Top-N 主线程热点（帧预算'));
+  check('report has Top-N driven call tree', md.includes('### Top-N 驱动调用树'));
+  check('report has phase overview tree', md.includes('### 主线程 phase 总览'));
+  check('report has §3 present-frame Top-N', md.includes('出现帧 self 均值'));
+  check('report has §3.3 hotspot subsection', md.includes('### 3.3 '));
+  check('report has 模块内部细分', md.includes('**模块内部细分**'));
   check('report has §5 GC trace header', md.includes('全 trace'));
+  check('report has §8 ROI index', md.includes('## §8 可执行建议'));
   check('ENRICH_FILL == 0', !(md.match(/ENRICH_FILL/g) ?? []).length);
-  check('_待 AI 填充 == 0', !(md.match(/_待 AI 填充/g) ?? []).length);
+  if (!skipAi) {
+    check('LLM_FILL == 0', !(md.match(/<!-- LLM_FILL/g) ?? []).length);
+  } else {
+    const llmCount = (md.match(/<!-- LLM_FILL/g) ?? []).length;
+    check('LLM_FILL present (skip-ai skeleton)', llmCount > 0, `${llmCount} slots`);
+  }
 
   const qualityPath = path.join(result.outputDir, 'unity-diff-quality.json');
   if (fs.existsSync(qualityPath)) {
     const q = JSON.parse(fs.readFileSync(qualityPath, 'utf-8')) as { deliverSource?: string };
-    check('quality.json deliverSource', q.deliverSource === 'ai-authored', q.deliverSource);
+    const expectedSource = skipAi ? 'enriched' : 'ai-authored';
+    check('quality.json deliverSource', q.deliverSource === expectedSource, q.deliverSource);
   }
 
   if (fs.existsSync(GOLD)) {
@@ -79,7 +97,9 @@ async function runServiceE2e() {
   check('enriched on disk', fs.existsSync(result.enrichedPath), result.enrichedPath);
   check('exported report path exists', fs.existsSync(result.reportPath), result.reportPath);
 
-  const sampleSrc = path.join(ROOT, 'output/p-web-unity-diff/performance-report_udiff_e2e_outside_ai_thickened.md');
+  const sampleSrc = skipAi
+    ? path.join(ROOT, 'output/p-web-unity-diff/performance-report_udiff_e2e_outside_enriched_v2.md')
+    : path.join(ROOT, 'output/p-web-unity-diff/performance-report_udiff_e2e_outside_ai_thickened.md');
   fs.mkdirSync(path.dirname(sampleSrc), { recursive: true });
   fs.copyFileSync(result.reportPath, sampleSrc);
   check('sample source copied', fs.existsSync(sampleSrc), sampleSrc);

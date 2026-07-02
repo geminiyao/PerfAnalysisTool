@@ -352,8 +352,7 @@ function ctxFromDiff(node: CallTreeNodeDiff): NodeCtx {
 function enrichSkeleton(skeletonMd: string, summary: UnityDiffSummary): string {
   let md = skeletonMd;
 
-  // §3 / §4 / §5 要点（确定性）
-  md = fillEnrichPlaceholder(md, '§3要点', buildSection3Bullets(summary));
+  // §4 / §5 要点（确定性展示层）
   md = fillEnrichPlaceholder(md, '§5要点', buildSection5Bullets(summary));
   for (const [thread, diffs] of Object.entries(summary.markersByThreadDiff)) {
     if (/Main Thread/i.test(thread) || !diffs.length) continue;
@@ -362,103 +361,19 @@ function enrichSkeleton(skeletonMd: string, summary: UnityDiffSummary): string {
     md = fillEnrichPlaceholder(md, `§4:${thread}`, buildSection4ThreadLine(thread, diffs));
   }
 
-  // §8 P{N} 替换 — 与 builder collectUniqueDegradedLeaves 同源（summary.topHotspots 前 5）
-  const main = summary.callTreesDiff.find(t => /Main Thread/i.test(t.threadName));
-  if (!main) return md;
-
-  const STAGE_NAME_RE = /^(PlayerLoop|Update\.|LateUpdate\.|PreLateUpdate\.|FixedUpdate\.|Initialization\.|EarlyUpdate\.|PostLateUpdate\.|TimeUpdate\.|BehaviourUpdate$|LateBehaviourUpdate$|InitializationSystemGroup|SimulationSystemGroup|PresentationSystemGroup)/;
-  const uniqueByLeaf: CallTreeNodeDiff[] = [];
-  if (summary.topHotspots?.length) {
-    for (const h of summary.topHotspots.slice(0, 5)) {
-      const node = findNodeByPath(main, h.path);
-      if (node) uniqueByLeaf.push(node);
-    }
-  }
-  if (!uniqueByLeaf.length) {
-    const candidates: CallTreeNodeDiff[] = [];
-    const walk = (n: CallTreeNodeDiff) => {
-      const selfDelta = n.msPerFrameSelf.delta ?? 0;
-      if (!STAGE_NAME_RE.test(n.name) && n.status === 'degraded' && selfDelta >= 0.3) candidates.push(n);
-      n.children.forEach(walk);
-    };
-    main.roots.forEach(walk);
-    candidates.sort((a, b) => (b.msPerFrameSelf.delta ?? 0) - (a.msPerFrameSelf.delta ?? 0));
-    const seenPaths = new Set<string>();
-    for (const n of candidates) {
-      let isAncestorOfSelected = false;
-      for (const sp of seenPaths) {
-        if (sp.startsWith(n.path + '▸')) { isAncestorOfSelected = true; break; }
-      }
-      if (isAncestorOfSelected) continue;
-      uniqueByLeaf.push(n);
-      seenPaths.add(n.path);
-      if (uniqueByLeaf.length >= 5) break;
-    }
-  }
-
-  // 替换每个 P{N} 块的 _AI_FILL_
-  uniqueByLeaf.forEach((node, i) => {
-    const ctx = ctxFromDiff(node);
-    const rule = matchRule(ctx);
-    const bizText = rule.business(ctx);
-    const boundaryItems = rule.boundary(ctx);
-    const optItems = rule.optimize(ctx);
-
-    // 业务含义占位替换
-    const bizPattern = new RegExp(
-      `### P${i + 1}.*?\\*\\*业务含义\\*\\*[^：]*：[\\s\\S]*?- _待 AI 填充：业务背景解释_`,
-      's'
-    );
-    md = md.replace(bizPattern, (block) => {
-      return block.replace(
-        /\*\*业务含义\*\*[^：]*：[\s\S]*?- _待 AI 填充：业务背景解释_/,
-        `**业务含义**（${rule.category}类，自动归类）：\n- ${bizText}`
-      );
-    });
-
-    // 本源边界占位替换
-    const bndPattern = new RegExp(
-      `### P${i + 1}.*?\\*\\*本源边界\\*\\*[^：]*：[\\s\\S]*?- _待 AI 填充：哪些诊断[^_]*_`,
-      's'
-    );
-    md = md.replace(bndPattern, (block) => {
-      const bndRendered = boundaryItems.map(s => `- ${s}`).join('\n');
-      return block.replace(
-        /\*\*本源边界\*\*[^：]*：[\s\S]*?- _待 AI 填充：哪些诊断[^_]*_/,
-        `**本源边界**：\n${bndRendered}`
-      );
-    });
-
-    // 优化方向占位替换
-    const optPattern = new RegExp(
-      `### P${i + 1}.*?\\*\\*优化方向\\*\\*[^：]*：[\\s\\S]*?3\\. _待 AI 填充：第三优化方向_`,
-      's'
-    );
-    md = md.replace(optPattern, (block) => {
-      const optRendered = optItems.map((s, j) => `${j + 1}. ${s}`).join('\n');
-      return block.replace(
-        /\*\*优化方向\*\*[^：]*：[\s\S]*?3\. _待 AI 填充：第三优化方向_/,
-        `**优化方向**：\n${optRendered}`
-      );
-    });
-  });
-
-  // §0 一句话结论扩写：在原结论后追加场景背景 + 优化空间估算（基于数字，不写死项目）
+  // §0 一句话结论扩写：场景背景 + 粗估优化空间（基于 §3 Top-N 数字）
   const meanDelta = summary.frameSummary.mean?.delta ?? 0;
-  const top1 = uniqueByLeaf[0];
-  const top1Delta = top1?.msPerFrameSelf.delta ?? 0;
-  const top1Name = top1?.name ?? '—';
-  const totalRecoverableEst = uniqueByLeaf.slice(0, 3).reduce((s, n) => s + (n.msPerFrameSelf.delta ?? 0), 0);
+  const top3 = summary.topHotspots?.slice(0, 3) ?? [];
+  const totalRecoverableEst = top3.reduce((s, h) => s + (h.msPerFrameSelf.delta ?? 0), 0);
   const recoverPct = meanDelta > 0 ? ((totalRecoverableEst / meanDelta) * 100).toFixed(0) : '0';
 
   const headlineExtra = [
     '',
     `> **场景对比**：base ${summary.meta.base.label} (${summary.meta.base.frameCount} 帧) vs cur ${summary.meta.cur.label} (${summary.meta.cur.frameCount} 帧)。两份采集帧数比 ${summary.consistency.framesRatio}，target FPS ${summary.consistency.targetFpsMatch ? '一致' : '不一致 ⚠️'}。`,
     '>',
-    `> **粗估优化空间**：仅 P1+P2+P3 三项业务模块（合计 self ${totalRecoverableEst.toFixed(2)}ms/帧）若全部回收，可缓解约 ${recoverPct}% 的总回归（${meanDelta.toFixed(2)}ms/帧）。剩余部分大概率来自压测场景的合理业务增量（实体数量 / RPC / 资源加载等），需业务侧权衡。`,
+    `> **粗估优化空间**：§3 Top-3 热点 self 合计 ${totalRecoverableEst.toFixed(2)}ms/帧，若全部回收可缓解约 ${recoverPct}% 的总回归（${meanDelta.toFixed(2)}ms/帧）。剩余部分可能来自压测场景的合理业务增量，需业务侧权衡。详见 §3.3+ 与 §8 ROI 索引。`,
   ].join('\n');
 
-  // 在 §0 原 "> **头号回归**" 行后追加（多行匹配，路径里可能有特殊字符）
   md = md.replace(
     /(> \*\*头号回归\*\*[^\n]*\n)/,
     `$1${headlineExtra}\n`,
@@ -491,10 +406,9 @@ function main() {
   fs.writeFileSync(outPath, enriched, 'utf-8');
 
   const lines = enriched.split('\n').length;
-  const remaining = (enriched.match(/_AI_FILL/g) ?? []).length;
-  const remaining2 = (enriched.match(/_待 AI 填充/g) ?? []).length;
+  const remaining = (enriched.match(/<!-- LLM_FILL/g) ?? []).length;
   const remaining3 = (enriched.match(/ENRICH_FILL/g) ?? []).length;
-  console.error(`[enrich] ✅ ${outPath} (${lines} 行, 残留 _AI_FILL=${remaining}, _待 AI 填充=${remaining2}, ENRICH_FILL=${remaining3})`);
+  console.error(`[enrich] ✅ ${outPath} (${lines} 行, 残留 LLM_FILL=${remaining}, ENRICH_FILL=${remaining3})`);
 }
 
 if (require.main === module) main();

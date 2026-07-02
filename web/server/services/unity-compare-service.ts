@@ -115,22 +115,23 @@ async function runAiEnrichment(
     return null;
   }
 
-  const skillDir = path.join(config.skillProjectPath, '.claude/skills/unity-profiler-compare').replace(/\\/g, '/');
+
   const enrichedRel = enrichedPath.replace(/\\/g, '/');
   const summaryRel = path.join(workDir, 'unity-diff-summary.json').replace(/\\/g, '/');
   const aiOutPath = path.join(workDir, 'performance-report_unity_diff_AI_v1.md');
 
   const prompt = [
-    `请使用 ${skillDir} skill 在 **enriched 报告** 上增量加厚 unity diff 叙事（ai-thickened 交付）。`,
+    `请读取 enriched 报告并填写所有 <!-- LLM_FILL:... --> 分析槽（ai-thickened 交付）。`,
     `enriched 报告路径: ${enrichedRel}`,
     `Δ 数字 JSON: ${summaryRel}`,
     `润色规则（必须严格遵守）：`,
-    `1. 数字一律来自 Δ JSON / enriched 表格，禁止改任何 ms/帧、Δ%、状态标签、emoji`,
-    `2. §3 Top-N 热点表、§3/§4/§5 已有 enrich 要点可扩写但不可删表/删树`,
-    `3. mermaid 图、章节顺序、§2 帧级表 / §3 缩进树 不准动`,
-    `4. 业务叙事用 ≤2 句话，避免冗长；§8 P 块在 enrich 模板基础上加厚`,
-    `5. 输出保存为: ${aiOutPath.replace(/\\/g, '/')}`,
-    `6. 不要使用 Agent / 子任务 / conversation summary`,
+    `1. 每个 <!-- LLM_FILL:§3.N:槽名: 说明 --> 必须替换为真实叙事，最终文件中不得残留 LLM_FILL`,
+    `2. 数字一律来自 Δ JSON / enriched 表格，禁止改任何 ms/帧、Δ%、状态标签、emoji`,
+    `3. §3 Top-N 表、Top-N 驱动调用树、§3.x 子函数表、§2 帧级表 不准删改`,
+    `4. §3.x 四个槽：业务含义(60-120字)、调用入口(1句)、优化方向(3-5条bullet引用子marker)、探索(1-2条跨§假设)`,
+    `5. 章节顺序不变；§8 仅为 ROI 索引，勿重复 §3.x 全文`,
+    `6. 输出保存为: ${aiOutPath.replace(/\\/g, '/')}`,
+    `7. 不要使用 Agent / 子任务 / conversation summary`,
   ].join(' ');
   fs.writeFileSync(path.join(workDir, 'unity-diff-cli-prompt.txt'), prompt, 'utf-8');
 
@@ -194,13 +195,19 @@ function validateUnityDiffQuality(markdown: string, summaryJson: any, opts: { mi
     errors.push(`报告厚度不足: ${lineCount} 行 < ${Math.floor(goldenLines * minRatio)} (= ${goldenLines} × ${minRatio})`);
   }
 
-  // 5. ai-thickened 结构检查
+  // 5. v2 结构检查
   if (!markdown.includes('### Top-N 主线程热点')) warnings.push('§3 缺 Top-N 热点表');
+  if (!markdown.includes('### 3.3 ')) errors.push('§3 缺 per-hotspot 子节 (### 3.3)');
+  if (!markdown.includes('### Top-N 驱动调用树')) errors.push('§3 缺 Top-N 驱动调用树');
+  if (!markdown.includes('### 主线程 phase 总览')) warnings.push('§3 缺 phase 总览树');
+  if (!markdown.includes('**模块内部细分**')) warnings.push('§3 缺模块内部细分表');
   if (!markdown.includes('GC.Alloc 次数（全 trace）') && !markdown.includes('GC.Alloc 次数 base→cur（全 trace）')) {
     warnings.push('§5 缺 GC.Alloc 全 trace 口径表头');
   }
   const enrichLeft = (markdown.match(/ENRICH_FILL/g) ?? []).length;
   if (enrichLeft > 0) errors.push(`残留 ENRICH_FILL 占位 ${enrichLeft} 处`);
+  const llmFillLeft = (markdown.match(/<!-- LLM_FILL/g) ?? []).length;
+  if (llmFillLeft > 0) errors.push(`残留 LLM_FILL 占位 ${llmFillLeft} 处`);
 
   return { pass: errors.length === 0, errors, warnings, lineCount, sectionCount };
 }

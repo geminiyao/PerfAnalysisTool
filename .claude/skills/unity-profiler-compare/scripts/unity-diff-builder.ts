@@ -93,6 +93,10 @@ interface CallTreeNodeDiff {
   depth: number;
   msPerFrameTotal: DiffNumberPair;
   msPerFrameSelf: DiffNumberPair;
+  /** self ms ÷ 出现帧数（仅 marker 存在的帧） */
+  msSelfWhenPresent: DiffNumberPair;
+  presentRate: DiffNumberPair;
+  presentOnFrameCount: { base: number | null; cur: number | null };
   threadPct: DiffNumberPair;
   gcAllocCount: DiffNumberPair;
   status: DiffStatus;
@@ -141,18 +145,67 @@ export interface UnityDiffSummary {
     gcBytesPerFrame?: DiffNumberPair;
     topSubtrees: { path: string; name: string; gcAlloc: DiffNumberPair; msPerFrameTotal: DiffNumberPair }[];
   };
-  /** §3 Top-N 热点（与 §8 P 候选同源） */
-  topHotspots: { rank: number; name: string; path: string; msPerFrameSelf: DiffNumberPair; msPerFrameTotal: DiffNumberPair; gcAllocCount: DiffNumberPair; status: DiffStatus }[];
+  /** §3 Top-N 热点（帧预算：÷总帧数） */
+  topHotspots: HotspotRow[];
+  /** §3 Top-N 补充（出现帧 self 均值：÷出现帧数） */
+  topHotspotsPresent: HotspotPresentRow[];
   /** §6 慢帧 / 波动 Δ */
   spikes: { newSpikes: MarkerDiff[]; resolvedSpikes: MarkerDiff[]; changed: MarkerDiff[] };
   /** §7 新增 / 消失 marker */
   presence: { addedInCur: string[]; removedFromCur: string[] };
 }
 
+interface HotspotRow {
+  rank: number;
+  name: string;
+  path: string;
+  msPerFrameSelf: DiffNumberPair;
+  msPerFrameTotal: DiffNumberPair;
+  gcAllocCount: DiffNumberPair;
+  status: DiffStatus;
+  isGroup?: boolean;
+  groupKey?: string;
+  memberCount?: number;
+  members?: HotspotRow[];
+}
+
+interface HotspotPresentRow {
+  rank: number;
+  name: string;
+  path: string;
+  msSelfWhenPresent: DiffNumberPair;
+  msPerFrameSelf: DiffNumberPair;
+  presentRate: DiffNumberPair;
+  presentOnFrameCount: { base: number | null; cur: number | null };
+  status: DiffStatus;
+  isGroup?: boolean;
+  groupKey?: string;
+  memberCount?: number;
+}
+
+interface PresentHotspotDisplayRow {
+  rank: number;
+  label: string;
+  row: HotspotPresentRow;
+  isGroup: boolean;
+  members: HotspotPresentRow[];
+}
+
+function msWhenPresent(msSelf: number | undefined, presentCount: number | undefined): number | null {
+  if (msSelf == null || presentCount == null || presentCount <= 0) return null;
+  return safeRound(msSelf / presentCount, 3);
+}
+
 // ============ Δ 计算辅助 ============
 
 const SIGNIFICANT_DELTA_PCT = 5;  // ≥5% 视为变化
 const STABLE_THRESHOLD_MS = 0.05;  // ms/帧 < 0.05 视为稳态噪声
+/** §3 主树剪枝：信号阈值（非行数上限）；完整数据始终在 unity-diff-summary.json */
+const TREE_MIN_TOTAL_DELTA_MS = 0.1;
+const TREE_MIN_SELF_DELTA_MS = 0.1;
+const TREE_MIN_CUR_MS = 0.1;
+const TREE_MIN_GC_DELTA = 100;
+const TREE_MIN_IMPROVED_DELTA_MS = 0.5;  // 仅展示幅度较大的改善
 
 function safeRound(x: number, digits = 2): number {
   return parseFloat(x.toFixed(digits));
@@ -199,6 +252,15 @@ function diffCallTreeNode(baseNode: AggregatedCallTreeNode | undefined, curNode:
 
   const msPerFrameTotal = makeDiffPair(baseNode?.msPerFrameTotal, curNode?.msPerFrameTotal);
   const msPerFrameSelf = makeDiffPair(baseNode?.msPerFrameSelf, curNode?.msPerFrameSelf);
+  const msSelfWhenPresent = makeDiffPair(
+    msWhenPresent(baseNode?.msSelf, baseNode?.presentOnFrameCount),
+    msWhenPresent(curNode?.msSelf, curNode?.presentOnFrameCount),
+  );
+  const presentRate = makeDiffPair(baseNode?.presentRate, curNode?.presentRate);
+  const presentOnFrameCount = {
+    base: baseNode?.presentOnFrameCount ?? null,
+    cur: curNode?.presentOnFrameCount ?? null,
+  };
   const threadPct = makeDiffPair(baseNode?.threadPct, curNode?.threadPct);
   const gcAllocCount = makeDiffPair(baseNode?.gcAllocCount, curNode?.gcAllocCount);
 
@@ -227,7 +289,7 @@ function diffCallTreeNode(baseNode: AggregatedCallTreeNode | undefined, curNode:
   // 节点状态：用 msPerFrameTotal status 作为主要标
   return {
     path, name, depth,
-    msPerFrameTotal, msPerFrameSelf, threadPct, gcAllocCount,
+    msPerFrameTotal, msPerFrameSelf, msSelfWhenPresent, presentRate, presentOnFrameCount, threadPct, gcAllocCount,
     status: msPerFrameTotal.status,
     children,
   };
@@ -357,6 +419,179 @@ export function collectUniqueDegradedLeaves(main: CallTreeDiff | undefined, limi
   return dedupeLeafFirstByPath(degradedNodes, n => n.msPerFrameSelf.delta ?? 0, limit);
 }
 
+const PRESENT_HOTSPOT_MIN_CUR_MS = 0.2;
+
+/** 主线程「出现帧 self 均值」热点（÷出现帧数，leaf-first） */
+export function collectPresentFrameHotspots(main: CallTreeDiff | undefined, limit = 8): CallTreeNodeDiff[] {
+  if (!main) return [];
+  const candidates: CallTreeNodeDiff[] = [];
+  const walk = (n: CallTreeNodeDiff) => {
+    if (!isStageName(n.name) && !/^GC(\.|$)/.test(n.name)) {
+      const curWp = n.msSelfWhenPresent.cur ?? 0;
+      const deltaWp = n.msSelfWhenPresent.delta ?? 0;
+      const interesting =
+        curWp >= PRESENT_HOTSPOT_MIN_CUR_MS
+        || (n.status === 'newly_added' && curWp >= 0.15)
+        || (n.msSelfWhenPresent.status === 'degraded' && deltaWp >= 0.1);
+      if (interesting && (n.status === 'degraded' || n.status === 'newly_added' || deltaWp >= 0.1)) {
+        candidates.push(n);
+      }
+    }
+    n.children.forEach(walk);
+  };
+  main.roots.forEach(walk);
+  return dedupeLeafFirstByPath(candidates, n => n.msSelfWhenPresent.cur ?? 0, limit);
+}
+
+function isPbDecodeName(name: string): boolean {
+  return /\*\*\* pb\.decode\*\*\*/i.test(name);
+}
+
+function isResMarkerName(name: string): boolean {
+  return /^\[res\]/i.test(name);
+}
+
+function aggregatePresentGroup(members: HotspotPresentRow[], label: string, groupKey: string): HotspotPresentRow {
+  const curWp = Math.max(...members.map(m => m.msSelfWhenPresent.cur ?? 0));
+  const baseWp = Math.max(...members.map(m => m.msSelfWhenPresent.base ?? 0), 0);
+  const pfCur = members.reduce((s, m) => s + (m.presentOnFrameCount.cur ?? 0), 0);
+  const pfBase = members.reduce((s, m) => s + (m.presentOnFrameCount.base ?? 0), 0);
+  const msPfB = members.reduce((s, m) => s + (m.msPerFrameSelf.base ?? 0), 0);
+  const msPfC = members.reduce((s, m) => s + (m.msPerFrameSelf.cur ?? 0), 0);
+  return {
+    rank: 0,
+    name: label,
+    path: members[0]?.path ?? label,
+    msSelfWhenPresent: makeDiffPair(baseWp || null, curWp),
+    msPerFrameSelf: makeDiffPair(msPfB || null, msPfC),
+    presentRate: makeDiffPair(
+      pfBase && members[0] ? safeRound((pfBase / (members[0].presentOnFrameCount.base ? 1 : 1)) * 0, 1) : null,
+      null,
+    ),
+    presentOnFrameCount: { base: pfBase || null, cur: pfCur || null },
+    presentRate: makeDiffPair(null, null),
+    status: members.some(m => m.status === 'newly_added') ? 'newly_added' : 'degraded',
+    isGroup: true,
+    groupKey,
+    memberCount: members.length,
+  };
+}
+
+function buildPresentHotspotDisplayRows(rows: HotspotPresentRow[], limit = 8): PresentHotspotDisplayRow[] {
+  const urp = rows.filter(r => isUrpRenderPassHotspot(r));
+  const decode = rows.filter(r => isPbDecodeName(r.name));
+  const res = rows.filter(r => isResMarkerName(r.name));
+  const rest = rows.filter(r => !isPbDecodeName(r.name) && !isResMarkerName(r.name) && !isUrpRenderPassHotspot(r));
+
+  const buckets: HotspotPresentRow[] = [...rest];
+  if (urp.length >= 2) {
+    buckets.push(aggregatePresentGroup(urp, `URP 渲染管线（${urp.length} 项合并）`, 'urp.render'));
+  } else {
+    buckets.push(...urp);
+  }
+  if (decode.length) {
+    buckets.push(aggregatePresentGroup(decode, `网络 pb.decode（${decode.length} 项合并）`, 'pb.decode'));
+  }
+  if (res.length) {
+    buckets.push(aggregatePresentGroup(res, `资源 [res] 加载/卸载（${res.length} 项合并）`, 'res'));
+  }
+  buckets.sort((a, b) => (b.msSelfWhenPresent.cur ?? 0) - (a.msSelfWhenPresent.cur ?? 0));
+
+  return buckets.slice(0, limit).map((row, i) => ({
+    rank: i + 1,
+    label: row.name,
+    row: { ...row, rank: i + 1 },
+    isGroup: Boolean(row.isGroup),
+    members: row.groupKey === 'pb.decode' ? decode
+      : row.groupKey === 'res' ? res
+        : row.groupKey === 'urp.render' ? urp
+          : [row],
+  }));
+}
+
+function fmtPresentFramesCell(
+  pf: { base: number | null; cur: number | null },
+  totalFrames: { base: number; cur: number },
+): string {
+  const b = pf.base == null ? '—' : String(pf.base);
+  const c = pf.cur == null ? '—' : String(pf.cur);
+  return `${b}→${c} / ${totalFrames.base}→${totalFrames.cur}`;
+}
+
+function toHotspotRow(n: CallTreeNodeDiff, rank: number): HotspotRow {
+  return {
+    rank, name: n.name, path: n.path,
+    msPerFrameSelf: n.msPerFrameSelf, msPerFrameTotal: n.msPerFrameTotal,
+    gcAllocCount: n.gcAllocCount, status: n.status,
+  };
+}
+
+function toHotspotPresentRow(n: CallTreeNodeDiff, rank: number): HotspotPresentRow {
+  return {
+    rank, name: n.name, path: n.path,
+    msSelfWhenPresent: n.msSelfWhenPresent, msPerFrameSelf: n.msPerFrameSelf,
+    presentRate: n.presentRate,
+    presentOnFrameCount: n.presentOnFrameCount,
+    status: n.msSelfWhenPresent.status,
+  };
+}
+
+function isUrpRenderPassHotspot(row: Pick<HotspotRow, 'name' | 'path'>): boolean {
+  return /^URP\./.test(row.name)
+    && /FinishFrameRendering|RenderPipelineManager|URP\.Render/.test(row.path);
+}
+
+function sumDiffPairs(members: HotspotRow[], pick: (r: HotspotRow) => DiffNumberPair): DiffNumberPair {
+  const base = members.reduce((s, m) => s + (pick(m).base ?? 0), 0);
+  const cur = members.reduce((s, m) => s + (pick(m).cur ?? 0), 0);
+  return makeDiffPair(base || null, cur || null);
+}
+
+function findUrpGroupAnchorPath(members: HotspotRow[]): string {
+  for (const m of members) {
+    const parts = m.path.split('▸');
+    const idx = parts.findIndex(p => p === 'URP.RenderSingleCamera');
+    if (idx >= 0) return parts.slice(0, idx + 1).join('▸');
+  }
+  for (const m of members) {
+    const parts = m.path.split('▸');
+    const idx = parts.findIndex(p => /FinishFrameRendering/.test(p));
+    if (idx >= 0) return parts.slice(0, idx + 1).join('▸');
+  }
+  return members[0]?.path ?? 'URP';
+}
+
+function aggregateBudgetGroup(members: HotspotRow[], label: string, groupKey: string): HotspotRow {
+  const sorted = [...members].sort((a, b) => (b.msPerFrameSelf.delta ?? 0) - (a.msPerFrameSelf.delta ?? 0));
+  return {
+    rank: 0,
+    name: label,
+    path: findUrpGroupAnchorPath(sorted),
+    msPerFrameSelf: sumDiffPairs(sorted, r => r.msPerFrameSelf),
+    msPerFrameTotal: sumDiffPairs(sorted, r => r.msPerFrameTotal),
+    gcAllocCount: sumDiffPairs(sorted, r => r.gcAllocCount),
+    status: sorted.some(m => m.status === 'degraded') ? 'degraded' : sorted[0]?.status ?? 'stable',
+    isGroup: true,
+    groupKey,
+    memberCount: sorted.length,
+    members: sorted,
+  };
+}
+
+/** 帧预算 Top-N 展示行：合并 URP pass 等同族热点 */
+export function buildBudgetHotspotDisplayRows(rows: HotspotRow[], limit = 8): HotspotRow[] {
+  const urp = rows.filter(isUrpRenderPassHotspot);
+  const rest = rows.filter(r => !isUrpRenderPassHotspot(r));
+  const buckets: HotspotRow[] = [...rest];
+  if (urp.length >= 2) {
+    buckets.push(aggregateBudgetGroup(urp, `URP 渲染管线（${urp.length} 项合并）`, 'urp.render'));
+  } else {
+    buckets.push(...urp);
+  }
+  buckets.sort((a, b) => (b.msPerFrameSelf.delta ?? 0) - (a.msPerFrameSelf.delta ?? 0));
+  return buckets.slice(0, limit).map((row, i) => ({ ...row, rank: i + 1 }));
+}
+
 // ============ GC 业务归因 Δ ============
 
 function collectGcSubtrees(node: CallTreeNodeDiff, parentPath: string, out: { path: string; name: string; gcAlloc: DiffNumberPair; msPerFrameTotal: DiffNumberPair }[]) {
@@ -474,15 +709,9 @@ export function buildUnityDiffSummary(base: PreprocessResult, cur: PreprocessRes
   const gcAttribution = buildGcAttribution(callTreesDiff, base, cur);
 
   const mainThread = callTreesDiff.find(t => /Main Thread/i.test(t.threadName));
-  const topHotspots = collectUniqueDegradedLeaves(mainThread, 8).map((n, i) => ({
-    rank: i + 1,
-    name: n.name,
-    path: n.path,
-    msPerFrameSelf: n.msPerFrameSelf,
-    msPerFrameTotal: n.msPerFrameTotal,
-    gcAllocCount: n.gcAllocCount,
-    status: n.status,
-  }));
+  const rawHotspots = collectUniqueDegradedLeaves(mainThread, 16).map((n, i) => toHotspotRow(n, i + 1));
+  const topHotspots = buildBudgetHotspotDisplayRows(rawHotspots, 8);
+  const topHotspotsPresent = collectPresentFrameHotspots(mainThread, 24).map((n, i) => toHotspotPresentRow(n, i + 1));
 
   // §6 Spikes
   const spikes = buildSpikesDiff(base, cur);
@@ -507,6 +736,7 @@ export function buildUnityDiffSummary(base: PreprocessResult, cur: PreprocessRes
     markersByThreadDiff,
     gcAttribution,
     topHotspots,
+    topHotspotsPresent,
     spikes,
     presence,
   };
@@ -524,19 +754,657 @@ function fmtPair(pair: DiffNumberPair, unit = 'ms'): string {
   return `${b} → ${c} ${d ? `(${d}${unit}${dp})` : ''} ${emoji}`;
 }
 
-function renderCallTreeNode(node: CallTreeNodeDiff, depth: number, maxLines: { remaining: number }, lines: string[]) {
-  if (maxLines.remaining <= 0) return;
-  if (node.msPerFrameTotal.status === 'stable' && (node.msPerFrameTotal.cur ?? 0) < 0.5) {
-    // 噪声，跳过
+function findNodeByPath(main: CallTreeDiff, targetPath: string): CallTreeNodeDiff | null {
+  let found: CallTreeNodeDiff | null = null;
+  const walk = (n: CallTreeNodeDiff) => {
+    if (n.path === targetPath) found = n;
+    n.children.forEach(walk);
+  };
+  main.roots.forEach(walk);
+  return found;
+}
+
+function hotspotEmoji(status: DiffStatus): string {
+  if (status === 'degraded') return '🔴';
+  if (status === 'newly_added') return '🆕';
+  if (status === 'improved') return '🟢';
+  return '⚪';
+}
+
+function collectNodesOnPath(main: CallTreeDiff, targetPath: string): CallTreeNodeDiff[] {
+  const chain: CallTreeNodeDiff[] = [];
+  const walk = (nodes: CallTreeNodeDiff[]): boolean => {
+    for (const n of nodes) {
+      if (targetPath === n.path || targetPath.startsWith(n.path + '▸')) {
+        chain.push(n);
+        if (n.path === targetPath) return true;
+        if (walk(n.children)) return true;
+        chain.pop();
+      }
+    }
+    return false;
+  };
+  walk(main.roots);
+  return chain;
+}
+
+function formatCallTreeNodeLine(node: CallTreeNodeDiff, tier: 'hot' | 'warm'): string {
+  const emoji = tier === 'hot' ? '🔴' : '🟡';
+  const ms = fmtPair(node.msPerFrameTotal, 'ms').replace(/[🔴🟢🆕➖⚪🟡]/g, '').trim();
+  const gc = node.gcAllocCount.delta != null && Math.abs(node.gcAllocCount.delta) >= 100
+    ? ` gcΔ=${node.gcAllocCount.delta > 0 ? '+' : ''}${node.gcAllocCount.delta.toFixed(0)}`
+    : '';
+  const tag = node.status === 'newly_added' ? ' 🆕' : node.status === 'improved' ? ' 🟢' : '';
+  const label = /^MapSignificanceMgr/.test(node.name) && /\.sampler_/.test(node.name)
+    ? 'MapSignificanceMgr'
+    : node.name;
+  return `${label}: ${ms} ${emoji}${gc}${tag}`;
+}
+
+function renderHotspotPathTree(main: CallTreeDiff | undefined, targetPath: string): string[] {
+  if (!main) return ['_主线程数据缺失_'];
+  const chain = collectNodesOnPath(main, targetPath);
+  if (!chain.length) return [`_路径未在主线程树中找到_`];
+  return chain.map((node, depth) => `${'  '.repeat(depth)}└─ ${formatCallTreeNodeLine(node, 'hot')}`);
+}
+
+function collectHotspotChildBreakdown(node: CallTreeNodeDiff | null, limit = 8): CallTreeNodeDiff[] {
+  return (node?.children ?? [])
+    .filter(c => c.status !== 'stable' || Math.abs(c.msPerFrameSelf.delta ?? 0) >= 0.03)
+    .sort((a, b) => Math.abs(b.msPerFrameSelf.delta ?? 0) - Math.abs(a.msPerFrameSelf.delta ?? 0))
+    .slice(0, limit);
+}
+
+/** 入口路径（过长时折叠中间透传层） */
+function renderCompactEntryPath(main: CallTreeDiff, targetPath: string): string[] {
+  const chain = collectNodesOnPath(main, targetPath);
+  if (!chain.length) return ['_路径未找到_'];
+  if (chain.length <= 6) {
+    return chain.map((node, depth) =>
+      `${'  '.repeat(depth)}└─ ${formatCallTreeNodeLine(node, depth === chain.length - 1 ? 'hot' : 'warm')}`,
+    );
+  }
+  const out: string[] = [];
+  out.push(`└─ ${formatCallTreeNodeLine(chain[0], 'warm')}`);
+  const phase = chain.find((n, i) => i > 0 && (isStageName(n.name) || /GameLauncher/.test(n.name))) ?? chain[1];
+  out.push(`  └─ ${formatCallTreeNodeLine(phase, 'warm')}`);
+  out.push('    └─ …');
+  const parent = chain[chain.length - 2];
+  const target = chain[chain.length - 1];
+  if (parent.path !== phase.path) {
+    out.push(`      └─ ${formatCallTreeNodeLine(parent, 'warm')}`);
+    out.push(`        └─ ${formatCallTreeNodeLine(target, 'hot')}`);
+  } else {
+    out.push(`      └─ ${formatCallTreeNodeLine(target, 'hot')}`);
+  }
+  return out;
+}
+
+/** §3 Top-N 驱动调用树（同 simpleperf §5.2：按 Top-N 排列，每项下挂子 marker） */
+function renderTopNDrivenCallTree(main: CallTreeDiff, topN: HotspotRow[], analysisDepth = 5): string[] {
+  const lines: string[] = [];
+  const analyzed = Math.min(analysisDepth, topN.length);
+  lines.push('### Top-N 驱动调用树', '');
+  lines.push(
+    '> 与上表 **# 列一一对应**。每项 = **入口** + **子 marker 拆分**（ms/帧）；' +
+    (analyzed > 0
+      ? `业务叙事见 §3.3 ~ §3.${2 + analyzed}。`
+      : '业务叙事见 §3.x。'),
+    '',
+  );
+  for (const h of topN) {
+    const node = findNodeByPath(main, h.path);
+    const sd = h.msPerFrameSelf.delta ?? 0;
+    const td = h.msPerFrameTotal.delta ?? 0;
+    const emoji = hotspotEmoji(h.status);
+    const ref = h.rank <= analysisDepth ? `→ §3.${h.rank + 2}` : '';
+    lines.push(
+      `#### #${h.rank} ${h.name}  ·  self ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms/帧  ·  total ${td >= 0 ? '+' : ''}${td.toFixed(2)}ms/帧  ${emoji}${ref ? `  ${ref}` : ''}`,
+      '',
+    );
+    lines.push('**入口**：', '', '```');
+    lines.push(...renderCompactEntryPath(main, h.path));
+    lines.push('```', '');
+    lines.push('**子 marker 拆分**（|self Δ| 降序）：', '');
+    if (h.isGroup && h.groupKey === 'urp.render' && h.members?.length) {
+      lines.push('| pass | self Δ ms/帧 | total Δ ms/帧 | GC Δ |');
+      lines.push('|---|---:|---:|---:|');
+      for (const m of h.members) {
+        const cs = m.msPerFrameSelf.delta ?? 0;
+        const ct = m.msPerFrameTotal.delta ?? 0;
+        const cg = m.gcAllocCount.delta ?? 0;
+        lines.push(
+          `| ${m.name} | ${cs >= 0 ? '+' : ''}${cs.toFixed(2)}ms | ${ct >= 0 ? '+' : ''}${ct.toFixed(2)}ms | ${cg >= 0 ? '+' : ''}${cg.toFixed(0)} |`,
+        );
+      }
+      lines.push('');
+      continue;
+    }
+    const children = collectHotspotChildBreakdown(node);
+    if (children.length) {
+      lines.push('```');
+      for (const c of children) {
+        const cs = c.msPerFrameSelf.delta ?? 0;
+        lines.push(
+          `└─ ${formatCallTreeNodeLine(c, 'warm')}  (selfΔ ${cs >= 0 ? '+' : ''}${cs.toFixed(2)}ms/帧)`,
+        );
+      }
+      lines.push('```');
+    } else {
+      lines.push('_叶子 / 引擎管线节点，无显著子 marker_', '');
+    }
+    lines.push('');
+  }
+  return lines;
+}
+
+interface TreeRenderCtx {
+  budgetPaths: string[];
+  presentPaths: string[];
+  /** 仅 ScriptRunBehaviour Update/LateUpdate 业务链内展开模块 */
+  inBusinessSpine: boolean;
+}
+
+/** 含 GameLauncher→Core→Lua/Map 的业务 phase（非 URP/Canvas/Profiler 等） */
+const BUSINESS_PHASE_RE = /^Update\.ScriptRunBehaviourUpdate$|^PreLateUpdate\.ScriptRunBehaviourLateUpdate$/;
+
+function withBusinessSpine(ctx: TreeRenderCtx, node: CallTreeNodeDiff): TreeRenderCtx {
+  if (ctx.inBusinessSpine || BUSINESS_PHASE_RE.test(node.name)) {
+    return { ...ctx, inBusinessSpine: true };
+  }
+  return ctx;
+}
+
+function nodeSelfTier(node: CallTreeNodeDiff, ctx: TreeRenderCtx): 'hot' | 'warm' | 'hide' {
+  const totalD = Math.abs(node.msPerFrameTotal.delta ?? 0);
+  const selfD = Math.abs(node.msPerFrameSelf.delta ?? 0);
+  const curTotal = node.msPerFrameTotal.cur ?? 0;
+  if (ctx.budgetPaths.includes(node.path)) return 'hot';
+  if (ctx.presentPaths.includes(node.path)) return 'warm';
+  if (node.status === 'degraded' && (totalD >= 0.35 || selfD >= 0.25)) return 'hot';
+  if (node.status === 'degraded' && totalD >= 0.12) return 'warm';
+  if (node.status === 'newly_added' && curTotal >= 0.15) return 'warm';
+  if (node.status === 'improved' && totalD >= TREE_MIN_IMPROVED_DELTA_MS) return 'warm';
+  return 'hide';
+}
+
+function effectiveTreeTier(node: CallTreeNodeDiff, ctx: TreeRenderCtx): 'hot' | 'warm' | 'hide' {
+  let childTier: 'hot' | 'warm' | 'hide' = 'hide';
+  for (const c of node.children) {
+    const ct = effectiveTreeTier(c, ctx);
+    if (ct === 'hot') { childTier = 'hot'; break; }
+    if (ct === 'warm') childTier = 'warm';
+  }
+  const onBudgetAnc = ctx.budgetPaths.some(p => p.startsWith(node.path + '▸') || p === node.path);
+  const onPresentAnc = ctx.presentPaths.some(p => p.startsWith(node.path + '▸') || p === node.path);
+  const self = nodeSelfTier(node, ctx);
+  if (self === 'hot') return 'hot';
+  if (childTier === 'hot') return (onBudgetAnc || onPresentAnc || self === 'warm') ? 'hot' : 'warm';
+  if (self === 'warm' || childTier === 'warm') return 'warm';
+  if ((onBudgetAnc || onPresentAnc) && childTier !== 'hide') return 'warm';
+  return 'hide';
+}
+
+function renderPresentHotspotSection(
+  presentN: HotspotPresentRow[],
+  meta: UnityDiffSummary['meta'],
+): string[] {
+  const lines: string[] = [];
+  const totalFrames = { base: meta.base.frameCount, cur: meta.cur.frameCount };
+  const display = buildPresentHotspotDisplayRows(presentN, 8);
+  if (!display.length) return lines;
+
+  lines.push('### Top-N 主线程热点（出现帧 self 均值，÷出现帧数）', '');
+  lines.push(
+    '> **出现帧/总帧** = 该 marker 在多少帧里出现过 / 采集总帧数。**self ms（出现帧）** = 累计 self ms ÷ 出现帧数。' +
+    '与帧预算 Top-N 互补；已在帧预算表出现的项见 **Top-N 驱动调用树** 对应 #。',
+    '',
+  );
+  lines.push('| # | 模块 | self ms（出现帧）base→cur | Δ | 出现帧/总帧 base→cur | self ms/帧 Δ | 状态 |');
+  lines.push('|---:|---|---:|---:|---|---:|---|');
+  for (const item of display) {
+    const row = item.row;
+    const b = row.msSelfWhenPresent.base?.toFixed(2) ?? '—';
+    const c = row.msSelfWhenPresent.cur?.toFixed(2) ?? '—';
+    const d = row.msSelfWhenPresent.delta;
+    const dStr = d == null ? '—' : `${d >= 0 ? '+' : ''}${d.toFixed(2)}ms`;
+    const pf = fmtPresentFramesCell(row.presentOnFrameCount, totalFrames);
+    const sd = row.msPerFrameSelf.delta ?? 0;
+    const emoji = row.status === 'degraded' ? '🔴' : row.status === 'newly_added' ? '🆕' : row.status === 'improved' ? '🟢' : '⚪';
+    lines.push(`| ${item.rank} | ${item.label} | ${b}→${c} | ${dStr} | ${pf} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms | ${emoji} |`);
+  }
+  lines.push('');
+
+  const decodeGroup = display.find(d => d.row.groupKey === 'pb.decode');
+  if (decodeGroup && decodeGroup.members.length > 1) {
+    lines.push('**pb.decode 明细**（合并项展开，按出现帧 self 降序）：', '');
+    lines.push('| marker | self ms（出现帧）cur | 出现帧/总帧 cur | self ms/帧 Δ |');
+    lines.push('|---|---:|---|---:|');
+    for (const m of [...decodeGroup.members].sort((a, b) => (b.msSelfWhenPresent.cur ?? 0) - (a.msSelfWhenPresent.cur ?? 0))) {
+      const wp = m.msSelfWhenPresent.cur?.toFixed(2) ?? '—';
+      const pf = `${m.presentOnFrameCount.cur ?? '—'} / ${totalFrames.cur}`;
+      const sd = m.msPerFrameSelf.delta ?? 0;
+      lines.push(`| ${m.name} | ${wp} | ${pf} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms |`);
+    }
+    lines.push('');
+  }
+
+  const resGroup = display.find(d => d.row.groupKey === 'res');
+  if (resGroup && resGroup.members.length > 1) {
+    lines.push('**[res] 资源 明细**（合并项展开）：', '');
+    lines.push('| marker | self ms（出现帧）cur | 出现帧/总帧 cur | self ms/帧 Δ |');
+    lines.push('|---|---:|---|---:|');
+    for (const m of [...resGroup.members].sort((a, b) => (b.msSelfWhenPresent.cur ?? 0) - (a.msSelfWhenPresent.cur ?? 0)).slice(0, 12)) {
+      const shortName = m.name.length > 72 ? m.name.slice(0, 69) + '…' : m.name;
+      const wp = m.msSelfWhenPresent.cur?.toFixed(2) ?? '—';
+      const pf = `${m.presentOnFrameCount.cur ?? '—'} / ${totalFrames.cur}`;
+      const sd = m.msPerFrameSelf.delta ?? 0;
+      lines.push(`| ${shortName} | ${wp} | ${pf} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms |`);
+    }
+    lines.push('');
+  }
+
+  const urpGroup = display.find(d => d.row.groupKey === 'urp.render');
+  if (urpGroup && urpGroup.members.length > 1) {
+    lines.push('**URP 渲染 pass 明细**（合并项展开）：', '');
+    lines.push('| pass | self ms（出现帧）cur | self ms/帧 Δ |');
+    lines.push('|---|---:|---:|');
+    for (const m of [...urpGroup.members].sort((a, b) => (b.msPerFrameSelf.delta ?? 0) - (a.msPerFrameSelf.delta ?? 0))) {
+      const wp = m.msSelfWhenPresent.cur?.toFixed(2) ?? '—';
+      const sd = m.msPerFrameSelf.delta ?? 0;
+      lines.push(`| ${m.name} | ${wp} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms |`);
+    }
+    lines.push('');
+  }
+  return lines;
+}
+
+/** §3.3+ per-hotspot 子节（展示层骨架 + LLM_FILL 分析槽） */
+function renderHotspotSubsections(summary: UnityDiffSummary, main: CallTreeDiff | undefined): string[] {
+  const lines: string[] = [];
+  const hotspots = (summary.topHotspots ?? []).slice(0, 5);
+  if (!hotspots.length) {
+    lines.push('_无 Top-N 热点（self Δ < 0.3ms/帧 或无 degraded 叶子）_', '');
+    return lines;
+  }
+
+  lines.push('### 3.2 Top 热点细化分析', '');
+  lines.push(
+    `> §3.3 ~ §3.${2 + hotspots.length} 与 **Top-N 驱动调用树 #1~#${hotspots.length}** 一一对应：` +
+    '展示层（身份 + 子函数表 + 关联事实）由 Provider 渲染；**分析层**由 LLM 填写 `LLM_FILL` 槽。',
+    '',
+  );
+
+  for (const [i, h] of hotspots.entries()) {
+    const secNum = i + 3;
+    const tag = `§3.${secNum}`;
+    const node = main && !h.isGroup ? findNodeByPath(main, h.path) : null;
+    const emoji = hotspotEmoji(h.status);
+
+    lines.push(`### 3.${secNum} ${h.name}（Top-N #${h.rank}，${emoji}）`, '');
+
+    lines.push('**身份**：', '');
+    const sd = h.msPerFrameSelf.delta ?? 0;
+    const td = h.msPerFrameTotal.delta ?? 0;
+    lines.push(`- self ms/帧 Δ ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms；total ms/帧 Δ ${td >= 0 ? '+' : ''}${td.toFixed(2)}ms`);
+    if (node && node.msPerFrameSelf.cur != null && node.msPerFrameTotal.cur != null && node.msPerFrameTotal.cur > 0) {
+      const selfRatio = ((node.msPerFrameSelf.cur / node.msPerFrameTotal.cur) * 100).toFixed(0);
+      lines.push(`- self/total = ${selfRatio}%`);
+    }
+    const gcD = h.gcAllocCount.delta ?? 0;
+    if (Math.abs(gcD) >= 1) {
+      lines.push(`- GC.Alloc Δ ${gcD >= 0 ? '+' : ''}${gcD.toFixed(0)} 次（全 trace）`);
+    }
+    if (h.status === 'newly_added') lines.push('- 🆕 base 完全没有此模块，cur 新引入');
+    lines.push('');
+    lines.push(`> 调用树见上文 **Top-N 驱动调用树 #${h.rank}**（入口 + 子 marker 拆分）`, '');
+
+    lines.push('**模块内部细分**（Provider，按 |self Δ| 降序；与驱动树子 marker 同源）：', '');
+    if (h.isGroup && h.members?.length) {
+      lines.push('| 子 marker | self Δ ms/帧 | total Δ ms/帧 | GC Δ | 状态 |');
+      lines.push('|---|---:|---:|---:|---|');
+      for (const m of h.members) {
+        const cs = m.msPerFrameSelf.delta ?? 0;
+        const ct = m.msPerFrameTotal.delta ?? 0;
+        const cg = m.gcAllocCount.delta ?? 0;
+        lines.push(
+          `| ${m.name} | ${cs >= 0 ? '+' : ''}${cs.toFixed(2)}ms | ${ct >= 0 ? '+' : ''}${ct.toFixed(2)}ms | ${cg >= 0 ? '+' : ''}${cg.toFixed(0)} | ${hotspotEmoji(m.status)} |`,
+        );
+      }
+      lines.push('');
+    } else {
+      const children = collectHotspotChildBreakdown(node, 10);
+      if (children.length) {
+        lines.push('| 子 marker | self Δ ms/帧 | total Δ ms/帧 | GC Δ | 状态 |');
+        lines.push('|---|---:|---:|---:|---|');
+        for (const c of children) {
+          const cs = c.msPerFrameSelf.delta ?? 0;
+          const ct = c.msPerFrameTotal.delta ?? 0;
+          const cg = c.gcAllocCount.delta ?? 0;
+          lines.push(
+            `| ${c.name} | ${cs >= 0 ? '+' : ''}${cs.toFixed(2)}ms | ${ct >= 0 ? '+' : ''}${ct.toFixed(2)}ms | ${cg >= 0 ? '+' : ''}${cg.toFixed(0)} | ${hotspotEmoji(c.status)} |`,
+          );
+        }
+        lines.push('');
+      } else {
+        lines.push('_无显著子节点 Δ（叶子热点或子树未展开）_', '');
+      }
+    }
+
+    lines.push('**关联事实**（展示层，可校验）：', '');
+    const gcRelated = summary.gcAttribution.topSubtrees
+      .filter(s => h.path.includes(s.name) || s.path.includes(h.name) || h.path.endsWith(s.name))
+      .slice(0, 2);
+    if (gcRelated.length) {
+      for (const g of gcRelated) {
+        const gd = g.gcAlloc.delta ?? 0;
+        lines.push(`- §5 GC 子树 \`${g.name}\`：Δ ${gd >= 0 ? '+' : ''}${gd.toFixed(0)} 次`);
+      }
+    } else {
+      lines.push('- _本节无直接 GC 叶子归因；见 §5 总表_');
+    }
+    lines.push('');
+
+    lines.push(`**业务含义**：<!-- LLM_FILL:${tag}:业务含义: 60-120字，解读上表数字与场景；禁止编造子函数名 -->`, '');
+    lines.push(`**调用入口**：<!-- LLM_FILL:${tag}:调用入口: 1句，节点须出现在 §3 callTree 或上表 -->`, '');
+    lines.push(`**优化方向**：<!-- LLM_FILL:${tag}:优化方向: 3-5条bullet，每条引用上表子 marker -->`, '');
+    lines.push(`**探索（待验证）**：<!-- LLM_FILL:${tag}:探索: 1-2条跨§假设，须标注依据，允许「可能」 -->`, '');
+    lines.push('', '---', '');
+  }
+  return lines;
+}
+
+function renderSection8RoiIndex(summary: UnityDiffSummary, main: CallTreeDiff | undefined): string[] {
+  const lines: string[] = [];
+  const hotspots = (summary.topHotspots ?? collectUniqueDegradedLeaves(main, 5).map((n, i) => ({
+    rank: i + 1, name: n.name, path: n.path,
+    msPerFrameSelf: n.msPerFrameSelf, msPerFrameTotal: n.msPerFrameTotal,
+    gcAllocCount: n.gcAllocCount, status: n.status,
+  }))).slice(0, 5);
+
+  lines.push('> 详细分析见 §3.3 ~ §3.' + (hotspots.length ? 2 + hotspots.length : 'N') + '；本节为 ROI 优先级索引。', '');
+  if (hotspots.length) {
+    lines.push('| 优先级 | 模块 | self Δ ms/帧 | 详见 |');
+    lines.push('|---:|---|---:|---|');
+    for (const [i, h] of hotspots.entries()) {
+      const sd = h.msPerFrameSelf.delta ?? 0;
+      lines.push(`| P${i + 1} | ${h.name} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms | §3.${i + 3} |`);
+    }
+  } else {
+    lines.push('- 无显著回归热点，本版本稳定或改善');
+  }
+  lines.push('');
+  lines.push('_§8 为索引；业务叙事与优化方向在 §3.x 的 LLM_FILL 槽填写。_', '');
+  return lines;
+}
+
+/** 资源加载 / Cleanup Job 等高频低耗时噪声名 */
+function isNoiseCallTreeName(name: string): boolean {
+  if (isPbDecodeName(name)) return true;
+  if (isResMarkerName(name)) return true;
+  if (/^\[res\](goLoader|assetLoader|abLoader)_async:/.test(name)) return true;
+  if (/^\[res\]go: assets\//.test(name)) return true;
+  if (/\(Cleanup\):/.test(name)) return true;
+  if (/^ParticleSystem\.(GeometryJob|ColorOverLifetime|Sort|TextureSheet)/.test(name)) return true;
+  if (/^(GatherChunksAndOffsetsJob|UnsafeHashMapDataDisposeJob|Instantiate\.Copy)$/.test(name)) return true;
+  if (/^mscorlib\.dll!System::Func/.test(name)) return true;
+  if (/^VisualWrapper\.BindShadow$/.test(name)) return true;
+  if (/^AssetRefCnt\./.test(name)) return true;
+  if (/^Instantiate(\.|$)/.test(name)) return true;
+  return false;
+}
+
+function isInterestingCallTreeNode(node: CallTreeNodeDiff): boolean {
+  if (isNoiseCallTreeName(node.name)) return false;
+
+  const curTotal = node.msPerFrameTotal.cur ?? 0;
+  const baseTotal = node.msPerFrameTotal.base ?? 0;
+  const totalDelta = Math.abs(node.msPerFrameTotal.delta ?? 0);
+  const selfDelta = Math.abs(node.msPerFrameSelf.delta ?? 0);
+  const gcDelta = Math.abs(node.gcAllocCount.delta ?? 0);
+
+  if (node.status === 'improved') {
+    return totalDelta >= TREE_MIN_IMPROVED_DELTA_MS;
+  }
+  if (node.status === 'degraded') {
+    return totalDelta >= TREE_MIN_TOTAL_DELTA_MS || selfDelta >= TREE_MIN_SELF_DELTA_MS || gcDelta >= TREE_MIN_GC_DELTA;
+  }
+  if (node.status === 'newly_added') {
+    return curTotal >= TREE_MIN_CUR_MS || gcDelta >= 500;
+  }
+  if (node.status === 'removed') {
+    return baseTotal >= TREE_MIN_CUR_MS || gcDelta >= 500;
+  }
+  // stable：仅高耗时或有明显 Δ（纯 gc 小抖动不展示）
+  return curTotal >= 1.0 || totalDelta >= TREE_MIN_TOTAL_DELTA_MS;
+}
+
+function isOnHotspotAncestorPath(nodePath: string, hotspotPaths: string[]): boolean {
+  return hotspotPaths.some(hp => hp === nodePath || hp.startsWith(nodePath + '▸'));
+}
+
+function shouldShowCallTreeNode(node: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  if (isNoiseCallTreeName(node.name)) {
+    return node.children.some(c => shouldShowCallTreeNode(c, ctx));
+  }
+  return effectiveTreeTier(node, ctx) !== 'hide';
+}
+
+/** 调度/容器透传节点（self≈0，子树承载真实工作） */
+const PLUMBING_NAME_RE = /(\.|^)sampler_/i;
+
+function isManagerLikeName(name: string): boolean {
+  if (/\.(sampler_|ProcessTasks|EntityTask|TimeoutTask)/i.test(name)) return false;
+  if (name === 'MapSignificanceMgr' || name === 'BattleHeadMgr') return true;
+  if (/^CS:AOE\./.test(name) && /(Mgr|Manager|UIManager)$/.test(name)) return true;
+  return false;
+}
+
+function isBudgetModule(node: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  return ctx.budgetPaths.includes(node.path);
+}
+
+function isModuleTaskLeaf(node: CallTreeNodeDiff): boolean {
+  return /ProcessTask_/i.test(node.name);
+}
+
+function isPlumbingNode(node: CallTreeNodeDiff): boolean {
+  if (isManagerLikeName(node.name)) return false;
+  if (PLUMBING_NAME_RE.test(node.name)) return true;
+  if (/\.(ProcessTasks|EntityTask|TimeoutTask)$/i.test(node.name)) return true;
+  if (/\.On\w+Schedule$/.test(node.name) && (node.msPerFrameSelf.cur ?? 0) < 0.08) return true;
+  if (/\.OnUpdate$/.test(node.name)) return false;
+  const self = node.msPerFrameSelf.cur ?? 0;
+  const total = node.msPerFrameTotal.cur ?? 0;
+  if (node.children.length > 0 && total > 0.05 && self / total < 0.03 && Math.abs(node.msPerFrameSelf.delta ?? 0) < 0.05) {
+    return true;
+  }
+  return false;
+}
+
+/** 帧预算 Top-N 下的子系统入口（MapManager → LineMgr / BattleUIManager） */
+function isSubsystemEntry(child: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  if (isBudgetModule(child, ctx)) return true;
+  if (ctx.budgetPaths.some(p => p.startsWith(child.path + '▸') || p === child.path)) return true;
+  const selfD = Math.abs(child.msPerFrameSelf.delta ?? 0);
+  const totalD = Math.abs(child.msPerFrameTotal.delta ?? 0);
+  return selfD >= 0.3 || totalD >= 0.5;
+}
+
+/** 提权到模块树的任务级节点（ProcessTask_* / 出现帧热点） */
+function isPromotedTaskNode(node: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  if (/ProcessTask_/i.test(node.name)) {
+    const td = Math.abs(node.msPerFrameTotal.delta ?? 0);
+    const cur = node.msPerFrameTotal.cur ?? 0;
+    return td >= 0.12 || cur >= 0.15 || (node.status === 'newly_added' && cur >= 0.08);
+  }
+  if (ctx.presentPaths.includes(node.path)) {
+    const cur = node.msPerFrameTotal.cur ?? 0;
+    return cur >= 0.08 || node.status === 'newly_added';
+  }
+  return false;
+}
+
+function dedupeNodesByPath(nodes: CallTreeNodeDiff[]): CallTreeNodeDiff[] {
+  const seen = new Set<string>();
+  const out: CallTreeNodeDiff[] = [];
+  for (const n of nodes) {
+    if (seen.has(n.path)) continue;
+    seen.add(n.path);
+    out.push(n);
+  }
+  return out;
+}
+
+function flattenModuleDescendants(node: CallTreeNodeDiff, ctx: TreeRenderCtx, depth = 0): CallTreeNodeDiff[] {
+  if (depth > 14) return [];
+  const out: CallTreeNodeDiff[] = [];
+  for (const c of node.children) {
+    if (isNoiseCallTreeName(c.name)) {
+      out.push(...flattenModuleDescendants(c, ctx, depth + 1));
+      continue;
+    }
+    if (isBudgetModule(c, ctx)) {
+      out.push(c);
+      continue;
+    }
+    if (isPlumbingNode(c)) {
+      out.push(...flattenModuleDescendants(c, ctx, depth + 1));
+      continue;
+    }
+    if (isModuleTaskLeaf(c) && isPromotedTaskNode(c, ctx)) {
+      out.push(c);
+      continue;
+    }
+    if (isSubsystemEntry(c, ctx) && isManagerLikeName(c.name)) {
+      out.push(c);
+      continue;
+    }
+    if (c.children.some(ch => isModuleTaskLeaf(ch) || isPlumbingNode(ch) || isBudgetModule(ch, ctx))) {
+      out.push(...flattenModuleDescendants(c, ctx, depth + 1));
+    }
+  }
+  return dedupeNodesByPath(out);
+}
+
+/** 聚合模块：MapSignificanceMgr 类（含 sampler 节点名） */
+function isModuleAggregator(node: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  if (isStageName(node.name) || isBudgetModule(node, ctx) || isModuleTaskLeaf(node)) return false;
+  if (node.name === 'MapSignificanceMgr' || /^MapSignificanceMgr\.sampler_/i.test(node.name)) return true;
+  const totalD = node.msPerFrameTotal.delta ?? 0;
+  if (totalD < 0.25) return false;
+  const tasks = flattenModuleDescendants(node, ctx).filter(n => isModuleTaskLeaf(n));
+  return tasks.length >= 2;
+}
+
+function isModuleContainer(node: CallTreeNodeDiff): boolean {
+  return /OnTick&UpdateSchedule$/.test(node.name)
+    || /OnLateUpdateSchedule$/.test(node.name);
+}
+
+function isModuleBoundary(node: CallTreeNodeDiff, ctx: TreeRenderCtx): boolean {
+  if (isModuleAggregator(node, ctx) || isBudgetModule(node, ctx) || isModuleTaskLeaf(node)) return true;
+  if (isModuleContainer(node)) return true;
+  return isManagerLikeName(node.name);
+}
+
+function getModuleTreeChildren(node: CallTreeNodeDiff, ctx: TreeRenderCtx): CallTreeNodeDiff[] {
+  if (node.name === 'PlayerLoop') {
+    return node.children.filter(c => !isNoiseCallTreeName(c.name) && shouldShowCallTreeNode(c, ctx));
+  }
+  if (!ctx.inBusinessSpine) return [];
+
+  if (isBudgetModule(node, ctx) || isModuleTaskLeaf(node)) return [];
+
+  if (isModuleAggregator(node, ctx)) {
+    return flattenModuleDescendants(node, ctx)
+      .filter(n => isModuleTaskLeaf(n) && isPromotedTaskNode(n, ctx))
+      .sort((a, b) => Math.abs(b.msPerFrameTotal.delta ?? 0) - Math.abs(a.msPerFrameTotal.delta ?? 0))
+      .slice(0, 8);
+  }
+
+  // 叶子 Mgr（无子 Mgr）：不展开业务子树；BattleHeadMgr 保留 .OnUpdate
+  if (isManagerLikeName(node.name)) {
+    const scheduleKids = node.children.filter(c => isModuleContainer(c) && shouldShowCallTreeNode(c, ctx));
+    if (scheduleKids.length) return scheduleKids;
+
+    const hasSubManager = node.children.some(c =>
+      !isNoiseCallTreeName(c.name) && (isManagerLikeName(c.name) || isModuleAggregator(c, ctx)),
+    );
+    if (!hasSubManager) {
+      return node.children.filter(c =>
+        /\.OnUpdate$/.test(c.name) && !isNoiseCallTreeName(c.name) && shouldShowCallTreeNode(c, ctx),
+      );
+    }
+  }
+
+  // 阶段 / 调度链：正常向下导航，直到模块边界
+  if (!isModuleBoundary(node, ctx)) {
+    return node.children.filter(c => !isNoiseCallTreeName(c.name) && shouldShowCallTreeNode(c, ctx));
+  }
+
+  // 模块容器（MapManager / Lua Schedule）：只展示子系统入口
+  const direct: CallTreeNodeDiff[] = [];
+  for (const c of node.children) {
+    if (isNoiseCallTreeName(c.name)) continue;
+    if (!shouldShowCallTreeNode(c, ctx)) continue;
+    if (isPlumbingNode(c)) {
+      const inner = flattenModuleDescendants(c, ctx).filter(n =>
+        isModuleAggregator(n, ctx) || (isSubsystemEntry(n, ctx) && isManagerLikeName(n.name)),
+      );
+      direct.push(...inner);
+      continue;
+    }
+    if (isModuleAggregator(c, ctx)) {
+      direct.push(c);
+    } else if (isSubsystemEntry(c, ctx) && isManagerLikeName(c.name)) {
+      direct.push(c);
+    } else if (isSubsystemEntry(c, ctx) && /\.OnUpdate$/.test(c.name)) {
+      direct.push(c);
+    }
+  }
+  return dedupeNodesByPath(direct).sort(
+    (a, b) => Math.abs(b.msPerFrameTotal.delta ?? 0) - Math.abs(a.msPerFrameTotal.delta ?? 0),
+  );
+}
+
+function renderModuleCallTreeNode(node: CallTreeNodeDiff, depth: number, lines: string[], ctx: TreeRenderCtx) {
+  const nodeCtx = withBusinessSpine(ctx, node);
+  if (isNoiseCallTreeName(node.name)) {
+    for (const c of getModuleTreeChildren(node, nodeCtx)) {
+      renderModuleCallTreeNode(c, depth, lines, withBusinessSpine(nodeCtx, c));
+    }
     return;
   }
-  const indent = '  '.repeat(Math.min(depth, 8));
-  const emoji = node.status === 'degraded' ? '🔴' : node.status === 'improved' ? '🟢' : node.status === 'newly_added' ? '🆕' : node.status === 'removed' ? '➖' : '⚪';
-  const ms = fmtPair(node.msPerFrameTotal, 'ms').replace(/[🔴🟢🆕➖⚪]/g, '').trim();
-  const gc = node.gcAllocCount.delta != null && Math.abs(node.gcAllocCount.delta) >= 100 ? ` gcΔ=${node.gcAllocCount.delta > 0 ? '+' : ''}${node.gcAllocCount.delta.toFixed(0)}` : '';
-  lines.push(`${indent}└─ ${node.name}: ${ms} ${emoji}${gc}`);
-  maxLines.remaining--;
-  for (const c of node.children) renderCallTreeNode(c, depth + 1, maxLines, lines);
+  const tier = effectiveTreeTier(node, ctx);
+  if (tier === 'hide') return;
+  lines.push(`${'  '.repeat(depth)}└─ ${formatCallTreeNodeLine(node, tier)}`);
+  for (const c of getModuleTreeChildren(node, nodeCtx)) {
+    renderModuleCallTreeNode(c, depth + 1, lines, withBusinessSpine(nodeCtx, c));
+  }
+}
+
+/** PlayerLoop phase 总览（折叠完整树），与 Top-N 驱动树互补 */
+function renderPhaseOverviewTree(main: CallTreeDiff, summary: UnityDiffSummary): string[] {
+  const lines: string[] = [];
+  const budgetPaths = (summary.topHotspots ?? []).flatMap(h =>
+    h.isGroup && h.members ? h.members.map(m => m.path) : [h.path],
+  );
+  lines.push('### 主线程 phase 总览（折叠完整树）', '');
+  lines.push(
+    '> **全局结构**：PlayerLoop 各 phase 一行；Update/LateUpdate **业务链**展开到模块边界。' +
+    '下方 Top-N 表/驱动树按 **# 优先级** 展开；节点级全量见 `unity-diff-summary.json`。',
+    '',
+  );
+  const treeCtx: TreeRenderCtx = {
+    budgetPaths,
+    presentPaths: (summary.topHotspotsPresent ?? []).map(h => h.path),
+    inBusinessSpine: false,
+  };
+  lines.push('```');
+  for (const r of main.roots) renderModuleCallTreeNode(r, 0, lines, treeCtx);
+  lines.push('```', '');
+  return lines;
 }
 
 export function buildSkeletonMarkdown(summary: UnityDiffSummary): string {
@@ -584,23 +1452,19 @@ export function buildSkeletonMarkdown(summary: UnityDiffSummary): string {
   }
   lines.push('', '---', '');
 
-  // §3 主线程业务子树 Δ
-  lines.push('## §3 主线程业务子树 Δ (aggregatedCallTrees)', '');
+  // §3 主线程热点与调用树
+  lines.push('## §3 主线程热点与调用树 (aggregatedCallTrees)', '');
   if (main) {
     lines.push(`Main Thread ms/帧: ${fmtPair(main.msPerFrameTotal, 'ms')}`, '');
-    lines.push('```');
-    const remaining = { remaining: 40 };
-    for (const r of main.roots) renderCallTreeNode(r, 0, remaining, lines);
-    lines.push('```');
     const topN = summary.topHotspots?.length
       ? summary.topHotspots
-      : collectUniqueDegradedLeaves(main, 8).map((n, i) => ({
-          rank: i + 1, name: n.name, path: n.path,
-          msPerFrameSelf: n.msPerFrameSelf, msPerFrameTotal: n.msPerFrameTotal,
-          gcAllocCount: n.gcAllocCount, status: n.status,
-        }));
+      : buildBudgetHotspotDisplayRows(
+          collectUniqueDegradedLeaves(main, 16).map((n, i) => toHotspotRow(n, i + 1)),
+          8,
+        );
     if (topN.length) {
-      lines.push('', '### Top-N 主线程热点 (msSelf Δ)', '');
+      lines.push(...renderPhaseOverviewTree(main, summary));
+      lines.push('### Top-N 主线程热点（帧预算，self ms/帧 ÷总帧数）', '');
       lines.push('| # | 模块 | self ms/帧 Δ | total ms/帧 Δ | GC.Alloc Δ (全trace 次数) | 状态 |');
       lines.push('|---:|---|---:|---:|---:|---|');
       for (const row of topN) {
@@ -610,7 +1474,15 @@ export function buildSkeletonMarkdown(summary: UnityDiffSummary): string {
         const emoji = row.status === 'degraded' ? '🔴' : row.status === 'newly_added' ? '🆕' : row.status === 'improved' ? '🟢' : '⚪';
         lines.push(`| ${row.rank} | ${row.name} | ${sd >= 0 ? '+' : ''}${sd.toFixed(2)}ms | ${td >= 0 ? '+' : ''}${td.toFixed(2)}ms | ${gc >= 0 ? '+' : ''}${gc.toFixed(0)} | ${emoji} |`);
       }
-      lines.push('', '<!-- ENRICH_FILL:§3要点 -->', '');
+      lines.push('');
+      lines.push(...renderTopNDrivenCallTree(main, topN, 5));
+      const presentN = summary.topHotspotsPresent ?? [];
+      if (presentN.length) {
+        lines.push(...renderPresentHotspotSection(presentN, meta));
+      }
+      lines.push(...renderHotspotSubsections(summary, main));
+    } else {
+      lines.push('_无 Top-N 热点（self Δ < 0.3ms/帧 或无 degraded 叶子）_');
     }
   } else {
     lines.push('_主线程数据缺失_');
@@ -688,62 +1560,10 @@ export function buildSkeletonMarkdown(summary: UnityDiffSummary): string {
   }
   lines.push('---', '');
 
-  // §8 可执行建议
+  // §8 可执行建议 — ROI 索引（详细分析在 §3.x）
   lines.push('## §8 可执行建议（按 ROI）', '');
-  const uniqueByLeaf = collectUniqueDegradedLeaves(main, 5);
-
-  uniqueByLeaf.forEach((n, i) => {
-    lines.push(`### P${i + 1} — 削减 ${n.name} (self ${(n.msPerFrameSelf.delta ?? 0).toFixed(2)}ms/帧 回归)`);
-    lines.push('');
-    lines.push('**身份**：');
-    lines.push(`- 路径：\`${n.path}\``);
-    lines.push(`- self ms/帧 ${fmtPair(n.msPerFrameSelf, 'ms')}`);
-    lines.push(`- total ms/帧 ${fmtPair(n.msPerFrameTotal, 'ms')}`);
-    if (n.msPerFrameSelf.cur != null && n.msPerFrameTotal.cur != null && n.msPerFrameTotal.cur > 0) {
-      const selfRatio = ((n.msPerFrameSelf.cur / n.msPerFrameTotal.cur) * 100).toFixed(0);
-      lines.push(`- self/total = ${selfRatio}% （${Number(selfRatio) > 70 ? '⚠️ 自身循环即瓶颈，优化收益高' : '主要由子节点贡献，需进一步下钻'}）`);
-    }
-    if (n.gcAllocCount.delta != null && Math.abs(n.gcAllocCount.delta) >= 100) {
-      lines.push(`- gcAlloc Δ ${n.gcAllocCount.delta > 0 ? '+' : ''}${n.gcAllocCount.delta.toFixed(0)} 次/全trace（${n.gcAllocCount.delta > 0 ? '同步 GC 风险升高' : '同步 GC 风险降低'}）`);
-    }
-    if (n.status === 'newly_added') lines.push(`- 🆕 base 完全没有此模块，cur 新引入`);
-    lines.push('');
-
-    lines.push('**业务含义** (_AI_FILL: 2-3 句话解释为什么 base→cur 此模块负载暴涨/出现，结合压测场景与业务知识_)：');
-    lines.push('- _待 AI 填充：业务背景解释_');
-    lines.push('');
-
-    lines.push('**本源边界** (_AI_FILL: Profile 数据能 / 不能告诉你什么_)：');
-    lines.push('- _待 AI 填充：哪些诊断 self/total 已经能定，哪些需要 Frame Debugger / RenderDoc / Memory Profiler 复核_');
-    lines.push('');
-
-    lines.push('**优化方向** (_AI_FILL: ≥3 条具体可操作项_)：');
-    lines.push('1. _待 AI 填充：第一优化方向_');
-    lines.push('2. _待 AI 填充：第二优化方向_');
-    lines.push('3. _待 AI 填充：第三优化方向_');
-    lines.push('');
-
-    // 模块内部细分（Provider 直接给数据）
-    if (n.children && n.children.length) {
-      const subDegraded = n.children
-        .filter(c => c.status === 'degraded' || c.status === 'newly_added')
-        .filter(c => Math.abs(c.msPerFrameSelf.delta ?? 0) >= 0.05 || Math.abs(c.msPerFrameTotal.delta ?? 0) >= 0.1)
-        .sort((a, b) => Math.abs(b.msPerFrameSelf.delta ?? 0) - Math.abs(a.msPerFrameSelf.delta ?? 0))
-        .slice(0, 6);
-      if (subDegraded.length) {
-        lines.push('**模块内部细分**（Provider 数据，AI 不准改）：');
-        for (const c of subDegraded) {
-          const selfStr = `self ${c.msPerFrameSelf.base?.toFixed(2) ?? '—'}→${c.msPerFrameSelf.cur?.toFixed(2) ?? '—'}ms`;
-          const dlt = c.msPerFrameSelf.delta == null ? '' : ` (${c.msPerFrameSelf.delta >= 0 ? '+' : ''}${c.msPerFrameSelf.delta.toFixed(2)}ms)`;
-          const emoji = c.status === 'newly_added' ? '🆕' : '🔴';
-          lines.push(`- ${c.name}: ${selfStr}${dlt} ${emoji}`);
-        }
-        lines.push('');
-      }
-    }
-  });
-  if (!uniqueByLeaf.length) lines.push('- 无显著回归，本版本稳定或改善');
-  lines.push('', '---', '', `_本骨架由 unity-diff-builder 自动产出，含 5 段标准结构（身份/业务含义/本源边界/优化方向/细分）。AI 仅填充标记 \`_AI_FILL_\` 的部分。_`);
+  lines.push(...renderSection8RoiIndex(summary, main));
+  lines.push('', '---', '', '_本骨架由 unity-diff-builder 自动产出。展示层表格/树由 Provider 锁定；§3.x 的 `LLM_FILL` 槽由 AI 填写分析叙事。_');
 
   return lines.join('\n');
 }
