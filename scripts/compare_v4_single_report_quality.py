@@ -20,6 +20,7 @@ REQUIRED = [
 def main():
     report = Path(sys.argv[1] if len(sys.argv) > 1 else "")
     min_ratio = float(sys.argv[2]) if len(sys.argv) > 2 else 0.75
+    baseline = Path(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else None
     if not report.is_file():
         print(f"FAIL: missing report {report}")
         sys.exit(1)
@@ -32,12 +33,15 @@ def main():
     llm_left = text.count("LLM_FILL")
     if llm_left:
         errors.append(f"LLM_FILL left={llm_left}")
-    gold = Path(__file__).resolve().parents[1] / "output" / "samples" / "simpleperf-single" / "performance-report.web-stressmove.md"
-    if gold.is_file():
-        gold_lines = gold.read_text(encoding="utf-8").count("\n") + 1
-        ratio = lines / gold_lines
+    ref = baseline if baseline and baseline.is_file() else (
+        Path(__file__).resolve().parents[1] / "output" / "samples" / "simpleperf-single" / "performance-report.web-stressmove.md"
+    )
+    if ref.is_file():
+        ref_lines = ref.read_text(encoding="utf-8").count("\n") + 1
+        ratio = lines / ref_lines
         if ratio < min_ratio:
-            errors.append(f"thickness {ratio:.2f}x < {min_ratio}")
+            label = "baseline" if baseline and baseline.is_file() else "gold"
+            errors.append(f"thickness {ratio:.2f}x < {min_ratio} (vs {label})")
     if errors:
         print("FAIL:", "; ".join(errors), f"({lines} lines)")
         sys.exit(1)

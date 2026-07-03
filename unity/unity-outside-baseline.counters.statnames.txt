@@ -1,0 +1,108 @@
+=== ProfilerArea stat names (auto-dump) ===
+
+[CPU] (9):
+  - Rendering
+  - Scripts
+  - Physics
+  - Animation
+  - GarbageCollector
+  - VSync
+  - Global Illumination
+  - UI
+  - Others
+
+[GPU] (7):
+  - Opaque
+  - Transparent
+  - Shadows/Depth
+  - Deferred PrePass
+  - Deferred Lighting
+  - PostProcess
+  - Other
+
+[Rendering] (4):
+  - Batches
+  - SetPass Calls
+  - Triangles
+  - Vertices
+
+[Memory] (8):
+  - Total Allocated
+  - Particle Memory
+  - Texture Memory
+  - Mesh Memory
+  - Material Count
+  - Object Count
+  - Total GC Allocated
+  - GC Allocated
+
+[Audio] (4):
+  - Playing Audio Sources
+  - Audio Voices
+  - Total Audio CPU
+  - Total Audio Memory
+
+[Video] (4):
+  - Total Video Sources
+  - Playing Video Sources
+  - Pre-buffered frames
+  - Total Video Memory
+
+[Physics] (7):
+  - Active Dynamic
+  - Active Kinematic
+  - Static Colliders
+  - Rigidbody
+  - Trigger Overlaps
+  - Active Constraints
+  - Contacts
+
+[Physics2D] (9):
+  - Total Bodies
+  - Active Bodies
+  - Sleeping Bodies
+  - Dynamic Bodies
+  - Kinematic Bodies
+  - Static Bodies
+  - Contacts
+  - Discrete Island Count
+  - Continuous Island Count
+
+[NetworkMessages] (7):
+  - Protocol Packets In
+  - Buffered Msgs In
+  - Unbuffered Msgs In
+  - Protocol Packets Out
+  - Buffered Msgs Out
+  - Unbuffered Msgs Out
+  - Pending Buffers
+
+[NetworkOperations] (8):
+  - Command
+  - ClientRPC
+  - SyncVar
+  - Sync List
+  - Sync Event
+  - User Message
+  - Object Destroy
+  - Object Create
+
+[UI] (2):
+  - Layout
+  - Render
+
+[UIDetails] (2):
+  - Batches
+  - Vertices
+
+[GlobalIllumination] (10):
+  - Total CPU
+  - Light Probe
+  - Setup
+  - Environment
+  - Input Lighting
+  - Systems
+  - Solve Tasks
+  - Dynamic Objects
+  - Other Commands
+  - Blocked Command Write

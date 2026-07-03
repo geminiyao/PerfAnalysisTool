@@ -524,6 +524,58 @@ export async function runIngestRoutes(app: FastifyInstance) {
     return reply.status(202).send(jobPayload(job.id));
   });
 
+  /** Phase A.4: Unity 双版本对比 — 上传 base/cur .pdata */
+  app.post('/runs/ingest/unity-compare', async (request, reply) => {
+    const parts = request.parts();
+    const fields: Record<string, string> = {};
+    const byRole: Record<'base' | 'cur', string | null> = { base: null, cur: null };
+    const jobDir = path.join(getConfig().dataDir, 'uploads', 'ingest', uuid());
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        const role = part.fieldname as 'base' | 'cur';
+        if (!['base', 'cur'].includes(role)) {
+          await part.file.resume?.();
+          continue;
+        }
+        const ext = path.extname(part.filename || '').toLowerCase();
+        if (ext !== '.pdata') {
+          return reply.status(400).send({ error: `${role} 仅支持 .pdata 文件` });
+        }
+        const dest = safeUploadPath(path.join(jobDir, role), part.filename || 'profile.pdata');
+        await saveUpload(part.file, dest);
+        byRole[role] = dest;
+      } else if (part.type === 'field') {
+        fields[part.fieldname] = String(part.value);
+      }
+    }
+
+    if (!byRole.base || !byRole.cur) {
+      return reply.status(400).send({ error: '需要上传 base 与 cur 两份 .pdata' });
+    }
+
+    const meta = metaFromFields(fields);
+    const cliProvider = (fields.cliProvider as 'codebuddy' | 'claude' | 'mock' | undefined) || undefined;
+    const skipAiEnrich = fields.skipAiEnrich === 'true' || fields.skipAiEnrich === '1';
+    const job = createIngestJob('unity_compare');
+    runUnityCompareIngestJob(job.id, {
+      input: {
+        basePdataPath: byRole.base,
+        curPdataPath: byRole.cur,
+        baseLabel: fields.baseLabel,
+        curLabel: fields.curLabel,
+        device: fields.device,
+        scene: fields.scene,
+        targetFps: meta.targetFps,
+      },
+      meta,
+      cliProvider,
+      skipAiEnrich,
+    });
+    return reply.status(202).send(jobPayload(job.id));
+  });
+
   /** Phase A.4: Unity 双版本对比 — 本地路径模式 */
   app.post('/runs/ingest/unity-compare/local', async (request, reply) => {
     const body = request.body as {
@@ -569,7 +621,7 @@ export async function runIngestRoutes(app: FastifyInstance) {
       cliProvider: body.cliProvider,
       skipAiEnrich: body.skipAiEnrich,
     });
-    return { jobId: job.id };
+    return reply.status(202).send(jobPayload(job.id));
   });
 
   /** 合并已有单源 Run → 多源 Run */

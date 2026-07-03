@@ -408,6 +408,21 @@ export function ingestSimpleperfDiffBundleRun(
   return ingestWithProgress(() => postIngestMultipart('/runs/ingest/simpleperf-diff/bundle', fd), onEvent);
 }
 
+/** Phase A.4: Unity 双版本对比 — 上传 .pdata */
+export function ingestUnityCompareRun(
+  files: { base: File; cur: File },
+  meta: Record<string, string | number | boolean | undefined> = {},
+  onEvent?: (event: IngestJobEvent) => void,
+) {
+  const fd = new FormData();
+  fd.append('base', files.base, uploadFileName(files.base));
+  fd.append('cur', files.cur, uploadFileName(files.cur));
+  Object.entries(meta).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') fd.append(k, String(v));
+  });
+  return ingestWithProgress(() => postIngestMultipart('/runs/ingest/unity-compare', fd), onEvent);
+}
+
 /** Phase A.4: Unity 双版本对比 — 本地路径模式 */
 export function ingestUnityCompareLocalRun(
   paths: { basePath: string; curPath: string },

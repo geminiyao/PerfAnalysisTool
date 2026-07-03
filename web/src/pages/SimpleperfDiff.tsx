@@ -89,7 +89,6 @@ const SimpleperfDiff: React.FC = () => {
       if (v.sceneCur) meta.sceneCur = v.sceneCur;
       if (v.targetFps) meta.targetFps = String(v.targetFps);
       if (v.binaryCachePath) meta.binaryCacheLocalPath = v.binaryCachePath;
-      meta.skipAiEnrich = '1';
 
       const res = await ingestSimpleperfDiffRun({ base, cur }, meta, onIngestEvent);
       setDiffId(res.diffId || res.runId);

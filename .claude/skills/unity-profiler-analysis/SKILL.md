@@ -41,6 +41,8 @@ Decision rules:
 
 Wait for this to complete before proceeding.
 
+**Web / Service 路径（Hybrid v6）**：当由 `buildUnitySingleReport()` 调度时，Step 1 之后会额外跑 `unity-single-builder.ts` 产出 `performance-report_unity_single_skeleton.md`（含全部表格/callTree + `<!-- LLM_FILL:... -->` 槽）。CLI 读 `prompts/single-prompt.txt` **只替换 LLM_FILL**，禁止改表格与代码块。质量门：`LLM_FILL==0` + 表格保留。
+
 ### Step 2: Run Source Mapping (if projectPath configured)
 
 If `config.json` has a non-empty `projectPath`, run source mapping:

@@ -1,26 +1,13 @@
 // Run 入库后的 skill 分析 (三源 CLI skill + 多源 cross builder)
 
 import fs from 'fs';
-import path from 'path';
 import type { Run, SourceId } from '../../shared/perf-model.js';
 import type { CliProvider } from '../../shared/types.js';
-import { getConfig } from '../utils/config.js';
-import { executeCli } from './cli-executor.js';
 import { generateCrossSourceAnalysisForRun } from './cross-source-analysis-service.js';
-import { saveAnalysisWithReport } from './analysis-store.js';
-import { saveReportMarkdown } from './report-export.js';
-import { saveAnalysisLogs, readPreprocessJson } from './report-artifacts.js';
-import {
-  frameCountFromMarkdown,
-  resolveUnityTargetFps,
-} from './unity-preprocess-runner.js';
-import {
-  runSourceProfileBuild,
-  resolveSimpleperfBinaryCache,
-} from './source-profile-runner.js';
-import { getSkillConfig, type SkillKind, normalizeReportInOutputDir } from './skill-config.js';
+import { resolveUnityTargetFps } from './unity-preprocess-runner.js';
+import { resolveSimpleperfBinaryCache } from './source-profile-runner.js';
+import type { SkillKind } from './skill-config.js';
 import { getRun } from './run-store.js';
-import { defaultCliProvider, isCliAvailable, cliUnavailableHint } from '../utils/cli-resolver.js';
 import type { PerfettoIngestOptions } from './run-ingest-service.js';
 
 export interface RunAnalysisOptions {
@@ -47,11 +34,6 @@ function findRawPath(run: Run, source: SourceId): string | undefined {
     r.source === source && r.localPath && fs.existsSync(r.localPath),
   );
   return ref?.localPath;
-}
-
-function extractHeadline(markdown: string, fallback: string): string {
-  const line = markdown.split('\n').find(l => l.startsWith('#'));
-  return line ? line.replace(/^#+\s*/, '').trim() : fallback;
 }
 
 async function runSingleSourceSkillAnalysis(
@@ -87,6 +69,34 @@ async function runSingleSourceSkillAnalysis(
     return { markdownPath: result.reportPath, outputDir: result.outputDir };
   }
 
+  // unity 单次：Hybrid v6 Provider 骨架 → LLM 填槽
+  if (source === 'unity_profiler') {
+    const { buildUnitySingleReport } = await import('./unity-single-service.js');
+    const result = await buildUnitySingleReport(
+      {
+        pdataPath: inputPath,
+        label: run.label,
+        device: run.meta?.device,
+        scene: run.meta?.scene,
+        targetFps: resolveUnityTargetFps(opts.targetFps, run.meta),
+      },
+      {
+        meta: {
+          runId,
+          label: run.label,
+          device: run.meta?.device,
+          scene: run.meta?.scene,
+          projectName: run.meta?.projectName,
+          version: run.meta?.version,
+        },
+        cliProvider: opts.cliProvider,
+        skipAiEnrich: false,
+        onLog: opts.onLog,
+      },
+    );
+    return { markdownPath: result.reportPath, outputDir: result.outputDir };
+  }
+
   // simpleperf 单次：Hybrid v4 Provider → enrich → CLI
   if (source === 'simpleperf') {
     const { buildSimpleperfSingleReport } = await import('./simpleperf-single-service.js');
@@ -115,97 +125,7 @@ async function runSingleSourceSkillAnalysis(
     return { markdownPath: result.reportPath, outputDir: result.outputDir };
   }
 
-  const config = getConfig();
-  const outputDir = path.join(config.dataDir, 'results', runId);
-  fs.mkdirSync(outputDir, { recursive: true });
-
-  const meta = { label: run.label, device: run.meta?.device, scene: run.meta?.scene };
-  const skillMeta = SINGLE_SOURCE_SKILLS[source];
-  const cfg = getSkillConfig(source);
-
-  let cliProvider = opts.cliProvider ?? defaultCliProvider(config.cliPaths);
-  if (cliProvider !== 'mock' && !isCliAvailable(cliProvider, config.cliPaths?.[cliProvider])) {
-    opts.onLog?.(`[warn] ${cliUnavailableHint(cliProvider)} 已回退 Mock 模式`);
-    cliProvider = 'mock';
-  }
-
-  opts.onLog?.(`[skill] 重建 ${source} profile → ${outputDir}`);
-  await runSourceProfileBuild(source, inputPath, outputDir, {
-    targetFps: resolveUnityTargetFps(opts.targetFps, run.meta),
-    perfetto: opts.perfetto,
-    binaryCachePath: opts.binaryCachePath ?? resolveSimpleperfBinaryCache(run.profile.raw),
-    meta,
-    onLog: opts.onLog,
-  });
-
-  if (source === 'unity_profiler') {
-    const preSrc = path.join(outputDir, 'preprocess-result.json');
-    if (!fs.existsSync(preSrc)) {
-      const unitySummary = path.join(outputDir, 'unity-profile-summary.json');
-      if (fs.existsSync(unitySummary)) {
-        opts.onLog?.('[skill] 使用 build-profile 产出 (无 preprocess-result.json 副本)');
-      }
-    }
-  }
-
-  opts.onLog?.(`[skill] ${skillMeta.skill} (${cliProvider}) → ${outputDir}`);
-
-  const result = await executeCli({
-    sessionId: runId,
-    skill: source,
-    inputPath,
-    outputDir,
-    cliProvider,
-    params: { targetFps: resolveUnityTargetFps(opts.targetFps, run.meta) },
-    onLog: opts.onLog,
-  });
-
-  if (result.logs?.length) saveAnalysisLogs(runId, result.logs);
-
-  if (!result.success) {
-    throw new Error(result.error || `${skillMeta.skill} 分析失败`);
-  }
-
-  normalizeReportInOutputDir(outputDir);
-  const reportPath = path.join(outputDir, 'performance-report.md');
-  if (!fs.existsSync(reportPath)) {
-    throw new Error('skill 未产出 performance-report.md');
-  }
-
-  const markdown = fs.readFileSync(reportPath, 'utf-8');
-
-  if (source === 'unity_profiler') {
-    const pre = readPreprocessJson(runId);
-    const reportFrames = frameCountFromMarkdown(markdown);
-    const preFrames = pre?.frameSummary && typeof (pre.frameSummary as { count?: number }).count === 'number'
-      ? (pre.frameSummary as { count: number }).count
-      : null;
-    if (reportFrames != null && preFrames != null && reportFrames !== preFrames) {
-      opts.onLog?.(`[warn] 报告帧数 ${reportFrames} ≠ preprocess ${preFrames}，Mock/旧报告可能不匹配`);
-    }
-  }
-
-  const headline = extractHeadline(markdown, cfg.reportTitleFallback);
-  const exportedPath = saveReportMarkdown(
-    skillMeta.exportDir,
-    `performance-report_${runId}`,
-    markdown,
-  );
-
-  saveAnalysisWithReport(
-    {
-      id: `analysis_${runId}_${source}`,
-      mode: 'single',
-      runIds: [runId],
-      status: 'completed',
-      skill: skillMeta.skill,
-    },
-    { headline, markdown, insights: [] },
-    { analysisId: `analysis_${runId}_${source}`, skill: skillMeta.skill },
-  );
-
-  opts.onLog?.(`[skill] 报告已入库并落盘: ${exportedPath}`);
-  return { markdownPath: exportedPath, outputDir };
+  throw new Error(`不支持的 skill 源: ${source}`);
 }
 
 /** @deprecated 使用 runSingleSourceSkillAnalysis(runId, 'unity_profiler') */

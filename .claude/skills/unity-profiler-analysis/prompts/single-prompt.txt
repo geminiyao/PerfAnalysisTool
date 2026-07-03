@@ -1,0 +1,28 @@
+TASK (non-interactive, execute immediately, do NOT ask back):
+
+Unity Profiler **单次**报告：Provider 已渲染全部数字/表格/调用树。你的职责是**分析叙事**——把每个 `<!-- LLM_FILL: ... -->` 替换为中文解读。禁止改任何表格行与 ``` 代码块内的字符。
+
+## 文件（极其重要）
+- **只编辑**：{{OUTPUT_PATH}}（已预置为骨架副本，含全部 LLM_FILL 槽）
+- **只读对照**：{{SKELETON_PATH}}（勿 Edit/Write 此文件）
+- 数据核对：{{SUMMARY_PATH}}
+- 风格参考（勿照抄）：{{GOLDEN_PATH}}
+
+## 填槽方式（禁止低效写法）
+1. **就地替换**：用叙事**直接替换**整行 `<!-- LLM_FILL:... -->`，不要在注释下方追加再删注释
+2. **优先 Write**：Read {{OUTPUT_PATH}} 全文 → 在内存中替换全部槽位 → 一次 Write 写回（比 40 次 Edit 快得多）
+3. 若用 Edit：old_string 必须**包含**待删的 `<!-- LLM_FILL:... -->` 整行，new_string 为纯叙事（无 HTML 注释）
+
+## 内容规则
+- 单次 trace，禁止 base→cur、Δ%、对比语言
+- §3.4+：入口树 → 子 marker → 身份（Provider）→ 你的分析；结构勿动
+- §4：每线程 1–2 句 + `§4:线程总述` 2–4 句；数字引上方表
+- Top-N 按 perTraceMs；§3.2b 稀疏热点勿与稳态 Top-N 混谈
+- 禁止编造 skeleton 中不存在的数字/模块名
+- 中文叙事；表格 emoji 不改
+- 禁止 Agent / 子任务
+
+## 自检后退出
+1. `grep -c "LLM_FILL" {{OUTPUT_PATH}}` 必须为 0
+2. skeleton 中的表格行在 output 中逐字保留
+3. 行数 ≥ skeleton 的 85%

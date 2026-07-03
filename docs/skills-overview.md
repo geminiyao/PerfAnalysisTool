@@ -24,8 +24,8 @@ simpleperf  ✅ 能跑                ✅ v4 diff 已完成
 | **perfetto 单次** | perfetto 单次 | ✅ | ✅ | `render_perfetto_skeleton.py`（`LLM_FILL` 占位，N=1） | 只填占位符 | `validateSingleReport` | CLI/质量门 fail → 骨架 | `buildPerfettoSingleReport()` |
 | **perfetto diff** | perfetto 对比 | ✅ | ✅ | 同上（N≥2，任意角色名） | 只填占位符 | `validateDiffReport` | 同上（L1 骨架兜底） | `buildPerfettoDiffReport()` |
 | **simpleperf diff** | simpleperf 对比 | ✅ | ✅ | Provider 渲染 v4 骨架 | Python `enrich_v4_report` + 可选 CLI 加厚 | `compare_v4_report_quality.py`（0.82/0.92/0.95） | enriched → Provider 版 | `buildSimpleperfDiffReport()` |
-| **unity 单次** | unity 单次 | ✅ | ❌ | 无报告骨架 | `executeCli` 读 summary **整篇写报告** | 仅 `checkSkillOutput`（查文件存在） | CLI 失败直接抛错，无 L1 兜底 | `runSingleSourceSkillAnalysis('unity_profiler')` |
-| **simpleperf 单次** | simpleperf 单次 | ✅ | ✅ | `v4_single_report_renderer.py`（`LLM_FILL` 占位，N=1） | Python `enrich_v4_single_report` 填大部分槽 → CLI 填 §4 等剩余 | `compare_v4_single_report_quality.py` | enriched → **provider**（L0） | `buildSimpleperfSingleReport()` |
+| **unity 单次** | unity 单次 | ✅ | ✅ | `unity-single-builder` skeleton + `LLM_FILL`（§0–§10） | CLI 填全部 `LLM_FILL` | `validateSingleReport` | CLI/质量门 fail → 骨架 | `buildUnitySingleReport()` |
+| **simpleperf 单次** | simpleperf 单次 | ✅ | ✅ | `v4_single_report_renderer.py`（`LLM_FILL` 占位，N=1） | Python `enrich_v4_single` 填大部分槽 → CLI §4 加厚 | `compare_v4_single_report_quality.py`（相对 enriched ≥0.95×） | enriched → **provider**（L0） | `buildSimpleperfSingleReport()` |
 | **三源单次 cross** | 三源单次 | ✅ | 🟡 设计中 | `buildCrossSourceMarkdown` 程序拼装（非 v6 数字隔离） | AI 整篇改写（非 `LLM_FILL` 填空） | `validateCrossSourceQuality` | fallback builder 永远可交付 | `generateCrossSourceAnalysisForRun()` |
 | **三源 diff** | 三源对比 | ❌ | ❌ | — | — | — | — | Phase C 待建 `cross-source-compare-service` |
 
@@ -41,21 +41,62 @@ node scripts/sync-sample-reports.mjs
 
 | 子目录 | 流水线 | 正式样例 | 后缀含义 |
 |---|---|---|---|
-| `unity-single/` | unity 单次 | [`performance-report.cli-sourcemap.md`](../output/samples/unity-single/performance-report.cli-sourcemap.md) | CLI + marker→源码映射 |
+| `unity-single/` | unity 单次 | [`performance-report.ai-thickened.md`](../output/p-web-unity/performance-report_usingle_e2e_outside_ai_thickened.md) | Web 正式 e2e baseline ai-authored（`LLM_FILL=0`）；stressmove 见同目录 `*_stressmove_*` |
 | `unity-diff/` | unity 对比 | [`performance-report.ai-thickened.md`](../output/samples/unity-diff/performance-report.ai-thickened.md) | Web 正式 ai-thickened（enrich + CLI 填 `LLM_FILL` + 质量门 PASS）；快验见 [`enriched-v2.md`](../output/samples/unity-diff/performance-report.enriched-v2.md) |
 | `perfetto-single/` | perfetto 单次 | [`performance-report.e2e-l3-filled.md`](../output/samples/perfetto-single/performance-report.e2e-l3-filled.md) | Sprint 7 单次 e2e L3，`LLM_FILL=0` |
 | `perfetto-diff/` | perfetto 对比 | [`performance-report.e2e-l3-triad.md`](../output/samples/perfetto-diff/performance-report.e2e-l3-triad.md) | Sprint 7 三态 e2e L3（673 行） |
-| `simpleperf-single/` | simpleperf 单次 | [`performance-report.ai-thickened.md`](../output/samples/simpleperf-single/performance-report.ai-thickened.md) | hybrid：Provider + enrich + CLI + 质量门（待正式 e2e 验收后 sync） |
+| `simpleperf-single/` | simpleperf 单次 | [`performance-report.web-stressmove.md`](../output/samples/simpleperf-single/performance-report.web-stressmove.md) | hybrid 金标准；正式 e2e 产出 `output/p-web-simpleperf/performance-report_sp_single_e2e_ai_thickened.md` |
 | `simpleperf-diff/` | simpleperf 对比 | [`performance-report.web-v4-diff.md`](../output/samples/simpleperf-diff/performance-report.web-v4-diff.md) | Web 落盘 v4 hybrid diff |
 | `cross-single/` | 三源单次 | [`performance-report.fallback-builder.md`](../output/samples/cross-single/performance-report.fallback-builder.md) | fallback builder（AI 路径待验收） |
 | `cross-diff/` | 三源对比 | — | Phase C 待实现，见 `cross-diff/README.md` |
 
 **读表要点**：
 
-- **已接入高质量 hybrid**（6 条）：unity diff、perfetto 单次、perfetto diff、simpleperf diff、**simpleperf 单次**（代码已接，样例待正式 e2e sync）。
-- **未接入 hybrid**（1 条）：unity 单次 — 仍走老式 `executeCli` 全 AI 写报告路径。
+- **已接入高质量 hybrid**（7 条）：unity diff、**unity 单次**（正式 e2e ✅ baseline+stressmove）、perfetto 单次、perfetto diff、simpleperf diff、simpleperf 单次。
 - **三源单次 cross**：代码已接 AI 路径（Phase B），但 `output/p-web-cross/` 正式产出目前均为 fallback builder；架构也是「AI 改写」而非 v6 填空，**待验收 + 待升级**。
 - **三源 diff**：矩阵唯一空白格，Phase C 待开。
+
+### 正式 E2E 验收状态（2026-07-03）
+
+| 流水线 | 命令 | 状态 | deliverSource |
+|---|---|---|---|
+| unity 单次 | `npx tsx web/server/scripts/e2e-unity-single.ts` | ✅ 19/19 baseline + stressmove | `ai-authored` |
+| unity diff | `npx tsx web/server/scripts/e2e-unity-diff.ts` | ✅ | `ai-authored` |
+| simpleperf 单次 | `npx tsx web/server/scripts/e2e-simpleperf-single.ts` | 🟡 质量门已改（相对 enriched ≥0.95×）待重跑 | — |
+| simpleperf diff | `npx tsx web/server/scripts/e2e-simpleperf-diff.ts` | ✅ | `ai-authored` |
+| perfetto 单次/diff | `verify-perfetto-single-e2e.sh` / triad e2e | ✅ Sprint 7 L3 | `ai-authored` |
+
+### Web 正式入口与输入清单
+
+Web 与 E2E 共用同一 `build*Report()`；拖入 **相同类型、相同数量** 的原始采集文件即可产出同级报告。
+
+| 流水线 | Web 页面 / 路由 | 必需输入 | 强烈建议 / 可选 | E2E 样例路径 |
+|---|---|---|---|---|
+| **unity 单次** | `/upload` → `POST /runs/ingest/unified` | **1× `.pdata`** | `targetFps`、label、cliProvider | `unity/unity-outside-baseline.pdata` |
+| **unity diff** | `/unity-compare` → `POST /runs/ingest/unity-compare` 或 `/local` | **2× `.pdata`**（base + cur） | baseLabel/curLabel、targetFps | `unity-outside-baseline.pdata` + `unity-outside-stressmove.pdata` |
+| **simpleperf 单次** | `/upload` 或 `POST /runs/ingest/simpleperf` | **1× `perf.data`** | **`binary_cache` 路径** | `perf_aoeyz_stressmove.data` + `binary_cache/` |
+| **simpleperf diff** | `/simpleperf-diff` → `POST /runs/ingest/simpleperf-diff` | **2× `perf.data`** | `binary_cache`、sceneBase/Cur | `perf_aoeyz_base.data` + `perf_aoeyz_stressmove.data` |
+| **perfetto 单次** | `/upload` 或 `POST /runs/ingest/perfetto` | **1× `.pftrace`** / `.perfetto-trace` / `.trace` | 同目录 sidecar、`meta.json`；剪枝参数 | `sample_cur_*.pftrace` |
+| **perfetto triad** | `/perfetto-triad` → `POST /runs/ingest/perfetto-triad` | **3× trace**（base / cur / throttle） | 上传或本地 sample 目录 | `sample_base_*` + `sample_cur_*` + `sample_throttle_*` |
+| **三源 cross** | `/upload` 拖齐三源 | **.pdata + perf.data + .pftrace** | binary_cache、meta.json | 同次三源采集目录 |
+
+**Web 注意**：
+
+- `POST /runs/ingest/unity` **只入库、不跑 skill**；unity 单次完整报告请用 **统一上传** `/upload`。
+- unity diff、simpleperf diff 均支持 **拖文件上传** 与 **本地路径** 两种模式。
+- 多源（≥2 种源类型）走 cross-source，不是单 skill 报告。
+
+```
+/upload（统一入口）
+├── 1× .pdata          → unity single
+├── 1× perf.data       → simpleperf single（填 binary_cache）
+├── 1× .pftrace        → perfetto single
+└── 三源齐             → cross-source
+
+/unity-compare         → 2× .pdata（拖入或本地路径）
+/simpleperf-diff       → 2× perf.data + binary_cache
+/perfetto-triad        → 3× trace（base/cur/throttle）
+```
 
 **推进顺序**（已确认）：~~Phase X → A → B → C → D~~ → E ✅
 
@@ -140,7 +181,7 @@ E2E 脚本直接调 Web 后端同一 `build*Report()`，与浏览器点按钮的
 | **perfetto diff** | B | 同上 N≥2 | — | `perfetto-diff-service` | `LLM_FILL` | `validate_perfetto_report.py` | L0 skeleton | `buildPerfettoDiffReport` |
 | **simpleperf diff** | A | `build_simpleperf_profile` v4 | `enrich_v4_report.py` | 可选 CLI 加厚 | `LLM_FILL` | `compare_v4_report_quality.py` | enriched → provider | `buildSimpleperfDiffReport` / `e2e-simpleperf-diff.ts` |
 | **simpleperf 单次** | A* | `v4_single_report_renderer.py` | `enrich_v4_single_report.py` | `simpleperf-single-service` | `LLM_FILL` | `compare_v4_single_report_quality.py` | enriched → provider | `buildSimpleperfSingleReport` / `e2e-simpleperf-single.ts` |
-| **unity 单次** | _legacy_ | `preprocess.ts`（仅 JSON） | — | `executeCli` 整篇写 | 无骨架槽 | `checkSkillOutput` | 无 L0 兜底 | `runSingleSourceSkillAnalysis('unity_profiler')` |
+| **unity 单次** | B | `unity-single-builder.ts` | — | `unity-single-service` | `LLM_FILL` | `validateSingleReport` | L0 skeleton | `buildUnitySingleReport` / `e2e-unity-single.ts` |
 | **cross 单次** | 混合 | `cross-source-digest` + builder | — | AI 整篇改写 | 无 v6 槽 | `validateCrossSourceQuality` | fallback builder | `generateCrossSourceAnalysisForRun` |
 | **cross diff** | — | 未建 | — | — | — | — | — | Phase C |
 
@@ -191,17 +232,22 @@ E2E 脚本直接调 Web 后端同一 `build*Report()`，与浏览器点按钮的
 | Provider | `v4_single_report_renderer.py`（N=1） |
 | Enrich | `enrich_v4_single_report.py` — §0 整块替换 + §1–§3/§5 规则句 + §4 兜底句 |
 | CLI | `single-prompt.txt` — 仅替换**残留** `LLM_FILL`（尤其 §4 主线程深度解读） |
-| 质量门 | `compare_v4_single_report_quality.py`；enriched 快验阈值 0.55× |
+| 质量门 | `compare_v4_single_report_quality.py`；ai-thickened 相对 **enriched** ≥0.95×；快验 enriched ≥0.55× gold |
 | Service | `simpleperf-single-service.ts`；`run-analysis-service` simpleperf 分支 |
 | E2E | `web/server/scripts/e2e-simpleperf-single.ts` |
 
-### unity 单次（_legacy · 待 hybrid 化）
+### unity 单次（路线 B · v6 骨架填空）
 
 | 项 | 内容 |
 |---|---|
-| 现状 | Provider 只产 JSON；`executeCli` 读 summary **整篇写** markdown |
-| 风险 | 数字漂移、结构/厚度不稳、无 L0 兜底 |
-| 改造方向 | 参照 simpleperf 单次或 perfetto v6 接入 Provider 骨架 + 质量门 |
+| 数据流 | `.pdata` → preprocess → `unity-single-builder` → `unity-single-summary.json` + skeleton.md → CLI |
+| L0 展示层 | §0 四槽 / §1 帧统计 / §2 总览 / §3 phase+Top-N+驱动树+热点子节 / §4–§10 |
+| 占位符 | `<!-- LLM_FILL:... -->`（~29–32 槽，无 enrich 层） |
+| L2 CLI | `single-prompt.txt` — 替换全部 `LLM_FILL`，禁止改表格与 callTree |
+| 质量门 | `LLM_FILL == 0`；表格行缺失 ≤8；厚度 ≥0.82×骨架 |
+| 兜底 | CLI/质量门 fail → 交付 **skeleton.md** |
+| Service | `unity-single-service.ts`；`run-analysis-service` unity 分支 |
+| E2E | `web/server/scripts/e2e-unity-single.ts` |
 
 ### cross 单次（混合 · 待升级 v6）
 
@@ -303,23 +349,22 @@ Pass B（LLM）  facts + rules.yaml / 知识库 → 填解读槽 + 探索槽
 
 ---
 
-## 一、当前矩阵（已实现 vs 待实现）
+## 一、当前矩阵（简表）
 
-> 高质量 hybrid 接入明细见文首 **「高质量 hybrid 接入状态」** 表。
+> 高质量 hybrid 明细、Web 输入清单、E2E 状态见文首 **「高质量 hybrid 接入状态」** 与 **「Web 正式入口与输入清单」**。
 
 ```
                 单源单次              单源对比 (diff)
-unity         ✅ 能跑 / ❌ 非 hybrid   ✅ hybrid 三层 (A)
+unity         ✅ v6 单次 hybrid (B)   ✅ hybrid 三层 (A)
 perfetto      ✅ v6 单次 hybrid (B)   ✅ v6 N 列 hybrid (B)
 simpleperf    ✅ hybrid 单次 (A*)     ✅ v4 hybrid (A)
 三源          🟡 cross 能跑 / 待验收   ❌ Phase C 待做
 
-待补强（按优先级）：
-1. 三源 diff 提炼层（Phase C）—— 矩阵最后一格 + 终极对比入口
-2. 三源单次 cross — AI 路径验收 + 架构升级（v6 填空 / 双 Pass）
-3. unity 单次 — 接入 Provider 骨架 + 自评门 + L1 兜底
-4. 叙事三层试点 — unity-diff 探索槽 / 加厚分级（见「叙事架构演进」）
-5. unity provider 加 rendering/memory stat 字段（依赖项目侧 ProfilerRecorder 改造，暂缓）
+待补强：
+1. 三源 diff（Phase C）
+2. 三源 cross AI 路径验收 + v6 升级
+3. simpleperf 单次正式 e2e 重跑（质量门已修）
+4. 叙事三层试点（unity-diff 探索槽）
 ```
 
 ---
@@ -358,13 +403,14 @@ simpleperf    ✅ hybrid 单次 (A*)     ✅ v4 hybrid (A)
 | 项 | 内容 |
 |---|---|
 | 输入 | `.pdata`（Unity Profiler 二进制）|
-| Provider | `.claude/skills/unity-profiler-analysis/scripts/preprocess.ts`（Node tsx）|
-| Provider 入口（service） | `runSourceProfileBuild('unity_profiler', ...)` → `runUnityPreprocessScript()` |
-| 数据产物 | `preprocess-result.json`（顶层：`config / frameSummary / markers[] / markerSpikes[] / jankFrames / frameTrees[] / threads[]`）|
+| Provider | `build-profile.ts` → `preprocess-result.json` + `unity-single-builder.ts` → skeleton |
+| Provider 入口（service） | `buildUnitySingleReport()` → `runSourceProfileBuild` + `unity-single-builder` |
+| 数据产物 | `preprocess-result.json` + `unity-single-summary.json` + `performance-report_unity_single_skeleton.md` |
 | Skill | `.claude/skills/unity-profiler-analysis/SKILL.md` |
-| AI 调度 | `runSingleSourceSkillAnalysis(runId, 'unity_profiler')` → `executeCli(skill='unity_profiler', ...)` |
+| AI 调度 | `runSingleSourceSkillAnalysis(runId, 'unity_profiler')` → `buildUnitySingleReport()` → CLI 填 `LLM_FILL` |
 | 报告产出 | `performance-report.md` → 入库 `analyses` + `analysis_reports` |
-| 已知短板（待 Phase X 修） | 1) `markers[]` 仅主线程为主（Render 7 / Submit 39）；2) `frameTrees[]` 只有 worst+median 两单帧，无 aggregatedCallTree；3) callTree 节点未标 `gcAllocCount`；4) 无 `markerSourceMap`（要 projectPath） |
+| 质量门 | `validateSingleReport`（`LLM_FILL==0`、表格保留、厚度） |
+| 兜底 | CLI/质量门 fail → skeleton |
 
 ### 2.2 perfetto-trace-analysis（perfetto 单源单次）
 
@@ -407,7 +453,7 @@ simpleperf    ✅ hybrid 单次 (A*)     ✅ v4 hybrid (A)
 | 流水线（**真 hybrid 三层**）| 1. **Provider** (unity-diff-builder)：表格/树 + `LLM_FILL`（§3.x）+ `ENRICH_FILL`（§4/§5）<br>2. **Enrich**：填 `ENRICH_FILL` + §0 扩写 — **必须成功**<br>3. **AI（正式验收）**：CLI 填全部 `LLM_FILL` → `validateUnityDiffQuality` PASS；失败 **抛错** |
 | AI 调度 | `runAiEnrichment()` 读 enriched + summary；替换 `<!-- LLM_FILL:§3.N:槽名:… -->`；禁止改数字/表/树 |
 | 质量门 | 必备 §0–§8 / Top-N 驱动树 / phase 总览 / §3.3+ / 无 `ENRICH_FILL` + 无 `<!-- LLM_FILL` / §2 mean Δ 一致 / 行数 ≥ 金标准 78% — **PASS = ai-authored** |
-| Web/CLI 入口 | `POST /runs/ingest/unity-compare/local`（页面 `/unity-compare`）/ `npx tsx web/server/scripts/e2e-unity-diff.ts` |
+| Web/CLI 入口 | `POST /runs/ingest/unity-compare`（拖入）/ `/local`（路径）/ `e2e-unity-diff.ts` |
 | 金标准 | `docs/report/performance-report_unity_diff_GOLDEN.md` (~250 行) |
 | 真实输出示例 | `output/samples/unity-diff/performance-report.ai-thickened.md`（e2e outside pdata） |
 | 数字保护 | enrich 用 summary.json 直接渲染，AI 仅在 enriched 之上加厚；表格数字、Δ%、状态 emoji 全程不可改 |
@@ -652,7 +698,7 @@ Web 主入口三个：
 | Skill 定义 | `.claude/skills/<skill>/SKILL.md` |
 | Golden 报告 | `docs/report/performance-report_<source>_ULTIMATE_*.md`、`performance-report_perfetto_SINGLE_GOLDEN_v1.md`（单次形态）|
 | Web service 入口 | `run-analysis-service.ts`（单源分流）、`simpleperf-single-service.ts`、`unity-compare-service.ts`、`perfetto-single-service.ts`、`perfetto-diff-service.ts`、`simpleperf-diff-service.ts`、`cross-source-analysis-service.ts` |
-| Service E2E 脚本 | `web/server/scripts/e2e-unity-diff.ts`、`e2e-simpleperf-single.ts`、`e2e-simpleperf-diff.ts` |
+| Service E2E 脚本 | `e2e-unity-single.ts`、`e2e-unity-diff.ts`、`e2e-simpleperf-single.ts`、`e2e-simpleperf-diff.ts` |
 | Simpleperf 单次 enrich | `scripts/enrich_v4_single_report.py` |
 | Simpleperf 单次渲染 | `simpleperf/simpleperf_analyzer/v4_single_report_renderer.py` |
 | Unity diff enrich | `.claude/skills/unity-profiler-compare/scripts/unity-diff-enrich.ts` |

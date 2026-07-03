@@ -57,11 +57,18 @@ function reportHeadline(markdown: string): string {
   return line ? line.replace(/^#+\s*/, '').trim().slice(0, 120) : 'Simpleperf 单次报告';
 }
 
-async function runQualityGate(reportPath: string, minRatio: number, onLog?: (line: string) => void): Promise<boolean> {
+async function runQualityGate(
+  reportPath: string,
+  minRatio: number,
+  onLog?: (line: string) => void,
+  baselinePath?: string,
+): Promise<boolean> {
   try {
+    const args = [reportPath, String(minRatio)];
+    if (baselinePath) args.push(baselinePath);
     await runProjectPython(
       'scripts/compare_v4_single_report_quality.py',
-      [reportPath, String(minRatio)],
+      args,
       onLog,
       60_000,
     );
@@ -199,9 +206,11 @@ export async function buildSimpleperfSingleReport(
     if (cliProvider === 'mock' || !isCliAvailable(cliProvider, config.cliPaths?.[cliProvider])) {
       throw new Error(`ai-thickened 需要 CLI (${cliProvider}) 可用`);
     }
-    await runCliSingle(outputDir, enrichedPath, cliProvider, opts.onLog);
     const aiPath = path.join(outputDir, 'performance-report.md');
-    if (!(await runQualityGate(aiPath, 0.75, opts.onLog))) {
+    fs.copyFileSync(enrichedPath, aiPath);
+    opts.onLog?.('[single] 已复制 enriched → performance-report.md（CLI 加厚底稿）');
+    await runCliSingle(outputDir, enrichedPath, cliProvider, opts.onLog);
+    if (!(await runQualityGate(aiPath, 0.95, opts.onLog, enrichedPath))) {
       throw new Error('validateSimpleperfSingleQuality FAIL');
     }
     deliverPath = aiPath;

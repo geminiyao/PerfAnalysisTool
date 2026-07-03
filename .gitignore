@@ -29,6 +29,9 @@ simpleperf/result/
 # 分析输出产物
 output/
 
+# Unity 原始采集（体积过大，仅本地保留；e2e 用 .pdata）
+unity/*.data
+
 # 其他临时文件
 .cost-monitor-state.json
 todo/

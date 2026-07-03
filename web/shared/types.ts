@@ -118,7 +118,7 @@ export type SimpleperfStage =
 export type MapleCompareStage = SimpleperfStage;
 
 /** 采集入库 Tab 异步任务 */
-export type IngestJobKind = 'unity' | 'simpleperf' | 'perfetto' | 'merge' | 'unified' | 'perfetto_triad' | 'simpleperf_diff';
+export type IngestJobKind = 'unity' | 'simpleperf' | 'perfetto' | 'merge' | 'unified' | 'perfetto_triad' | 'simpleperf_diff' | 'unity_compare';
 export type IngestJobStatus = 'processing' | 'done' | 'failed';
 
 export interface IngestJobEvent {

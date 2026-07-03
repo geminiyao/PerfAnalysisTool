@@ -42,7 +42,7 @@ const SKILL_CONFIGS: Record<SkillKind, SkillConfig> = {
   },
   simpleperf: {
     kind: 'simpleperf',
-    skillDirParts: ['.cursor', 'skills', 'simpleperf-native-analysis'],
+    skillDirParts: ['.claude', 'skills', 'simpleperf-native-analysis'],
     skillMdCandidates: ['SKILL.md'],
     profileSummaryFile: 'simpleperf-profile-summary.json',
     legacyPreprocessFile: null,
