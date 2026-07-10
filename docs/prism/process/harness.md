@@ -66,9 +66,13 @@
 2. 从 plan/backlog.md 挑当前里程碑该做的需求（按里程碑内优先级）
 3. 有在途工单？→ 自查施工状态（REVIEW-前缀/git diff/logs），该验收就验收
    无在途？→ 出下一张工单
-4. 【派发是主 agent 自己的活】出完 TODO- 工单后，主 agent 自己跑派发脚本：
+4. 【派发是主 agent 自己的活·用现成脚本，别重造】出完 TODO- 工单后，主 agent 自己跑派发脚本
+   —— **派发机制已脚本化完备，主 agent 只需「写工单 + 调脚本」，不要另写任何派发逻辑/prompt 构造**：
    powershell -File docs/prism/process/scripts/dispatch-ticket.ps1 -Ticket <TODO-xxx.md>
-   （会话进程能读到用户已设的 CURSOR_API_KEY；先 -DryRun 验 prompt 不乱码，再真发）
+   （会话进程能读到用户已设的 CURSOR_API_KEY；先加 -DryRun 验一眼，再去掉真发）
+   脚本自动：TODO-→WIP- 改名、构造 prompt、发 Cursor、写 .jsonl 原始流 + 可读 .log。
+   ⚠️ 编码坑：PS 5.1 直接 -File 跑，**终端回显**会中文乱码，但那只是显示层，传给 Cursor 的 prompt 是干净 UTF-8（脚本内部已在 agent 启动前设好 UTF-8）。想让回显也正常，用强制 UTF-8 控制台跑：
+   powershell -NoProfile -Command "chcp 65001 > $null; [Console]::OutputEncoding=[System.Text.Encoding]::UTF8; & 'docs/prism/process/scripts/dispatch-ticket.ps1' -Ticket <TODO-xxx.md>"
    → Cursor 自动施工 → 主 agent 自查完工 → 验收
 5. 验收后：更新 now.md（下一步）+ backlog.md（状态）+ 必要时 roadmap（里程碑进度）
 6. 回到 1
