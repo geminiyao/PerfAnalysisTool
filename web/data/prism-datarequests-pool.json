@@ -1,0 +1,234 @@
+{
+  "perallocationsiteoratleastpermarkerbreak": {
+    "key": "perallocationsiteoratleastpermarkerbreak",
+    "title": "Per-allocation-site (or at least per-marker) breakdown of managed heap allocation bytes during frames 462-481, correlated with the GarbageCollector.CollectIncremental burst window identified in F3.",
+    "rationale": "queryFrameCounters only exposes gc_allocated_in_frame as a single whole-frame total per frame; it cannot attribute which specific marker/subsystem/script call is allocating during this 20-frame burst window. Without this, it is impossible to confirm which system is driving the periodic incremental GC pressure feeding into the frame-483 GC.Collect stall (F2/F3).",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_run01",
+    "seenInRuns": [
+      "unity-outside-stressmove",
+      "unity-outside-stressmove\\2026-07-07_run01"
+    ],
+    "status": "open"
+  },
+  "timeseriesoreventlogoftheloadermanagertr": {
+    "key": "timeseriesoreventlogoftheloadermanagertr",
+    "title": "Time series or event log of the LoaderManagerTryUnloadPending pending-unload queue size (number of assets queued for unload) around frames 80, 102, 146, 414, 464.",
+    "rationale": "None of the 8 tools expose asset/resource manager internal state (queue depth, asset counts) -- they only see marker timing (selfMs/totalMs) in the call tree. F5 established that this marker spikes to ~30ms on 5 specific frames but cannot explain why those specific frames trigger a larger unload batch than neighboring frames.",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_run01",
+    "seenInRuns": [
+      "unity-outside-stressmove",
+      "unity-outside-stressmove\\2026-07-07_run01"
+    ],
+    "status": "open"
+  },
+  "acrossthreadwaitdependencygraphforshowin": {
+    "key": "acrossthreadwaitdependencygraphforshowin",
+    "title": "A cross-thread wait-dependency graph for frame 194 showing whether the Main Thread was blocked waiting on the '1:Lua.GC' thread's LuaMtGc.ExecuteMtGc call (F6), or whether the two ran fully in parallel without any Main Thread stall.",
+    "rationale": "getThreadTimeline reports per-thread topLevelMs and top markers but does not report explicit wait/signal dependencies between the Main Thread and the '1:Lua.GC' thread for this specific event. Without this, F6's real user-facing impact (does this spike actually cost the frame, or is it hidden behind other parallel work) is unconfirmed.",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_run01",
+    "seenInRuns": [
+      "unity-outside-stressmove",
+      "unity-outside-stressmove\\2026-07-07_run01"
+    ],
+    "status": "open"
+  },
+  "percameranotjustperframebreakdownofbatch": {
+    "key": "percameranotjustperframebreakdownofbatch",
+    "title": "Per-camera (not just per-frame) breakdown of batches / set_pass_calls / triangles for frames using URP.RenderSingleCamera, to determine whether the 10.64ms/frame rendering subtree cost (F7) scales primarily with draw call count, transparent overdraw, or shader complexity.",
+    "rationale": "queryFrameCounters only provides whole-frame totals (e.g. total batches across all cameras/passes for the frame), not a per-camera or per-pass breakdown. F7 identified that no single URP stage dominates the subtree cost, but cannot determine which upstream input (batch count vs overdraw vs shader cost) is driving the aggregate 10.64ms.",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_run01",
+    "seenInRuns": [
+      "unity-outside-stressmove",
+      "unity-outside-stressmove\\2026-07-07_run01"
+    ],
+    "status": "open"
+  },
+  "luasidefunctionlevelprofilingcallstackin": {
+    "key": "luasidefunctionlevelprofilingcallstackin",
+    "title": "Lua-side function-level profiling (call stack inside the Lua VM) for the CS:AOE.LuaMgr Update tick, to break down its 6.82ms/frame average cost (F8) into individual Lua functions or modules.",
+    "rationale": "The 8 tools only see Lua work as a single opaque C# marker boundary (CS:AOE.LuaMgr); getFrameCallTree cannot descend into Lua call stacks since Lua execution is not instrumented as native Unity Profiler markers. This is the single largest script-side subsystem in F8 but its internal composition is completely opaque to the current toolset.",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_run01",
+    "seenInRuns": [
+      "unity-outside-stressmove",
+      "unity-outside-stressmove\\2026-07-07_run01"
+    ],
+    "status": "open"
+  },
+  "增量gc堆积窗口期间的按分配来源marker子系统级内存分配字节明细而非仅有全帧": {
+    "key": "增量gc堆积窗口期间的按分配来源marker子系统级内存分配字节明细而非仅有全帧",
+    "title": "frames 462-481增量GC堆积窗口期间的按分配来源(marker/子系统级)内存分配字节明细，而非仅有全帧汇总的gc_allocated_in_frame一个数字；以及frame483/519两次GC.Collect的具体触发源头(是Lua侧主动调用的强制GC，还是Unity引擎GC调度器基于堆大小阈值的自动触发)。",
+    "rationale": "queryFrameCounters的gc_allocated_in_frame只能给出整帧的分配总量，无法归因到具体是哪个marker/子系统在持续分配；getFrameCallTree能看到GC.Collect嵌套在CS:AOE.LuaMgr标记边界之下，但无法穿透到Lua VM内部查看是否有显式的collectgarbage()调用或类似触发逻辑。这两个信息缺口直接影响F4(GC.Collect)和F5(增量GC堆积)的根因判断置信度。",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-07_12-08-59"
+    ],
+    "status": "open"
+  },
+  "loadermanagertryunloadpending对应的待卸载资源队列p": {
+    "key": "loadermanagertryunloadpending对应的待卸载资源队列p",
+    "title": "LoaderManagerTryUnloadPending对应的待卸载资源队列(pending-unload queue)的深度/大小的时间序列或事件日志，覆盖frames 80/102/146/414/464附近区间。",
+    "rationale": "8个工具中没有一个能读取ResManager/LoaderManager内部的队列状态，只能看到marker执行耗时(selfMs/totalMs)。F6已经确认这是一个周期性批量处理模式(5帧尖峰，均落在同一调用链上)，但无法解释为什么恰好是这5个帧触发了大批量处理而非相邻帧，也无法判断触发条件是固定时间间隔还是队列深度阈值。",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-07_12-08-59"
+    ],
+    "status": "open"
+  },
+  "yzentitymovelinentf对应网络消息的实际条数与payload大小": {
+    "key": "yzentitymovelinentf对应网络消息的实际条数与payload大小",
+    "title": "YzEntityMoveLineNtf对应网络消息的实际条数与payload大小(而非仅执行耗时)，用于判断“批量到达”推测的实际网络侵入程度。",
+    "rationale": "F7已经证实TServer.HandleMessages自身几乎不耗时(selfMs均值0.04ms)、耗时全部来自子节点YzEntityMoveLineNtf的多次调用，且已用getFrameCallTree观察到frame273内该marker在同一帧内被多次调用——但当前工具集只能统计marker调用的时间维度，无法读取网络层的消息条数/字节数，因此“消息批量到达”仍是基于调用次数堆积现象的合理推测，未从网络协议层直接证实。",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-07_12-08-59"
+    ],
+    "status": "open"
+  },
+  "submitthread的gfxpresentframe耗时波动meanstd背": {
+    "key": "submitthread的gfxpresentframe耗时波动meanstd背",
+    "title": "Submit Thread的Gfx.PresentFrame耗时波动(mean=8.79ms, std=9.21ms)背后的GPU侧实际执行时间/等待时间拆解，而非仅有CPU侧marker记录的时间。",
+    "rationale": "F8已用queryFrameCounters核实frame184/220附近的draw calls/triangles计数并未同步大幅跳变，倾向于排除“渲染负载暴涨”这一解释，但当前8个工具均只提供CPU侧的Unity Profiler marker时间戳和frame计数器快照，没有GPU侧的实际执行时间线(如RenderDoc capture或GPU frame time breakdown)，无法确认这究竟是GPU执行本身变慢、还是CPU-GPU同步/VSync层面的等待抖动。",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-07_12-08-59"
+    ],
+    "status": "open"
+  },
+  "csaoeluamgr的updatetickf中确认的帧持续成本本次运行绝对量级": {
+    "key": "csaoeluamgr的updatetickf中确认的帧持续成本本次运行绝对量级",
+    "title": "CS:AOE.LuaMgr的Update tick(F2中确认的6.82ms/帧持续成本，本次运行绝对量级最大的单一组件)内部的Lua函数级调用耗时分布。",
+    "rationale": "getFrameCallTree只能展示Unity Profiler原生标记边界，Lua VM内部执行的具体函数调用栈对这套工具完全不可见——CS:AOE.LuaMgr在调用树中呈现为一个不透明的黑盒节点，无法进一步下钻定位是哪些具体Lua模块/函数造成了这6.82ms/帧的持续成本。这是F2(本报告严重度最高的持续性基线成本)中最大但也最不透明的单一组成部分。",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-07_12-08-59",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-07_12-08-59"
+    ],
+    "status": "open"
+  },
+  "oncameramove这个marker对应的真实业务函数体源码c或lua均可而": {
+    "key": "oncameramove这个marker对应的真实业务函数体源码c或lua均可而",
+    "title": "OnCameraMove这个marker对应的真实业务函数体源码（C#或Lua均可），而不是同名Lua菜单类里的空函数体",
+    "rationale": "OnCameraMove是四个primaryDrivers之一(camera.oncameramove.spike)，单次移动平均卡43ms、最高53ms，是全场最尖锐的问题；但getSourceForSymbol('OnCameraMove')匹配到5个同名节点，选中的是Menu_SoldierRecruit_Main.lua里一个空函数体(function cls:OnCameraMove(params) end)，不是真正执行大量计算的实现，导致无法给出代码级优化建议",
+    "suspectedAxis": "symbol-disambiguation",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_03-31-46",
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  },
+  "csaoeoutsideoutsideviewarmylinemgr的onupd": {
+    "key": "csaoeoutsideoutsideviewarmylinemgr的onupd",
+    "title": "CS:AOE.Outside.OutSideViewArmyLineMgr的OnUpdate方法真实逐帧代码体",
+    "rationale": "该marker是primaryDrivers之一(steady.armylinemgr.selfcost)，累计1381ms、selfMs占比81%(非分摊到子系统)，是四个候选里绝对总耗时最大的一个；但'OnUpdate'字符串在codegraph里匹配到466个同名节点，getSourceForSymbol只能返回其中一个不相关的接口声明(ILauncherExtension.cs的空签名)，用类名直接查询也未命中(resolvedVia=none)，只拿到字段声明看不到方法体，无法判断这2.3ms/帧具体花在哪段逐帧遍历逻辑上",
+    "suspectedAxis": "symbol-disambiguation",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_03-31-46"
+    ],
+    "status": "open"
+  },
+  "csaoemeshuimanager每帧调度的updatetick方法真实代码体": {
+    "key": "csaoemeshuimanager每帧调度的updatetick方法真实代码体",
+    "title": "CS:AOE.MeshUIManager每帧调度的Update/Tick方法真实代码体",
+    "rationale": "该marker是primaryDrivers之一(steady.meshuimanager.selfcost)，累计1246ms、drillDownMarker证实是100%纯叶子marker(profiler采样粒度极限)，但只拿到类的静态基础设施声明(resource/renderers/controls等子系统字段+OnCreate初始化)，看不到每帧真正执行的调度代码，无法判断2.1ms/帧具体花在UI布局重算、渲染批次合并还是字体渲染等哪个子系统",
+    "suspectedAxis": "symbol-disambiguation",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_03-31-46"
+    ],
+    "status": "open"
+  },
+  "里gccollect的调用者信息是luamgrendofframe流程里哪一行哪": {
+    "key": "里gccollect的调用者信息是luamgrendofframe流程里哪一行哪",
+    "title": "frame519里GC.Collect的调用者信息——是LuaMgr.EndOfFrame流程里哪一行/哪个函数主动调用了System.GC.Collect",
+    "rationale": "frame519是全场最慢帧(113.6ms)，GC.Collect单次吃掉70.2ms(62%)，且确认走的是'CS:AOE.LuaMgr>Core.EndOfFrame'路径的主动同步Full GC(区别于frame461/483走WaitForTargetFPS的常规增量GC步进)，但getFrameCallTree/drillDownMarker只能看到GC.Collect本身是调用树的叶子，看不到是哪个业务函数触发了这次同步GC调用，无法定位可能存在的'手动触发Full GC'的具体代码位置",
+    "suspectedAxis": "marker-caller-chain",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_03-31-46",
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  },
+  "permarkerperfunction级别的gc分配字节数哪个函数在分配内存而": {
+    "key": "permarkerperfunction级别的gc分配字节数哪个函数在分配内存而",
+    "title": "per-marker/per-function级别的GC分配字节数（哪个函数在分配内存），而非整帧总量",
+    "rationale": "queryFrameCounters只提供gc_allocated_in_frame这个整帧汇总值，用于区分'分配触发的GC'和'定时触发的GC'时只能看整体趋势(如本次验证frame519分配量8192字节反而是相邻帧最低)，但无法定位具体是哪个marker/函数在贡献分配量，限制了对GC根因的进一步细化",
+    "suspectedAxis": "memory",
+    "recurrence": 2,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_03-31-46",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_03-31-46",
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  },
+  "csaoeoutsideoutsideviewarmylinemgr的逐帧更新方": {
+    "key": "csaoeoutsideoutsideviewarmylinemgr的逐帧更新方",
+    "title": "CS:AOE.Outside.OutSideViewArmyLineMgr的逐帧更新方法真实代码体",
+    "rationale": "该marker是baseline.coreupdate.luamgr-mapmanager finding里MapManager子树下贡献最大的一项(selfMs=2.302ms/帧，600帧全勤，81%自耗非分摊到子节点，是四个候选里绝对总耗时最大的纯自耗型marker)；本轮直接用getSourceForSymbol查询类名'OutSideViewArmyLineMgr'，返回resolvedVia=none/found=false（'symbol not in codegraph nor map-source'），确认这不是参数错误导致的假阴性，而是真实的数据覆盖局限，导致无法判断这2.3ms/帧具体花在哪段逐帧遍历/连线计算逻辑上",
+    "suspectedAxis": "symbol-disambiguation",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  },
+  "luamtgcexecutemtgc底层真正执行gc工作的luavmnative": {
+    "key": "luamtgcexecutemtgc底层真正执行gc工作的luavmnative",
+    "title": "LuaMtGc.ExecuteMtGc底层真正执行GC工作的Lua VM/native层实现代码（而非C#薄封装转发层）",
+    "rationale": "该marker是全场第二套独立GC机制(gc.luamtgc.executemtgc.spike finding)，均值0.592ms但在5个burstFrames里飙到最高21.591ms(是均值的36.5倍)；getSourceForSymbol('LuaMtGc.ExecuteMtGc')确实找到了源码(resolvedVia=codegraph, BaseLuaMgr.cs:1475-1481)，但内容只是`public void ExecuteMtGc() { if (this.env != null) { env.ExecuteMtGc(); } }`一个转发调用，真正的GC扫描/回收逻辑在env.ExecuteMtGc()内部的Lua VM/native层，该层代码不在本次codegraph可查范围内，无法判断burstFrames里21.591ms具体花在GC扫描哪类对象或哪个阶段",
+    "suspectedAxis": "codegraph-coverage",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  },
+  "baseloadertryunload内部调用的dounload方法真实代码体": {
+    "key": "baseloadertryunload内部调用的dounload方法真实代码体",
+    "title": "BaseLoader.TryUnload内部调用的DoUnload()方法真实代码体",
+    "rationale": "resource.tryunload.spike finding显示frame80单次TryUnloadPending.TryUnload耗时14.59ms(是均值0.11ms的132倍)；已用getSourceForSymbol确认TryUnload()本身源码(BaseLoader.cs:668-677)，内部有CanUnload()前置检查后调用DoUnload()，但进一步查询'DoUnload'返回ambiguous=true(6个候选)/resolvedVia=none，无法确认这6个候选里哪个是当前调用链上实际执行的那个重载，导致drillDownMarker已钻到具体bundle文件卸载的叶子级别之后，仍无法看到DoUnload()内部是否有可优化的具体逐资源处理逻辑",
+    "suspectedAxis": "symbol-disambiguation",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-09_06-58-16",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-09_06-58-16"
+    ],
+    "status": "open"
+  }
+}
