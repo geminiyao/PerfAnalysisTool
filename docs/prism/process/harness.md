@@ -64,16 +64,32 @@
 ```
 1. 读 state/now.md + plan/roadmap.md → 定位"当前里程碑 + 上一步 + 下一步"
 2. 从 plan/backlog.md 挑当前里程碑该做的需求（按里程碑内优先级）
-3. 有在途工单？→ 检查施工状态，该验收就验收
+3. 有在途工单？→ 自查施工状态（REVIEW-前缀/git diff/logs），该验收就验收
    无在途？→ 出下一张工单
-4. 验收后：更新 now.md（下一步）+ backlog.md（状态）+ 必要时 roadmap（里程碑进度）
-5. 到"三种找用户时刻"才打断用户：①新里程碑开不开 ②决策动锚定Feature ③里程碑验收
+4. 【派发是主 agent 自己的活】出完 TODO- 工单后，主 agent 自己跑派发脚本：
+   powershell -File docs/prism/process/scripts/dispatch-ticket.ps1 -Ticket <TODO-xxx.md>
+   （会话进程能读到用户已设的 CURSOR_API_KEY；先 -DryRun 验 prompt 不乱码，再真发）
+   → Cursor 自动施工 → 主 agent 自查完工 → 验收
+5. 验收后：更新 now.md（下一步）+ backlog.md（状态）+ 必要时 roadmap（里程碑进度）
 6. 回到 1
 ```
+
+**默认全自主**：出单→派发→自查→验收→更新→出下一单，主 agent 连轴转，不用用户逐步驱动。
+**只在"三种时刻"才打断用户**：①一个里程碑做完了（阶段验收）②某决策会动锚定 Feature（方向）③新里程碑开不开。其余（单张工单的出/发/验）全自主，用户只在阶段节点看结论。
 
 **每次做完一件事、或对话变长快切会话前，主 agent 主动更新 state/now.md**——这是"活战线"不失效的保证。
 
 ---
+
+## 主 agent 自查施工状态（不靠用户通知）
+
+施工是否完成，主 agent **自己查客观信号**，不用等用户说"做完了"：
+
+1. **工单文件名前缀**：`ls docs/prism/process/worktickets/` —— `REVIEW-` = 施工方声明完工待验收；`WIP-` = 施工中；`TODO-` = 还没派发。
+2. **git 工作区改动**：`git status --short <工单声明的文件>` —— 有改动 = 施工方动过了。
+3. **派发日志**：`docs/prism/process/worktickets/logs/` 最新 .log —— 看 Cursor 施工过程和退出码。
+
+**用户跑完派发脚本后，主 agent 主动查这三个信号即可判断进度并启动验收**，无需用户口头通知。验收前必 `git diff` 核对：施工方是否只改了工单声明的文件、有无越界。
 
 ## 已知边界
 
