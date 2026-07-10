@@ -96,6 +96,20 @@ function sevStyle(sev: string): { dot: string; badge: string } {
   return SEV_COLOR[sev] ?? { dot: '#9e9e9e', badge: '#9e9e9e20' };
 }
 
+/** Theme-group accent colors — cycle by section index, not by heading name. */
+const SECTION_GROUP_COLORS = [
+  { border: '#2196f3', bg: '#2196f318' },
+  { border: '#ff9800', bg: '#ff980018' },
+  { border: '#9c27b0', bg: '#9c27b018' },
+  { border: '#78909c', bg: '#78909c18' },
+  { border: '#4caf50', bg: '#4caf5018' },
+  { border: '#009688', bg: '#00968818' },
+];
+
+function sectionGroupColor(index: number): { border: string; bg: string } {
+  return SECTION_GROUP_COLORS[index % SECTION_GROUP_COLORS.length];
+}
+
 // ─────────────────────── Call-tree rendering ───────────────────────
 
 function renderTreeHTML(node: DrillDownNode, rootMs: number, depth: number): string {
@@ -243,8 +257,23 @@ function renderHTML(opts: RenderOptions): string {
       </div>`
     : '';
 
+  // ── TOC anchors ──
+  const tocItems = [
+    { label: '核心结论', id: 'sec-core-conclusions' },
+    ...narrative.sections.map((sec, i) => ({ label: sec.heading, id: `sec-section-${i}` })),
+    { label: '优化优先级', id: 'sec-priority' },
+  ];
+  const tocHTML = `
+<div class="toc-block">
+  <div class="toc-title">目录</div>
+  <ul class="toc-list">
+    ${tocItems.map(item => `<li><a href="#${item.id}">${htmlEsc(item.label)}</a></li>`).join('')}
+  </ul>
+</div>`;
+
   // ── § sections ──
-  const sectionsHTML = narrative.sections.map(sec => {
+  const sectionsHTML = narrative.sections.map((sec, secIdx) => {
+    const gc = sectionGroupColor(secIdx);
     const introHTML = sec.intro
       ? `<p class="section-intro">${htmlEsc(sec.intro).replace(/\n/g, '<br>')}</p>`
       : '';
@@ -255,7 +284,9 @@ function renderHTML(opts: RenderOptions): string {
     }).join('');
     return `
   <div class="narrative-section">
-    <div class="section-heading">${htmlEsc(sec.heading)}</div>
+    <div class="section-heading" id="sec-section-${secIdx}" style="border-left:4px solid ${gc.border};background:${gc.bg}">
+      ${htmlEsc(sec.heading)}
+    </div>
     ${introHTML}
     <div class="items-list">${itemsHTML}</div>
   </div>`;
@@ -294,6 +325,7 @@ function renderHTML(opts: RenderOptions): string {
   --radius-sm: 4px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -384,6 +416,37 @@ a { color: var(--accent2); }
   color: var(--accent2);
 }
 
+/* ── Table of contents ── */
+.toc-block {
+  margin-bottom: 28px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-width: 960px;
+}
+.toc-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.toc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.toc-list a {
+  color: var(--accent2);
+  text-decoration: none;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.toc-list a:hover { text-decoration: underline; }
+
 /* ── Section headers ── */
 .section-title {
   font-size: 17px;
@@ -470,8 +533,9 @@ a { color: var(--accent2); }
   font-weight: 700;
   color: #e8eaf6;
   margin: 24px 0 10px;
-  padding-bottom: 8px;
+  padding: 10px 12px 10px 14px;
   border-bottom: 1px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 .section-intro {
   color: #90a4ae;
@@ -715,8 +779,11 @@ a { color: var(--accent2); }
 ${metricsHTML}
 </div>
 
+<!-- ═══════════════════ TOC ═══════════════════ -->
+${tocHTML}
+
 <!-- ═══════════════════ § 核心结论 ═══════════════════ -->
-<div class="section-title">核心结论</div>
+<div class="section-title" id="sec-core-conclusions">核心结论</div>
 <table class="top-conclusions">
   <thead>
     <tr>
@@ -734,7 +801,7 @@ ${ruledOutHTML}
 ${sectionsHTML || '<p class="muted">（暂无分群内容）</p>'}
 
 <!-- ═══════════════════ § 优化优先级 ═══════════════════ -->
-<div class="section-title">优化优先级</div>
+<div class="section-title" id="sec-priority">优化优先级</div>
 <table class="priority-table">
   <thead>
     <tr><th>优先级</th><th>动作</th><th>收益</th></tr>

@@ -16,6 +16,7 @@ param(
     [switch]$Latest,
     [switch]$DryRun,
     [switch]$NoRenameWip,
+    [switch]$RawJsonOnly,
 
     [string]$ProjectRoot = ""
 )
@@ -85,6 +86,7 @@ function Build-DispatchPrompt {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $templatePath = Join-Path $scriptDir "dispatch-prompt-template.txt"
+$formatterLib = Join-Path $scriptDir "format-agent-stream.lib.ps1"
 
 if ($ProjectRoot) {
     $root = (Resolve-Path $ProjectRoot).Path
@@ -106,10 +108,13 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 $prompt = Build-DispatchPrompt -Root $root -TicketPath $ticketPath -TemplatePath $templatePath
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$logFile = Join-Path $logDir "${timestamp}_${ticketName}.log"
+$baseName = "${timestamp}_${ticketName}"
+$jsonlFile = Join-Path $logDir "$baseName.jsonl"
+$logFile = Join-Path $logDir "$baseName.log"
 
 Write-Host "Project: $root"
 Write-Host "Ticket:  $ticketName"
+Write-Host "Jsonl:   $jsonlFile"
 Write-Host "Log:     $logFile"
 
 if ($DryRun) {
@@ -128,6 +133,15 @@ if (-not (Get-Command agent -ErrorAction SilentlyContinue)) {
     throw "agent command not found on PATH."
 }
 
+if (-not (Test-Path $formatterLib)) {
+    throw "Formatter lib not found: $formatterLib"
+}
+
+. $formatterLib
+Initialize-AgentStreamConsole
+
+$utf8 = Get-AgentStreamUtf8Encoding
+
 if (-not $NoRenameWip -and $ticketName.StartsWith("TODO-")) {
     $wipName = "WIP-" + $ticketName.Substring(5)
     $wipPath = Join-Path $workDir $wipName
@@ -139,23 +153,53 @@ if (-not $NoRenameWip -and $ticketName.StartsWith("TODO-")) {
     $ticketName = $wipName
     Write-Host "Renamed to: $ticketName"
     $prompt = Build-DispatchPrompt -Root $root -TicketPath $ticketPath -TemplatePath $templatePath
+    $baseName = "${timestamp}_${ticketName}"
+    $jsonlFile = Join-Path $logDir "$baseName.jsonl"
+    $logFile = Join-Path $logDir "$baseName.log"
 }
 
 Push-Location $root
 try {
-    Write-Host "Dispatching Cursor Agent..."
-    $header = "=== Prism dispatch $timestamp ===`nTicket: $ticketName`nCwd: $root`n`n"
+    Write-Host "Dispatching Cursor Agent (cwd=$root)..."
+    $header = @(
+        "=== Prism dispatch $timestamp ==="
+        "Ticket: $ticketName"
+        "Cwd:    $root"
+        "Jsonl:  $jsonlFile"
+        ""
+    ) -join "`n"
     Set-Content -Path $logFile -Value $header -Encoding UTF8
+    Set-Content -Path $jsonlFile -Value "" -Encoding UTF8
 
-    & agent -p --trust --force --output-format text $prompt 2>&1 |
-        Tee-Object -FilePath $logFile -Append
+    $agentArgs = @(
+        "-p", "--trust", "--force",
+        "--workspace", $root,
+        "--output-format", "stream-json",
+        "--stream-partial-output",
+        $prompt
+    )
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "agent exited with code $LASTEXITCODE (see $logFile)"
+    Reset-AgentStreamState
+
+    if ($RawJsonOnly) {
+        & agent @agentArgs 2>&1 | Tee-Object -FilePath $jsonlFile -Append
+    }
+    else {
+        & agent @agentArgs 2>&1 | ForEach-Object {
+            [System.IO.File]::AppendAllText($jsonlFile, "$($_)`r`n", $utf8)
+            Format-AgentStreamLine -JsonLine $_
+        } | Tee-Object -FilePath $logFile -Append
     }
 
+    if ($LASTEXITCODE -ne 0) {
+        throw "agent exited with code $LASTEXITCODE (see $logFile and $jsonlFile)"
+    }
+
+    Write-Host ""
     Write-Host "Done. Check REVIEW- prefix and hand off to main agent."
-    Write-Host "Log: $logFile"
+    Write-Host "Readable log: $logFile"
+    Write-Host "Raw stream:   $jsonlFile"
+    Write-Host "Replay:       Get-Content '$jsonlFile' | & '$scriptDir\format-agent-stream.ps1'"
 }
 finally {
     Pop-Location

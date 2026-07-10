@@ -13,6 +13,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import type { TopConclusionRow } from './narrative-types.js';
 
 // ─────────────────────── 类型定义 ───────────────────────
 
@@ -282,6 +283,7 @@ export function renderReport(
   verdict: Verdict | null,
   findings: Finding[],
   meta?: { runId?: string; toolCalls?: number; verified?: string },
+  topConclusions?: TopConclusionRow[],
 ): { report: string; audit: string } {
   const L: string[] = [];
   const A: string[] = [];  // 审计文档（技术论证/自审/证据链），与正式报告分离
@@ -354,14 +356,24 @@ export function renderReport(
       const firstSentence = f ? f.conclusion.split(/[。\n]/)[0] : '';
       return { driver: f ? firstSentence : d, impact: '', evidenceRefs: f ? [d] : undefined };
     }
-    const o = d as { driver?: string; name?: string; title?: string; impact?: string; description?: string; evidenceRefs?: string[] };
+    const o = d as { driver?: string; name?: string; title?: string; impact?: string; description?: string; reasoning?: string; evidenceRefs?: string[] };
     return {
       driver: o.driver ?? o.name ?? o.title ?? '(未命名主因)',
-      impact: o.impact ?? o.description ?? '',
+      impact: o.impact ?? o.description ?? o.reasoning ?? '',
       evidenceRefs: o.evidenceRefs,
     };
   });
-  if (drivers.length > 0) {
+  if (topConclusions && topConclusions.length > 0) {
+    topConclusions.forEach((row, i) => {
+      const rank = row.rank ?? i + 1;
+      L.push(`**${rank}. ${row.problem}**`);
+      L.push('');
+      const kindPart = row.kind ? `【${row.kind}】` : '';
+      const desc = `${kindPart}${row.contribution}`.trim();
+      if (desc) L.push(`   ${desc}`);
+      L.push('');
+    });
+  } else if (drivers.length > 0) {
     drivers.forEach((d, i) => {
       L.push(`**${i + 1}. ${d.driver}**`);
       L.push('');
@@ -526,6 +538,8 @@ function main(): void {
     verification?: { verifiedEvidence?: number; totalEvidence?: number };
   } | null;
 
+  const narrative = read('narrative.json') as { topConclusions?: TopConclusionRow[] } | null;
+
   const runId = path.basename(dir);
   const meta = {
     runId,
@@ -535,7 +549,7 @@ function main(): void {
       : undefined,
   };
 
-  const { report, audit } = renderReport(verdict, findings, meta);
+  const { report, audit } = renderReport(verdict, findings, meta, narrative?.topConclusions);
   const outPath = path.join(dir, 'report.md');
   const auditPath = path.join(dir, 'report-audit.md');
   fs.writeFileSync(outPath, report, 'utf-8');

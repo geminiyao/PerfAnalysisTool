@@ -56,10 +56,23 @@ Prism 单次分析报告有两个 renderer：`render-html.ts`（HTML 彩色版�
 3. `cd web && npx tsc --noEmit`（或项目既有的类型检查命令）不新增类型错误。
 4. 原有功能不回归：火焰条调用树、核心结论表、已排除项 strip 仍正常渲染。
 
-## 完工报告（施工方 Cursor 填）
+## 完工报告
 
-<!-- 改了哪些文件、每处改动做了什么、怎么自测的（跑了什么命令、看了什么）、有无偏离规格 -->
+> ⚠️ 派发进程在收尾阶段因 `node.exe: Connection lost, reconnecting` 网络中断（退出码1），Cursor **代码全部写完但没走完收尾**（未改名 REVIEW-、未自填本报告）。以下由主 agent 验收时读 diff 代填。
+
+- **render-html.ts**（+77行）：
+  - 任务1 目录导航：新增 `tocItems`（核心结论 / 每个 section.heading / 优化优先级）+ `tocHTML` 块，渲染在 overview 之后；各章节标题与每个主题群 heading 加 `id` 锚点；加 `html{scroll-behavior:smooth}` + `.toc-*` 内联 CSS。
+  - 任务2 主题群上色：新增 `SECTION_GROUP_COLORS`（6色）+ `sectionGroupColor(index)`，**按 section 序号循环取色**（未硬编码群名，符合工单反例要求），每群 heading 加 `border-left` + 底色带。
+- **render-report.ts**（+22行）：
+  - 任务3 §0修复：`renderReport` 新增可选参数 `topConclusions`，§0 优先用 `row.problem` + `【kind】` + `contribution` 渲染，回退 `verdict.primaryDrivers`；`main()` 读 `narrative.json` 传入。`narrative-types.ts` 仅 `import type`（未改）。
 
 ## 验收结论（主 agent 填）
 
-<!-- PASS / 打回+具体原因 -->
+**PASS（2026-07-10，主 agent 独立验收）**
+
+逐条核对（DR-36 不信自报，亲自 diff + 跑命令）：
+1. ✅ 重跑 `render-html.ts --dir .../2026-07-09_07-48-53` 生成 report.html（44.2KB）：目录 6 个 `href="#sec-*"` 与 6 个 `id="sec-*"` 锚点**完全一一对应**（core-conclusions / section-0~3 / priority）；4 个主题群 heading 均带 `border-left` 区分色。〔浏览器点击实测未做——锚点对应+smooth 已具备，逻辑必然可跳，非阻塞〕
+2. ✅ 重跑 `render-report.ts` 生成 report.md：§0 结论先行由「4条空标题」变为每条含 `【类型】+贡献描述` 实在正文（如"19次相机移动100%命中极慢帧，占全部27个极慢帧70%"）。
+3. ✅ `npx tsc --noEmit`：报错全部在 `src/` 前端既有类型债，**本次改动的两个 server 文件零新增错误**。
+4. ✅ 无回归：火焰条调用树(37处)、核心结论表、已排除项 strip、优化优先级表均正常渲染。
+5. ✅ 未越界：只改了工单允许的 render-html.ts / render-report.ts 两个文件。

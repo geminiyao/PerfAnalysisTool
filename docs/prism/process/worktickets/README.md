@@ -27,7 +27,26 @@
 .\docs\prism\process\scripts\watch-worktickets.ps1 -ProcessExisting
 ```
 
-日志：`worktickets/logs/`。`-DryRun` 只打印 prompt 不执行。
+日志：`worktickets/logs/` 下两份文件：
+- `*.log` — 人类可读（思考/工具/结果）
+- `*.jsonl` — 原始 stream-json（完整回放）
+
+回放可读日志：
+```powershell
+Get-Content docs/prism/process/worktickets/logs/xxx.jsonl |
+  .\docs\prism\process\scripts\format-agent-stream.ps1
+```
+
+手动测试可读输出（推荐用包装脚本，避免乱码）：
+```powershell
+cd K:\AI\PerfAnalysisTool_Codebuddy
+.\docs\prism\process\scripts\run-readable-agent.ps1 `
+  -p --trust --mode ask --workspace . `
+  --output-format stream-json --stream-partial-output `
+  "只读：一句话说明 docs/prism/state/now.md 当前里程碑"
+```
+
+若仍乱码：用 Windows Terminal，或在运行前先执行 `chcp 65001`。
 
 ## 当前工单
 
