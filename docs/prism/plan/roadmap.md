@@ -89,6 +89,24 @@ flowchart LR
 
 **产出价值**：Prism 从"一次性程序"正式变成"会成长的 agent"。**这是全项目最关键的转折。**
 
+### M3 工单级拆解（2026-07-11 展开 / 2026-07-11 据用户反馈调整·加摄入层）
+
+> 把"电路总闸"拆成可独立派发的工单。**核心顺序：存取骨架 → 摄入(清洗入库) → 注入(读库进prompt) → 沉淀(写库) → 连跑验证。** 严守 DR-32——总闸先合，别急着灌料。
+> **关键设计(用户 2026-07-11)**：知识入库前要经**摄入层清洗**——原始来源(md/findings/…)→ LLM 提炼切条+脚本规整格式 → 统一条目入库。所有来源(先验知识+三回路)走同一摄入口，格式统一；存储后端(现文件系统/未来RAG)靠 M3-A 抽象接口隔离，可换不改调用方。
+
+| 工单 | 做什么 | 改哪些文件（预判·出单时复核） | 验收门 | 依赖 |
+|---|---|---|---|---|
+| **M3-A · 持久大脑结构 + 存取接口** | ✅ **DONE(WT-005)**：`prism-memory/`(priors/knowledge/capabilities/lessons)+`prism-memory.ts`(loadMemory/appendMemory，配置驱动可扩展、按类筛选可插拔、md存储)。 | 新增 prism-memory.ts + 目录 | 22测试PASS | 无 |
+| **M3-摄入 · 摄入层(脚本+LLM二合一)** | ✅ **DONE(WT-006)**：`ingest-memory.ts` 脚本(读源→LLM清洗切条→appendMemory入库，LLM可mock、源参数化)。真实摄入 unity/aoe 两先验知识md → priors/ **79条独立条目**。加 `--replace-source`(+ prism-memory 的 clearBySource)按源覆盖，防 LLM 切分slug不稳定导致的重跑堆积。人工反馈闭环留接口未实现(后置)。20测试PASS。 | ingest-memory.ts/.test.ts + prism-memory.ts(加clearBySource) | 摄入产出规整独立条目、重跑不堆积 | M3-A |
+| **M3-B · 开局注入** | ✅ **DONE(WT-007)**：`explore-prompt.txt` 加 `{{MEMORY_INJECTION}}` 占位+F2免责说明(参考线索非清单)；`explore-service.ts` 加 `formatMemoryForPrompt()`(按分类加载 priors/knowledge/lessons、7KB上限、空大脑返空串)接入 replace 链。10测试PASS，守 F2。 | `explore-service.ts` + `prompts/explore-prompt.txt` + test | 大脑有条目→prompt带上；空→行为不变 | M3-摄入 |
+| **M3-C · 收尾沉淀** | ✅ **DONE(WT-008)**：`explore-service.ts` 加 `persistDataRequestsToMemory()`——run 收尾把 DataRequest 用语义字段sha256稳定id沉淀进 capabilities/(增量、同id覆盖、**从不清空**)，fire-and-forget容错；capabilities 纳入注入类。24测试PASS。**先沉淀DataRequest(最易闭环)，findings知识沉淀留后续谨慎做。** | `explore-service.ts` + test | 跑一次 run → 大脑出现本次新增条目 | M3-A/摄入 |
+| **M3-D · 连跑两次验证（里程碑验收）** | 端到端：同数据连跑两次，第二次开局加载到第一次沉淀、且注入改变了第二次行为。M3 验收门本身，主 agent 验收动作。 | —（验证） | 第二次 run 可见第一次沉淀的影响 | M3-A/摄入/B/C |
+
+**M3 前置决策（已定·用户 2026-07-11）**：
+1. ✅ **人工确认闸口**：先全存、事后人工删错的（不做实时确认交互，务实起步）。
+2. ✅ **prism-memory 落盘位置**：项目内 `web/server/prism/prism-memory/`（随仓库走、Cursor 可访问）。
+3. ✅ **入库形态**：经摄入层清洗(脚本+LLM)，非原样搬运；人工反馈后置为增强单。
+
 ---
 
 ## M4 · 三回路填料——越用越强（往通电的回路里灌内容）

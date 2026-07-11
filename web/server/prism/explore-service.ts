@@ -9,13 +9,188 @@
  * real tool call; verifyFindings detects fabricated evidence.
  */
 
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { resolveCliExecutable, spawnCliProcess, cliUnavailableHint } from '../utils/cli-resolver.js';
 import { getConfig } from '../utils/config.js';
+import { appendMemory, loadMemory, type MemoryCategory } from './prism-memory.js';
 import type { Finding, DataRequest, ExploreResult } from './types.js';
+
+/** Categories injected at explore startup (M3-B). Adjust here, not inline in formatters. */
+export const MEMORY_INJECTION_CATEGORIES: MemoryCategory[] = [
+  'priors',
+  'knowledge',
+  'lessons',
+  'capabilities',
+];
+
+/** M3-C: persist run DataRequests into capabilities/ at explore end (default on). */
+export const DATA_REQUEST_MEMORY_PERSIST_ENABLED = true;
+
+/** Max characters for the {{MEMORY_INJECTION}} block (~7KB). */
+export const MEMORY_INJECTION_MAX_CHARS = 7000;
+
+// ─────────────────────────────────────────────
+// M3-B: memory injection for explore prompt
+// ─────────────────────────────────────────────
+
+export interface FormatMemoryForPromptOptions {
+  /** Override memory root (tests). */
+  root?: string;
+}
+
+/** Load persistent brain entries and format as compact reference text for the explore prompt. */
+export function formatMemoryForPrompt(opts?: FormatMemoryForPromptOptions): string {
+  const { byCategory } = loadMemory({
+    categories: MEMORY_INJECTION_CATEGORIES,
+    root: opts?.root,
+  });
+
+  // Per-category budget so a large category (e.g. 79 priors) can't starve
+  // later categories (e.g. freshly-sedimented capabilities). Split the total
+  // budget across categories that actually have entries.
+  const activeCats = MEMORY_INJECTION_CATEGORIES.filter((c) => byCategory[c]?.length);
+  if (activeCats.length === 0) return '';
+  const perCatBudget = Math.floor(MEMORY_INJECTION_MAX_CHARS / activeCats.length);
+
+  const blocks: string[] = [];
+
+  for (const cat of activeCats) {
+    const catEntries = byCategory[cat]!;
+    const catLines: string[] = [`## ${cat} (${catEntries.length})`];
+    let catChars = catLines[0].length + 1;
+    let catTruncated = false;
+    let shown = 0;
+
+    for (const entry of catEntries) {
+      const title = entry.title ? String(entry.title) : entry.id;
+      const compact = entry.content.replace(/\s+/g, ' ').trim();
+      const summary = compact.length > 280 ? `${compact.slice(0, 277)}...` : compact;
+      const line = `- [${title}] ${summary}`;
+
+      if (catChars + line.length + 1 > perCatBudget) {
+        catTruncated = true;
+        break;
+      }
+      catLines.push(line);
+      catChars += line.length + 1;
+      shown++;
+    }
+
+    if (catTruncated) {
+      catLines.push(`...(${cat}: showing ${shown}/${catEntries.length}, budget-capped)`);
+    }
+    blocks.push(catLines.join('\n'));
+  }
+
+  return blocks.join('\n\n').trimEnd();
+}
+
+// ─────────────────────────────────────────────
+// M3-C: run-end DataRequest sedimentation
+// ─────────────────────────────────────────────
+
+function normalizeForStableId(text: string): string {
+  return text.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * Extract semantic fields from a DataRequest, tolerant to schema drift.
+ * The typed shape is want/rationale/..., but real LLM-written data-requests.json
+ * uses id/topic/description/reasonMissing/impactOnFindings. Support both.
+ */
+function extractDataRequestFields(dr: DataRequest): {
+  title: string;
+  body: string;
+  idParts: string[];
+} {
+  const r = dr as unknown as Record<string, unknown>;
+  const s = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+  // Title: prefer real-schema topic, fallback typed want, then id.
+  const title = s(r.topic) || s(r.want) || s(r.id) || '(untitled data request)';
+
+  // Body lines: include whichever fields are present (both schemas).
+  const lines: string[] = [];
+  const push = (label: string, v: unknown) => {
+    const val = s(v);
+    if (val) lines.push(`${label}: ${val}`);
+  };
+  push('Topic', r.topic);
+  push('Want', r.want);
+  push('Description', r.description);
+  push('Rationale', r.rationale);
+  push('ReasonMissing', r.reasonMissing);
+  push('ImpactOnFindings', r.impactOnFindings);
+  push('Axis', r.suspectedAxis);
+  push('ClosestTool', r.closestExistingTool);
+  const body = lines.length > 0 ? lines.join('\n') : title;
+
+  // Stable-id parts: semantic content across both schemas (never the volatile LLM id).
+  const idParts = [
+    s(r.topic),
+    s(r.want),
+    s(r.description),
+    s(r.rationale),
+    s(r.reasonMissing),
+    s(r.suspectedAxis),
+    s(r.closestExistingTool),
+  ];
+  return { title, body, idParts };
+}
+
+/** Derive stable id from semantic fields (not LLM-provided id). Same content → same id → overwrite. */
+export function deriveDataRequestStableId(dr: DataRequest): string {
+  const { idParts } = extractDataRequestFields(dr);
+  const payload = idParts.map(normalizeForStableId).join('|');
+  const hash = crypto.createHash('sha256').update(payload).digest('hex').slice(0, 16);
+  return `dr-${hash}`;
+}
+
+function formatDataRequestContent(dr: DataRequest): string {
+  return extractDataRequestFields(dr).body;
+}
+
+/** Append run DataRequests to capabilities/ (incremental; same id overwrites, never clears). */
+export function persistDataRequestsToMemory(
+  dataRequests: DataRequest[],
+  opts?: { runId?: string; root?: string; enabled?: boolean },
+): number {
+  const enabled = opts?.enabled ?? DATA_REQUEST_MEMORY_PERSIST_ENABLED;
+  if (!enabled || dataRequests.length === 0) {
+    return 0;
+  }
+
+  const source = opts?.runId ?? 'explore-datarequest';
+  let count = 0;
+
+  for (const dr of dataRequests) {
+    const { title } = extractDataRequestFields(dr);
+    try {
+      const id = deriveDataRequestStableId(dr);
+      appendMemory(
+        'capabilities',
+        {
+          id,
+          title,
+          content: formatDataRequestContent(dr),
+          source,
+        },
+        { root: opts?.root },
+      );
+      count++;
+    } catch (e) {
+      console.warn(
+        `[explore] persist DataRequest failed (${title.slice(0, 80)}): ${(e as Error).message}`,
+      );
+    }
+  }
+
+  return count;
+}
 
 // ─────────────────────────────────────────────
 // Public types
@@ -521,6 +696,7 @@ export async function runPrismExplore(
   const targetFps = Math.round(1000 / frameBudgetMs);
   promptText = promptText.replace(/\{\{FRAME_BUDGET_MS\}\}/g, String(frameBudgetMs));
   promptText = promptText.replace(/\{\{TARGET_FPS\}\}/g, String(targetFps));
+  promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt());
 
   // Resolve CLI
   const provider = opts.cliProvider ?? 'codebuddy';
@@ -694,6 +870,16 @@ export async function runPrismExplore(
         });
         child.on('error', () => { /* ignore */ });
       } catch { /* ignore */ }
+
+      // M3-C: sediment DataRequests into persistent brain capabilities/ (incremental, never clear).
+      try {
+        const persisted = persistDataRequestsToMemory(dataRequests, { runId });
+        if (persisted > 0) {
+          console.log(`[explore] Persisted ${persisted} DataRequest(s) to capabilities memory`);
+        }
+      } catch (e) {
+        console.warn(`[explore] Failed to persist DataRequests to memory: ${(e as Error).message}`);
+      }
 
       doResolve(result);
     });

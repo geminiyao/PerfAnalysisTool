@@ -43,6 +43,12 @@ export interface NarrativeSection {
   items: NarrativeItem[];
 }
 
+/** 三维定性维度：热点主要属于哪一类（可多选） */
+export type HotspotDimension = 'absoluteCost' | 'shareHigh' | 'outlier';
+
+/** 单源可判性：这条结论单源能不能下定论 */
+export type HotspotJudgability = 'judgable' | 'needsBaseline' | 'needsDomainKnowledge';
+
 /** 核心结论表的一行（问题先行，按整体贡献排序） */
 export interface TopConclusionRow {
   rank: number;
@@ -50,6 +56,10 @@ export interface TopConclusionRow {
   kind: string;          // 类型：稳态大头 / 高频尖峰 / 低频尖峰
   contribution: string;  // 对整体的贡献（如"每帧2.3ms×600=1381ms，全场self最高"）
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  /** 三维定性：这个热点主要属于哪一类（可多选）。absoluteCost=绝对量大/占帧预算显著；shareHigh=占总量/贡献度高；outlier=离群严重(spikeRatio/p99高) */
+  dimensions?: HotspotDimension[];
+  /** 单源可判性：这条结论单源能不能下定论。judgable=能判(有绝对基线/内生可比)；needsBaseline=该不该管需历史基线；needsDomainKnowledge=需业务知识 */
+  judgability?: HotspotJudgability;
 }
 
 export interface NarrativeReport {
@@ -60,6 +70,8 @@ export interface NarrativeReport {
   rating: 'excellent' | 'pass' | 'weak' | 'fail';
   /** 二、核心结论表（问题先行，按整体贡献排序） */
   topConclusions: TopConclusionRow[];
+  /** 判定边界诚实声明：单源这次能确定什么、判不了什么（超越作文机的"知道自己边界"）。可选。 */
+  judgmentBoundary?: { canJudge: string[]; cannotJudge: string[] };
   /** 已排除项（查证后确认不是问题的——作文机没有的"辨伪"能力） */
   ruledOut?: { name: string; why: string }[];
   /** 三~五、主题分群（稳态/尖峰/线程等，由叙事作者自己组织，不写死） */

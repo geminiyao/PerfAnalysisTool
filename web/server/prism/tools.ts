@@ -1248,17 +1248,28 @@ const MARKER_SOURCE_MAP_PATH = path.resolve(
 );
 const PROFILER_NOISE_RE = /Sampler(?:Begin|End)|BeginSample|EndSample|ProfilerUtil|CustomSampler/;
 
+export interface GetSourceForSymbolFrameContext {
+  runId: string;
+  frameIndex: number;
+  thread?: string;
+  markerName?: string;
+}
+
 export interface GetSourceForSymbolArgs {
   runId?: string;
   symbol: string;
   maxLines?: number;
   includeCalls?: boolean;
+  /** Nearest parent to distant ancestor symbol names from the call tree. */
+  callStack?: string[];
+  /** When callStack is omitted, build it from profiler parent_name chain in this frame. */
+  frameContext?: GetSourceForSymbolFrameContext;
 }
 
 export interface GetSourceForSymbolResult {
   data: {
     symbol: string;
-    resolvedVia: 'codegraph' | 'map-source' | 'none' | 'file-anchored';
+    resolvedVia: 'codegraph' | 'map-source' | 'none' | 'file-anchored' | 'callstack-disambiguated';
     found: boolean;
     kind?: string;
     language?: string;
@@ -1281,6 +1292,12 @@ function normalizeFilePath(filePath: string): string {
   return filePath.replace(/\\/g, '/');
 }
 
+function symbolToShortName(sym: string): string {
+  const stripped = sym.startsWith('CS:') ? sym.slice(3) : sym;
+  const parts = stripped.split(/[.:]/);
+  return parts[parts.length - 1] ?? stripped;
+}
+
 function readLines(absPath: string, startLine: number, endLine: number): string[] {
   const content = fs.readFileSync(absPath, 'utf8');
   const lines = content.split('\n');
@@ -1288,11 +1305,66 @@ function readLines(absPath: string, startLine: number, endLine: number): string[
   return lines.slice(startLine - 1, endLine);
 }
 
+const CALL_STACK_MAX_DEPTH = 20;
+
+function resolveFrameThread(
+  db: Database.Database,
+  runId: string,
+  frameIndex: number,
+  thread?: string
+): string | null {
+  if (thread) return thread;
+  const row = db
+    .prepare(
+      `SELECT DISTINCT thread FROM prism_frame_marker_samples
+       WHERE run_id = ? AND frame_index = ? AND thread LIKE '%Main Thread%'
+       LIMIT 1`
+    )
+    .get(runId, frameIndex) as { thread: string } | undefined;
+  return row?.thread ?? null;
+}
+
+/** Walk parent_name chain from startMarker; returns nearest-to-farthest ancestors (excludes startMarker). */
+export function buildCallStackFromFrame(
+  db: Database.Database,
+  runId: string,
+  frameIndex: number,
+  thread: string,
+  startMarker: string
+): string[] {
+  const stack: string[] = [];
+  const visited = new Set<string>();
+  let currentMarker = startMarker;
+
+  const parentStmt = db.prepare(
+    `SELECT parent_name FROM prism_frame_marker_samples
+     WHERE run_id = ? AND frame_index = ? AND thread = ? AND marker_name = ?
+     LIMIT 1`
+  );
+
+  for (let depth = 0; depth < CALL_STACK_MAX_DEPTH; depth++) {
+    const row = parentStmt.get(runId, frameIndex, thread, currentMarker) as
+      | { parent_name: string | null }
+      | undefined;
+
+    if (!row?.parent_name) break;
+
+    const parent = row.parent_name;
+    if (visited.has(parent)) break;
+    visited.add(parent);
+
+    stack.push(parent);
+    currentMarker = parent;
+  }
+
+  return stack;
+}
+
 export function getSourceForSymbol(
-  _db: Database.Database,
+  db: Database.Database,
   args: GetSourceForSymbolArgs
 ): GetSourceForSymbolResult {
-  const { runId, symbol, maxLines = 120, includeCalls = true } = args;
+  const { runId, symbol, maxLines = 120, includeCalls = true, callStack, frameContext } = args;
   const provenance = { runId, tool: 'getSourceForSymbol' as const, args: args as Record<string, unknown> };
 
   // ── Compute shortName ───────────────────────────────────────────
@@ -1508,6 +1580,149 @@ export function getSourceForSymbol(
             resolvedVia: 'none',
             found: false,
             reason: 'symbol not in codegraph nor map-source; may need map-source.ts to grep it first',
+          },
+          provenance,
+        };
+      }
+
+      type CgNodePick = CgNode;
+
+      function buildPathBSuccess(
+        picked: CgNodePick,
+        resolvedVia: 'codegraph' | 'callstack-disambiguated',
+        note?: string
+      ): GetSourceForSymbolResult {
+        const absPath = path.join(CODEBASE_ROOT, normalizeFilePath(picked.file_path)).replace(/\\/g, '/');
+        let sourceLines: string[];
+        let truncated = false;
+        try {
+          const { lines, truncated: t } = readCapped(absPath, picked.start_line, picked.end_line);
+          sourceLines = lines;
+          truncated = t;
+        } catch (readErr) {
+          return {
+            data: {
+              symbol,
+              resolvedVia: 'codegraph',
+              found: false,
+              reason: `codegraph resolved to ${picked.file_path} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+            },
+            provenance,
+          };
+        }
+
+        const businessCalls = getBusinessCalls(picked.id);
+        return {
+          data: {
+            symbol,
+            resolvedVia,
+            found: true,
+            kind: picked.kind,
+            language: picked.language,
+            file: normalizeFilePath(picked.file_path),
+            startLine: picked.start_line,
+            endLine: picked.end_line,
+            signature: picked.signature ?? undefined,
+            sourceCode: sourceLines.join('\n'),
+            truncated,
+            ...(businessCalls.length > 0 ? { businessCalls } : {}),
+            ...(note ? { note } : {}),
+          },
+          provenance,
+        };
+      }
+
+      function tryCallStackDisambiguation(
+        candidates: CgNodePick[],
+        stack: string[]
+      ): { picked: CgNodePick; matchedAncestor: string } | null {
+        const ancestorShortNames = new Set(
+          stack.map(s => symbolToShortName(s)).filter(s => s.length > 0)
+        );
+        if (ancestorShortNames.size === 0) return null;
+
+        const matching: Array<{ node: CgNodePick; matchedAncestors: string[] }> = [];
+
+        for (const cand of candidates) {
+          const callerSources = cgDb!
+            .prepare("SELECT source FROM edges WHERE target=? AND kind='calls'")
+            .all(cand.id) as Array<{ source: string }>;
+          if (callerSources.length === 0) continue;
+
+          const callerIds = callerSources.map(c => c.source);
+          const placeholders = callerIds.map(() => '?').join(',');
+          const callerNodes = cgDb!
+            .prepare(`SELECT name FROM nodes WHERE id IN (${placeholders})`)
+            .all(...callerIds) as Array<{ name: string }>;
+
+          const callerShortNames = new Set(callerNodes.map(n => symbolToShortName(n.name)));
+          const matchedAncestors = [...ancestorShortNames].filter(a => callerShortNames.has(a));
+          if (matchedAncestors.length > 0) {
+            matching.push({ node: cand, matchedAncestors });
+          }
+        }
+
+        if (matching.length !== 1) return null;
+        return { picked: matching[0].node, matchedAncestor: matching[0].matchedAncestors[0] };
+      }
+
+      const normalizedCallStack = (callStack ?? []).filter(s => s.length > 0);
+
+      let autoCallStack: string[] = [];
+      if (normalizedCallStack.length === 0 && frameContext) {
+        const resolvedThread = resolveFrameThread(
+          db,
+          frameContext.runId,
+          frameContext.frameIndex,
+          frameContext.thread
+        );
+        if (resolvedThread) {
+          const startMarker = frameContext.markerName ?? symbol;
+          autoCallStack = buildCallStackFromFrame(
+            db,
+            frameContext.runId,
+            frameContext.frameIndex,
+            resolvedThread,
+            startMarker
+          );
+        }
+      }
+
+      const effectiveStack =
+        normalizedCallStack.length > 0 ? normalizedCallStack : autoCallStack;
+      const fromFrameContext =
+        normalizedCallStack.length === 0 && autoCallStack.length > 0;
+
+      // Call-stack disambiguation when multiple name-only candidates exist
+      if (rows.length > 1 && effectiveStack.length > 0) {
+        const disambiguated = tryCallStackDisambiguation(rows, effectiveStack);
+        if (disambiguated) {
+          const note = fromFrameContext
+            ? `由 profiler 帧 ${frameContext!.frameIndex} 的运行时调用栈自动消歧，祖先 ${disambiguated.matchedAncestor}`
+            : `用调用栈祖先 ${disambiguated.matchedAncestor} 消歧，从 ${rows.length} 个候选中定位`;
+          const result = buildPathBSuccess(
+            disambiguated.picked,
+            'callstack-disambiguated',
+            note
+          );
+          cgDb.close();
+          cgDb = null;
+          return result;
+        }
+
+        cgDb.close();
+        cgDb = null;
+        const failNote = fromFrameContext
+          ? `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射。frameContext 回溯的运行时调用栈仍无法唯一收敛`
+          : `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射。提供了调用栈但仍无法唯一收敛`;
+        return {
+          data: {
+            symbol,
+            resolvedVia: 'none',
+            found: false,
+            ambiguous: true,
+            candidateCount: rows.length,
+            note: failNote,
           },
           provenance,
         };

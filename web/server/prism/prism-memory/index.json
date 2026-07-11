@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-11T07:22:30.520Z",
+  "categories": {
+    "priors": {
+      "count": 79,
+      "lastUpdated": "2026-07-11T06:29:27.766Z"
+    },
+    "knowledge": {
+      "count": 0,
+      "lastUpdated": null
+    },
+    "capabilities": {
+      "count": 6,
+      "lastUpdated": "2026-07-11T07:22:30.498Z"
+    },
+    "lessons": {
+      "count": 0,
+      "lastUpdated": null
+    }
+  }
+}
