@@ -19,6 +19,12 @@ import {
   correlateFrameSets,
   getSourceForSymbol,
   buildCallStackFromFrame,
+  querySchedState,
+  queryAtraceSlices,
+  queryFrameTimeline,
+  queryCpuFreq,
+  getPerfettoCallTree,
+  correlateFrameSchedCpu,
 } from './tools.js';
 
 // ─────────────────────────── Test harness ──────────────────────────
@@ -564,6 +570,82 @@ console.log('\n[10] getSourceForSymbol — marker alias table / confidence');
     `MUI_UpdateUIPos confidence=map-source-interval (got ${mui.data.confidence})`
   );
   assert(mui.data.confidence !== 'exact-codegraph', 'MUI_UpdateUIPos must not be exact');
+}
+
+// ─────────────────────────── 11. WT-013 Perfetto JSON query tools ─
+
+console.log('\n[11] WT-013 Perfetto JSON query tools');
+{
+  const curSched = querySchedState(db, { role: 'cur' });
+  assert(curSched.data.available === true, 'cur querySchedState available');
+  assert(
+    curSched.data.threads.some(t => t.name === 'UnityMain' && t.runningPct === 77.82),
+    'cur sched includes UnityMain runningPct=77.82',
+    curSched.data.threads
+  );
+  assert(curSched.provenance.source === 'perfetto', 'sched provenance.source=perfetto');
+
+  const curAtrace = queryAtraceSlices(db, { role: 'cur', pattern: 'PlayerLoop' });
+  assert(curAtrace.data.available === true, 'cur queryAtraceSlices available');
+  assert(
+    curAtrace.data.rows[0]?.name === 'PlayerLoop' && curAtrace.data.rows[0]?.count === 484,
+    'cur atrace PlayerLoop count=484',
+    curAtrace.data.rows[0]
+  );
+
+  const curFrame = queryFrameTimeline(db, { role: 'cur' });
+  assert(
+    curFrame.data.androidFrameTimeline.available === false,
+    'cur FrameTimeline honestly unavailable'
+  );
+  assert(
+    curFrame.data.choreographer.available === true,
+    'cur choreographer summary available',
+    curFrame.data.choreographer
+  );
+
+  const curCallTree = getPerfettoCallTree(db, { role: 'cur', maxDepth: 5 });
+  assert(curCallTree.data.available === true, 'cur getPerfettoCallTree available');
+  if (curCallTree.data.available) {
+    assert(curCallTree.data.callTrees.length > 0, 'cur callTrees non-empty');
+    assert(
+      curCallTree.data.hotPath.some(n => n.name === 'PlayerLoop'),
+      'cur callTree hotPath includes PlayerLoop',
+      curCallTree.data.hotPath
+    );
+  }
+
+  const baseCallTree = getPerfettoCallTree(db, { role: 'base' });
+  assert(baseCallTree.data.available === true, 'base getPerfettoCallTree available after WT-014 provider fallback');
+  if (baseCallTree.data.available) {
+    assert(baseCallTree.data.callTrees.length > 0, 'base callTrees non-empty after WT-014');
+    assert(
+      baseCallTree.data.hotPath.some(n => n.name === 'PlayerLoop'),
+      'base callTree hotPath includes PlayerLoop after WT-014',
+      baseCallTree.data.hotPath
+    );
+  }
+
+  const throttleCpu = queryCpuFreq(db, { role: 'throttle' });
+  assert(
+    Math.abs((throttleCpu.data.avgMhz ?? 0) - 1324.6) < 0.01,
+    `throttle cpu avgMhz=1324.6 (got ${throttleCpu.data.avgMhz})`,
+    throttleCpu.data
+  );
+  assert(
+    Math.abs((throttleCpu.data.bigCoreReachPct ?? 0) - 59.2) < 0.01,
+    `throttle bigCoreReachPct=59.2 (got ${throttleCpu.data.bigCoreReachPct})`,
+    throttleCpu.data
+  );
+  assert(throttleCpu.data.throttlingSuspected === true, 'throttle throttling suspected');
+
+  const corr = correlateFrameSchedCpu(db, { role: 'throttle' });
+  assert(corr.data.granularity === 'window', 'correlateFrameSchedCpu granularity=window');
+  assert(
+    corr.data.signals.includes('throttling suspected'),
+    'correlateFrameSchedCpu reports throttling suspected signal',
+    corr.data.signals
+  );
 }
 
 // ─────────────────────────── Summary ───────────────────────────────

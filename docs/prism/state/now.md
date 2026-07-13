@@ -50,7 +50,7 @@
 
 - **M3 阶段验收**：M3-D 重量层已通过，下一步可找用户做 M3 阶段收口/决定进入 M4（记忆语义去重、更多可复用知识料、BK-24）。
 - **当前用户关注重心**：报告图文流/调用树聚焦(BK-25)已入表但降为体验层低优先；当前更关注 **引擎层完整度、三大回路完整度、三源其它两源能否按当前 agent 设计跑出高于作文机的报告**。
-- **引擎层验证工单进展已收口**：`WT-010 / BK-26` 已按 DR-36 验收 PASS：simpleperf 与 Perfetto/ptrace 数据层最小闭环成立，但 agent 层仍缺 query/ledger/explore/narrative/memory。`WT-011 / BK-26b` 已按 DR-36 验收 PASS：新版 Perfetto triad（`sample_base_20260624_104944`、`sample_cur_20260624_105041`、`sample_throttle_20260624_105539`，由 `record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本。`WT-012 / BK-23a` 已按 DR-36 验收 PASS：marker alias table + confidence 已落地，`getSourceForSymbol` 能区分 exact/method/class/interval/low-confidence。下一批 TODO 已开：`WT-013` Perfetto query 最小集实现、`WT-014` provider sidecar/base-callTrees 修复、`WT-015` 报告层消费 source confidence、`WT-016` CustomSampler/Create 自动扫描扩展 map-source。建议另起新会话优先开 `WT-013`。
+- **引擎层验证工单进展已收口并进入 Perfetto agent 化**：`WT-010 / BK-26` 已按 DR-36 验收 PASS：simpleperf 与 Perfetto/ptrace 数据层最小闭环成立。`WT-011 / BK-26b` 已按 DR-36 验收 PASS：新版 Perfetto triad（`sample_base_20260624_104944`、`sample_cur_20260624_105041`、`sample_throttle_20260624_105539`，由 `record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本。`WT-012 / BK-23a` 已按 DR-36 验收 PASS：marker alias table + confidence 已落地。`WT-013 / BK-26b-impl` 已按 DR-36 验收 PASS：6 个 Perfetto query 最小集已实现并可 CLI/batch 调用。`WT-014 / BK-26b-fix` 已按 DR-36 验收 PASS：provider 自动 ingest sidecar，evidence 不再错报无 thermal，base callTrees 已通过 PlayerLoop anchor fallback 修复，三组 triad 重新 build 后测试 116 PASS。下一批 TODO：`WT-017` Perfetto explore+ledger MVP、`WT-018` Perfetto narrative.json+report.html MVP、`WT-015` 报告层消费 source confidence、`WT-016` CustomSampler/Create 自动扫描扩展 map-source。建议优先 `WT-017 -> WT-018`。
 
 ## M1 Gap 分析关键结论（2026-07-10，详见 m1-gap-analysis.md）
 

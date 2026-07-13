@@ -22,6 +22,8 @@ export interface Provenance {
   runId: string;
   tool: string;
   args: Record<string, unknown>;
+  source?: string;
+  role?: string;
 }
 
 // ─────────────────────────── Pure Math Helpers ─────────────────────
@@ -2316,5 +2318,500 @@ export function aggregateSubtree(
   return {
     data: trimmed,
     provenance: { runId, tool: 'aggregateSubtree', args: args as Record<string, unknown> },
+  };
+}
+
+// ─────────────────────────── WT-013: Perfetto JSON query tools ─────
+
+export type PerfettoSampleRole = 'base' | 'cur' | 'throttle' | 'single';
+
+export interface PerfettoJsonToolArgs {
+  runId?: string;
+  role?: PerfettoSampleRole;
+  runDir?: string;
+}
+
+interface LoadedPerfettoRun {
+  runId: string;
+  role: PerfettoSampleRole;
+  runDir: string;
+  profilePath: string;
+  summaryPath: string;
+  profile: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  core: Record<string, unknown>;
+  perfetto: Record<string, unknown>;
+}
+
+const PERFETTO_TRIAD_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../data/prism-out/bk26b-perfetto-triad'
+);
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function asRecord(v: unknown): Record<string, unknown> {
+  return isRecord(v) ? v : {};
+}
+
+function asNumber(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+}
+
+function roundNumber(v: number | undefined, digits = 3): number | undefined {
+  if (v == null || !Number.isFinite(v)) return undefined;
+  return +v.toFixed(digits);
+}
+
+function isNonEmptyObject(v: unknown): boolean {
+  return Array.isArray(v) ? v.length > 0 : isRecord(v) && Object.keys(v).length > 0;
+}
+
+function normalizePerfettoRole(role: unknown): PerfettoSampleRole {
+  return role === 'base' || role === 'cur' || role === 'throttle' || role === 'single'
+    ? role
+    : 'cur';
+}
+
+function resolvePerfettoRunDir(args: PerfettoJsonToolArgs): { role: PerfettoSampleRole; runDir: string } {
+  const role = normalizePerfettoRole(args.role);
+  if (args.runDir) {
+    return { role, runDir: path.resolve(args.runDir) };
+  }
+  const dirRole = role === 'single' ? 'cur' : role;
+  return { role, runDir: path.join(PERFETTO_TRIAD_ROOT, dirRole) };
+}
+
+function readJsonFile(filePath: string): Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+}
+
+function loadPerfettoRun(args: PerfettoJsonToolArgs): LoadedPerfettoRun {
+  const { role, runDir } = resolvePerfettoRunDir(args);
+  const profilePath = path.join(runDir, 'perfetto-profile.json');
+  const summaryPath = path.join(runDir, 'perfetto-profile-summary.json');
+  const profile = readJsonFile(profilePath);
+  const summary = readJsonFile(summaryPath);
+  const core = asRecord(profile.core ?? asRecord(profile.profile).core);
+  const detail = asRecord(profile.detail ?? asRecord(profile.profile).detail);
+  const perfetto = asRecord(detail.perfetto ?? profile.perfetto ?? summary);
+  const runId = args.runId ?? `bk26b-perfetto-${role}`;
+
+  return { runId, role, runDir, profilePath, summaryPath, profile, summary, core, perfetto };
+}
+
+function perfettoProvenance(
+  tool: string,
+  args: PerfettoJsonToolArgs,
+  run: LoadedPerfettoRun
+): Provenance {
+  return {
+    runId: run.runId,
+    tool,
+    args: args as Record<string, unknown>,
+    source: 'perfetto',
+    role: run.role,
+  };
+}
+
+function getPerfettoProfileWindow(run: LoadedPerfettoRun): Record<string, unknown> | null {
+  const window = run.perfetto.profileWindow;
+  return isRecord(window) ? window : null;
+}
+
+export interface QuerySchedStateArgs extends PerfettoJsonToolArgs {
+  thread?: string;
+  topN?: number;
+  sortBy?: 'runningPct' | 'runnablePct' | 'sleepingPct' | 'name';
+}
+
+export interface QuerySchedStateResult {
+  data: {
+    available: boolean;
+    window: Record<string, unknown> | null;
+    totalThreads: number;
+    threads: Array<{
+      name: string;
+      count?: number;
+      runningPct?: number;
+      runnablePct?: number;
+      sleepingPct?: number;
+      totalNs?: number;
+    }>;
+  };
+  provenance: Provenance;
+}
+
+export function querySchedState(
+  _db: Database.Database | null | undefined,
+  args: QuerySchedStateArgs
+): QuerySchedStateResult {
+  const run = loadPerfettoRun(args);
+  const sched = asRecord(run.perfetto.threadsSched ?? run.summary.threadsSched);
+  const needle = args.thread?.toLowerCase();
+  const sortBy = args.sortBy ?? 'runningPct';
+  const topN = Math.min(args.topN ?? 20, 50);
+
+  let rows = Object.entries(sched).map(([name, raw]) => {
+    const r = asRecord(raw);
+    return {
+      name,
+      count: asNumber(r.count),
+      runningPct: asNumber(r.runningPct),
+      runnablePct: asNumber(r.runnablePct),
+      sleepingPct: asNumber(r.sleepingPct),
+      totalNs: asNumber(r.totalNs),
+    };
+  });
+
+  if (needle) rows = rows.filter(r => r.name.toLowerCase().includes(needle));
+  rows.sort((a, b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name);
+    return (b[sortBy] ?? 0) - (a[sortBy] ?? 0);
+  });
+
+  return {
+    data: {
+      available: rows.length > 0,
+      window: getPerfettoProfileWindow(run),
+      totalThreads: rows.length,
+      threads: rows.slice(0, topN),
+    },
+    provenance: perfettoProvenance('querySchedState', args, run),
+  };
+}
+
+export interface QueryAtraceSlicesArgs extends PerfettoJsonToolArgs {
+  pattern?: string;
+  topN?: number;
+  sortBy?: 'totalMs' | 'avgMs' | 'count';
+}
+
+export interface QueryAtraceSlicesResult {
+  data: {
+    available: boolean;
+    totalSlices: number;
+    rows: Array<{
+      name: string;
+      count?: number;
+      avgMs?: number;
+      totalMs?: number;
+      totalPctOfWindow?: number;
+    }>;
+  };
+  provenance: Provenance;
+}
+
+export function queryAtraceSlices(
+  _db: Database.Database | null | undefined,
+  args: QueryAtraceSlicesArgs
+): QueryAtraceSlicesResult {
+  const run = loadPerfettoRun(args);
+  const slices = asRecord(run.perfetto.atraceSlices ?? run.summary.atraceSlices);
+  const window = getPerfettoProfileWindow(run);
+  const durMs = asNumber(window?.durMs);
+  const pattern = args.pattern?.toLowerCase();
+  const sortBy = args.sortBy ?? 'totalMs';
+  const topN = Math.min(args.topN ?? 20, 50);
+
+  let rows = Object.entries(slices).map(([name, raw]) => {
+    const r = asRecord(raw);
+    const totalMs = asNumber(r.totalMs);
+    return {
+      name,
+      count: asNumber(r.count),
+      avgMs: asNumber(r.avgMs),
+      totalMs,
+      totalPctOfWindow: durMs && totalMs != null ? roundNumber((totalMs / durMs) * 100, 2) : undefined,
+    };
+  });
+
+  if (pattern) rows = rows.filter(r => r.name.toLowerCase().includes(pattern));
+  rows.sort((a, b) => (b[sortBy] ?? 0) - (a[sortBy] ?? 0));
+
+  return {
+    data: {
+      available: rows.length > 0,
+      totalSlices: rows.length,
+      rows: rows.slice(0, topN),
+    },
+    provenance: perfettoProvenance('queryAtraceSlices', args, run),
+  };
+}
+
+export interface QueryFrameTimelineArgs extends PerfettoJsonToolArgs {}
+
+export interface QueryFrameTimelineResult {
+  data: {
+    androidFrameTimeline: {
+      available: boolean;
+      reason?: string;
+      raw?: unknown;
+    };
+    choreographer: {
+      available: boolean;
+      summary: unknown;
+    };
+  };
+  provenance: Provenance;
+}
+
+export function queryFrameTimeline(
+  _db: Database.Database | null | undefined,
+  args: QueryFrameTimelineArgs
+): QueryFrameTimelineResult {
+  const run = loadPerfettoRun(args);
+  const rawFrameTimeline = run.perfetto.frameTimeline ?? run.summary.frameTimeline;
+  const coreFrames = Array.isArray(run.core.frame) ? run.core.frame : [];
+  const choreographer =
+    coreFrames.find(f => asRecord(f).frameDefinition === 'choreographer') ??
+    asRecord(run.summary.frame).choreographer ??
+    run.summary.frame ??
+    null;
+  const androidAvailable = isNonEmptyObject(rawFrameTimeline);
+
+  return {
+    data: {
+      androidFrameTimeline: androidAvailable
+        ? { available: true, raw: rawFrameTimeline }
+        : {
+            available: false,
+            reason: 'Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.',
+          },
+      choreographer: {
+        available: choreographer != null && isNonEmptyObject(choreographer),
+        summary: choreographer,
+      },
+    },
+    provenance: perfettoProvenance('queryFrameTimeline', args, run),
+  };
+}
+
+export interface QueryCpuFreqArgs extends PerfettoJsonToolArgs {}
+
+export interface QueryCpuFreqResult {
+  data: {
+    available: boolean;
+    avgMhz?: number;
+    cpuThrottled?: boolean;
+    throttlingLevel?: string;
+    throttlingSuspected: boolean;
+    bigCoreReachPct?: number;
+    perCpu: Array<Record<string, unknown>>;
+    evidence: string[];
+  };
+  provenance: Provenance;
+}
+
+export function queryCpuFreq(
+  _db: Database.Database | null | undefined,
+  args: QueryCpuFreqArgs
+): QueryCpuFreqResult {
+  const run = loadPerfettoRun(args);
+  const system = asRecord(run.core.system ?? run.summary.system);
+  const throttling = asRecord(run.perfetto.throttling ?? run.summary.throttling);
+  const perCpu = Array.isArray(throttling.perCpu) ? throttling.perCpu.map(asRecord) : [];
+  const avgMhz = asNumber(system.cpuFreqAvgMhz);
+  const level = typeof throttling.level === 'string' ? throttling.level : undefined;
+  const cpuThrottled = typeof system.cpuThrottled === 'boolean' ? system.cpuThrottled : undefined;
+  const evidence = Array.isArray(throttling.evidence)
+    ? throttling.evidence.filter((v): v is string => typeof v === 'string')
+    : [];
+
+  return {
+    data: {
+      available: avgMhz != null || perCpu.length > 0,
+      avgMhz,
+      cpuThrottled,
+      throttlingLevel: level,
+      throttlingSuspected: level === 'suspected' || cpuThrottled === true,
+      bigCoreReachPct: asNumber(throttling.bigCoreReachPct),
+      perCpu,
+      evidence,
+    },
+    provenance: perfettoProvenance('queryCpuFreq', args, run),
+  };
+}
+
+export interface GetPerfettoCallTreeArgs extends PerfettoJsonToolArgs {
+  thread?: string;
+  maxDepth?: number;
+  topChildren?: number;
+  minTotalPct?: number;
+}
+
+export interface PerfettoCallTreeQueryResult {
+  data:
+    | {
+        available: false;
+        reason: string;
+        callTrees: [];
+      }
+    | {
+        available: true;
+        callTrees: unknown[];
+        hotPath: Array<{ name: string; totalMs?: number; totalPct?: number; selfMs?: number; selfPct?: number }>;
+      };
+  provenance: Provenance;
+}
+
+function prunePerfettoCallTreeNode(
+  node: Record<string, unknown>,
+  depth: number,
+  maxDepth: number,
+  topChildren: number,
+  minTotalPct: number
+): Record<string, unknown> {
+  const children = Array.isArray(node.children) ? node.children.map(asRecord) : [];
+  const prunedChildren = depth >= maxDepth
+    ? []
+    : children
+        .filter(child => (asNumber(child.totalPct) ?? 0) >= minTotalPct)
+        .sort((a, b) => (asNumber(b.totalMs) ?? asNumber(b.totalPct) ?? 0) - (asNumber(a.totalMs) ?? asNumber(a.totalPct) ?? 0))
+        .slice(0, topChildren)
+        .map(child => prunePerfettoCallTreeNode(child, depth + 1, maxDepth, topChildren, minTotalPct));
+  return { ...node, children: prunedChildren };
+}
+
+function buildPerfettoHotPath(root: Record<string, unknown>): Array<{ name: string; totalMs?: number; totalPct?: number; selfMs?: number; selfPct?: number }> {
+  const pathRows: Array<{ name: string; totalMs?: number; totalPct?: number; selfMs?: number; selfPct?: number }> = [];
+  let current: Record<string, unknown> | undefined = root;
+  while (current) {
+    pathRows.push({
+      name: typeof current.name === 'string' ? current.name : '(unknown)',
+      totalMs: asNumber(current.totalMs),
+      totalPct: asNumber(current.totalPct),
+      selfMs: asNumber(current.selfMs),
+      selfPct: asNumber(current.selfPct),
+    });
+    const childNodes: Record<string, unknown>[] = Array.isArray(current.children)
+      ? current.children.map(asRecord)
+      : [];
+    current = childNodes.reduce((best: Record<string, unknown> | undefined, child: Record<string, unknown>) => {
+      const childScore = asNumber(child.totalMs) ?? asNumber(child.totalPct) ?? 0;
+      const bestScore = best ? asNumber(best.totalMs) ?? asNumber(best.totalPct) ?? 0 : -Infinity;
+      return childScore > bestScore ? child : best;
+    }, undefined);
+  }
+  return pathRows;
+}
+
+export function getPerfettoCallTree(
+  _db: Database.Database | null | undefined,
+  args: GetPerfettoCallTreeArgs
+): PerfettoCallTreeQueryResult {
+  const run = loadPerfettoRun(args);
+  const rawTrees = run.perfetto.callTrees ?? run.summary.callTrees;
+  const callTrees = Array.isArray(rawTrees) ? rawTrees.map(asRecord) : [];
+
+  if (callTrees.length === 0) {
+    return {
+      data: {
+        available: false,
+        reason: 'Perfetto callTrees is empty in the source profile; no synthetic call tree was created.',
+        callTrees: [],
+      },
+      provenance: perfettoProvenance('getPerfettoCallTree', args, run),
+    };
+  }
+
+  const selected = args.thread
+    ? callTrees.filter(t => String(t.thread ?? '').toLowerCase().includes(args.thread!.toLowerCase()))
+    : callTrees;
+
+  if (selected.length === 0) {
+    return {
+      data: {
+        available: false,
+        reason: `Perfetto callTrees exists but no tree matched thread "${args.thread}"; no synthetic call tree was created.`,
+        callTrees: [],
+      },
+      provenance: perfettoProvenance('getPerfettoCallTree', args, run),
+    };
+  }
+
+  const maxDepth = Math.min(args.maxDepth ?? 8, 20);
+  const topChildren = Math.min(args.topChildren ?? 8, 30);
+  const minTotalPct = args.minTotalPct ?? 0;
+  const prunedTrees = selected.map(tree => {
+    const root = asRecord(tree.root);
+    return {
+      ...tree,
+      root: prunePerfettoCallTreeNode(root, 0, maxDepth, topChildren, minTotalPct),
+    };
+  });
+
+  return {
+    data: {
+      available: true,
+      callTrees: prunedTrees,
+      hotPath: buildPerfettoHotPath(asRecord(asRecord(prunedTrees[0]).root)),
+    },
+    provenance: perfettoProvenance('getPerfettoCallTree', args, run),
+  };
+}
+
+export interface CorrelateFrameSchedCpuArgs extends PerfettoJsonToolArgs {
+  thread?: string;
+}
+
+export interface CorrelateFrameSchedCpuResult {
+  data: {
+    granularity: 'window';
+    frame: unknown;
+    sched: Record<string, unknown> | null;
+    cpu: {
+      avgMhz?: number;
+      bigCoreReachPct?: number;
+      throttlingLevel?: string;
+      throttlingSuspected: boolean;
+    };
+    signals: string[];
+    note: string;
+  };
+  provenance: Provenance;
+}
+
+export function correlateFrameSchedCpu(
+  _db: Database.Database | null | undefined,
+  args: CorrelateFrameSchedCpuArgs
+): CorrelateFrameSchedCpuResult {
+  const run = loadPerfettoRun(args);
+  const sched = asRecord(run.perfetto.threadsSched ?? run.summary.threadsSched);
+  const threadName = args.thread ?? 'UnityMain';
+  const schedEntry = asRecord(sched[threadName] ?? Object.entries(sched).find(([name]) => name.toLowerCase().includes(threadName.toLowerCase()))?.[1]);
+  const coreFrames = Array.isArray(run.core.frame) ? run.core.frame : [];
+  const frame = coreFrames.find(f => asRecord(f).frameDefinition === 'choreographer') ?? run.summary.frame ?? null;
+  const system = asRecord(run.core.system ?? run.summary.system);
+  const throttling = asRecord(run.perfetto.throttling ?? run.summary.throttling);
+  const throttlingLevel = typeof throttling.level === 'string' ? throttling.level : undefined;
+  const throttlingSuspected = throttlingLevel === 'suspected' || system.cpuThrottled === true;
+  const runningPct = asNumber(schedEntry.runningPct);
+  const runnablePct = asNumber(schedEntry.runnablePct);
+  const signals: string[] = [];
+
+  if (runningPct != null) signals.push(`${threadName} runningPct=${runningPct}`);
+  if (runnablePct != null) signals.push(`${threadName} runnablePct=${runnablePct}`);
+  if (asNumber(system.cpuFreqAvgMhz) != null) signals.push(`cpuFreqAvgMhz=${system.cpuFreqAvgMhz}`);
+  if (asNumber(throttling.bigCoreReachPct) != null) signals.push(`bigCoreReachPct=${throttling.bigCoreReachPct}`);
+  if (throttlingSuspected) signals.push('throttling suspected');
+
+  return {
+    data: {
+      granularity: 'window',
+      frame,
+      sched: Object.keys(schedEntry).length > 0 ? { name: threadName, ...schedEntry } : null,
+      cpu: {
+        avgMhz: asNumber(system.cpuFreqAvgMhz),
+        bigCoreReachPct: asNumber(throttling.bigCoreReachPct),
+        throttlingLevel,
+        throttlingSuspected,
+      },
+      signals,
+      note: 'WT-013 MVP reports window-level correlation only; no per-frame sched/cpu correlation is claimed.',
+    },
+    provenance: perfettoProvenance('correlateFrameSchedCpu', args, run),
   };
 }

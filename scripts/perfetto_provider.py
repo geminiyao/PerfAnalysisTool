@@ -20,6 +20,7 @@ Provider 同一份磁盘 JSON 契约 (web/shared/perf-model.ts), 供 web 侧 ing
 unity/simpleperf 同一份 PerfProfile JSON 契约, web ingest 通用读取。
 """
 
+import json
 import os
 import sys
 
@@ -105,19 +106,35 @@ def _thread_sched(tp, utid, win):
 # ------------------------------------------------------------
 # atrace slice 树 (聚合同名兄弟; 以 parent_id 建树)
 # ------------------------------------------------------------
+def _slice_subtree_dur(row_id, children_of, seen=None):
+    """递归求一个 slice 的子树 dur 之和 (仅 dur>=0 的子节点)。用于 dur<0 的 root 估算。"""
+    if seen is None:
+        seen = set()
+    if row_id in seen:
+        return 0
+    seen.add(row_id)
+    total = 0
+    for child in children_of.get(row_id, []):
+        cd = int(child.dur or 0)
+        if cd >= 0:
+            total += cd
+        total += _slice_subtree_dur(child.id, children_of, seen)
+    return total
+
+
 def _slice_tree(tp, utid, win_dur_ns, min_pct=0.5, max_depth=12):
+    """返回 (nodes, fallback_note)。fallback_note 非 None 时表示走了 PlayerLoop anchor fallback。"""
+    # 主查询: 仅 dur>=0 的 slice (避免 dur=-1 噪音进入非 root 层聚合)
     rows = _safe(tp, """
         SELECT s.id id, s.parent_id parent_id, s.name name, s.dur dur
         FROM slice s JOIN thread_track tt ON s.track_id = tt.id
         WHERE tt.utid = %d AND s.dur >= 0
     """ % utid, "slices utid=%d" % utid)
     if not rows:
-        return None
+        return [], None
     children_of = {}  # parent_id -> [row]
     roots = []
-    by_id = {}
     for r in rows:
-        by_id[r.id] = r
         if r.parent_id is None:
             roots.append(r)
         else:
@@ -148,13 +165,150 @@ def _slice_tree(tp, utid, win_dur_ns, min_pct=0.5, max_depth=12):
         nodes.sort(key=lambda n: n["totalMs"], reverse=True)
         return nodes
 
-    return aggregate(roots, 0)
+    primary = aggregate(roots, 0)
+    if primary:
+        return primary, None
+
+    # Fallback (BUG-P2): root 聚合为空 — base 样本里真正有价值的 PlayerLoop 多数不是
+    # parent_id IS NULL 的 root，而是挂在其它容器下的 anchor slice。fallback 选取所有
+    # name='PlayerLoop' slice 作为虚拟 roots，仍只聚合真实 slice 子树；dur<0 的 slice 用子树 sum 估算。
+    pl_anchor_rows = _safe(tp, """
+        SELECT s.id id, s.parent_id parent_id, s.name name, s.dur dur
+        FROM slice s JOIN thread_track tt ON s.track_id = tt.id
+        WHERE tt.utid = %d AND s.name = 'PlayerLoop'
+    """ % utid, "playerloop anchors utid=%d" % utid)
+    if not pl_anchor_rows:
+        return [], "root 聚合为空且无 PlayerLoop anchor; callTrees 空 (顶层 slice 全被 dur<0 或 min_pct 剪掉)。"
+    # 把 PlayerLoop anchor 的 dur<0 替换为子树 sum, 并注入 children_of (它们的 children 已在主查询 rows 里)
+    virtual_roots = []
+    for r in pl_anchor_rows:
+        if r.dur is not None and int(r.dur) < 0:
+            sub_dur = _slice_subtree_dur(r.id, children_of)
+            # 用子树 sum 作为 root dur (估算); 挂一个临时 row 对象避免修改原 row
+            class _VRow:
+                pass
+            vr = _VRow()
+            vr.id = r.id
+            vr.parent_id = None
+            vr.name = r.name
+            vr.dur = sub_dur if sub_dur > 0 else 0
+            virtual_roots.append(vr)
+        else:
+            virtual_roots.append(r)
+    fallback_nodes = aggregate(virtual_roots, 0)
+    note = None
+    if fallback_nodes:
+        note = ("root 聚合为空 (顶层 roots 被 dur/min_pct 过滤); "
+                "fallback 选取 PlayerLoop anchor (%d 个) 作为虚拟 roots 聚合真实子树, "
+                "dur<0 anchor 用子树 sum 估算。" % len(pl_anchor_rows))
+    else:
+        note = ("root 聚合为空; PlayerLoop fallback 仍空 (PlayerLoop 子树全被 min_pct=%.2f%% 剪掉或无子节点)。" % min_pct)
+    return fallback_nodes, note
 
 
 # ------------------------------------------------------------
 # 降频推断 (推测级; 确认级需 sysfs 旁路 scaling_max vs cpuinfo_max)
 # ------------------------------------------------------------
-def _throttling(tp, win, main_running_pct, sysfs_available=False):
+
+def _read_thermal(path):
+    """解析 thermal_before/after.txt: zoneN=name:temp_millicelsius → 取主要 zone。"""
+    if not path or not os.path.isfile(path):
+        return None
+    zones = {}
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                if ":" not in val:
+                    continue
+                name, raw_temp = val.rsplit(":", 1)
+                try:
+                    zones[key.strip()] = {"name": name.strip(), "tempC": _round(int(raw_temp) / 1000.0, 1)}
+                except ValueError:
+                    continue
+    except Exception as e:
+        print("[perfetto_provider] WARN: thermal read failed %s: %s" % (path, e), file=sys.stderr)
+        return None
+    if not zones:
+        return None
+    # 主要 thermal zone = soc_thermal / board_thermal (soc 优先), 其余多为 modem 负值噪音
+    primary = None
+    for prefer in ("soc_thermal", "board_thermal"):
+        for z in zones.values():
+            if z["name"] == prefer:
+                primary = z
+                break
+        if primary:
+            break
+    if not primary:
+        # fallback: 第一个温度 > 0 的 zone
+        for z in zones.values():
+            if z["tempC"] > 0:
+                primary = z
+                break
+    return {"primary": primary, "zones": zones}
+
+
+def _read_cpuinfo_max(path):
+    """解析 cpuinfo_max_freq.txt: 每行一个 CPU 的 max freq (KHz) → 列表 (index=max cpu)。"""
+    if not path or not os.path.isfile(path):
+        return None
+    freqs = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    freqs.append(int(line))
+                except ValueError:
+                    continue
+    except Exception as e:
+        print("[perfetto_provider] WARN: cpuinfo_max_freq read failed %s: %s" % (path, e), file=sys.stderr)
+        return None
+    return freqs if freqs else None
+
+
+def _read_sidecar(trace_path):
+    """读取 trace 同目录 sidecar: collection-manifest.json / thermal_before/after.txt / cpuinfo_max_freq.txt。
+
+    返回 dict: {collectionManifest, thermalBefore, thermalAfter, thermalDelta, cpuinfoMaxKhz}。
+    缺失项为 None。不抛异常 (sidecar 是可选增强, 缺失不应阻断解析)。
+    """
+    trace_dir = os.path.dirname(os.path.abspath(trace_path)) if trace_path else None
+    sidecar = {
+        "collectionManifest": None, "thermalBefore": None,
+        "thermalAfter": None, "thermalDelta": None, "cpuinfoMaxKhz": None,
+    }
+    if not trace_dir or not os.path.isdir(trace_dir):
+        return sidecar
+    # manifest
+    mf = os.path.join(trace_dir, "collection-manifest.json")
+    if os.path.isfile(mf):
+        try:
+            with open(mf, "r", encoding="utf-8") as f:
+                sidecar["collectionManifest"] = json.load(f)
+        except Exception as e:
+            print("[perfetto_provider] WARN: manifest read failed: %s" % e, file=sys.stderr)
+    # thermal
+    tb = _read_thermal(os.path.join(trace_dir, "thermal_before.txt"))
+    ta = _read_thermal(os.path.join(trace_dir, "thermal_after.txt"))
+    sidecar["thermalBefore"] = tb
+    sidecar["thermalAfter"] = ta
+    if tb and ta and tb.get("primary") and ta.get("primary"):
+        sidecar["thermalDelta"] = _round(ta["primary"]["tempC"] - tb["primary"]["tempC"], 1)
+    # cpuinfo max
+    sidecar["cpuinfoMaxKhz"] = _read_cpuinfo_max(os.path.join(trace_dir, "cpuinfo_max_freq.txt"))
+    return sidecar
+
+
+def _throttling(tp, win, main_running_pct, sidecar=None):
+    """降频推断。sidecar = _read_sidecar() 返回值; 提供时 thermal/cpuinfo/manifest 进入 throttling。"""
+    sidecar = sidecar or {}
     rows = _safe(tp, """
         SELECT cct.cpu cpu, AVG(c.value) avg_khz, MAX(c.value) max_khz, COUNT(*) n
         FROM counter c JOIN cpu_counter_track cct ON c.track_id = cct.id
@@ -162,21 +316,55 @@ def _throttling(tp, win, main_running_pct, sysfs_available=False):
         GROUP BY cct.cpu ORDER BY cct.cpu
     """, "per-cpu cpufreq")
     per_cpu = []
+    cpuinfo_max_khz = sidecar.get("cpuinfoMaxKhz")
     if rows:
         for r in rows:
             if r.max_khz is None:
                 continue
+            cpu_idx = int(r.cpu)
+            # cpuinfo theoretical max (from sidecar, per-cpu); 越界则取最大值
+            cpuinfo_khz = None
+            if cpuinfo_max_khz:
+                cpuinfo_khz = cpuinfo_max_khz[cpu_idx] if cpu_idx < len(cpuinfo_max_khz) else max(cpuinfo_max_khz)
+            reach_vs_cpuinfo = None
+            if cpuinfo_khz:
+                reach_vs_cpuinfo = _round(float(r.avg_khz) / float(cpuinfo_khz) * 100, 1)
             per_cpu.append({
-                "cpu": int(r.cpu),
+                "cpu": cpu_idx,
                 "avgMhz": _round(float(r.avg_khz) / 1000.0, 1),
                 "maxMhz": _round(float(r.max_khz) / 1000.0, 1),
+                "cpuinfoMaxMhz": _round(float(cpuinfo_khz) / 1000.0, 1) if cpuinfo_khz else None,
+                "reachVsCpuinfoPct": reach_vs_cpuinfo,
                 "reachPct": _round(float(r.avg_khz) / float(r.max_khz) * 100, 1) if r.max_khz else 0.0,
             })
     evidence = []
     level = "unknown"
+    # thermal sidecar
+    thermal_info = None
+    tb = sidecar.get("thermalBefore")
+    ta = sidecar.get("thermalAfter")
+    if tb or ta:
+        thermal_info = {
+            "beforeC": tb["primary"]["tempC"] if tb and tb.get("primary") else None,
+            "afterC": ta["primary"]["tempC"] if ta and ta.get("primary") else None,
+            "deltaC": sidecar.get("thermalDelta"),
+            "primaryZone": (tb or ta or {}).get("primary", {}).get("name") if (tb or ta) else None,
+        }
+    # confirmedAvailable 语义: sidecar 存在 (thermal/cpuinfo available) 即 True; 但确认级降频仍需 scaling_max_freq / cooling state
+    manifest = sidecar.get("collectionManifest")
+    sysfs_manifest = (manifest or {}).get("sysfs", {}) if isinstance(manifest, dict) else {}
+    has_thermal_sidecar = bool(tb and ta)
+    has_cpuinfo_sidecar = bool(cpuinfo_max_khz)
+    has_scaling = bool(sysfs_manifest.get("scalingMaxFreq"))
+    confirmed_available = has_thermal_sidecar or has_cpuinfo_sidecar
+
     if not per_cpu:
         evidence.append("trace 无 cpufreq 计数器, 无法推断频率。")
-        return {"level": level, "confirmedAvailable": sysfs_available, "perCpu": per_cpu, "evidence": evidence}
+        return {
+            "level": level, "confirmedAvailable": confirmed_available,
+            "thermal": thermal_info, "collectionManifest": manifest,
+            "perCpu": per_cpu, "evidence": evidence,
+        }
 
     # 大核 = 观测 max 最高的若干核
     per_cpu_sorted = sorted(per_cpu, key=lambda c: c["maxMhz"], reverse=True)
@@ -194,10 +382,22 @@ def _throttling(tp, win, main_running_pct, sysfs_available=False):
         evidence.append("[推测] 大核持续低频: 平均频率仅达观测峰值 %.1f%%。" % big_reach)
 
     level = "suspected" if suspected else "none"
-    evidence.append("确认级降频判定需 sysfs 旁路 (scaling_max_freq vs cpuinfo_max_freq / cooling state); 本样本无 thermal_before/after.txt, 故仅推测级。")
+    # evidence: sidecar 存在时不再错误声称"无 thermal_before/after.txt"; 诚实说明 confirmed throttling 仍需 scaling/cooling
+    if confirmed_available:
+        parts = []
+        if has_thermal_sidecar:
+            parts.append("thermal_before/after.txt")
+        if has_cpuinfo_sidecar:
+            parts.append("cpuinfo_max_freq.txt")
+        evidence.append("thermal/cpuinfo sidecar available (%s), 但确认级降频仍缺 scaling_max_freq / cooling state 证据。"
+                        % ", ".join(parts))
+    else:
+        evidence.append("确认级降频判定需 sysfs 旁路 (scaling_max_freq vs cpuinfo_max_freq / cooling state); 本样本无 thermal/cpuinfo sidecar, 故仅推测级。")
     return {
         "level": level,
-        "confirmedAvailable": sysfs_available,
+        "confirmedAvailable": confirmed_available,
+        "thermal": thermal_info,
+        "collectionManifest": manifest,
         "perCpu": per_cpu,
         "bigCoreReachPct": _round(big_reach, 1),
         "evidence": evidence,
@@ -380,11 +580,13 @@ def build_profile_dict(
     call_trees = []
     atrace_slices = {}
     if main_utid is not None:
-        tree = _slice_tree(tp, main_utid, win_dur_ns, min_pct=slice_tree_min_pct, max_depth=slice_tree_max_depth)
+        tree, tree_fallback_note = _slice_tree(tp, main_utid, win_dur_ns, min_pct=slice_tree_min_pct, max_depth=slice_tree_max_depth)
         if tree:
             call_trees.append({"thread": "UnityMain", "label": "atrace-slice-tree", "root": {
                 "name": "UnityMain", "totalPct": 100.0, "children": tree,
             }})
+        if tree_fallback_note:
+            notes.append(tree_fallback_note)
         # 关键 slice 帧均 (供 marker.* 跨源对照, source=perfetto)
         for sname in ("PlayerLoop", "BehaviourUpdate", "Camera.Render", "GC.Collect", "WaitForTargetFPS", "Coroutines"):
             q = _safe(tp, """
@@ -418,7 +620,8 @@ def build_profile_dict(
         metrics.append(_metric("system.pssMb", v, "mb"))
 
     # --- 降频推断 ---
-    throttling = _throttling(tp, win.replace("ts >=", "c.ts >=") if win else "", main_running_pct, sysfs_available=False)
+    sidecar = _read_sidecar(trace_path)
+    throttling = _throttling(tp, win.replace("ts >=", "c.ts >=") if win else "", main_running_pct, sidecar=sidecar)
     if throttling.get("level") == "suspected":
         system["cpuThrottled"] = True
 

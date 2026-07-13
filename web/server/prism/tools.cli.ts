@@ -7,7 +7,12 @@
  * toolName: queryMarkers | scanMetricOverFrames | getFrameCallTree |
  *           getThreadTimeline | correlateFrameSets |
  *           scanPeakMarkers | queryFrameCounters | aggregateSubtree |
- *           drillDownMarker | getSourceForSymbol
+ *           drillDownMarker | getSourceForSymbol |
+ *           querySchedState | queryAtraceSlices | queryFrameTimeline |
+ *           queryCpuFreq | getPerfettoCallTree | correlateFrameSchedCpu
+ *
+ * SINGLE mode:
+ *   node --import tsx server/prism/tools.cli.ts single '{"tool":"querySchedState","args":{"role":"cur"}}'
  *
  * BATCH mode (amortizes tsx cold-start across many queries — MUCH faster):
  *   node --import tsx server/prism/tools.cli.ts batch '[{"tool":"queryMarkers","args":{...}}, ...]'
@@ -28,22 +33,45 @@ import {
   aggregateSubtree,
   drillDownMarker,
   getSourceForSymbol,
+  querySchedState,
+  queryAtraceSlices,
+  queryFrameTimeline,
+  queryCpuFreq,
+  getPerfettoCallTree,
+  correlateFrameSchedCpu,
 } from './tools.js';
 import type Database from 'better-sqlite3';
 
 const DEFAULT_RUN_ID = 'unity-outside-stressmove';
 
-const TOOLS: Record<string, (db: Database.Database, args: Record<string, unknown>) => unknown> = {
-  queryMarkers:          (db, a) => queryMarkers(db, a as Parameters<typeof queryMarkers>[1]),
-  scanMetricOverFrames:  (db, a) => scanMetricOverFrames(db, a as Parameters<typeof scanMetricOverFrames>[1]),
-  getFrameCallTree:      (db, a) => getFrameCallTree(db, a as Parameters<typeof getFrameCallTree>[1]),
-  getThreadTimeline:     (db, a) => getThreadTimeline(db, a as Parameters<typeof getThreadTimeline>[1]),
-  correlateFrameSets:    (db, a) => correlateFrameSets(db, a as Parameters<typeof correlateFrameSets>[1]),
-  scanPeakMarkers:       (db, a) => scanPeakMarkers(db, a as Parameters<typeof scanPeakMarkers>[1]),
-  queryFrameCounters:    (db, a) => queryFrameCounters(db, a as Parameters<typeof queryFrameCounters>[1]),
-  aggregateSubtree:      (db, a) => aggregateSubtree(db, a as Parameters<typeof aggregateSubtree>[1]),
-  drillDownMarker:       (db, a) => drillDownMarker(db, a as Parameters<typeof drillDownMarker>[1]),
-  getSourceForSymbol:    (db, a) => getSourceForSymbol(db, a as Parameters<typeof getSourceForSymbol>[1]),
+const PERFETTO_JSON_TOOL_NAMES = new Set([
+  'querySchedState',
+  'queryAtraceSlices',
+  'queryFrameTimeline',
+  'queryCpuFreq',
+  'getPerfettoCallTree',
+  'correlateFrameSchedCpu',
+]);
+
+type ToolRunner = (db: Database.Database | null, args: Record<string, unknown>) => unknown;
+
+const TOOLS: Record<string, ToolRunner> = {
+  queryMarkers:          (db, a) => queryMarkers(db!, a as unknown as Parameters<typeof queryMarkers>[1]),
+  scanMetricOverFrames:  (db, a) => scanMetricOverFrames(db!, a as unknown as Parameters<typeof scanMetricOverFrames>[1]),
+  getFrameCallTree:      (db, a) => getFrameCallTree(db!, a as unknown as Parameters<typeof getFrameCallTree>[1]),
+  getThreadTimeline:     (db, a) => getThreadTimeline(db!, a as unknown as Parameters<typeof getThreadTimeline>[1]),
+  correlateFrameSets:    (db, a) => correlateFrameSets(db!, a as unknown as Parameters<typeof correlateFrameSets>[1]),
+  scanPeakMarkers:       (db, a) => scanPeakMarkers(db!, a as unknown as Parameters<typeof scanPeakMarkers>[1]),
+  queryFrameCounters:    (db, a) => queryFrameCounters(db!, a as unknown as Parameters<typeof queryFrameCounters>[1]),
+  aggregateSubtree:      (db, a) => aggregateSubtree(db!, a as unknown as Parameters<typeof aggregateSubtree>[1]),
+  drillDownMarker:       (db, a) => drillDownMarker(db!, a as unknown as Parameters<typeof drillDownMarker>[1]),
+  getSourceForSymbol:    (db, a) => getSourceForSymbol(db!, a as unknown as Parameters<typeof getSourceForSymbol>[1]),
+  querySchedState:       (db, a) => querySchedState(db, a as unknown as Parameters<typeof querySchedState>[1]),
+  queryAtraceSlices:     (db, a) => queryAtraceSlices(db, a as unknown as Parameters<typeof queryAtraceSlices>[1]),
+  queryFrameTimeline:    (db, a) => queryFrameTimeline(db, a as unknown as Parameters<typeof queryFrameTimeline>[1]),
+  queryCpuFreq:          (db, a) => queryCpuFreq(db, a as unknown as Parameters<typeof queryCpuFreq>[1]),
+  getPerfettoCallTree:   (db, a) => getPerfettoCallTree(db, a as unknown as Parameters<typeof getPerfettoCallTree>[1]),
+  correlateFrameSchedCpu:(db, a) => correlateFrameSchedCpu(db, a as unknown as Parameters<typeof correlateFrameSchedCpu>[1]),
 };
 
 function usage(): never {
@@ -57,9 +85,46 @@ function usage(): never {
 
 const [, , toolName, rawArgs] = process.argv;
 
-if (!toolName || (toolName !== 'batch' && !TOOLS[toolName])) {
+if (!toolName || (toolName !== 'single' && toolName !== 'batch' && !TOOLS[toolName])) {
   console.error(`Unknown tool: ${toolName ?? '(none)'}`);
   usage();
+}
+
+function toolNeedsDb(name: string): boolean {
+  return !PERFETTO_JSON_TOOL_NAMES.has(name);
+}
+
+function injectDefaultRunId(name: string, args: Record<string, unknown>): void {
+  if (toolNeedsDb(name) && !args.runId) args.runId = DEFAULT_RUN_ID;
+}
+
+// ── SINGLE mode: JSON envelope { tool, args } ───────────────────────
+if (toolName === 'single') {
+  let item: { tool?: string; args?: Record<string, unknown> };
+  try {
+    item = rawArgs ? JSON.parse(rawArgs) : {};
+  } catch {
+    console.error('Failed to parse single args as JSON object:', rawArgs);
+    process.exit(1);
+  }
+  const t = item.tool;
+  const a: Record<string, unknown> = { ...(item.args ?? {}) };
+  if (!t || !TOOLS[t]) {
+    console.error(`Unknown tool: ${t ?? '(none)'}`);
+    process.exit(1);
+  }
+  injectDefaultRunId(t, a);
+  const db = toolNeedsDb(t) ? openPrismDb() : null;
+  try {
+    const result = TOOLS[t](db, a);
+    console.log(JSON.stringify(result, null, 2));
+  } catch (err) {
+    console.error('Tool error:', err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  } finally {
+    db?.close();
+  }
+  process.exit(0);
 }
 
 // ── BATCH mode: run many queries in one process (amortize tsx cold-start) ──
@@ -75,19 +140,20 @@ if (toolName === 'batch') {
     console.error('batch expects a JSON array of { tool, args }');
     process.exit(1);
   }
-  const db = openPrismDb();
+  const needsDb = batch.some(item => item?.tool && TOOLS[item.tool] && toolNeedsDb(item.tool));
+  const db = needsDb ? openPrismDb() : null;
   const results: unknown[] = [];
   try {
     for (const item of batch) {
       const t = item?.tool;
       const a: Record<string, unknown> = { ...(item?.args ?? {}) };
-      if (!a.runId) a.runId = DEFAULT_RUN_ID;
       if (!t || !TOOLS[t]) {
         results.push({ tool: t ?? '(none)', args: a, ok: false, error: `Unknown tool: ${t ?? '(none)'}` });
         continue;
       }
+      injectDefaultRunId(t, a);
       try {
-        const out = TOOLS[t](db, a) as { data?: unknown };
+        const out = TOOLS[t](toolNeedsDb(t) ? db : null, a) as { data?: unknown };
         // tools return { data, provenance }; surface data + keep provenance
         results.push({ tool: t, args: a, ok: true, result: out });
       } catch (err) {
@@ -96,7 +162,7 @@ if (toolName === 'batch') {
     }
     console.log(JSON.stringify(results, null, 2));
   } finally {
-    db.close();
+    db?.close();
   }
   process.exit(0);
 }
@@ -109,10 +175,9 @@ try {
   process.exit(1);
 }
 
-// Inject default runId
-if (!args.runId) args.runId = DEFAULT_RUN_ID;
+injectDefaultRunId(toolName, args);
 
-const db = openPrismDb();
+const db = toolNeedsDb(toolName) ? openPrismDb() : null;
 try {
   const result = TOOLS[toolName](db, args);
   console.log(JSON.stringify(result, null, 2));
@@ -120,5 +185,5 @@ try {
   console.error('Tool error:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 } finally {
-  db.close();
+  db?.close();
 }
