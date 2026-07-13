@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "description": "BK-23a marker alias table — profiler label → source file/function with confidence. Hotspot-only (~20 entries), not a full index.",
+  "aliases": [
+    {
+      "marker": "OnCameraMove",
+      "targetSymbol": "OutsideArmyMgr.OnCameraMove",
+      "file": "Assets/Scripts/.Lua/Outside/Army/OutsideArmyMgr.lua",
+      "startLine": 945,
+      "endLine": 986,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "WT-009 frame144 parent chain: UpdateCameraPos → infiniteZoomMgr_OnOutsideCameraMove → PostCameraMoveScale → OnCameraMove(leaf). Source scan: OutsideArmyMgr.lua BeginSample(\"OnCameraMove\") inside cls:OnCameraMove. Codegraph has 5 same-named candidates with zero caller edges — alias is the only safe attribution."
+    },
+    {
+      "marker": "infiniteZoomMgr_OnOutsideCameraMove",
+      "targetSymbol": "MapCameraCtrl.UpdateCameraPos",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Visual/MapCameraCtrl.lua",
+      "startLine": 660,
+      "endLine": 665,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "CustomSampler.Create(\"infiniteZoomMgr_OnOutsideCameraMove\") in MapCameraCtrl.lua; Begin/End wraps infiniteZoomMgr:OnOutsideCameraMove call inside UpdateCameraPos. Label ≠ source function name."
+    },
+    {
+      "marker": "InfiniteZoomMgr.PostCameraMoveScale",
+      "targetSymbol": "InfiniteZoomMgr.OnOutsideCameraMove",
+      "file": "Assets/Scripts/.Lua/Module/InfiniteZoom/InfiniteZoomMgr.lua",
+      "startLine": 501,
+      "endLine": 505,
+      "confidence": "map-source-interval",
+      "prefer": true,
+      "rationale": "Sampler wraps mgr.evt:Post(OutsideEvt.CameraMoveScale, ...) inside OnOutsideCameraMove (414–508), not a standalone PostCameraMoveScale function. Interval-level attribution only."
+    },
+    {
+      "marker": "MapCameraCtrl.UpdateCameraPos",
+      "targetSymbol": "MapCameraCtrl.UpdateCameraPos",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Visual/MapCameraCtrl.lua",
+      "startLine": 625,
+      "endLine": 668,
+      "confidence": "method-anchored",
+      "prefer": false,
+      "rationale": "Exact method body; map-source + codegraph already resolve. Alias records provenance for confidence tagging."
+    },
+    {
+      "marker": "MapCameraCtrl.OnCameraPosChanged",
+      "targetSymbol": "MapCameraCtrl.OnCameraPosChanged",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Visual/MapCameraCtrl.lua",
+      "startLine": 470,
+      "endLine": 513,
+      "confidence": "method-anchored",
+      "prefer": false,
+      "rationale": "Exact method body in MapCameraCtrl.lua."
+    },
+    {
+      "marker": "MapSignificanceMgr",
+      "targetSymbol": "MapSignificanceMgr",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1,
+      "endLine": 40,
+      "confidence": "class-anchored",
+      "prefer": true,
+      "rationale": "Bare class/module marker — anchors to MapSignificanceMgr.lua header only; not a method. Do not treat as exact method attribution."
+    },
+    {
+      "marker": "MapSignificanceMgr.ProcessTasks",
+      "targetSymbol": "MapSignificanceMgr.ProcessSignificanceTasks",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1290,
+      "endLine": 1372,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "Profiler label ProcessTasks ≠ source function ProcessSignificanceTasks. Sampler Begin/End wraps the body at 1293–1369."
+    },
+    {
+      "marker": "MapSignificanceMgr.ProcessTask_MapEntityAdd",
+      "targetSymbol": "MapSignificanceMgr.ProcessSignificanceTask_MapEntityAdd",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1714,
+      "endLine": 1745,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "GetSampler_ProcessTask creates \"MapSignificanceMgr.ProcessTask_\"..taskTypeName; handler is ProcessSignificanceTask_MapEntityAdd."
+    },
+    {
+      "marker": "MapSignificanceMgr.ProcessTask_MapObjRefresh",
+      "targetSymbol": "MapSignificanceMgr.ProcessSignificanceTask_MapObjRefresh",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1706,
+      "endLine": 1712,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "Same ProcessTask_ naming pattern → ProcessSignificanceTask_MapObjRefresh."
+    },
+    {
+      "marker": "MapSignificanceMgr.ProcessTask_MapObjCleanUp",
+      "targetSymbol": "MapSignificanceMgr.ProcessSignificanceTask_MapObjCleanUp",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1679,
+      "endLine": 1704,
+      "confidence": "alias-exact",
+      "prefer": true,
+      "rationale": "Same ProcessTask_ naming pattern → ProcessSignificanceTask_MapObjCleanUp."
+    },
+    {
+      "marker": "MapSignificanceMgr.EntityTask",
+      "targetSymbol": "MapSignificanceMgr.ProcessSignificanceTasks",
+      "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+      "startLine": 1334,
+      "endLine": 1340,
+      "confidence": "map-source-interval",
+      "prefer": true,
+      "rationale": "EntityTask is a sub-sampler inside ProcessSignificanceTasks (sampler_ProcessEntityTask Begin/End), not a standalone function."
+    },
+    {
+      "marker": "MUI_UpdateUIPos",
+      "targetSymbol": "BattleUIMgr.OnUpdate",
+      "file": "Assets/Scripts/CS/Battle/BattleUIMgr.cs",
+      "startLine": 1056,
+      "endLine": 1098,
+      "confidence": "map-source-interval",
+      "prefer": true,
+      "rationale": "CustomSampler \"MUI_UpdateUIPos\" Begin/End inside BattleUIMgr.OnUpdate; no method named MUI_UpdateUIPos."
+    },
+    {
+      "marker": "LuaMgr.OnTick&UpdateSchedule",
+      "targetSymbol": "Mgr.OnUpdate",
+      "file": "Assets/Scripts/.Lua/Mgr/Mgr.lua",
+      "startLine": 384,
+      "endLine": 399,
+      "confidence": "low-confidence",
+      "prefer": true,
+      "rationale": "Synthetic schedule sampler wrapping scheduler:UpdateEntityFunc(OnUpdate/OnTick/Custom) in Mgr:OnUpdate. NOT a real function named OnTick&UpdateSchedule. WT-009: bare file-anchored previously picked wrong methods via line-containment on Create() site — override with suspicious/low-confidence attribution to the Begin/End block."
+    },
+    {
+      "marker": "LuaMgr.OnLateUpdateSchedule",
+      "targetSymbol": "Mgr.OnLateUpdate",
+      "file": "Assets/Scripts/.Lua/Mgr/Mgr.lua",
+      "startLine": 430,
+      "endLine": 439,
+      "confidence": "low-confidence",
+      "prefer": true,
+      "rationale": "Synthetic schedule sampler wrapping scheduler OnLateUpdate in Mgr:OnLateUpdate. Same WT-009 risk as OnTick&UpdateSchedule — must not silently appear as high-confidence file-anchored."
+    },
+    {
+      "marker": "OutSideViewArmyLineMgr",
+      "targetSymbol": "AOE.Outside.OutSideViewArmyLineMgr",
+      "file": "Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs",
+      "startLine": 25,
+      "endLine": 40,
+      "confidence": "class-anchored",
+      "prefer": true,
+      "rationale": "Bare class name marker — class-level only, not a method."
+    },
+    {
+      "marker": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+      "targetSymbol": "AOE.Outside.OutSideViewArmyLineMgr",
+      "file": "Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs",
+      "startLine": 25,
+      "endLine": 40,
+      "confidence": "class-anchored",
+      "prefer": false,
+      "rationale": "Unity auto CS: class sampler — class-anchored, must not be reported as method exact."
+    },
+    {
+      "marker": "CS:AOE.MeshUIManager",
+      "targetSymbol": "AOE.MeshUIManager",
+      "file": "Assets/Scripts/CS/MeshUI/MeshUIManager.cs",
+      "startLine": 9,
+      "endLine": 30,
+      "confidence": "class-anchored",
+      "prefer": false,
+      "rationale": "Unity auto CS: class sampler — class-anchored only."
+    },
+    {
+      "marker": "TServer.HandleMessages",
+      "targetSymbol": "TServer.HandleMessages",
+      "file": "Assets/Scripts/CS/NetworkCore/Network/TServer.cs",
+      "startLine": 1367,
+      "endLine": 1419,
+      "confidence": "method-anchored",
+      "prefer": true,
+      "rationale": "map-source points at CustomSampler.Create line 266; real method body is HandleMessages at 1367–1419. Alias corrects to method body."
+    },
+    {
+      "marker": "YzEntityMoveLineNtf",
+      "targetSymbol": "YzEntityMoveLineNtf",
+      "file": null,
+      "startLine": null,
+      "endLine": null,
+      "confidence": "exact-codegraph",
+      "prefer": false,
+      "rationale": "WT-009: already high-confidence codegraph. Alias records expected confidence; do not override codegraph."
+    },
+    {
+      "marker": "WorldCoordFormatUtil.FormatWorldPosition_MoveAttr",
+      "targetSymbol": "WorldCoordFormatUtil.FormatWorldPosition_MoveAttr",
+      "file": null,
+      "startLine": null,
+      "endLine": null,
+      "confidence": "exact-codegraph",
+      "prefer": false,
+      "rationale": "WT-009: already high-confidence codegraph. Alias records expected confidence; do not override codegraph."
+    }
+  ]
+}

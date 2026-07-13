@@ -77,8 +77,9 @@
 | **BK-24 记忆质量治理（语义去重/防臃肿）** | M3 摄入/沉淀暴露的深水区(WT-006验证)：结构性重复(同id)已靠覆盖解决，但**语义重复防不了**——run1与run5学到同一结论但finding_id不同→存成两条讲同一事的条目。"越用越强"与"越用越臃肿"一线之隔。需上层机制：语义去重/合并、或"同结论反复出现则加权增强而非堆条"。**属M3通电后的质量优化，不阻塞通电**；先验知识侧已用 replaceSource 按源覆盖绕过。 | WT-006验证(2026-07-11) | ⏸（M4，通电后开单） |
 | **BK-11 diff/cross 推广** | 单源榨干后推广到对比/三源综合分析 | Charter 阶段三 | ⏸ |
 | **BK-18 自动采集流程** | 打通"采集→ingest→分析触发"的自动入口（当前 pdata 靠手工放置+手工灌库+手工敲探索命令）。是 BK-LOOP agent loop 的**数据入口**：loop 要自转，数据得能自动进来。来源：用户手记脑图「待做需求·自动采集流程」，此前 BACKLOG 缺失 | 手记.smm | ⬜（依赖 BK-LOOP 前不急，先在册） |
-| **BK-23 profiler标签名↔源码函数名映射** | BK-16 续做暴露的硬缺口（WT-003 验证）：profiler 的 marker/parent_name 是**采样标签**（如 `LuaMgr.OnTick&UpdateSchedule`、`Core.Update`），与 codegraph 里的**函数名**不是一套命名，导致"运行时调用栈消歧"零命中。要让源码归因对 Lua 真正见效，需建标签↔函数名映射层（可能靠命名规约解析 / 埋点时带函数元信息 / 人工映射表）。**是源码归因线(BK-16/8)真正落地的前置**，非细枝末节。难度中高 | WT-003验证(2026-07-11) | ⬜（源码归因线,数据条件未成熟前搁置） |
+| **BK-23 profiler标签名↔源码函数名映射** | ✅ **WT-009/WT-012 验收 PASS（2026-07-13）**：WT-009 证明 Lua/C# marker-source 灰区真实存在；WT-012 已落地 marker alias table（20 条）+ confidence 分级，`getSourceForSymbol` 可区分 `exact-codegraph` / `method-anchored` / `class-anchored` / `map-source-interval` / `low-confidence`。OnCameraMove、ProcessTask_*、MUI_UpdateUIPos、LuaMgr schedule 等灰区已变成可审计映射；仍需注意 class/interval/low 不可作为强行级源码建议。后续可选：BK-23b 自动扫描 CustomSampler/Create 串；报告层按 confidence 控制源码建议强度。 | WT-003/WT-009/WT-012验证(2026-07-13) | ✅ 最小闭环完成，转自动化/报告消费 |
 | **BK-19 能力回路·run内实时自举** | 能力回路最强版：本次 run 内 LLM 发出 DataRequest 后，**当场**把它变成可执行新查询/新感官、立即用来挖当下想要的数据，而非写盘等下次 run。是"run内即时补感官" vs 现有"跨run离线固化"的升级。**优先级不高**（用户判断：新源可先多跑几次把 DataRequest 跑出来、离线把感官建好，~90% 感官能这样提前建好，不必都实时）。难度高（需 run 内安全动态生成+执行新查询）。排在 BK-LOOP 之后 | 用户疑问2（本轮） | ⏸（在册不丢，BK-LOOP 后） |
+| **BK-26 三源同构试点验证** | ✅ **WT-010/WT-011 验收 PASS（2026-07-13）**：WT-010 证明 simpleperf 真实 base/stressmove 与 Perfetto/ptrace 真实 `.pftrace` 均可进入 `PerfProfile` / `detail.<source>.callTrees` 数据层最小闭环；WT-011/BK-26b 进一步证明新版 Perfetto triad（base/cur/throttle，`record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本，三态差分清晰。结论边界：数据层够格继续试点，但 agent 层尚未同构，缺 query 工具面、ledger、explore、Prism 标准 `narrative.json + report.html`、memory loop。后续优先 BK-26b-impl（6 个 Perfetto query）与 BK-26b-fix（sidecar ingest + base callTrees 空树）。 | 用户 2026-07-13 关注三源其它两源能否复用当前 agent 设计 | ✅ 试点验证完成，转 query 实现/修复工单 |
 
 ---
 
@@ -91,6 +92,7 @@
 | **BK-20 单源三维热点判定 + 诚实标注能判/判不了** | ✅ **DONE（WT-004，2026-07-11 验收PASS）**：narrative-types 加可选 `dimensions`(absoluteCost/shareHigh/outlier)+`judgability`(judgable/needsBaseline/needsDomainKnowledge)+顶层 `judgmentBoundary`(canJudge/cannotJudge)；narrative-prompt 加三维显式标注写作纪律+判定边界诚实声明+降级链逻辑(有知识用知识→有基线用基线→通用三维+诚实标注判不了)。renderer 向后兼容(新字段可选)。**内核隐式三维→显式化+诚实边界完成。** 真实报告效果待整体重跑探索验证。原描述：把单源"热点判定"从单靠耗时排序升级为三维定位并诚实标注 | 用户困扰拆解(本轮)/Charter F8 | ✅ DONE |
 | **BK-21 回归哨兵(单源自动对标历史基线)** | 把"哪里烫"升级成"哪里**开始**烫了"。用户**早已在diff模式手动做**(报告里"ArmyLineMgr 0.02→2.84ms +16594%🔴"就是雏形)。回归哨兵=每次分析自动跟该场景历史基线比、自动报变化,**单源模式也能有**。"涨3倍"可采纳性极高(不需业务知识就成立的强信号)。天然依赖跨run记忆(BK-LOOP),是"agent loop>作文机"最有说服力的证明 | 用户Q3(本轮)/回归哨兵讨论 | ⬜（依赖BK-LOOP,框架后做） |
 | **BK-22 清理prompt业务词·提升F2纯度** | explore-prompt 里混入了游戏专属业务词作举例：第241行 finding title 示范用了`'行军线模块每帧常驻开销'`(AOEYZ专属)，第119行候选清单举例含"相机"等。虽是**举例/示范非硬编码逻辑**(发现机制仍数据驱动:ArmyLine/YzEntity 都是从榜单扫出来的,非名字命中),但业务专属词写进prompt降低了F2「自由发现·不预设盯防名单」的纯度(违反DR-2废白名单精神)。**修:业务专属词(尤其"行军线")换成纯通用类别或占位符;通用引擎概念(GC/渲染/UI)可保留因任何游戏都有**。低成本、纯prompt改动 | 用户本轮追问(相机/行军线是否写死) | ⬜ P1候选 |
+| **BK-25 报告图文流 + 调用树聚焦** | 当前 HTML 已有 narrative+调用树，但体验仍像"大段文字 + 一棵原始调用树"。调用树即使不截字，也存在**信息冗余、重点不明**：例如 `600帧全超预算` 下展示 PlayerLoop 大树，读者看不出重点在哪里。需求：报告从“文字后贴树”升级为**图文流**：按结论选择合适可视化（总账用贡献拆分/小型瀑布或Top contributors，不贴完整 PlayerLoop；单热点用聚焦 hot path；低价值分支折叠/弱化；每棵树有“为什么看这棵树/看哪几行”的标注）。验收：用户不用读完整树，也能在第一眼知道关键路径、贡献比例、下一步动作。**用户已明确：当前优先级不高，先关注引擎层/三回路/三源能力。** | 用户 2026-07-13 report.html review | ⏸ 体验层低优先 |
 
 ---
 

@@ -1246,7 +1246,45 @@ const MARKER_SOURCE_MAP_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../../.claude/skills/unity-profiler-analysis/marker-source-map.json'
 );
+const MARKER_ALIASES_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  'marker-aliases.json'
+);
 const PROFILER_NOISE_RE = /Sampler(?:Begin|End)|BeginSample|EndSample|ProfilerUtil|CustomSampler/;
+
+/** BK-23a confidence grades for source attribution. */
+export type SourceConfidence =
+  | 'exact-codegraph'
+  | 'method-anchored'
+  | 'alias-exact'
+  | 'file-anchored'
+  | 'class-anchored'
+  | 'map-source-interval'
+  | 'ambiguous'
+  | 'not-found'
+  | 'low-confidence'
+  | 'suspicious';
+
+export interface MarkerAliasEntry {
+  marker: string;
+  targetSymbol?: string;
+  file?: string | null;
+  startLine?: number | null;
+  endLine?: number | null;
+  confidence: SourceConfidence;
+  prefer?: boolean;
+  rationale?: string;
+}
+
+export interface SourceAliasProvenance {
+  source: 'marker-aliases';
+  targetSymbol?: string;
+  file?: string;
+  startLine?: number;
+  endLine?: number;
+  rationale?: string;
+  confidence?: SourceConfidence;
+}
 
 export interface GetSourceForSymbolFrameContext {
   runId: string;
@@ -1269,7 +1307,7 @@ export interface GetSourceForSymbolArgs {
 export interface GetSourceForSymbolResult {
   data: {
     symbol: string;
-    resolvedVia: 'codegraph' | 'map-source' | 'none' | 'file-anchored' | 'callstack-disambiguated';
+    resolvedVia: 'codegraph' | 'map-source' | 'none' | 'file-anchored' | 'callstack-disambiguated' | 'alias';
     found: boolean;
     kind?: string;
     language?: string;
@@ -1284,8 +1322,129 @@ export interface GetSourceForSymbolResult {
     reason?: string;
     ambiguous?: boolean;
     candidateCount?: number;
+    /** BK-23a: graded confidence — never treat class/interval/low as exact. */
+    confidence?: SourceConfidence;
+    confidenceReason?: string;
+    alias?: SourceAliasProvenance;
   };
   provenance: { runId?: string; tool: 'getSourceForSymbol'; args: Record<string, unknown> };
+}
+
+const HIGH_CONFIDENCE: ReadonlySet<SourceConfidence> = new Set([
+  'exact-codegraph',
+  'method-anchored',
+  'alias-exact',
+]);
+
+let _aliasTableCache: Map<string, MarkerAliasEntry> | null = null;
+
+function loadMarkerAliasTable(): Map<string, MarkerAliasEntry> {
+  if (_aliasTableCache) return _aliasTableCache;
+  const map = new Map<string, MarkerAliasEntry>();
+  try {
+    const raw = JSON.parse(fs.readFileSync(MARKER_ALIASES_PATH, 'utf8')) as {
+      aliases?: MarkerAliasEntry[];
+    };
+    for (const entry of raw.aliases ?? []) {
+      if (entry?.marker) map.set(entry.marker, entry);
+    }
+  } catch {
+    /* alias table optional */
+  }
+  _aliasTableCache = map;
+  return map;
+}
+
+/** Test helper: clear alias cache so tests can reload after fixture changes. */
+export function clearMarkerAliasCache(): void {
+  _aliasTableCache = null;
+}
+
+function aliasProvenance(entry: MarkerAliasEntry): SourceAliasProvenance {
+  return {
+    source: 'marker-aliases',
+    targetSymbol: entry.targetSymbol,
+    file: entry.file ?? undefined,
+    startLine: entry.startLine ?? undefined,
+    endLine: entry.endLine ?? undefined,
+    rationale: entry.rationale,
+    confidence: entry.confidence,
+  };
+}
+
+function withConfidence(
+  result: GetSourceForSymbolResult,
+  confidence: SourceConfidence,
+  confidenceReason: string,
+  alias?: SourceAliasProvenance
+): GetSourceForSymbolResult {
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      confidence,
+      confidenceReason,
+      ...(alias ? { alias } : {}),
+    },
+  };
+}
+
+function resolveViaAlias(
+  symbol: string,
+  entry: MarkerAliasEntry,
+  provenance: GetSourceForSymbolResult['provenance'],
+  maxLines: number
+): GetSourceForSymbolResult | null {
+  if (!entry.file || entry.startLine == null || entry.endLine == null) return null;
+  const relPath = normalizeFilePath(entry.file);
+  const absPath = path.join(CODEBASE_ROOT, relPath).replace(/\\/g, '/');
+  let sourceLines: string[];
+  let truncated = false;
+  try {
+    const content = fs.readFileSync(absPath, 'utf8');
+    const allLines = content.split('\n');
+    const startLine = Math.max(1, entry.startLine);
+    const endLine = Math.min(allLines.length, entry.endLine);
+    const raw = allLines.slice(startLine - 1, endLine);
+    if (raw.length <= maxLines) {
+      sourceLines = raw;
+    } else {
+      const dropped = raw.length - maxLines;
+      sourceLines = [...raw.slice(0, maxLines), `...(truncated ${dropped} lines)`];
+      truncated = true;
+    }
+    return {
+      data: {
+        symbol,
+        resolvedVia: 'alias',
+        found: true,
+        file: relPath,
+        startLine,
+        endLine,
+        signature: entry.targetSymbol,
+        sourceCode: sourceLines.join('\n'),
+        truncated,
+        note: entry.rationale,
+        confidence: entry.confidence,
+        confidenceReason: entry.rationale ?? `alias table: ${entry.confidence}`,
+        alias: aliasProvenance(entry),
+      },
+      provenance,
+    };
+  } catch (readErr) {
+    return {
+      data: {
+        symbol,
+        resolvedVia: 'alias',
+        found: false,
+        reason: `alias resolved to ${relPath} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+        confidence: 'not-found',
+        confidenceReason: 'alias file unreadable',
+        alias: aliasProvenance(entry),
+      },
+      provenance,
+    };
+  }
 }
 
 function normalizeFilePath(filePath: string): string {
@@ -1374,6 +1533,18 @@ export function getSourceForSymbol(
   const stripped = symbol.startsWith('CS:') ? symbol.slice(3) : symbol;
   const parts = stripped.split(/[.:]/);
   const shortName = parts[parts.length - 1] ?? stripped;
+
+  // ── Load BK-23a marker alias table ──────────────────────────────
+  const aliasTable = loadMarkerAliasTable();
+  const aliasEntry = aliasTable.get(symbol) ?? null;
+  const aliasProv = aliasEntry ? aliasProvenance(aliasEntry) : undefined;
+
+  // Prefer alias when marked prefer (overrides bad map-source / ambiguous paths).
+  // Never claim exact-codegraph via alias alone — only alias's declared confidence.
+  if (aliasEntry?.prefer) {
+    const viaAlias = resolveViaAlias(symbol, aliasEntry, provenance, maxLines);
+    if (viaAlias) return viaAlias;
+  }
 
   // ── Load marker-source-map once ─────────────────────────────────
   type MapEntry = { files?: Array<{ path: string; line: number }>; snippet?: string };
@@ -1476,20 +1647,24 @@ export function getSourceForSymbol(
     if (fileNodes.length > 0) {
       // Determine target node: pick by name match first, then by line containment
       let picked: CgNode | undefined;
+      let pickMode: 'method-name' | 'class-name' | 'line-containment' | undefined;
 
       // 1. Exact shortName match among methods/functions in this file
       const methodsInFile = fileNodes.filter(n => n.kind === 'method' || n.kind === 'function');
       picked = methodsInFile.find(n => n.name === shortName);
+      if (picked) pickMode = 'method-name';
 
       // 2. If the marker IS the class itself (shortName matches class name) → pick class
       if (!picked) {
         const classNodes = fileNodes.filter(n => n.kind === 'class');
         picked = classNodes.find(n => n.name === shortName);
+        if (picked) pickMode = 'class-name';
       }
 
       // 3. Fall back: find the method whose [start_line,end_line] contains mapLine
       if (!picked && mapLine > 0) {
         picked = methodsInFile.find(n => n.start_line <= mapLine && n.end_line >= mapLine);
+        if (picked) pickMode = 'line-containment';
       }
 
       // 4. If still nothing, fall through to map-source window path
@@ -1507,30 +1682,58 @@ export function getSourceForSymbol(
           // (fall through to Path C below by leaving picked undefined and breaking early)
           cgDb.close();
           cgDb = null;
-          return _fallbackMapSourceWindow(relPath, mapLine, symbol, provenance, maxLines);
+          return _fallbackMapSourceWindow(relPath, mapLine, symbol, provenance, maxLines, aliasProv);
         }
 
         const businessCalls = getBusinessCalls(picked.id);
 
+        // Confidence: never promote class / Create()-line containment to exact.
+        let confidence: SourceConfidence;
+        let confidenceReason: string;
+        if (pickMode === 'class-name') {
+          confidence = aliasEntry?.confidence === 'class-anchored' ? 'class-anchored' : 'class-anchored';
+          confidenceReason =
+            aliasEntry?.rationale ??
+            `file-anchored to class ${picked.name}; not a method-level attribution`;
+        } else if (pickMode === 'line-containment') {
+          confidence = 'low-confidence';
+          confidenceReason =
+            aliasEntry?.rationale ??
+            `map-source line ${mapLine} fell inside ${picked.name} via containment — may be CustomSampler.Create site, not the true hot body`;
+        } else if (aliasEntry && !HIGH_CONFIDENCE.has(aliasEntry.confidence) && aliasEntry.confidence !== 'method-anchored') {
+          confidence = aliasEntry.confidence;
+          confidenceReason = aliasEntry.rationale ?? `alias overrides file-anchored grade to ${aliasEntry.confidence}`;
+        } else {
+          confidence = aliasEntry?.confidence === 'method-anchored' ? 'method-anchored' : 'method-anchored';
+          confidenceReason =
+            aliasEntry?.rationale ??
+            `file-anchored method name match for ${picked.name} in mapped file`;
+        }
+
         cgDb.close();
         cgDb = null;
-        return {
-          data: {
-            symbol,
-            resolvedVia: 'file-anchored' as unknown as 'codegraph',
-            found: true,
-            kind: picked.kind,
-            language: picked.language,
-            file: normalizeFilePath(picked.file_path),
-            startLine: picked.start_line,
-            endLine: picked.end_line,
-            signature: picked.signature ?? undefined,
-            sourceCode: sourceLines.join('\n'),
-            truncated,
-            ...(businessCalls.length > 0 ? { businessCalls } : {}),
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia: 'file-anchored',
+              found: true,
+              kind: picked.kind,
+              language: picked.language,
+              file: normalizeFilePath(picked.file_path),
+              startLine: picked.start_line,
+              endLine: picked.end_line,
+              signature: picked.signature ?? undefined,
+              sourceCode: sourceLines.join('\n'),
+              truncated,
+              ...(businessCalls.length > 0 ? { businessCalls } : {}),
+            },
+            provenance,
           },
-          provenance,
-        };
+          confidence,
+          confidenceReason,
+          aliasProv
+        );
       }
       // picked still undefined → fall through to Path C
     }
@@ -1538,7 +1741,7 @@ export function getSourceForSymbol(
     // PATH C: in map-source but codegraph had nothing for this file → read window around line
     cgDb.close();
     cgDb = null;
-    return _fallbackMapSourceWindow(relPath, mapLine, symbol, provenance, maxLines);
+    return _fallbackMapSourceWindow(relPath, mapLine, symbol, provenance, maxLines, aliasProv);
   }
 
   // If map-source matched but no codegraph → window fallback
@@ -1546,7 +1749,7 @@ export function getSourceForSymbol(
     const fileEntry = mapMatch.entry.files[0];
     const rawPath = normalizeFilePath(fileEntry.path);
     const relPath = rawPath.startsWith('AOE3D/') ? rawPath.slice('AOE3D/'.length) : rawPath;
-    return _fallbackMapSourceWindow(relPath, fileEntry.line, symbol, provenance, maxLines);
+    return _fallbackMapSourceWindow(relPath, fileEntry.line, symbol, provenance, maxLines, aliasProv);
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -1574,15 +1777,25 @@ export function getSourceForSymbol(
       if (rows.length === 0) {
         cgDb.close();
         cgDb = null;
-        return {
-          data: {
-            symbol,
-            resolvedVia: 'none',
-            found: false,
-            reason: 'symbol not in codegraph nor map-source; may need map-source.ts to grep it first',
+        // Non-prefer alias can still rescue not-found (e.g. supplemental entries with file).
+        if (aliasEntry && !aliasEntry.prefer) {
+          const viaAlias = resolveViaAlias(symbol, aliasEntry, provenance, maxLines);
+          if (viaAlias) return viaAlias;
+        }
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia: 'none',
+              found: false,
+              reason: 'symbol not in codegraph nor map-source; may need map-source.ts to grep it first',
+            },
+            provenance,
           },
-          provenance,
-        };
+          'not-found',
+          'not in codegraph nor map-source',
+          aliasProv
+        );
       }
 
       type CgNodePick = CgNode;
@@ -1600,36 +1813,57 @@ export function getSourceForSymbol(
           sourceLines = lines;
           truncated = t;
         } catch (readErr) {
-          return {
-            data: {
-              symbol,
-              resolvedVia: 'codegraph',
-              found: false,
-              reason: `codegraph resolved to ${picked.file_path} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+          return withConfidence(
+            {
+              data: {
+                symbol,
+                resolvedVia: 'codegraph',
+                found: false,
+                reason: `codegraph resolved to ${picked.file_path} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+              },
+              provenance,
             },
-            provenance,
-          };
+            'not-found',
+            'codegraph file unreadable',
+            aliasProv
+          );
         }
 
         const businessCalls = getBusinessCalls(picked.id);
-        return {
-          data: {
-            symbol,
-            resolvedVia,
-            found: true,
-            kind: picked.kind,
-            language: picked.language,
-            file: normalizeFilePath(picked.file_path),
-            startLine: picked.start_line,
-            endLine: picked.end_line,
-            signature: picked.signature ?? undefined,
-            sourceCode: sourceLines.join('\n'),
-            truncated,
-            ...(businessCalls.length > 0 ? { businessCalls } : {}),
-            ...(note ? { note } : {}),
+        const confidence: SourceConfidence =
+          resolvedVia === 'callstack-disambiguated'
+            ? 'exact-codegraph'
+            : aliasEntry?.confidence === 'exact-codegraph'
+              ? 'exact-codegraph'
+              : 'exact-codegraph';
+        const confidenceReason =
+          resolvedVia === 'callstack-disambiguated'
+            ? note ?? 'call-stack disambiguated to a unique codegraph node'
+            : aliasEntry?.rationale ??
+              `codegraph exact name match for ${picked.name}`;
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia,
+              found: true,
+              kind: picked.kind,
+              language: picked.language,
+              file: normalizeFilePath(picked.file_path),
+              startLine: picked.start_line,
+              endLine: picked.end_line,
+              signature: picked.signature ?? undefined,
+              sourceCode: sourceLines.join('\n'),
+              truncated,
+              ...(businessCalls.length > 0 ? { businessCalls } : {}),
+              ...(note ? { note } : {}),
+            },
+            provenance,
           },
-          provenance,
-        };
+          confidence,
+          confidenceReason,
+          aliasProv
+        );
       }
 
       function tryCallStackDisambiguation(
@@ -1712,37 +1946,58 @@ export function getSourceForSymbol(
 
         cgDb.close();
         cgDb = null;
+        // Prefer alias over unresolved ambiguous (e.g. OnCameraMove handled earlier via prefer;
+        // this covers non-prefer aliases if any).
+        if (aliasEntry) {
+          const viaAlias = resolveViaAlias(symbol, aliasEntry, provenance, maxLines);
+          if (viaAlias) return viaAlias;
+        }
         const failNote = fromFrameContext
           ? `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射。frameContext 回溯的运行时调用栈仍无法唯一收敛`
           : `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射。提供了调用栈但仍无法唯一收敛`;
-        return {
-          data: {
-            symbol,
-            resolvedVia: 'none',
-            found: false,
-            ambiguous: true,
-            candidateCount: rows.length,
-            note: failNote,
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia: 'none',
+              found: false,
+              ambiguous: true,
+              candidateCount: rows.length,
+              note: failNote,
+            },
+            provenance,
           },
-          provenance,
-        };
+          'ambiguous',
+          failNote,
+          aliasProv
+        );
       }
 
       // If > 3 same-named results and no map-source file to anchor: refuse to guess
       if (rows.length > 3) {
         cgDb.close();
         cgDb = null;
-        return {
-          data: {
-            symbol,
-            resolvedVia: 'none',
-            found: false,
-            ambiguous: true,
-            candidateCount: rows.length,
-            note: `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射`,
-          } as GetSourceForSymbolResult['data'],
-          provenance,
-        };
+        if (aliasEntry) {
+          const viaAlias = resolveViaAlias(symbol, aliasEntry, provenance, maxLines);
+          if (viaAlias) return viaAlias;
+        }
+        const ambNote = `名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射`;
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia: 'none',
+              found: false,
+              ambiguous: true,
+              candidateCount: rows.length,
+              note: ambNote,
+            } as GetSourceForSymbolResult['data'],
+            provenance,
+          },
+          'ambiguous',
+          ambNote,
+          aliasProv
+        );
       }
 
       // ≤ 3 results: pick unambiguously or with low collision risk
@@ -1757,15 +2012,20 @@ export function getSourceForSymbol(
       } catch (readErr) {
         cgDb.close();
         cgDb = null;
-        return {
-          data: {
-            symbol,
-            resolvedVia: 'codegraph',
-            found: false,
-            reason: `codegraph resolved to ${picked.file_path} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+        return withConfidence(
+          {
+            data: {
+              symbol,
+              resolvedVia: 'codegraph',
+              found: false,
+              reason: `codegraph resolved to ${picked.file_path} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+            },
+            provenance,
           },
-          provenance,
-        };
+          'not-found',
+          'codegraph file unreadable',
+          aliasProv
+        );
       }
 
       const businessCalls = getBusinessCalls(picked.id);
@@ -1775,26 +2035,38 @@ export function getSourceForSymbol(
           ? `Ambiguous: ${rows.length} nodes matched "${shortName}"; picked first (${picked.file_path}:${picked.start_line}-${picked.end_line}).`
           : undefined;
 
+      const confidence: SourceConfidence =
+        rows.length > 1 ? 'low-confidence' : 'exact-codegraph';
+      const confidenceReason =
+        rows.length > 1
+          ? ambiguityNote!
+          : aliasEntry?.rationale ?? `codegraph exact name match for ${picked.name}`;
+
       cgDb.close();
       cgDb = null;
-      return {
-        data: {
-          symbol,
-          resolvedVia: 'codegraph',
-          found: true,
-          kind: picked.kind,
-          language: picked.language,
-          file: normalizeFilePath(picked.file_path),
-          startLine: picked.start_line,
-          endLine: picked.end_line,
-          signature: picked.signature ?? undefined,
-          sourceCode: sourceLines.join('\n'),
-          truncated,
-          ...(businessCalls.length > 0 ? { businessCalls } : {}),
-          ...(ambiguityNote ? { note: ambiguityNote } : {}),
+      return withConfidence(
+        {
+          data: {
+            symbol,
+            resolvedVia: 'codegraph',
+            found: true,
+            kind: picked.kind,
+            language: picked.language,
+            file: normalizeFilePath(picked.file_path),
+            startLine: picked.start_line,
+            endLine: picked.end_line,
+            signature: picked.signature ?? undefined,
+            sourceCode: sourceLines.join('\n'),
+            truncated,
+            ...(businessCalls.length > 0 ? { businessCalls } : {}),
+            ...(ambiguityNote ? { note: ambiguityNote } : {}),
+          },
+          provenance,
         },
-        provenance,
-      };
+        confidence,
+        confidenceReason,
+        aliasProv
+      );
     } catch (err) {
       if (cgDb) { try { cgDb.close(); } catch { /* ignore */ } cgDb = null; }
     } finally {
@@ -1802,15 +2074,25 @@ export function getSourceForSymbol(
     }
   }
 
-  return {
-    data: {
-      symbol,
-      resolvedVia: 'none',
-      found: false,
-      reason: 'symbol not in codegraph nor map-source; may need map-source.ts to grep it first',
+  if (aliasEntry) {
+    const viaAlias = resolveViaAlias(symbol, aliasEntry, provenance, maxLines);
+    if (viaAlias) return viaAlias;
+  }
+
+  return withConfidence(
+    {
+      data: {
+        symbol,
+        resolvedVia: 'none',
+        found: false,
+        reason: 'symbol not in codegraph nor map-source; may need map-source.ts to grep it first',
+      },
+      provenance,
     },
-    provenance,
-  };
+    'not-found',
+    'symbol not in codegraph nor map-source',
+    aliasProv
+  );
 }
 
 /** Path C: map-source found a file+line but no codegraph node matched → read a window around line */
@@ -1819,7 +2101,8 @@ function _fallbackMapSourceWindow(
   lineNum: number,
   symbol: string,
   provenance: GetSourceForSymbolResult['provenance'],
-  maxLines: number
+  maxLines: number,
+  alias?: SourceAliasProvenance
 ): GetSourceForSymbolResult {
   const absPath = path.join(CODEBASE_ROOT, relPath).replace(/\\/g, '/');
   let sourceLines: string[];
@@ -1836,30 +2119,43 @@ function _fallbackMapSourceWindow(
     }
     sourceLines = allLines.slice(startLine - 1, endLine);
   } catch (readErr) {
-    return {
+    return withConfidence(
+      {
+        data: {
+          symbol,
+          resolvedVia: 'map-source',
+          found: false,
+          reason: `map-source found ${relPath} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+        },
+        provenance,
+      },
+      'not-found',
+      'map-source file unreadable',
+      alias
+    );
+  }
+  return withConfidence(
+    {
       data: {
         symbol,
         resolvedVia: 'map-source',
-        found: false,
-        reason: `map-source found ${relPath} but could not read file: ${readErr instanceof Error ? readErr.message : String(readErr)}`,
+        found: true,
+        file: relPath,
+        startLine,
+        endLine,
+        sourceCode: sourceLines.join('\n'),
+        truncated: false,
+        note: 'interval-marker: showing code near sampler location (not a resolved function)',
       },
       provenance,
-    };
-  }
-  return {
-    data: {
-      symbol,
-      resolvedVia: 'map-source',
-      found: true,
-      file: relPath,
-      startLine,
-      endLine,
-      sourceCode: sourceLines.join('\n'),
-      truncated: false,
-      note: 'interval-marker: showing code near sampler location (not a resolved function)',
     },
-    provenance,
-  };
+    alias?.confidence && !HIGH_CONFIDENCE.has(alias.confidence)
+      ? alias.confidence
+      : 'map-source-interval',
+    alias?.rationale ??
+      'interval-marker: showing code near sampler Create/Begin site — not equivalent to a function body',
+    alias
+  );
 }
 
 // ─────────────────────────── Tool 8: aggregateSubtree ──────────────

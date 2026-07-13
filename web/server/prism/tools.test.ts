@@ -449,6 +449,123 @@ console.log('\n[9] getSourceForSymbol — frameContext auto callStack');
   memDb.close();
 }
 
+// ─────────────────────────── 10. marker alias + confidence (BK-23a) ────
+
+console.log('\n[10] getSourceForSymbol — marker alias table / confidence');
+{
+  // (a) OnCameraMove: was ambiguous(5); now alias-exact to OutsideArmyMgr
+  const onCam = getSourceForSymbol(db, { symbol: 'OnCameraMove', maxLines: 40 });
+  assert(onCam.data.found === true, 'OnCameraMove found via alias');
+  assert(onCam.data.resolvedVia === 'alias', `OnCameraMove resolvedVia=alias (got ${onCam.data.resolvedVia})`);
+  assert(onCam.data.confidence === 'alias-exact', `OnCameraMove confidence=alias-exact (got ${onCam.data.confidence})`);
+  assert(
+    (onCam.data.file ?? '').includes('OutsideArmyMgr.lua'),
+    `OnCameraMove file is OutsideArmyMgr.lua (got ${onCam.data.file})`
+  );
+  assert(onCam.data.alias?.source === 'marker-aliases', 'OnCameraMove has alias provenance');
+  assert(
+    onCam.data.confidence !== 'exact-codegraph',
+    'OnCameraMove must not be exact-codegraph'
+  );
+
+  // (b) ProcessTask_MapEntityAdd: was not-found → alias-exact
+  const entityAdd = getSourceForSymbol(db, {
+    symbol: 'MapSignificanceMgr.ProcessTask_MapEntityAdd',
+    maxLines: 40,
+  });
+  assert(entityAdd.data.found === true, 'ProcessTask_MapEntityAdd found');
+  assert(
+    entityAdd.data.confidence === 'alias-exact',
+    `ProcessTask_MapEntityAdd confidence=alias-exact (got ${entityAdd.data.confidence})`
+  );
+  assert(
+    (entityAdd.data.file ?? '').includes('MapSignificanceMgr.lua'),
+    `ProcessTask_MapEntityAdd file (got ${entityAdd.data.file})`
+  );
+  assert(
+    typeof entityAdd.data.confidenceReason === 'string' && entityAdd.data.confidenceReason.length > 0,
+    'ProcessTask_MapEntityAdd has confidenceReason'
+  );
+
+  // (c) YzEntityMoveLineNtf remains high-confidence codegraph
+  const yz = getSourceForSymbol(db, { symbol: 'YzEntityMoveLineNtf', maxLines: 40 });
+  assert(yz.data.found === true, 'YzEntityMoveLineNtf found');
+  assert(
+    yz.data.confidence === 'exact-codegraph',
+    `YzEntityMoveLineNtf confidence=exact-codegraph (got ${yz.data.confidence})`
+  );
+  assert(
+    yz.data.resolvedVia === 'codegraph' || yz.data.resolvedVia === 'callstack-disambiguated',
+    `YzEntityMoveLineNtf via codegraph (got ${yz.data.resolvedVia})`
+  );
+
+  // (d) CS class marker → class-anchored, never method exact
+  const mesh = getSourceForSymbol(db, { symbol: 'CS:AOE.MeshUIManager', maxLines: 40 });
+  assert(mesh.data.found === true, 'CS:AOE.MeshUIManager found');
+  assert(
+    mesh.data.confidence === 'class-anchored',
+    `CS:AOE.MeshUIManager confidence=class-anchored (got ${mesh.data.confidence})`
+  );
+  assert(
+    mesh.data.confidence !== 'exact-codegraph' && mesh.data.confidence !== 'alias-exact',
+    'CS class must not be exact/alias-exact method attribution'
+  );
+
+  // (e) LuaMgr schedule markers: low-confidence + correct Mgr.lua range (not silent wrong file-anchored)
+  const tickSched = getSourceForSymbol(db, {
+    symbol: 'LuaMgr.OnTick&UpdateSchedule',
+    maxLines: 40,
+  });
+  assert(tickSched.data.found === true, 'LuaMgr.OnTick&UpdateSchedule found');
+  assert(
+    tickSched.data.confidence === 'low-confidence' || tickSched.data.confidence === 'suspicious',
+    `LuaMgr.OnTick&UpdateSchedule low/suspicious (got ${tickSched.data.confidence})`
+  );
+  assert(
+    (tickSched.data.file ?? '').replace(/\\/g, '/').includes('Mgr/Mgr.lua') ||
+      (tickSched.data.file ?? '').replace(/\\/g, '/').includes('.Lua/Mgr/Mgr.lua'),
+    `LuaMgr.OnTick&UpdateSchedule maps to Mgr.lua (got ${tickSched.data.file})`
+  );
+  assert(
+    typeof tickSched.data.confidenceReason === 'string' &&
+      (tickSched.data.confidenceReason.includes('Synthetic') ||
+        tickSched.data.confidenceReason.includes('schedule') ||
+        tickSched.data.confidenceReason.includes('可疑') ||
+        tickSched.data.confidenceReason.length > 20),
+    'LuaMgr.OnTick&UpdateSchedule has explanatory confidenceReason'
+  );
+
+  const lateSched = getSourceForSymbol(db, {
+    symbol: 'LuaMgr.OnLateUpdateSchedule',
+    maxLines: 40,
+  });
+  assert(lateSched.data.found === true, 'LuaMgr.OnLateUpdateSchedule found');
+  assert(
+    lateSched.data.confidence === 'low-confidence' || lateSched.data.confidence === 'suspicious',
+    `LuaMgr.OnLateUpdateSchedule low/suspicious (got ${lateSched.data.confidence})`
+  );
+
+  // (f) OutSideViewArmyLineMgr CS: class-anchored
+  const armyLine = getSourceForSymbol(db, {
+    symbol: 'CS:AOE.Outside.OutSideViewArmyLineMgr',
+    maxLines: 40,
+  });
+  assert(armyLine.data.found === true, 'CS:AOE.Outside.OutSideViewArmyLineMgr found');
+  assert(
+    armyLine.data.confidence === 'class-anchored',
+    `OutSideViewArmyLineMgr confidence=class-anchored (got ${armyLine.data.confidence})`
+  );
+
+  // (g) MUI_UpdateUIPos rescued from not-found
+  const mui = getSourceForSymbol(db, { symbol: 'MUI_UpdateUIPos', maxLines: 40 });
+  assert(mui.data.found === true, 'MUI_UpdateUIPos found via alias');
+  assert(
+    mui.data.confidence === 'map-source-interval',
+    `MUI_UpdateUIPos confidence=map-source-interval (got ${mui.data.confidence})`
+  );
+  assert(mui.data.confidence !== 'exact-codegraph', 'MUI_UpdateUIPos must not be exact');
+}
+
 // ─────────────────────────── Summary ───────────────────────────────
 
 db.close();

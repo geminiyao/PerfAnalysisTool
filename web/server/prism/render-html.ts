@@ -125,9 +125,10 @@ function renderTreeHTML(node: DrillDownNode, rootMs: number, depth: number): str
   const pctStr = (node.pctOfRoot * 100).toFixed(1);
 
   let html = `
-  <div class="tree-row" style="margin-left:${indent}px">
-    <div class="tree-bar" style="width:${widthPct.toFixed(1)}%;background:${col.bg};border-left:3px solid ${col.border}">
-      <span class="tree-label" style="color:${col.text}">${htmlEsc(node.name)}</span>
+  <div class="tree-row" style="--tree-indent:${indent}px;--tree-width:${widthPct.toFixed(1)}%;--tree-bg:${col.bg};--tree-border:${col.border};">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:${col.text}" title="${htmlEsc(node.name)}">${htmlEsc(node.name)}</span>
       <span class="tree-ms">${htmlEsc(displayMs)}</span>
       <span class="tree-pct">${pctStr}%</span>
     </div>
@@ -627,6 +628,7 @@ a { color: var(--accent2); }
   padding: 10px 12px;
   background: #080d14;
   overflow-x: auto;
+  --tree-full-width: 1080px;
 }
 .tree-note {
   padding: 10px 14px;
@@ -635,27 +637,49 @@ a { color: var(--accent2); }
   background: #080d14;
   font-style: italic;
 }
-.tree-row { margin-bottom: 4px; min-width: 0; }
+.tree-row {
+  margin-bottom: 4px;
+  margin-left: var(--tree-indent);
+  min-width: calc(var(--tree-full-width) - var(--tree-indent));
+}
 .tree-bar {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
+  border-left: 3px solid var(--tree-border);
   border-radius: 3px;
-  min-width: 120px;
-  max-width: 100%;
-  overflow: hidden;
+  min-width: 520px;
+  width: calc(var(--tree-full-width) - var(--tree-indent));
+  overflow: visible;
   cursor: default;
   transition: filter 0.12s;
 }
+.tree-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--tree-width);
+  min-width: 8px;
+  max-width: 100%;
+  border-radius: 3px;
+  background: var(--tree-bg);
+  pointer-events: none;
+}
 .tree-bar:hover { filter: brightness(1.2); }
+.tree-label,
+.tree-ms,
+.tree-pct {
+  position: relative;
+  z-index: 1;
+}
 .tree-label {
   font-family: var(--font-mono);
   font-size: 12px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
+  overflow: visible;
+  text-overflow: clip;
   min-width: 0;
 }
 .tree-ms {
@@ -856,8 +880,9 @@ async function requeryTrees(
       const result = drillDownMarker(db, {
         runId: narrative.runId,
         rootMarker: ref.rootMarker,
-        maxDepth: 5,
-        minMsPerFrame: 0.1,
+        maxDepth: 6,
+        minMsPerFrame: 0.05,
+        topPerLevel: 8,
       });
       const tree = result.data.tree;
       map.set(ref.key, tree);

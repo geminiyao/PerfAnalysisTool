@@ -2,13 +2,13 @@
 
 > **新会话第一个读这个。** 永远保持最新。主 agent 每做完一件事 / 快切会话前必更新本文。
 > 坐标系见 `../plan/roadmap.md`（里程碑）和 `../plan/backlog.md`（需求）。
-> 最后更新：2026-07-11（M3推进：WT-005持久大脑✅ + WT-006摄入层✅先验知识79条入库；下一步M3-B注入）
+> 最后更新：2026-07-11（M3-D 重量层验收✅：完整 explore 已证实记忆注入改变分析行为；M3 可阶段收口）
 
 ---
 
 ## 当前里程碑
 
-**M1 单次质量收尾 ✅ 基本收官** → **M3 持久大脑通电（BK-LOOP）进行中·转折点** + M2 开发OS（已搭完·持续用）
+**M1 单次质量收尾 ✅ 基本收官** → **M3 持久大脑通电（BK-LOOP）✅ 重量层已验收** + M2 开发OS（已搭完·持续用）
 
 ## 刚做完什么（本次会话）
 
@@ -29,9 +29,9 @@
 
 ## 下一步具体动作
 
-1. **M3 加载端+写回端全通**：A(大脑)✅ 摄入✅ B(开局注入)✅ C(收尾沉淀)✅。**大脑能存、能摄入、开局注入、收尾沉淀，四条神经全接通。**
-2. **M3-D 连跑验证·数据流闭环已验通(2026-07-11)**：主 agent 用真实 stressmove data-requests.json 跑轻量闭环——run1沉淀6条DataRequest→run2开局注入真的带上(+79条先验)、重跑不堆积。**"越用越强"最小实证成立**。过程揪出并修复 WT-008 两个"单测过但真实数据崩"的bug(字段错位topic/description vs want/rationale + 注入被79条先验饿死)，详见 DONE-WT-008 返工记录。**仅剩"重量层"**：真跑一次完整 explore(~40min)看注入知识是否改变分析行为——建议清了cursor僵尸终端后由主agent直接跑，是M3真正毕业照。
-3. **DataRequest schema 脱节**：types.ts 定义(want/rationale)与真实产物(topic/description/reasonMissing)不一致——persist已做字段自适应绕过，但根上types与产物对齐值得单独清理(可归BK-24附近)。
+1. **M3 加载端+写回端全通**：A(大脑)✅ 摄入✅ B(开局注入)✅ C(收尾沉淀)✅ D(重量层行为验证)✅。**大脑能存、能摄入、开局注入、收尾沉淀，且完整 explore 行为已被记忆改变。**
+2. **M3-D 重量层验收通过(2026-07-11)**：主 agent 用 `stressmove.pdata` / `unity-outside-stressmove` 真跑完整 explore，产物目录 `web/data/prism-out/unity-outside-stressmove/2026-07-11_14-55-28`。结果：`findings=9`、`dataRequests=5`、`toolCalls=33`、`verifiedEvidence=42/42`、`suspects=0`，并沉淀 5 条 DataRequest 到 capabilities。与旧 run `2026-07-09_07-48-53` 对比，行为改变明确：新增全局 `baseline.main.overbudget` 总账；把 Lua `MapSignificanceMgr` 提升为 primary driver；URP 从单点 `RenderGraphSetup` 改为 `URP.RenderSingleCamera` 分摊视角；相机分析从“OnCameraMove 源码定位不到”推进到 `MapCameraCtrl.UpdateCameraPos`/`InfiniteZoomMgr` 路径；DataRequest 从旧 DR01-DR06 的自然语言缺口演化为稳定语义 id（`gc.per-marker-alloc`、`meshui.subsystem-markers`、`network.move-line-payload-size`、`resource.unload-count-per-frame`、`camera-move-listener-breakdown`）。**判定：M3-D 达标，M3 可阶段收口。**
+3. **DataRequest schema 脱节**：types.ts 定义(want/rationale)与旧真实产物(topic/description/reasonMissing)不一致；新 run 已输出稳定语义 id + want/rationale 格式，但根上 types 与历史产物兼容/迁移仍可单独清理(可归BK-24附近)。
 4. **已知深水区 BK-24**：记忆语义去重(跨run同需求措辞变化仍可能算不同id)——留 M4。
 5. **环境·Cursor shell 故障根因修正(2026-07-11)**：此前误判为"僵尸终端 pid 25280 / 陈旧会话文件 805916.txt"。用户关 Cursor 后进程已清、主 agent 也删了陈旧 terminal 文件，**但探针重测 shell 仍空返回**（cmd/bash/写文件多法皆空、terminals 目录已空）。故根因**不是僵尸进程/文件**，而是 **Cursor Agent CLI 在 dispatch 脚本的 headless 非交互模式(`-p --output-format stream-json`)下，shell 工具子系统本身就不工作**——属该调用模式的固有限制，清进程/文件修不好。**结论：继续用"Cursor 写代码 + 主 agent 补跑验证"模式**(一直有效)；不再尝试修 Cursor shell。若要 Cursor 能自测，需换 Cursor 的启动方式(非本 harness 范畴)。
 
@@ -48,8 +48,9 @@
 
 ## 待用户拍板 / 进行中
 
-- **下一单 M3-B 开局注入**：主 agent 可继续自主出单派发（先验知识注入 explore-prompt）。
-- **M3-D 连跑两次验证** = M3 里程碑验收门，到那步回来找用户做阶段验收。
+- **M3 阶段验收**：M3-D 重量层已通过，下一步可找用户做 M3 阶段收口/决定进入 M4（记忆语义去重、更多可复用知识料、BK-24）。
+- **当前用户关注重心**：报告图文流/调用树聚焦(BK-25)已入表但降为体验层低优先；当前更关注 **引擎层完整度、三大回路完整度、三源其它两源能否按当前 agent 设计跑出高于作文机的报告**。
+- **引擎层验证工单进展已收口**：`WT-010 / BK-26` 已按 DR-36 验收 PASS：simpleperf 与 Perfetto/ptrace 数据层最小闭环成立，但 agent 层仍缺 query/ledger/explore/narrative/memory。`WT-011 / BK-26b` 已按 DR-36 验收 PASS：新版 Perfetto triad（`sample_base_20260624_104944`、`sample_cur_20260624_105041`、`sample_throttle_20260624_105539`，由 `record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本。`WT-012 / BK-23a` 已按 DR-36 验收 PASS：marker alias table + confidence 已落地，`getSourceForSymbol` 能区分 exact/method/class/interval/low-confidence。下一批 TODO 已开：`WT-013` Perfetto query 最小集实现、`WT-014` provider sidecar/base-callTrees 修复、`WT-015` 报告层消费 source confidence、`WT-016` CustomSampler/Create 自动扫描扩展 map-source。建议另起新会话优先开 `WT-013`。
 
 ## M1 Gap 分析关键结论（2026-07-10，详见 m1-gap-analysis.md）
 
