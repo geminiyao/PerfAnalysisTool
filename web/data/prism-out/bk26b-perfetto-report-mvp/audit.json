@@ -1,0 +1,42 @@
+{
+  "script": "server/scripts/perfetto-report-mvp.ts",
+  "ticket": "WT-018",
+  "generatedAt": "2026-07-14T06:52:03.852Z",
+  "inputs": {
+    "ledger": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\ledger.json",
+    "findings": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\findings.json",
+    "verdict": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\verdict.json",
+    "ledgerEvidenceCount": 17,
+    "findingCount": 6
+  },
+  "outputs": {
+    "narrative": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-report-mvp\\narrative.json",
+    "reportHtml": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-report-mvp\\report.html"
+  },
+  "provenancePolicy": "All narrative numbers/claims derive from WT-017 ledger/findings/verdict; no ungoverned summary rewrite.",
+  "capabilityBoundaries": [
+    "FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy",
+    "base callTree via PlayerLoop anchor fallback — lower confidence absolute ms",
+    "correlateFrameSchedCpu is window-only — no per-frame claim"
+  ],
+  "callTreeNotes": {
+    "base": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": true,
+      "note": "via PlayerLoop anchor fallback — absolute ms lower-confidence vs cur/throttle native roots",
+      "evidenceId": "ev-005-base-getPerfettoCallTree"
+    },
+    "cur": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": false,
+      "note": "native callTree root",
+      "evidenceId": "ev-010-cur-getPerfettoCallTree"
+    },
+    "throttle": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": false,
+      "note": "native callTree root",
+      "evidenceId": "ev-015-throttle-getPerfettoCallTree"
+    }
+  }
+}

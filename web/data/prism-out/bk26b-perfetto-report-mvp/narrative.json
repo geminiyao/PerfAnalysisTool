@@ -1,0 +1,493 @@
+{
+  "source": "perfetto",
+  "sampleSet": "bk26b-perfetto-triad",
+  "generatedAt": "2026-07-14T06:52:03.852Z",
+  "overview": "Perfetto triad explore MVP: throttle shows lower avgMhz with co-directional UnityMain running/sleeping shift vs cur (window-level); atrace PlayerLoop/BehaviourUpdate/FinishFrameRendering differ across cur/throttle; Android FrameTimeline absent so jank/GPU busy not judged; base callTree is fallback-sourced.",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4…",
+      "kind": "CPU + sched (window)",
+      "contribution": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-009-cur-queryCpuFreq",
+        "ev-014-throttle-queryCpuFreq",
+        "ev-006-cur-querySchedState",
+        "ev-011-throttle-querySchedState",
+        "ev-017-throttle-correlateFrameSchedCpu"
+      ],
+      "findingIds": [
+        "f-03",
+        "f-05"
+      ]
+    },
+    {
+      "rank": 2,
+      "problem": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905)…",
+      "kind": "atrace + hotPath",
+      "contribution": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-007-cur-queryAtraceSlices",
+        "ev-012-throttle-queryAtraceSlices",
+        "ev-010-cur-getPerfettoCallTree",
+        "ev-015-throttle-getPerfettoCallTree"
+      ],
+      "findingIds": [
+        "f-04"
+      ]
+    },
+    {
+      "rank": 3,
+      "problem": "Android FrameTimeline unavailable across triad",
+      "kind": "boundary / snapshot",
+      "contribution": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-003-base-queryFrameTimeline",
+        "ev-008-cur-queryFrameTimeline",
+        "ev-013-throttle-queryFrameTimeline"
+      ],
+      "findingIds": [
+        "f-01"
+      ]
+    },
+    {
+      "rank": 4,
+      "problem": "base callTree available via PlayerLoop anchor fallback",
+      "kind": "boundary / snapshot",
+      "contribution": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-005-base-getPerfettoCallTree"
+      ],
+      "findingIds": [
+        "f-02"
+      ]
+    },
+    {
+      "rank": 5,
+      "problem": "base vs cur UnityMain sched snapshot",
+      "kind": "boundary / snapshot",
+      "contribution": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-001-base-querySchedState",
+        "ev-006-cur-querySchedState"
+      ],
+      "findingIds": [
+        "f-06"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-01",
+      "title": "Android FrameTimeline unavailable across triad",
+      "severity": "info",
+      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
+      "boundary": "FrameTimeline unavailable; no jank finding synthesized",
+      "evidenceIds": [
+        "ev-003-base-queryFrameTimeline",
+        "ev-008-cur-queryFrameTimeline",
+        "ev-013-throttle-queryFrameTimeline"
+      ]
+    },
+    {
+      "id": "f-02",
+      "title": "base callTree available via PlayerLoop anchor fallback",
+      "severity": "info",
+      "claim": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.",
+      "boundary": "via PlayerLoop anchor fallback",
+      "evidenceIds": [
+        "ev-005-base-getPerfettoCallTree"
+      ]
+    },
+    {
+      "id": "f-03",
+      "title": "throttle CPU freq decline co-directional with UnityMain sched shift (window)",
+      "severity": "warning",
+      "claim": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+      "boundary": "window-only correlation; not per-frame",
+      "evidenceIds": [
+        "ev-009-cur-queryCpuFreq",
+        "ev-014-throttle-queryCpuFreq",
+        "ev-006-cur-querySchedState",
+        "ev-011-throttle-querySchedState",
+        "ev-017-throttle-correlateFrameSchedCpu"
+      ]
+    },
+    {
+      "id": "f-04",
+      "title": "cur vs throttle atrace slice deltas (PlayerLoop / BehaviourUpdate / FinishFrameRendering)",
+      "severity": "info",
+      "claim": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
+      "boundary": "atrace aggregates + callTree hotPath; not frame-timeline jank",
+      "evidenceIds": [
+        "ev-007-cur-queryAtraceSlices",
+        "ev-012-throttle-queryAtraceSlices",
+        "ev-010-cur-getPerfettoCallTree",
+        "ev-015-throttle-getPerfettoCallTree"
+      ]
+    },
+    {
+      "id": "f-05",
+      "title": "correlateFrameSchedCpu is window-granularity only",
+      "severity": "info",
+      "claim": "correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation.",
+      "boundary": "granularity:window; no per-frame correlation claimed",
+      "evidenceIds": [
+        "ev-016-cur-correlateFrameSchedCpu",
+        "ev-017-throttle-correlateFrameSchedCpu"
+      ]
+    },
+    {
+      "id": "f-06",
+      "title": "base vs cur UnityMain sched snapshot",
+      "severity": "info",
+      "claim": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
+      "boundary": "window sched aggregates; not FrameTimeline jank",
+      "evidenceIds": [
+        "ev-001-base-querySchedState",
+        "ev-006-cur-querySchedState"
+      ]
+    }
+  ],
+  "evidenceSummary": [
+    {
+      "id": "ev-001-base-querySchedState",
+      "tool": "querySchedState",
+      "role": "base",
+      "summary": "base UnityMain runningPct=86.94 runnablePct=0.97 sleepingPct=12.04",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-002-base-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "base",
+      "summary": "base PlayerLoop count=684 avgMs=16.621 totalMs=11368.46; BehaviourUpdate count=684; FinishFrameRendering count=n/a",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-003-base-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "base",
+      "summary": "base FrameTimeline available=false; choreographer available=true",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-004-base-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "base",
+      "summary": "base cpu avgMhz=1729.5 bigCoreReachPct=74.9 throttlingLevel=suspected suspected=true",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-005-base-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "base",
+      "summary": "base callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true viaPlayerLoopAnchorFallback=true",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-006-cur-querySchedState",
+      "tool": "querySchedState",
+      "role": "cur",
+      "summary": "cur UnityMain runningPct=77.82 runnablePct=1.62 sleepingPct=20.4",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-007-cur-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "cur",
+      "summary": "cur PlayerLoop count=484 avgMs=30.183 totalMs=14608.74; BehaviourUpdate count=484; FinishFrameRendering count=n/a",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-008-cur-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "cur",
+      "summary": "cur FrameTimeline available=false; choreographer available=true",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-009-cur-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "cur",
+      "summary": "cur cpu avgMhz=1576.3 bigCoreReachPct=75.6 throttlingLevel=none suspected=false",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-010-cur-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "cur",
+      "summary": "cur callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-011-throttle-querySchedState",
+      "tool": "querySchedState",
+      "role": "throttle",
+      "summary": "throttle UnityMain runningPct=56.99 runnablePct=2.83 sleepingPct=38.99",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-012-throttle-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "throttle",
+      "summary": "throttle PlayerLoop count=428 avgMs=46.567 totalMs=19930.73; BehaviourUpdate count=428; FinishFrameRendering count=n/a",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-013-throttle-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "throttle",
+      "summary": "throttle FrameTimeline available=false; choreographer available=true",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-014-throttle-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "throttle",
+      "summary": "throttle cpu avgMhz=1324.6 bigCoreReachPct=59.2 throttlingLevel=suspected suspected=true",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-015-throttle-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "throttle",
+      "summary": "throttle callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-016-cur-correlateFrameSchedCpu",
+      "tool": "correlateFrameSchedCpu",
+      "role": "cur",
+      "summary": "cur correlate granularity=window signals=[UnityMain runningPct=77.82; UnityMain runnablePct=1.62; cpuFreqAvgMhz=1576.3; bigCoreReachPct=75.6]",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-017-throttle-correlateFrameSchedCpu",
+      "tool": "correlateFrameSchedCpu",
+      "role": "throttle",
+      "summary": "throttle correlate granularity=window signals=[UnityMain runningPct=56.99; UnityMain runnablePct=2.83; cpuFreqAvgMhz=1324.6; bigCoreReachPct=59.2; throttling suspected]",
+      "runId": "bk26b-perfetto-throttle"
+    }
+  ],
+  "capabilityBoundaries": [
+    "FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy",
+    "base callTree via PlayerLoop anchor fallback — lower confidence absolute ms",
+    "correlateFrameSchedCpu is window-only — no per-frame claim"
+  ],
+  "triadComparison": {
+    "sched": {
+      "base": {
+        "runningPct": 86.94,
+        "sleepingPct": 12.04,
+        "evidenceId": "ev-001-base-querySchedState"
+      },
+      "cur": {
+        "runningPct": 77.82,
+        "sleepingPct": 20.4,
+        "evidenceId": "ev-006-cur-querySchedState"
+      },
+      "throttle": {
+        "runningPct": 56.99,
+        "sleepingPct": 38.99,
+        "evidenceId": "ev-011-throttle-querySchedState"
+      }
+    },
+    "atrace": {
+      "base": {
+        "playerLoopAvgMs": 16.621,
+        "playerLoopCount": 684,
+        "behaviourAvgMs": 2.133,
+        "evidenceId": "ev-002-base-queryAtraceSlices"
+      },
+      "cur": {
+        "playerLoopAvgMs": 30.183,
+        "playerLoopCount": 484,
+        "behaviourAvgMs": 7.905,
+        "evidenceId": "ev-007-cur-queryAtraceSlices"
+      },
+      "throttle": {
+        "playerLoopAvgMs": 46.567,
+        "playerLoopCount": 428,
+        "behaviourAvgMs": 8.804,
+        "evidenceId": "ev-012-throttle-queryAtraceSlices"
+      }
+    },
+    "cpu": {
+      "base": {
+        "avgMhz": 1729.5,
+        "bigCoreReachPct": 74.9,
+        "throttlingLevel": "suspected",
+        "evidenceId": "ev-004-base-queryCpuFreq"
+      },
+      "cur": {
+        "avgMhz": 1576.3,
+        "bigCoreReachPct": 75.6,
+        "throttlingLevel": "none",
+        "evidenceId": "ev-009-cur-queryCpuFreq"
+      },
+      "throttle": {
+        "avgMhz": 1324.6,
+        "bigCoreReachPct": 59.2,
+        "throttlingLevel": "suspected",
+        "evidenceId": "ev-014-throttle-queryCpuFreq"
+      }
+    },
+    "frame": {
+      "base": {
+        "androidFrameTimelineAvailable": false,
+        "choreographerAvailable": true,
+        "evidenceId": "ev-003-base-queryFrameTimeline"
+      },
+      "cur": {
+        "androidFrameTimelineAvailable": false,
+        "choreographerAvailable": true,
+        "evidenceId": "ev-008-cur-queryFrameTimeline"
+      },
+      "throttle": {
+        "androidFrameTimelineAvailable": false,
+        "choreographerAvailable": true,
+        "evidenceId": "ev-013-throttle-queryFrameTimeline"
+      }
+    }
+  },
+  "callTrees": {
+    "base": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": true,
+      "note": "via PlayerLoop anchor fallback — absolute ms lower-confidence vs cur/throttle native roots",
+      "hotPath": [
+        {
+          "name": "UnityMain",
+          "totalPct": 100
+        },
+        {
+          "name": "PlayerLoop",
+          "totalMs": 11458.86,
+          "totalPct": 100.25
+        },
+        {
+          "name": "PostLateUpdate.FinishFrameRendering",
+          "totalMs": 4677.17,
+          "totalPct": 40.92
+        },
+        {
+          "name": "URP.Render",
+          "totalMs": 4167.28,
+          "totalPct": 36.46
+        },
+        {
+          "name": "URP.RenderCameraStack",
+          "totalMs": 4074.3,
+          "totalPct": 35.64
+        },
+        {
+          "name": "URP.RenderSingleCamera",
+          "totalMs": 3931.5,
+          "totalPct": 34.4
+        },
+        {
+          "name": "URP.MainRenderingTransparent",
+          "totalMs": 1163.75,
+          "totalPct": 10.18
+        }
+      ],
+      "evidenceId": "ev-005-base-getPerfettoCallTree"
+    },
+    "cur": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": false,
+      "note": "native callTree root",
+      "hotPath": [
+        {
+          "name": "UnityMain",
+          "totalPct": 100
+        },
+        {
+          "name": "PlayerLoop",
+          "totalMs": 14608.74,
+          "totalPct": 99.6
+        },
+        {
+          "name": "PostLateUpdate.FinishFrameRendering",
+          "totalMs": 6311.62,
+          "totalPct": 43.03
+        },
+        {
+          "name": "URP.Render",
+          "totalMs": 5869.82,
+          "totalPct": 40.02
+        },
+        {
+          "name": "URP.RenderCameraStack",
+          "totalMs": 5802.8,
+          "totalPct": 39.56
+        },
+        {
+          "name": "URP.RenderSingleCamera",
+          "totalMs": 5698.7,
+          "totalPct": 38.85
+        },
+        {
+          "name": "URP.AfterRendering",
+          "totalMs": 3300.05,
+          "totalPct": 22.5
+        }
+      ],
+      "evidenceId": "ev-010-cur-getPerfettoCallTree"
+    },
+    "throttle": {
+      "available": true,
+      "viaPlayerLoopAnchorFallback": false,
+      "note": "native callTree root",
+      "hotPath": [
+        {
+          "name": "UnityMain",
+          "totalPct": 100
+        },
+        {
+          "name": "PlayerLoop",
+          "totalMs": 19930.73,
+          "totalPct": 99.87
+        },
+        {
+          "name": "PostLateUpdate.FinishFrameRendering",
+          "totalMs": 11117.55,
+          "totalPct": 55.71
+        },
+        {
+          "name": "URP.Render",
+          "totalMs": 10650.6,
+          "totalPct": 53.37
+        },
+        {
+          "name": "URP.RenderCameraStack",
+          "totalMs": 10557.52,
+          "totalPct": 52.9
+        },
+        {
+          "name": "URP.RenderSingleCamera",
+          "totalMs": 10425.68,
+          "totalPct": 52.24
+        },
+        {
+          "name": "URP.AfterRendering",
+          "totalMs": 8253.95,
+          "totalPct": 41.36
+        }
+      ],
+      "evidenceId": "ev-015-throttle-getPerfettoCallTree"
+    }
+  },
+  "inputProvenance": {
+    "exploreDir": "web/data/prism-out/bk26b-perfetto-explore-mvp",
+    "ledgerGeneratedAt": "2026-07-14T06:21:46.448Z",
+    "findingsGeneratedAt": "2026-07-14T06:21:46.448Z",
+    "verdictGeneratedAt": "2026-07-14T06:21:46.450Z"
+  }
+}

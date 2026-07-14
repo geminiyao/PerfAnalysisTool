@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Perfetto Triad Report · bk26b-perfetto-triad</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a2332;
+    --border: #2a3a4a;
+    --text: #e6edf3;
+    --muted: #8b9cb3;
+    --accent: #3d8bfd;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --miss: #f85149;
+    --info: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(160deg, #0f1419 0%, #152030 50%, #0f1419 100%);
+    color: var(--text); line-height: 1.55;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
+  header.hero {
+    margin-bottom: 28px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 1.75rem; font-weight: 650; letter-spacing: -0.02em; }
+  header.hero .sub { color: var(--muted); font-size: 0.95rem; }
+  .pill {
+    display: inline-block; padding: 2px 10px; border-radius: 4px;
+    background: #213047; color: var(--accent); font-size: 0.8rem; margin-right: 6px;
+  }
+  section { margin: 28px 0; }
+  section > h2 {
+    font-size: 1.15rem; margin: 0 0 14px; padding-left: 10px;
+    border-left: 3px solid var(--accent);
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;
+  }
+  .card.conclusion { display: flex; gap: 14px; }
+  .card.conclusion .rank {
+    flex: 0 0 40px; font-weight: 700; font-size: 1.1rem; color: var(--accent);
+  }
+  .card.warning { border-left: 3px solid var(--warn); }
+  .card.critical { border-left: 3px solid var(--miss); }
+  .card.info { border-left: 3px solid var(--info); }
+  .meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 6px; }
+  .ev, .ev-mini { color: var(--muted); font-size: 0.78rem; margin-top: 8px; }
+  .ev-mini { margin-top: 4px; }
+  .boundary { color: var(--warn); font-size: 0.88rem; }
+  .muted { color: var(--muted); }
+  .note { font-size: 0.9rem; color: var(--muted); }
+  code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.82em; background: #0d1117; padding: 1px 5px; border-radius: 3px;
+  }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.88rem; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { background: #213047; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  table.compact td, table.compact th { padding: 6px 10px; font-size: 0.88rem; }
+  .bar {
+    display: flex; align-items: center; gap: 8px; min-width: 120px;
+  }
+  .bar-fill {
+    height: 8px; background: var(--accent); border-radius: 2px; min-width: 2px;
+  }
+  .bar-fill.mhz { background: #a371f7; }
+  .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 0.75rem;
+    background: #213047; color: var(--muted);
+  }
+  .badge.ok { color: var(--ok); background: #16331f; }
+  .badge.warn { color: var(--warn); background: #3d2e0a; }
+  .badge.miss { color: var(--miss); background: #3d1214; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .child-list { margin: 6px 0 0; padding-left: 18px; font-size: 0.88rem; }
+  .overview { font-size: 0.98rem; color: var(--text); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>Perfetto Triad Report</h1>
+    <p class="sub">
+      <span class="pill">source: perfetto</span>
+      <span class="pill">sampleSet: bk26b-perfetto-triad</span>
+      <span class="pill">window-level</span>
+    </p>
+    <p class="sub">样本：base / cur / throttle · 窗口级 Perfetto 分析（非逐帧）。输入来自 WT-017 ledger / findings / verdict。</p>
+  </header>
+
+  <section>
+    <h2>概览</h2>
+    <div class="card"><p class="overview">Perfetto triad explore MVP: throttle shows lower avgMhz with co-directional UnityMain running/sleeping shift vs cur (window-level); atrace PlayerLoop/BehaviourUpdate/FinishFrameRendering differ across cur/throttle; Android FrameTimeline absent so jank/GPU busy not judged; base callTree is fallback-sourced.</p></div>
+  </section>
+
+  <section>
+    <h2>顶部结论</h2>
+    
+    <div class="card conclusion warning">
+      <div class="rank">#1</div>
+      <div class="body">
+        <div class="meta"><span class="kind">CPU + sched (window)</span> · <span class="sev">warning</span></div>
+        <p>cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).</p>
+        <div class="ev">
+          findings: <code>f-03</code> <code>f-05</code>
+          · evidence: <code>ev-009-cur-queryCpuFreq</code> <code>ev-014-throttle-queryCpuFreq</code> <code>ev-006-cur-querySchedState</code> <code>ev-011-throttle-querySchedState</code> <code>ev-017-throttle-correlateFrameSchedCpu</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card conclusion info">
+      <div class="rank">#2</div>
+      <div class="body">
+        <div class="meta"><span class="kind">atrace + hotPath</span> · <span class="sev">info</span></div>
+        <p>PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)</p>
+        <div class="ev">
+          findings: <code>f-04</code>
+          · evidence: <code>ev-007-cur-queryAtraceSlices</code> <code>ev-012-throttle-queryAtraceSlices</code> <code>ev-010-cur-getPerfettoCallTree</code> <code>ev-015-throttle-getPerfettoCallTree</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card conclusion info">
+      <div class="rank">#3</div>
+      <div class="body">
+        <div class="meta"><span class="kind">boundary / snapshot</span> · <span class="sev">info</span></div>
+        <p>queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.</p>
+        <div class="ev">
+          findings: <code>f-01</code>
+          · evidence: <code>ev-003-base-queryFrameTimeline</code> <code>ev-008-cur-queryFrameTimeline</code> <code>ev-013-throttle-queryFrameTimeline</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card conclusion info">
+      <div class="rank">#4</div>
+      <div class="body">
+        <div class="meta"><span class="kind">boundary / snapshot</span> · <span class="sev">info</span></div>
+        <p>base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.</p>
+        <div class="ev">
+          findings: <code>f-02</code>
+          · evidence: <code>ev-005-base-getPerfettoCallTree</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card conclusion info">
+      <div class="rank">#5</div>
+      <div class="body">
+        <div class="meta"><span class="kind">boundary / snapshot</span> · <span class="sev">info</span></div>
+        <p>UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4</p>
+        <div class="ev">
+          findings: <code>f-06</code>
+          · evidence: <code>ev-001-base-querySchedState</code> <code>ev-006-cur-querySchedState</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>三态对照表 · sched / atrace / cpu / frame</h2>
+    <table>
+      <thead>
+        <tr><th>metric</th><th>base</th><th>cur</th><th>throttle</th></tr>
+      </thead>
+      <tbody>
+        
+    <tr>
+      <td>sched · UnityMain runningPct</td>
+      <td><div class="bar"><div class="bar-fill" style="width:86.9%"></div><span>86.9%</span></div><div class="ev-mini"><code>ev-001-base-querySchedState</code></div></td><td><div class="bar"><div class="bar-fill" style="width:77.8%"></div><span>77.8%</span></div><div class="ev-mini"><code>ev-006-cur-querySchedState</code></div></td><td><div class="bar"><div class="bar-fill" style="width:57.0%"></div><span>57.0%</span></div><div class="ev-mini"><code>ev-011-throttle-querySchedState</code></div></td>
+    </tr>
+    <tr>
+      <td>sched · UnityMain sleepingPct</td>
+      <td><div class="bar"><div class="bar-fill" style="width:12.0%"></div><span>12.0%</span></div><div class="ev-mini"><code>ev-001-base-querySchedState</code></div></td><td><div class="bar"><div class="bar-fill" style="width:20.4%"></div><span>20.4%</span></div><div class="ev-mini"><code>ev-006-cur-querySchedState</code></div></td><td><div class="bar"><div class="bar-fill" style="width:39.0%"></div><span>39.0%</span></div><div class="ev-mini"><code>ev-011-throttle-querySchedState</code></div></td>
+    </tr>
+    <tr>
+      <td>atrace · PlayerLoop avgMs (count)</td>
+      <td>16.621 ms<br/><span class="muted">n=684</span><div class="ev-mini"><code>ev-002-base-queryAtraceSlices</code></div></td><td>30.183 ms<br/><span class="muted">n=484</span><div class="ev-mini"><code>ev-007-cur-queryAtraceSlices</code></div></td><td>46.567 ms<br/><span class="muted">n=428</span><div class="ev-mini"><code>ev-012-throttle-queryAtraceSlices</code></div></td>
+    </tr>
+    <tr>
+      <td>atrace · BehaviourUpdate avgMs</td>
+      <td>2.133 ms<div class="ev-mini"><code>ev-002-base-queryAtraceSlices</code></div></td><td>7.905 ms<div class="ev-mini"><code>ev-007-cur-queryAtraceSlices</code></div></td><td>8.804 ms<div class="ev-mini"><code>ev-012-throttle-queryAtraceSlices</code></div></td>
+    </tr>
+    <tr>
+      <td>cpu · avgMhz</td>
+      <td><div class="bar"><div class="bar-fill mhz" style="width:86.5%"></div><span>1729.5</span></div><div class="ev-mini"><code>ev-004-base-queryCpuFreq</code></div></td><td><div class="bar"><div class="bar-fill mhz" style="width:78.8%"></div><span>1576.3</span></div><div class="ev-mini"><code>ev-009-cur-queryCpuFreq</code></div></td><td><div class="bar"><div class="bar-fill mhz" style="width:66.2%"></div><span>1324.6</span></div><div class="ev-mini"><code>ev-014-throttle-queryCpuFreq</code></div></td>
+    </tr>
+    <tr>
+      <td>cpu · bigCoreReachPct / throttling</td>
+      <td>74.9%<br/><span class="muted">suspected</span><div class="ev-mini"><code>ev-004-base-queryCpuFreq</code></div></td><td>75.6%<br/><span class="muted">none</span><div class="ev-mini"><code>ev-009-cur-queryCpuFreq</code></div></td><td>59.2%<br/><span class="muted">suspected</span><div class="ev-mini"><code>ev-014-throttle-queryCpuFreq</code></div></td>
+    </tr>
+    <tr>
+      <td>frame · Android FrameTimeline</td>
+      <td><span class="badge miss">unavailable</span><div class="ev-mini"><code>ev-003-base-queryFrameTimeline</code></div></td><td><span class="badge miss">unavailable</span><div class="ev-mini"><code>ev-008-cur-queryFrameTimeline</code></div></td><td><span class="badge miss">unavailable</span><div class="ev-mini"><code>ev-013-throttle-queryFrameTimeline</code></div></td>
+    </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+    
+    <div class="card finding info" id="f-01">
+      <h3><code>f-01</code> Android FrameTimeline unavailable across triad</h3>
+      <div class="meta"><span class="sev">info</span></div>
+      <p>queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.</p>
+      <p class="boundary">boundary: FrameTimeline unavailable; no jank finding synthesized</p>
+      <div class="ev">evidence: <a href="#ev-003-base-queryFrameTimeline"><code>ev-003-base-queryFrameTimeline</code></a> <a href="#ev-008-cur-queryFrameTimeline"><code>ev-008-cur-queryFrameTimeline</code></a> <a href="#ev-013-throttle-queryFrameTimeline"><code>ev-013-throttle-queryFrameTimeline</code></a></div>
+    </div>
+
+    <div class="card finding info" id="f-02">
+      <h3><code>f-02</code> base callTree available via PlayerLoop anchor fallback</h3>
+      <div class="meta"><span class="sev">info</span></div>
+      <p>base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.</p>
+      <p class="boundary">boundary: via PlayerLoop anchor fallback</p>
+      <div class="ev">evidence: <a href="#ev-005-base-getPerfettoCallTree"><code>ev-005-base-getPerfettoCallTree</code></a></div>
+    </div>
+
+    <div class="card finding warning" id="f-03">
+      <h3><code>f-03</code> throttle CPU freq decline co-directional with UnityMain sched shift (window)</h3>
+      <div class="meta"><span class="sev">warning</span></div>
+      <p>cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).</p>
+      <p class="boundary">boundary: window-only correlation; not per-frame</p>
+      <div class="ev">evidence: <a href="#ev-009-cur-queryCpuFreq"><code>ev-009-cur-queryCpuFreq</code></a> <a href="#ev-014-throttle-queryCpuFreq"><code>ev-014-throttle-queryCpuFreq</code></a> <a href="#ev-006-cur-querySchedState"><code>ev-006-cur-querySchedState</code></a> <a href="#ev-011-throttle-querySchedState"><code>ev-011-throttle-querySchedState</code></a> <a href="#ev-017-throttle-correlateFrameSchedCpu"><code>ev-017-throttle-correlateFrameSchedCpu</code></a></div>
+    </div>
+
+    <div class="card finding info" id="f-04">
+      <h3><code>f-04</code> cur vs throttle atrace slice deltas (PlayerLoop / BehaviourUpdate / FinishFrameRendering)</h3>
+      <div class="meta"><span class="sev">info</span></div>
+      <p>PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)</p>
+      <p class="boundary">boundary: atrace aggregates + callTree hotPath; not frame-timeline jank</p>
+      <div class="ev">evidence: <a href="#ev-007-cur-queryAtraceSlices"><code>ev-007-cur-queryAtraceSlices</code></a> <a href="#ev-012-throttle-queryAtraceSlices"><code>ev-012-throttle-queryAtraceSlices</code></a> <a href="#ev-010-cur-getPerfettoCallTree"><code>ev-010-cur-getPerfettoCallTree</code></a> <a href="#ev-015-throttle-getPerfettoCallTree"><code>ev-015-throttle-getPerfettoCallTree</code></a></div>
+    </div>
+
+    <div class="card finding info" id="f-05">
+      <h3><code>f-05</code> correlateFrameSchedCpu is window-granularity only</h3>
+      <div class="meta"><span class="sev">info</span></div>
+      <p>correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation.</p>
+      <p class="boundary">boundary: granularity:window; no per-frame correlation claimed</p>
+      <div class="ev">evidence: <a href="#ev-016-cur-correlateFrameSchedCpu"><code>ev-016-cur-correlateFrameSchedCpu</code></a> <a href="#ev-017-throttle-correlateFrameSchedCpu"><code>ev-017-throttle-correlateFrameSchedCpu</code></a></div>
+    </div>
+
+    <div class="card finding info" id="f-06">
+      <h3><code>f-06</code> base vs cur UnityMain sched snapshot</h3>
+      <div class="meta"><span class="sev">info</span></div>
+      <p>UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4</p>
+      <p class="boundary">boundary: window sched aggregates; not FrameTimeline jank</p>
+      <div class="ev">evidence: <a href="#ev-001-base-querySchedState"><code>ev-001-base-querySchedState</code></a> <a href="#ev-006-cur-querySchedState"><code>ev-006-cur-querySchedState</code></a></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>CallTree / Hot Path 聚焦</h2>
+    <p class="muted">cur / throttle 显示 hot path 与沿路 Top children；base 若为 PlayerLoop anchor fallback，绝对 ms 按低置信处理。无树时标 callTree unavailable。</p>
+    <div class="grid-3">
+      
+    <div class="card hotpath-card">
+      <h3>base <span class="badge warn">fallback</span></h3>
+      <p class="note">via PlayerLoop anchor fallback — absolute ms lower-confidence vs cur/throttle native roots</p>
+      <p class="ev">evidence: <code>ev-005-base-getPerfettoCallTree</code></p>
+      <h4>Hot path</h4>
+      <table class="compact">
+        <thead><tr><th>marker</th><th>totalMs</th><th>totalPct</th></tr></thead>
+        <tbody><tr>
+      <td class="mono">UnityMain</td>
+      <td class="num">—</td>
+      <td><div class="bar"><div class="bar-fill" style="width:100.0%"></div><span>100.0%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;PlayerLoop</td>
+      <td class="num">11458.86</td>
+      <td><div class="bar"><div class="bar-fill" style="width:100.0%"></div><span>100.3%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;PostLateUpdate.FinishFrameRendering</td>
+      <td class="num">4677.17</td>
+      <td><div class="bar"><div class="bar-fill" style="width:40.9%"></div><span>40.9%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.Render</td>
+      <td class="num">4167.28</td>
+      <td><div class="bar"><div class="bar-fill" style="width:36.5%"></div><span>36.5%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderCameraStack</td>
+      <td class="num">4074.30</td>
+      <td><div class="bar"><div class="bar-fill" style="width:35.6%"></div><span>35.6%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderSingleCamera</td>
+      <td class="num">3931.50</td>
+      <td><div class="bar"><div class="bar-fill" style="width:34.4%"></div><span>34.4%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.MainRenderingTransparent</td>
+      <td class="num">1163.75</td>
+      <td><div class="bar"><div class="bar-fill" style="width:10.2%"></div><span>10.2%</span></div></td>
+    </tr></tbody>
+      </table>
+      <h4>Top children (along hot path)</h4>
+      <ul class="child-list"><li><code>PlayerLoop</code> — 11458.86 ms (100.3%)</li>
+<li><code>PostLateUpdate.FinishFrameRendering</code> — 4677.17 ms (40.9%)</li>
+<li><code>URP.Render</code> — 4167.28 ms (36.5%)</li>
+<li><code>URP.RenderCameraStack</code> — 4074.30 ms (35.6%)</li></ul>
+    </div>
+
+    <div class="card hotpath-card">
+      <h3>cur <span class="badge ok">native</span></h3>
+      <p class="note">native callTree root</p>
+      <p class="ev">evidence: <code>ev-010-cur-getPerfettoCallTree</code></p>
+      <h4>Hot path</h4>
+      <table class="compact">
+        <thead><tr><th>marker</th><th>totalMs</th><th>totalPct</th></tr></thead>
+        <tbody><tr>
+      <td class="mono">UnityMain</td>
+      <td class="num">—</td>
+      <td><div class="bar"><div class="bar-fill" style="width:100.0%"></div><span>100.0%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;PlayerLoop</td>
+      <td class="num">14608.74</td>
+      <td><div class="bar"><div class="bar-fill" style="width:99.6%"></div><span>99.6%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;PostLateUpdate.FinishFrameRendering</td>
+      <td class="num">6311.62</td>
+      <td><div class="bar"><div class="bar-fill" style="width:43.0%"></div><span>43.0%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.Render</td>
+      <td class="num">5869.82</td>
+      <td><div class="bar"><div class="bar-fill" style="width:40.0%"></div><span>40.0%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderCameraStack</td>
+      <td class="num">5802.80</td>
+      <td><div class="bar"><div class="bar-fill" style="width:39.6%"></div><span>39.6%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderSingleCamera</td>
+      <td class="num">5698.70</td>
+      <td><div class="bar"><div class="bar-fill" style="width:38.9%"></div><span>38.9%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.AfterRendering</td>
+      <td class="num">3300.05</td>
+      <td><div class="bar"><div class="bar-fill" style="width:22.5%"></div><span>22.5%</span></div></td>
+    </tr></tbody>
+      </table>
+      <h4>Top children (along hot path)</h4>
+      <ul class="child-list"><li><code>PlayerLoop</code> — 14608.74 ms (99.6%)</li>
+<li><code>PostLateUpdate.FinishFrameRendering</code> — 6311.62 ms (43.0%)</li>
+<li><code>URP.Render</code> — 5869.82 ms (40.0%)</li>
+<li><code>URP.RenderCameraStack</code> — 5802.80 ms (39.6%)</li></ul>
+    </div>
+
+    <div class="card hotpath-card">
+      <h3>throttle <span class="badge ok">native</span></h3>
+      <p class="note">native callTree root</p>
+      <p class="ev">evidence: <code>ev-015-throttle-getPerfettoCallTree</code></p>
+      <h4>Hot path</h4>
+      <table class="compact">
+        <thead><tr><th>marker</th><th>totalMs</th><th>totalPct</th></tr></thead>
+        <tbody><tr>
+      <td class="mono">UnityMain</td>
+      <td class="num">—</td>
+      <td><div class="bar"><div class="bar-fill" style="width:100.0%"></div><span>100.0%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;PlayerLoop</td>
+      <td class="num">19930.73</td>
+      <td><div class="bar"><div class="bar-fill" style="width:99.9%"></div><span>99.9%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;PostLateUpdate.FinishFrameRendering</td>
+      <td class="num">11117.55</td>
+      <td><div class="bar"><div class="bar-fill" style="width:55.7%"></div><span>55.7%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.Render</td>
+      <td class="num">10650.60</td>
+      <td><div class="bar"><div class="bar-fill" style="width:53.4%"></div><span>53.4%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderCameraStack</td>
+      <td class="num">10557.52</td>
+      <td><div class="bar"><div class="bar-fill" style="width:52.9%"></div><span>52.9%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.RenderSingleCamera</td>
+      <td class="num">10425.68</td>
+      <td><div class="bar"><div class="bar-fill" style="width:52.2%"></div><span>52.2%</span></div></td>
+    </tr>
+<tr>
+      <td class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;URP.AfterRendering</td>
+      <td class="num">8253.95</td>
+      <td><div class="bar"><div class="bar-fill" style="width:41.4%"></div><span>41.4%</span></div></td>
+    </tr></tbody>
+      </table>
+      <h4>Top children (along hot path)</h4>
+      <ul class="child-list"><li><code>PlayerLoop</code> — 19930.73 ms (99.9%)</li>
+<li><code>PostLateUpdate.FinishFrameRendering</code> — 11117.55 ms (55.7%)</li>
+<li><code>URP.Render</code> — 10650.60 ms (53.4%)</li>
+<li><code>URP.RenderCameraStack</code> — 10557.52 ms (52.9%)</li></ul>
+    </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>能力边界</h2>
+    <div class="card">
+      <ul>
+        <li>FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy</li>
+<li>base callTree via PlayerLoop anchor fallback — lower confidence absolute ms</li>
+<li>correlateFrameSchedCpu is window-only — no per-frame claim</li>
+        <li>无 Android FrameTimeline → 不判断 jank。</li>
+        <li>无 GPU 计数 → 不判断 GPU busy。</li>
+        <li>thermal / 降频仍为 <strong>suspected</strong>（非 confirmed）。</li>
+        <li>correlateFrameSchedCpu granularity=window → 不声称逐帧相关。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>审计 / 证据入口</h2>
+    <p class="muted">evidence id · tool · role · runId · summary（全部来自 WT-017 ledger）</p>
+    <table class="compact">
+      <thead>
+        <tr><th>id</th><th>tool</th><th>role</th><th>runId</th><th>summary</th></tr>
+      </thead>
+      <tbody>
+        
+    <tr id="ev-001-base-querySchedState">
+      <td><code>ev-001-base-querySchedState</code></td>
+      <td><code>querySchedState</code></td>
+      <td>base</td>
+      <td class="mono">bk26b-perfetto-base</td>
+      <td>base UnityMain runningPct=86.94 runnablePct=0.97 sleepingPct=12.04</td>
+    </tr>
+
+    <tr id="ev-002-base-queryAtraceSlices">
+      <td><code>ev-002-base-queryAtraceSlices</code></td>
+      <td><code>queryAtraceSlices</code></td>
+      <td>base</td>
+      <td class="mono">bk26b-perfetto-base</td>
+      <td>base PlayerLoop count=684 avgMs=16.621 totalMs=11368.46; BehaviourUpdate count=684; FinishFrameRendering count=n/a</td>
+    </tr>
+
+    <tr id="ev-003-base-queryFrameTimeline">
+      <td><code>ev-003-base-queryFrameTimeline</code></td>
+      <td><code>queryFrameTimeline</code></td>
+      <td>base</td>
+      <td class="mono">bk26b-perfetto-base</td>
+      <td>base FrameTimeline available=false; choreographer available=true</td>
+    </tr>
+
+    <tr id="ev-004-base-queryCpuFreq">
+      <td><code>ev-004-base-queryCpuFreq</code></td>
+      <td><code>queryCpuFreq</code></td>
+      <td>base</td>
+      <td class="mono">bk26b-perfetto-base</td>
+      <td>base cpu avgMhz=1729.5 bigCoreReachPct=74.9 throttlingLevel=suspected suspected=true</td>
+    </tr>
+
+    <tr id="ev-005-base-getPerfettoCallTree">
+      <td><code>ev-005-base-getPerfettoCallTree</code></td>
+      <td><code>getPerfettoCallTree</code></td>
+      <td>base</td>
+      <td class="mono">bk26b-perfetto-base</td>
+      <td>base callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true viaPlayerLoopAnchorFallback=true</td>
+    </tr>
+
+    <tr id="ev-006-cur-querySchedState">
+      <td><code>ev-006-cur-querySchedState</code></td>
+      <td><code>querySchedState</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur UnityMain runningPct=77.82 runnablePct=1.62 sleepingPct=20.4</td>
+    </tr>
+
+    <tr id="ev-007-cur-queryAtraceSlices">
+      <td><code>ev-007-cur-queryAtraceSlices</code></td>
+      <td><code>queryAtraceSlices</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur PlayerLoop count=484 avgMs=30.183 totalMs=14608.74; BehaviourUpdate count=484; FinishFrameRendering count=n/a</td>
+    </tr>
+
+    <tr id="ev-008-cur-queryFrameTimeline">
+      <td><code>ev-008-cur-queryFrameTimeline</code></td>
+      <td><code>queryFrameTimeline</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur FrameTimeline available=false; choreographer available=true</td>
+    </tr>
+
+    <tr id="ev-009-cur-queryCpuFreq">
+      <td><code>ev-009-cur-queryCpuFreq</code></td>
+      <td><code>queryCpuFreq</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur cpu avgMhz=1576.3 bigCoreReachPct=75.6 throttlingLevel=none suspected=false</td>
+    </tr>
+
+    <tr id="ev-010-cur-getPerfettoCallTree">
+      <td><code>ev-010-cur-getPerfettoCallTree</code></td>
+      <td><code>getPerfettoCallTree</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true</td>
+    </tr>
+
+    <tr id="ev-011-throttle-querySchedState">
+      <td><code>ev-011-throttle-querySchedState</code></td>
+      <td><code>querySchedState</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle UnityMain runningPct=56.99 runnablePct=2.83 sleepingPct=38.99</td>
+    </tr>
+
+    <tr id="ev-012-throttle-queryAtraceSlices">
+      <td><code>ev-012-throttle-queryAtraceSlices</code></td>
+      <td><code>queryAtraceSlices</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle PlayerLoop count=428 avgMs=46.567 totalMs=19930.73; BehaviourUpdate count=428; FinishFrameRendering count=n/a</td>
+    </tr>
+
+    <tr id="ev-013-throttle-queryFrameTimeline">
+      <td><code>ev-013-throttle-queryFrameTimeline</code></td>
+      <td><code>queryFrameTimeline</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle FrameTimeline available=false; choreographer available=true</td>
+    </tr>
+
+    <tr id="ev-014-throttle-queryCpuFreq">
+      <td><code>ev-014-throttle-queryCpuFreq</code></td>
+      <td><code>queryCpuFreq</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle cpu avgMhz=1324.6 bigCoreReachPct=59.2 throttlingLevel=suspected suspected=true</td>
+    </tr>
+
+    <tr id="ev-015-throttle-getPerfettoCallTree">
+      <td><code>ev-015-throttle-getPerfettoCallTree</code></td>
+      <td><code>getPerfettoCallTree</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true</td>
+    </tr>
+
+    <tr id="ev-016-cur-correlateFrameSchedCpu">
+      <td><code>ev-016-cur-correlateFrameSchedCpu</code></td>
+      <td><code>correlateFrameSchedCpu</code></td>
+      <td>cur</td>
+      <td class="mono">bk26b-perfetto-cur</td>
+      <td>cur correlate granularity=window signals=[UnityMain runningPct=77.82; UnityMain runnablePct=1.62; cpuFreqAvgMhz=1576.3; bigCoreReachPct=75.6]</td>
+    </tr>
+
+    <tr id="ev-017-throttle-correlateFrameSchedCpu">
+      <td><code>ev-017-throttle-correlateFrameSchedCpu</code></td>
+      <td><code>correlateFrameSchedCpu</code></td>
+      <td>throttle</td>
+      <td class="mono">bk26b-perfetto-throttle</td>
+      <td>throttle correlate granularity=window signals=[UnityMain runningPct=56.99; UnityMain runnablePct=2.83; cpuFreqAvgMhz=1324.6; bigCoreReachPct=59.2; throttling suspected]</td>
+    </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    generatedAt: 2026-07-14T06:52:03.852Z ·
+    input: web/data/prism-out/bk26b-perfetto-explore-mvp
+    (ledger 2026-07-14T06:21:46.448Z) ·
+    WT-018 MVP · no FrameTimeline jank / no GPU busy / no per-frame claim
+  </footer>
+</div>
+</body>
+</html>
