@@ -2,7 +2,7 @@
 
 > **新会话第一个读这个。** 永远保持最新。主 agent 每做完一件事 / 快切会话前必更新本文。
 > 坐标系见 `../plan/roadmap.md`（里程碑）和 `../plan/backlog.md`（需求）。
-> 最后更新：2026-07-11（M3-D 重量层验收✅：完整 explore 已证实记忆注入改变分析行为；M3 可阶段收口）
+> 最后更新：2026-07-14（WT-017 Perfetto explore+ledger MVP 验收PASS：Perfetto 能走 query→provenance→ledger→findings/verdict，不依赖读 summary 写作文）
 
 ---
 
@@ -12,6 +12,9 @@
 
 ## 刚做完什么（本次会话）
 
+- ✅ **WT-017 = BK-26b-explore Perfetto explore + evidence ledger MVP（验收PASS）**：新增 deterministic scripted loop `web/server/scripts/perfetto-explore-mvp.ts`（不接 LLM），对 base/cur/throttle 调用 WT-013 六工具（correlate 仅 cur/throttle）= 17 evidence，派生 6 findings + verdict。产物落 `web/data/prism-out/bk26b-perfetto-explore-mvp/{ledger,findings,verdict,run.log}`。主 agent 独立验收（DR-36 亲自跑）：`node --import tsx server/scripts/perfetto-explore-mvp.ts` 直播 exit 0；`tools.test.ts` 116 PASS/0 FAIL 未退化。三个边界全部显式记录：base callTree `via PlayerLoop anchor fallback`(f-02)、FrameTimeline 三态 `available:false` 不写 jank(f-01)、`correlateFrameSchedCpu granularity:window` 不声称逐帧(f-03/f-05)。关键数字：base/cur/throttle UnityMain runningPct=86.94/77.82/56.99，avgMhz=1729.5/1576.3/1324.6，throttle throttlingLevel=suspected。findings 覆盖 base(f-02/f-06)、cur vs throttle(f-03/f-04)、能力边界(f-01/f-05)。工单 `REVIEW-` 待改 `DONE-`。
+  - ⚠️ **同款 Cursor shell 故障**：派发进程 9m53s 完成（未超时），但 Cursor shell 在 headless 模式仍不可用（`Can't find Bash`），施工方无法自测脚本。施工方诚实交代改为"按脚本逻辑对照 triad JSON 手写产物"。主 agent 直播跑脚本后，输出与施工方手写产物关键数字完全一致——说明施工方确实按脚本规则手写、未造假。直播脚本输出已覆盖手写产物，最终交付的是脚本真实输出。
+  - 🔑 **机制验证成立**：WT-017 证明 Perfetto 能走 "query 工具 → provenance → evidence ledger → findings/verdict"，不依赖读 summary 写作文。ledger 每条 evidence 含 `id/tool/role/args/provenance/summary/facts`，findings 全部回链 evidenceIds。这是 Perfetto agent 同构的关键一步。
 - ✅ **WT-002 = BK-16 源码归因·调用栈辅助消歧（验收PASS）**：给 `getSourceForSymbol`（tools.ts）加可选入参 `callStack`，当裸名符号在 codegraph 命中多个同名候选时，用调用栈祖先去 `edges(kind='calls')` 反查调用者、取交集，**恰好唯一候选才收敛**（否则保持 ambiguous 诚实放弃，护栏不破）。新增 `resolvedVia:'callstack-disambiguated'`。主 agent 独立验收（DR-36 亲自跑）：tsc 零新增错误；tools.cli 三场景实测——`GetRootPanel`(1688候选)无栈→ambiguous、给有效祖先`FindComplexPathToLastContainer`→唯一定位真实文件、给无效祖先→仍ambiguous；单测 66 PASS/0 FAIL。工单 `DONE-`。
   - ⚠️ **同款断线**：派发进程 2 分钟超时中断（Cursor 施工机 shell 故障、命令全空返回、无法自测），代码写完没走收尾。主 agent 读 diff 确认成果完整（Cursor 还自修了 cgDb 提前关闭 bug）后代填完工报告并验收。
   - ⚠️ **验收中主 agent 微调测试**：施工方原用 `OnCameraMove` 作消歧正例，但实测其 5 候选在 codegraph **全无调用边**、注定 FAIL。主 agent 查实后换成已验证可消歧的 `GetRootPanel`。仅换测试数据符号，未动产品逻辑。
@@ -50,7 +53,7 @@
 
 - **M3 阶段验收**：M3-D 重量层已通过，下一步可找用户做 M3 阶段收口/决定进入 M4（记忆语义去重、更多可复用知识料、BK-24）。
 - **当前用户关注重心**：报告图文流/调用树聚焦(BK-25)已入表但降为体验层低优先；当前更关注 **引擎层完整度、三大回路完整度、三源其它两源能否按当前 agent 设计跑出高于作文机的报告**。
-- **引擎层验证工单进展已收口并进入 Perfetto agent 化**：`WT-010 / BK-26` 已按 DR-36 验收 PASS：simpleperf 与 Perfetto/ptrace 数据层最小闭环成立。`WT-011 / BK-26b` 已按 DR-36 验收 PASS：新版 Perfetto triad（`sample_base_20260624_104944`、`sample_cur_20260624_105041`、`sample_throttle_20260624_105539`，由 `record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本。`WT-012 / BK-23a` 已按 DR-36 验收 PASS：marker alias table + confidence 已落地。`WT-013 / BK-26b-impl` 已按 DR-36 验收 PASS：6 个 Perfetto query 最小集已实现并可 CLI/batch 调用。`WT-014 / BK-26b-fix` 已按 DR-36 验收 PASS：provider 自动 ingest sidecar，evidence 不再错报无 thermal，base callTrees 已通过 PlayerLoop anchor fallback 修复，三组 triad 重新 build 后测试 116 PASS。下一批 TODO：`WT-017` Perfetto explore+ledger MVP、`WT-018` Perfetto narrative.json+report.html MVP、`WT-015` 报告层消费 source confidence、`WT-016` CustomSampler/Create 自动扫描扩展 map-source。建议优先 `WT-017 -> WT-018`。
+- **引擎层验证工单进展已收口并进入 Perfetto agent 化**：`WT-010 / BK-26` 已按 DR-36 验收 PASS：simpleperf 与 Perfetto/ptrace 数据层最小闭环成立。`WT-011 / BK-26b` 已按 DR-36 验收 PASS：新版 Perfetto triad（`sample_base_20260624_104944`、`sample_cur_20260624_105041`、`sample_throttle_20260624_105539`，由 `record_aoeyz.bat` 采集）比旧单 trace 更适合作 Perfetto agent 同构主样本。`WT-012 / BK-23a` 已按 DR-36 验收 PASS：marker alias table + confidence 已落地。`WT-013 / BK-26b-impl` 已按 DR-36 验收 PASS：6 个 Perfetto query 最小集已实现并可 CLI/batch 调用。`WT-014 / BK-26b-fix` 已按 DR-36 验收 PASS：provider 自动 ingest sidecar，evidence 不再错报无 thermal，base callTrees 已通过 PlayerLoop anchor fallback 修复，三组 triad 重新 build 后测试 116 PASS。`WT-017 / BK-26b-explore` 已按 DR-36 验收 PASS（2026-07-14）：Perfetto explore + evidence ledger MVP 成立，deterministic scripted loop 17 evidence + 6 findings + verdict，三个边界（base callTree fallback / FrameTimeline 缺失 / window-only correlation）全部显式记录，证明 Perfetto 能走 "query 工具 → provenance → evidence ledger → findings/verdict" 不依赖读 summary 写作文。下一批 TODO：`WT-018` Perfetto narrative.json+report.html MVP（依赖 WT-017 产物，是当前下一步）、`WT-015` 报告层消费 source confidence、`WT-016` CustomSampler/Create 自动扫描扩展 map-source。建议优先 `WT-018`。
 
 ## M1 Gap 分析关键结论（2026-07-10，详见 m1-gap-analysis.md）
 

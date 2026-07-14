@@ -1,0 +1,23 @@
+{
+  "source": "perfetto",
+  "sampleSet": "bk26b-perfetto-triad",
+  "summary": "Perfetto triad explore MVP: throttle shows lower avgMhz with co-directional UnityMain running/sleeping shift vs cur (window-level); atrace PlayerLoop/BehaviourUpdate/FinishFrameRendering differ across cur/throttle; Android FrameTimeline absent so jank/GPU busy not judged; base callTree is fallback-sourced.",
+  "conclusions": [
+    "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+    "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)"
+  ],
+  "boundaries": [
+    "FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy",
+    "base callTree via PlayerLoop anchor fallback — lower confidence absolute ms",
+    "correlateFrameSchedCpu is window-only — no per-frame claim"
+  ],
+  "findingIds": [
+    "f-01",
+    "f-02",
+    "f-03",
+    "f-04",
+    "f-05",
+    "f-06"
+  ],
+  "generatedAt": "2026-07-14T06:21:46.450Z"
+}

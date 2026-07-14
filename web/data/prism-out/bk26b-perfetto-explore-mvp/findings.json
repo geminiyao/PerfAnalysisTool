@@ -1,0 +1,78 @@
+{
+  "source": "perfetto",
+  "sampleSet": "bk26b-perfetto-triad",
+  "generatedAt": "2026-07-14T06:21:46.448Z",
+  "findings": [
+    {
+      "id": "f-01",
+      "title": "Android FrameTimeline unavailable across triad",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-003-base-queryFrameTimeline",
+        "ev-008-cur-queryFrameTimeline",
+        "ev-013-throttle-queryFrameTimeline"
+      ],
+      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
+      "boundary": "FrameTimeline unavailable; no jank finding synthesized"
+    },
+    {
+      "id": "f-02",
+      "title": "base callTree available via PlayerLoop anchor fallback",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-005-base-getPerfettoCallTree"
+      ],
+      "claim": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.",
+      "boundary": "via PlayerLoop anchor fallback"
+    },
+    {
+      "id": "f-03",
+      "title": "throttle CPU freq decline co-directional with UnityMain sched shift (window)",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-009-cur-queryCpuFreq",
+        "ev-014-throttle-queryCpuFreq",
+        "ev-006-cur-querySchedState",
+        "ev-011-throttle-querySchedState",
+        "ev-017-throttle-correlateFrameSchedCpu"
+      ],
+      "claim": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+      "boundary": "window-only correlation; not per-frame"
+    },
+    {
+      "id": "f-04",
+      "title": "cur vs throttle atrace slice deltas (PlayerLoop / BehaviourUpdate / FinishFrameRendering)",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-007-cur-queryAtraceSlices",
+        "ev-012-throttle-queryAtraceSlices",
+        "ev-010-cur-getPerfettoCallTree",
+        "ev-015-throttle-getPerfettoCallTree"
+      ],
+      "claim": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
+      "boundary": "atrace aggregates + callTree hotPath; not frame-timeline jank"
+    },
+    {
+      "id": "f-05",
+      "title": "correlateFrameSchedCpu is window-granularity only",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-016-cur-correlateFrameSchedCpu",
+        "ev-017-throttle-correlateFrameSchedCpu"
+      ],
+      "claim": "correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation.",
+      "boundary": "granularity:window; no per-frame correlation claimed"
+    },
+    {
+      "id": "f-06",
+      "title": "base vs cur UnityMain sched snapshot",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-001-base-querySchedState",
+        "ev-006-cur-querySchedState"
+      ],
+      "claim": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
+      "boundary": "window sched aggregates; not FrameTimeline jank"
+    }
+  ]
+}

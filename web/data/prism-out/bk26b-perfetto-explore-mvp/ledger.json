@@ -1,0 +1,689 @@
+{
+  "source": "perfetto",
+  "sampleSet": "bk26b-perfetto-triad",
+  "generatedAt": "2026-07-14T06:21:46.448Z",
+  "evidenceCount": 17,
+  "evidence": [
+    {
+      "id": "ev-001-base-querySchedState",
+      "tool": "querySchedState",
+      "role": "base",
+      "args": {
+        "role": "base",
+        "thread": "UnityMain",
+        "topN": 20
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "querySchedState",
+        "args": {
+          "role": "base",
+          "thread": "UnityMain",
+          "topN": 20
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base UnityMain runningPct=86.94 runnablePct=0.97 sleepingPct=12.04",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalThreads": 1,
+        "unityMain": {
+          "name": "UnityMain",
+          "runningPct": 86.94,
+          "runnablePct": 0.97,
+          "sleepingPct": 12.04
+        }
+      }
+    },
+    {
+      "id": "ev-002-base-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "base",
+      "args": {
+        "role": "base",
+        "topN": 30
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "queryAtraceSlices",
+        "args": {
+          "role": "base",
+          "topN": 30
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base PlayerLoop count=684 avgMs=16.621 totalMs=11368.46; BehaviourUpdate count=684; FinishFrameRendering count=n/a",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalSlices": 5,
+        "slices": {
+          "PlayerLoop": {
+            "name": "PlayerLoop",
+            "count": 684,
+            "avgMs": 16.621,
+            "totalMs": 11368.46
+          },
+          "BehaviourUpdate": {
+            "name": "BehaviourUpdate",
+            "count": 684,
+            "avgMs": 2.133,
+            "totalMs": 1459.12
+          },
+          "FinishFrameRendering": null
+        }
+      }
+    },
+    {
+      "id": "ev-003-base-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "base",
+      "args": {
+        "role": "base"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "queryFrameTimeline",
+        "args": {
+          "role": "base"
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base FrameTimeline available=false; choreographer available=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "androidFrameTimelineAvailable": false,
+        "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
+        "choreographerAvailable": true
+      }
+    },
+    {
+      "id": "ev-004-base-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "base",
+      "args": {
+        "role": "base"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "queryCpuFreq",
+        "args": {
+          "role": "base"
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base cpu avgMhz=1729.5 bigCoreReachPct=74.9 throttlingLevel=suspected suspected=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "avgMhz": 1729.5,
+        "bigCoreReachPct": 74.9,
+        "throttlingLevel": "suspected",
+        "throttlingSuspected": true,
+        "cpuThrottled": true
+      }
+    },
+    {
+      "id": "ev-005-base-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "base",
+      "args": {
+        "role": "base",
+        "maxDepth": 6
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "getPerfettoCallTree",
+        "args": {
+          "role": "base",
+          "maxDepth": 6
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true viaPlayerLoopAnchorFallback=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "treeCount": 1,
+        "hotPath": [
+          {
+            "name": "UnityMain",
+            "totalPct": 100
+          },
+          {
+            "name": "PlayerLoop",
+            "totalMs": 11458.86,
+            "totalPct": 100.25
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 4677.17,
+            "totalPct": 40.92
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 4167.28,
+            "totalPct": 36.46
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 4074.3,
+            "totalPct": 35.64
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 3931.5,
+            "totalPct": 34.4
+          },
+          {
+            "name": "URP.MainRenderingTransparent",
+            "totalMs": 1163.75,
+            "totalPct": 10.18
+          }
+        ],
+        "hasPlayerLoop": true,
+        "viaPlayerLoopAnchorFallback": true
+      }
+    },
+    {
+      "id": "ev-006-cur-querySchedState",
+      "tool": "querySchedState",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "thread": "UnityMain",
+        "topN": 20
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "querySchedState",
+        "args": {
+          "role": "cur",
+          "thread": "UnityMain",
+          "topN": 20
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur UnityMain runningPct=77.82 runnablePct=1.62 sleepingPct=20.4",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalThreads": 1,
+        "unityMain": {
+          "name": "UnityMain",
+          "runningPct": 77.82,
+          "runnablePct": 1.62,
+          "sleepingPct": 20.4
+        }
+      }
+    },
+    {
+      "id": "ev-007-cur-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "topN": 30
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "queryAtraceSlices",
+        "args": {
+          "role": "cur",
+          "topN": 30
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur PlayerLoop count=484 avgMs=30.183 totalMs=14608.74; BehaviourUpdate count=484; FinishFrameRendering count=n/a",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalSlices": 6,
+        "slices": {
+          "PlayerLoop": {
+            "name": "PlayerLoop",
+            "count": 484,
+            "avgMs": 30.183,
+            "totalMs": 14608.74
+          },
+          "BehaviourUpdate": {
+            "name": "BehaviourUpdate",
+            "count": 484,
+            "avgMs": 7.905,
+            "totalMs": 3826.16
+          },
+          "FinishFrameRendering": null
+        }
+      }
+    },
+    {
+      "id": "ev-008-cur-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "cur",
+      "args": {
+        "role": "cur"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "queryFrameTimeline",
+        "args": {
+          "role": "cur"
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur FrameTimeline available=false; choreographer available=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "androidFrameTimelineAvailable": false,
+        "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
+        "choreographerAvailable": true
+      }
+    },
+    {
+      "id": "ev-009-cur-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "cur",
+      "args": {
+        "role": "cur"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "queryCpuFreq",
+        "args": {
+          "role": "cur"
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur cpu avgMhz=1576.3 bigCoreReachPct=75.6 throttlingLevel=none suspected=false",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "avgMhz": 1576.3,
+        "bigCoreReachPct": 75.6,
+        "throttlingLevel": "none",
+        "throttlingSuspected": false
+      }
+    },
+    {
+      "id": "ev-010-cur-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "maxDepth": 6
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "getPerfettoCallTree",
+        "args": {
+          "role": "cur",
+          "maxDepth": 6
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "treeCount": 1,
+        "hotPath": [
+          {
+            "name": "UnityMain",
+            "totalPct": 100
+          },
+          {
+            "name": "PlayerLoop",
+            "totalMs": 14608.74,
+            "totalPct": 99.6
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 6311.62,
+            "totalPct": 43.03
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 5869.82,
+            "totalPct": 40.02
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 5802.8,
+            "totalPct": 39.56
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 5698.7,
+            "totalPct": 38.85
+          },
+          {
+            "name": "URP.AfterRendering",
+            "totalMs": 3300.05,
+            "totalPct": 22.5
+          }
+        ],
+        "hasPlayerLoop": true,
+        "viaPlayerLoopAnchorFallback": false
+      }
+    },
+    {
+      "id": "ev-011-throttle-querySchedState",
+      "tool": "querySchedState",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "thread": "UnityMain",
+        "topN": 20
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "querySchedState",
+        "args": {
+          "role": "throttle",
+          "thread": "UnityMain",
+          "topN": 20
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle UnityMain runningPct=56.99 runnablePct=2.83 sleepingPct=38.99",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalThreads": 1,
+        "unityMain": {
+          "name": "UnityMain",
+          "runningPct": 56.99,
+          "runnablePct": 2.83,
+          "sleepingPct": 38.99
+        }
+      }
+    },
+    {
+      "id": "ev-012-throttle-queryAtraceSlices",
+      "tool": "queryAtraceSlices",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "topN": 30
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryAtraceSlices",
+        "args": {
+          "role": "throttle",
+          "topN": 30
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle PlayerLoop count=428 avgMs=46.567 totalMs=19930.73; BehaviourUpdate count=428; FinishFrameRendering count=n/a",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalSlices": 6,
+        "slices": {
+          "PlayerLoop": {
+            "name": "PlayerLoop",
+            "count": 428,
+            "avgMs": 46.567,
+            "totalMs": 19930.73
+          },
+          "BehaviourUpdate": {
+            "name": "BehaviourUpdate",
+            "count": 428,
+            "avgMs": 8.804,
+            "totalMs": 3767.99
+          },
+          "FinishFrameRendering": null
+        }
+      }
+    },
+    {
+      "id": "ev-013-throttle-queryFrameTimeline",
+      "tool": "queryFrameTimeline",
+      "role": "throttle",
+      "args": {
+        "role": "throttle"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryFrameTimeline",
+        "args": {
+          "role": "throttle"
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle FrameTimeline available=false; choreographer available=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "androidFrameTimelineAvailable": false,
+        "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
+        "choreographerAvailable": true
+      }
+    },
+    {
+      "id": "ev-014-throttle-queryCpuFreq",
+      "tool": "queryCpuFreq",
+      "role": "throttle",
+      "args": {
+        "role": "throttle"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryCpuFreq",
+        "args": {
+          "role": "throttle"
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle cpu avgMhz=1324.6 bigCoreReachPct=59.2 throttlingLevel=suspected suspected=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "avgMhz": 1324.6,
+        "bigCoreReachPct": 59.2,
+        "throttlingLevel": "suspected",
+        "throttlingSuspected": true,
+        "cpuThrottled": true
+      }
+    },
+    {
+      "id": "ev-015-throttle-getPerfettoCallTree",
+      "tool": "getPerfettoCallTree",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "maxDepth": 6
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "getPerfettoCallTree",
+        "args": {
+          "role": "throttle",
+          "maxDepth": 6
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "treeCount": 1,
+        "hotPath": [
+          {
+            "name": "UnityMain",
+            "totalPct": 100
+          },
+          {
+            "name": "PlayerLoop",
+            "totalMs": 19930.73,
+            "totalPct": 99.87
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 11117.55,
+            "totalPct": 55.71
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 10650.6,
+            "totalPct": 53.37
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 10557.52,
+            "totalPct": 52.9
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 10425.68,
+            "totalPct": 52.24
+          },
+          {
+            "name": "URP.AfterRendering",
+            "totalMs": 8253.95,
+            "totalPct": 41.36
+          }
+        ],
+        "hasPlayerLoop": true,
+        "viaPlayerLoopAnchorFallback": false
+      }
+    },
+    {
+      "id": "ev-016-cur-correlateFrameSchedCpu",
+      "tool": "correlateFrameSchedCpu",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "thread": "UnityMain"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "correlateFrameSchedCpu",
+        "args": {
+          "role": "cur",
+          "thread": "UnityMain"
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur correlate granularity=window signals=[UnityMain runningPct=77.82; UnityMain runnablePct=1.62; cpuFreqAvgMhz=1576.3; bigCoreReachPct=75.6]",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "granularity": "window",
+        "signals": [
+          "UnityMain runningPct=77.82",
+          "UnityMain runnablePct=1.62",
+          "cpuFreqAvgMhz=1576.3",
+          "bigCoreReachPct=75.6"
+        ],
+        "cpu": {
+          "avgMhz": 1576.3,
+          "bigCoreReachPct": 75.6,
+          "throttlingLevel": "none",
+          "throttlingSuspected": false
+        },
+        "sched": {
+          "name": "UnityMain",
+          "runningPct": 77.82,
+          "runnablePct": 1.62,
+          "sleepingPct": 20.4
+        },
+        "note": "WT-013 MVP reports window-level correlation only; no per-frame sched/cpu correlation is claimed."
+      }
+    },
+    {
+      "id": "ev-017-throttle-correlateFrameSchedCpu",
+      "tool": "correlateFrameSchedCpu",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "thread": "UnityMain"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "correlateFrameSchedCpu",
+        "args": {
+          "role": "throttle",
+          "thread": "UnityMain"
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle correlate granularity=window signals=[UnityMain runningPct=56.99; UnityMain runnablePct=2.83; cpuFreqAvgMhz=1324.6; bigCoreReachPct=59.2; throttling suspected]",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "granularity": "window",
+        "signals": [
+          "UnityMain runningPct=56.99",
+          "UnityMain runnablePct=2.83",
+          "cpuFreqAvgMhz=1324.6",
+          "bigCoreReachPct=59.2",
+          "throttling suspected"
+        ],
+        "cpu": {
+          "avgMhz": 1324.6,
+          "bigCoreReachPct": 59.2,
+          "throttlingLevel": "suspected",
+          "throttlingSuspected": true
+        },
+        "sched": {
+          "name": "UnityMain",
+          "runningPct": 56.99,
+          "runnablePct": 2.83,
+          "sleepingPct": 38.99
+        },
+        "note": "WT-013 MVP reports window-level correlation only; no per-frame sched/cpu correlation is claimed."
+      }
+    }
+  ]
+}
