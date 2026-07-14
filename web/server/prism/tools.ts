@@ -2552,10 +2552,29 @@ export interface QueryFrameTimelineResult {
     };
     choreographer: {
       available: boolean;
-      summary: unknown;
+      p50Ms: number | null;
+      p95Ms: number | null;
+      p99Ms: number | null;
+      fps: number | null;
+      slowFrameRate: number | null;
+    };
+    playerLoopPercentiles: {
+      available: false;
+      reason: string;
     };
   };
   provenance: Provenance;
+}
+
+function findChoreographerFrame(run: LoadedPerfettoRun): Record<string, unknown> | null {
+  const coreFrames = Array.isArray(run.core.frame) ? run.core.frame : [];
+  const fromCore = coreFrames.find(f => asRecord(f).frameDefinition === 'choreographer');
+  if (fromCore) return asRecord(fromCore);
+  const summaryFrames = Array.isArray(run.summary.frame) ? run.summary.frame : [];
+  const fromSummary = summaryFrames.find(f => asRecord(f).frameDefinition === 'choreographer');
+  if (fromSummary) return asRecord(fromSummary);
+  const nested = asRecord(run.summary.frame).choreographer;
+  return isRecord(nested) ? nested : null;
 }
 
 export function queryFrameTimeline(
@@ -2564,13 +2583,13 @@ export function queryFrameTimeline(
 ): QueryFrameTimelineResult {
   const run = loadPerfettoRun(args);
   const rawFrameTimeline = run.perfetto.frameTimeline ?? run.summary.frameTimeline;
-  const coreFrames = Array.isArray(run.core.frame) ? run.core.frame : [];
-  const choreographer =
-    coreFrames.find(f => asRecord(f).frameDefinition === 'choreographer') ??
-    asRecord(run.summary.frame).choreographer ??
-    run.summary.frame ??
-    null;
+  const choreographer = findChoreographerFrame(run);
   const androidAvailable = isNonEmptyObject(rawFrameTimeline);
+  const hasChoreo =
+    choreographer != null &&
+    (asNumber(choreographer.p50Ms) != null ||
+      asNumber(choreographer.fps) != null ||
+      isNonEmptyObject(choreographer));
 
   return {
     data: {
@@ -2581,8 +2600,16 @@ export function queryFrameTimeline(
             reason: 'Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.',
           },
       choreographer: {
-        available: choreographer != null && isNonEmptyObject(choreographer),
-        summary: choreographer,
+        available: hasChoreo,
+        p50Ms: asNumber(choreographer?.p50Ms) ?? null,
+        p95Ms: asNumber(choreographer?.p95Ms) ?? null,
+        p99Ms: asNumber(choreographer?.p99Ms) ?? null,
+        fps: asNumber(choreographer?.fps) ?? null,
+        slowFrameRate: asNumber(choreographer?.slowFrameRate) ?? null,
+      },
+      playerLoopPercentiles: {
+        available: false,
+        reason: 'provider 未提取 PlayerLoop 分位数，仅有 choreographer；需另开工单补 provider',
       },
     },
     provenance: perfettoProvenance('queryFrameTimeline', args, run),
@@ -2590,6 +2617,21 @@ export function queryFrameTimeline(
 }
 
 export interface QueryCpuFreqArgs extends PerfettoJsonToolArgs {}
+
+export interface QueryCpuFreqPerCpuRow {
+  cpu: number;
+  avgMhz: number | null;
+  maxMhz: number | null;
+  cpuinfoMaxMhz: number | null;
+  reachPct: number | null;
+  reachVsCpuinfoPct: number | null;
+}
+
+export interface QueryCpuFreqClusterStats {
+  cpuCount: number;
+  avgReachPct: number | null;
+  avgMhz: number | null;
+}
 
 export interface QueryCpuFreqResult {
   data: {
@@ -2599,10 +2641,28 @@ export interface QueryCpuFreqResult {
     throttlingLevel?: string;
     throttlingSuspected: boolean;
     bigCoreReachPct?: number;
-    perCpu: Array<Record<string, unknown>>;
+    perCpu: QueryCpuFreqPerCpuRow[];
+    clusterSummary: {
+      small: QueryCpuFreqClusterStats;
+      mid: QueryCpuFreqClusterStats;
+      big: QueryCpuFreqClusterStats;
+    };
     evidence: string[];
   };
   provenance: Provenance;
+}
+
+function summarizeCpuCluster(rows: QueryCpuFreqPerCpuRow[]): QueryCpuFreqClusterStats {
+  if (rows.length === 0) return { cpuCount: 0, avgReachPct: null, avgMhz: null };
+  const reachVals = rows.map(r => r.reachPct).filter((v): v is number => v != null);
+  const mhzVals = rows.map(r => r.avgMhz).filter((v): v is number => v != null);
+  const avg = (vals: number[]) =>
+    vals.length > 0 ? roundNumber(vals.reduce((a, b) => a + b, 0) / vals.length, 2) ?? null : null;
+  return {
+    cpuCount: rows.length,
+    avgReachPct: avg(reachVals),
+    avgMhz: avg(mhzVals),
+  };
 }
 
 export function queryCpuFreq(
@@ -2612,13 +2672,26 @@ export function queryCpuFreq(
   const run = loadPerfettoRun(args);
   const system = asRecord(run.core.system ?? run.summary.system);
   const throttling = asRecord(run.perfetto.throttling ?? run.summary.throttling);
-  const perCpu = Array.isArray(throttling.perCpu) ? throttling.perCpu.map(asRecord) : [];
+  const perCpuRaw = Array.isArray(throttling.perCpu) ? throttling.perCpu.map(asRecord) : [];
+  const perCpu: QueryCpuFreqPerCpuRow[] = perCpuRaw.map(r => ({
+    cpu: asNumber(r.cpu) ?? -1,
+    avgMhz: asNumber(r.avgMhz) ?? null,
+    maxMhz: asNumber(r.maxMhz) ?? null,
+    cpuinfoMaxMhz: asNumber(r.cpuinfoMaxMhz) ?? null,
+    reachPct: asNumber(r.reachPct) ?? null,
+    reachVsCpuinfoPct: asNumber(r.reachVsCpuinfoPct) ?? null,
+  })).filter(r => r.cpu >= 0);
   const avgMhz = asNumber(system.cpuFreqAvgMhz);
   const level = typeof throttling.level === 'string' ? throttling.level : undefined;
   const cpuThrottled = typeof system.cpuThrottled === 'boolean' ? system.cpuThrottled : undefined;
   const evidence = Array.isArray(throttling.evidence)
     ? throttling.evidence.filter((v): v is string => typeof v === 'string')
     : [];
+
+  // Generic cluster split by CPU index (0-3 / 4-6 / ≥7) — no SoC name hardcoding.
+  const small = perCpu.filter(r => r.cpu <= 3);
+  const mid = perCpu.filter(r => r.cpu >= 4 && r.cpu <= 6);
+  const big = perCpu.filter(r => r.cpu >= 7);
 
   return {
     data: {
@@ -2629,6 +2702,11 @@ export function queryCpuFreq(
       throttlingSuspected: level === 'suspected' || cpuThrottled === true,
       bigCoreReachPct: asNumber(throttling.bigCoreReachPct),
       perCpu,
+      clusterSummary: {
+        small: summarizeCpuCluster(small),
+        mid: summarizeCpuCluster(mid),
+        big: summarizeCpuCluster(big),
+      },
       evidence,
     },
     provenance: perfettoProvenance('queryCpuFreq', args, run),
@@ -2813,5 +2891,411 @@ export function correlateFrameSchedCpu(
       note: 'WT-013 MVP reports window-level correlation only; no per-frame sched/cpu correlation is claimed.',
     },
     provenance: perfettoProvenance('correlateFrameSchedCpu', args, run),
+  };
+}
+
+// ─────────────────────────── WT-019: Perfetto query content expansion ─
+
+export interface QueryCallTreeSubtreeArgs extends PerfettoJsonToolArgs {
+  pattern?: string;
+  minTotalPct?: number;
+  topN?: number;
+  businessOnly?: boolean;
+  includeSubtree?: boolean;
+}
+
+export interface QueryCallTreeSubtreeRow {
+  name: string;
+  totalMs: number | null;
+  totalPct: number | null;
+  count: number | null;
+  avgMs: number | null;
+  layer: string | null;
+  depth: number;
+  parentChain: string;
+  subtreeTotalMs?: number | null;
+  subtreeTotalPct?: number | null;
+}
+
+export interface QueryCallTreeSubtreeResult {
+  data: {
+    available: boolean;
+    totalNodes: number;
+    rows: QueryCallTreeSubtreeRow[];
+  };
+  provenance: Provenance;
+}
+
+interface FlatCallTreeNode {
+  name: string;
+  totalMs: number | null;
+  totalPct: number | null;
+  count: number | null;
+  avgMs: number | null;
+  layer: string | null;
+  depth: number;
+  parentChain: string;
+  subtreeTotalMs: number | null;
+  subtreeTotalPct: number | null;
+}
+
+function flattenCallTreeNodes(
+  node: Record<string, unknown>,
+  depth: number,
+  ancestors: string[]
+): FlatCallTreeNode[] {
+  const name = typeof node.name === 'string' ? node.name : '(unknown)';
+  const totalMs = asNumber(node.totalMs) ?? null;
+  const totalPct = asNumber(node.totalPct) ?? null;
+  const count = asNumber(node.count) ?? null;
+  const avgMs =
+    asNumber(node.avgMs) ??
+    (totalMs != null && count != null && count > 0 ? roundNumber(totalMs / count, 3) ?? null : null);
+  const layer = typeof node.layer === 'string' ? node.layer : null;
+  const chain = [...ancestors, name];
+  const self: FlatCallTreeNode = {
+    name,
+    totalMs,
+    totalPct,
+    count,
+    avgMs,
+    layer,
+    depth,
+    parentChain: chain.join(' > '),
+    // totalMs is inclusive of children in provider callTrees
+    subtreeTotalMs: totalMs,
+    subtreeTotalPct: totalPct,
+  };
+  const children = Array.isArray(node.children) ? node.children.map(asRecord) : [];
+  const childRows = children.flatMap(child => flattenCallTreeNodes(child, depth + 1, chain));
+  return [self, ...childRows];
+}
+
+function collectCallTreeFlatNodes(run: LoadedPerfettoRun): FlatCallTreeNode[] {
+  const rawTrees = run.perfetto.callTrees ?? run.summary.callTrees;
+  const callTrees = Array.isArray(rawTrees) ? rawTrees.map(asRecord) : [];
+  const out: FlatCallTreeNode[] = [];
+  for (const tree of callTrees) {
+    const root = asRecord(tree.root);
+    if (Object.keys(root).length === 0) continue;
+    out.push(...flattenCallTreeNodes(root, 0, []));
+  }
+  return out;
+}
+
+export function queryCallTreeSubtree(
+  _db: Database.Database | null | undefined,
+  args: QueryCallTreeSubtreeArgs
+): QueryCallTreeSubtreeResult {
+  const run = loadPerfettoRun(args);
+  const minTotalPct = args.minTotalPct ?? 1.0;
+  const topN = Math.min(args.topN ?? 20, 200);
+  const includeSubtree = args.includeSubtree !== false;
+  const pattern = args.pattern?.toLowerCase();
+  const businessOnly = args.businessOnly === true;
+
+  let rows = collectCallTreeFlatNodes(run);
+  if (pattern) rows = rows.filter(r => r.name.toLowerCase().includes(pattern));
+  if (businessOnly) rows = rows.filter(r => r.layer === 'business');
+  rows = rows.filter(r => (r.totalPct ?? 0) >= minTotalPct);
+  rows.sort((a, b) => (b.totalMs ?? 0) - (a.totalMs ?? 0));
+  const totalNodes = rows.length;
+  const trimmed = rows.slice(0, topN).map(r => {
+    const out: QueryCallTreeSubtreeRow = {
+      name: r.name,
+      totalMs: r.totalMs,
+      totalPct: r.totalPct,
+      count: r.count,
+      avgMs: r.avgMs,
+      layer: r.layer,
+      depth: r.depth,
+      parentChain: r.parentChain,
+    };
+    if (includeSubtree) {
+      out.subtreeTotalMs = r.subtreeTotalMs;
+      out.subtreeTotalPct = r.subtreeTotalPct;
+    }
+    return out;
+  });
+
+  return {
+    data: {
+      available: trimmed.length > 0,
+      totalNodes,
+      rows: trimmed,
+    },
+    provenance: perfettoProvenance('queryCallTreeSubtree', args, run),
+  };
+}
+
+export interface QuerySliceDeltasArgs {
+  baseRole: PerfettoSampleRole;
+  compareRole: PerfettoSampleRole;
+  tool: 'callTreeSubtree' | 'atraceSlices' | 'schedState';
+  minFoldChange?: number;
+  minTotalPct?: number;
+  topN?: number;
+  runDir?: string;
+  runId?: string;
+}
+
+export interface QuerySliceDeltasRow {
+  name: string;
+  baseTotalMs: number | null;
+  compareTotalMs: number | null;
+  foldChange: number | null;
+  baseTotalPct: number | null;
+  compareTotalPct: number | null;
+  baseCount: number | null;
+  compareCount: number | null;
+  avgMsChange: number | null;
+  evidenceBaseId: string;
+  evidenceCompareId: string;
+}
+
+export interface QuerySliceDeltasResult {
+  data: {
+    available: boolean;
+    rows: QuerySliceDeltasRow[];
+  };
+  provenance: Provenance;
+}
+
+interface SliceDeltaMetric {
+  name: string;
+  totalMs: number | null;
+  totalPct: number | null;
+  count: number | null;
+  avgMs: number | null;
+}
+
+function metricsFromCallTreeSubtree(role: PerfettoSampleRole, minTotalPct: number): SliceDeltaMetric[] {
+  const result = queryCallTreeSubtree(null, { role, minTotalPct: 0, topN: 200 });
+  return result.data.rows
+    .filter(r => (r.totalPct ?? 0) >= minTotalPct || minTotalPct <= 0)
+    .map(r => ({
+      name: r.name,
+      totalMs: r.totalMs,
+      totalPct: r.totalPct,
+      count: r.count,
+      avgMs: r.avgMs,
+    }));
+}
+
+function metricsFromAtraceSlices(role: PerfettoSampleRole, minTotalPct: number): SliceDeltaMetric[] {
+  const result = queryAtraceSlices(null, { role, topN: 50, sortBy: 'totalMs' });
+  return result.data.rows
+    .filter(r => (r.totalPctOfWindow ?? 0) >= minTotalPct || minTotalPct <= 0)
+    .map(r => ({
+      name: r.name,
+      totalMs: r.totalMs ?? null,
+      totalPct: r.totalPctOfWindow ?? null,
+      count: r.count ?? null,
+      avgMs: r.avgMs ?? null,
+    }));
+}
+
+function metricsFromSchedState(role: PerfettoSampleRole, _minTotalPct: number): SliceDeltaMetric[] {
+  const result = querySchedState(null, { role, topN: 50 });
+  return result.data.threads.map(t => {
+    const totalNs = t.totalNs;
+    return {
+      name: t.name,
+      // Prefer absolute time; fall back to runningPct as comparable magnitude.
+      totalMs: totalNs != null ? roundNumber(totalNs / 1e6, 3) ?? null : t.runningPct ?? null,
+      totalPct: t.runningPct ?? null,
+      count: t.count ?? null,
+      avgMs: null,
+    };
+  });
+}
+
+function loadSliceDeltaMetrics(
+  tool: QuerySliceDeltasArgs['tool'],
+  role: PerfettoSampleRole,
+  minTotalPct: number
+): SliceDeltaMetric[] {
+  if (tool === 'callTreeSubtree') return metricsFromCallTreeSubtree(role, minTotalPct);
+  if (tool === 'atraceSlices') return metricsFromAtraceSlices(role, minTotalPct);
+  return metricsFromSchedState(role, minTotalPct);
+}
+
+export function querySliceDeltas(
+  _db: Database.Database | null | undefined,
+  args: QuerySliceDeltasArgs
+): QuerySliceDeltasResult {
+  const minFoldChange = args.minFoldChange ?? 1.5;
+  const minTotalPct = args.minTotalPct ?? 1.0;
+  const topN = Math.min(args.topN ?? 20, 100);
+  const baseRole = normalizePerfettoRole(args.baseRole);
+  const compareRole = normalizePerfettoRole(args.compareRole);
+
+  const baseMetrics = loadSliceDeltaMetrics(args.tool, baseRole, 0);
+  const compareMetrics = loadSliceDeltaMetrics(args.tool, compareRole, 0);
+  const baseByName = new Map(baseMetrics.map(m => [m.name, m]));
+  const compareByName = new Map(compareMetrics.map(m => [m.name, m]));
+  const names = new Set([...baseByName.keys(), ...compareByName.keys()]);
+
+  const rows: QuerySliceDeltasRow[] = [];
+  for (const name of names) {
+    const base = baseByName.get(name);
+    const compare = compareByName.get(name);
+    const baseTotalMs = base?.totalMs ?? null;
+    const compareTotalMs = compare?.totalMs ?? null;
+    const baseTotalPct = base?.totalPct ?? null;
+    const compareTotalPct = compare?.totalPct ?? null;
+    // Keep rows that matter in either side by totalPct threshold.
+    const pctOk =
+      (baseTotalPct ?? 0) >= minTotalPct || (compareTotalPct ?? 0) >= minTotalPct;
+    if (!pctOk) continue;
+
+    let foldChange: number | null = null;
+    if (baseTotalMs != null && baseTotalMs > 0 && compareTotalMs != null) {
+      foldChange = roundNumber(compareTotalMs / baseTotalMs, 3) ?? null;
+    } else if ((baseTotalMs == null || baseTotalMs === 0) && compareTotalMs != null && compareTotalMs > 0) {
+      // Appeared in compare only — high sentinel (JSON-safe; Infinity becomes null).
+      foldChange = 9999;
+    } else if (baseTotalPct != null && baseTotalPct > 0 && compareTotalPct != null) {
+      foldChange = roundNumber(compareTotalPct / baseTotalPct, 3) ?? null;
+    }
+
+    if (foldChange == null || foldChange < minFoldChange) continue;
+
+    const baseAvg = base?.avgMs ?? null;
+    const compareAvg = compare?.avgMs ?? null;
+    rows.push({
+      name,
+      baseTotalMs,
+      compareTotalMs,
+      foldChange,
+      baseTotalPct,
+      compareTotalPct,
+      baseCount: base?.count ?? null,
+      compareCount: compare?.count ?? null,
+      avgMsChange:
+        baseAvg != null && compareAvg != null ? roundNumber(compareAvg - baseAvg, 3) ?? null : null,
+      evidenceBaseId: `bk26b-perfetto-${baseRole}:${name}`,
+      evidenceCompareId: `bk26b-perfetto-${compareRole}:${name}`,
+    });
+  }
+
+  rows.sort((a, b) => (b.foldChange ?? 0) - (a.foldChange ?? 0));
+  const trimmed = rows.slice(0, topN);
+  const provenanceRun = loadPerfettoRun({ role: compareRole, runId: args.runId, runDir: args.runDir });
+
+  return {
+    data: {
+      available: trimmed.length > 0,
+      rows: trimmed,
+    },
+    provenance: {
+      runId: args.runId ?? `bk26b-perfetto-delta-${baseRole}-vs-${compareRole}`,
+      tool: 'querySliceDeltas',
+      args: args as unknown as Record<string, unknown>,
+      source: 'perfetto',
+      role: provenanceRun.role,
+    },
+  };
+}
+
+export interface QueryOffCpuAttributionArgs extends PerfettoJsonToolArgs {
+  thread?: string;
+}
+
+export interface QueryOffCpuAttributionResult {
+  data: {
+    available: boolean;
+    thread: string;
+    runningPct: number | null;
+    sleepingPct: number | null;
+    runnablePct: number | null;
+    waitSlices: Array<{
+      name: string;
+      totalMs: number | null;
+      totalPct: number | null;
+      count: number | null;
+      avgMs: number | null;
+      parentChain: string;
+    }>;
+    sleepingMs: number | null;
+    waitSliceTotalMs: number | null;
+    coveragePct: number | null;
+    note: string;
+  };
+  provenance: Provenance;
+}
+
+function isWaitSliceName(name: string): boolean {
+  // Generic name-axis patterns only — no hard-coded module list.
+  return /Wait|Sleep|Block|Present/i.test(name);
+}
+
+export function queryOffCpuAttribution(
+  _db: Database.Database | null | undefined,
+  args: QueryOffCpuAttributionArgs
+): QueryOffCpuAttributionResult {
+  const run = loadPerfettoRun(args);
+  const thread = args.thread ?? 'UnityMain';
+  const sched = asRecord(run.perfetto.threadsSched ?? run.summary.threadsSched);
+  const schedEntry = asRecord(
+    sched[thread] ??
+      Object.entries(sched).find(([name]) => name.toLowerCase().includes(thread.toLowerCase()))?.[1]
+  );
+  const offCpu = asRecord(run.perfetto.offCpuReasons ?? run.summary.offCpuReasons);
+  const window = getPerfettoProfileWindow(run);
+  const durMs = asNumber(window?.durMs);
+
+  const sleepingPct =
+    asNumber(offCpu.sleepingPct) ?? asNumber(schedEntry.sleepingPct) ?? null;
+  const runnablePct =
+    asNumber(offCpu.runnablePct) ?? asNumber(schedEntry.runnablePct) ?? null;
+  const runningPct = asNumber(schedEntry.runningPct) ?? null;
+  const note =
+    (typeof offCpu.note === 'string' && offCpu.note) ||
+    'offCpuReasons / wait-slice coverage derived from summary + callTree; no synthetic blocked-reason rows.';
+
+  const flat = collectCallTreeFlatNodes(run);
+  const waitSlices = flat
+    .filter(n => isWaitSliceName(n.name))
+    .sort((a, b) => (b.totalMs ?? 0) - (a.totalMs ?? 0))
+    .map(n => ({
+      name: n.name,
+      totalMs: n.totalMs,
+      totalPct: n.totalPct,
+      count: n.count,
+      avgMs: n.avgMs,
+      parentChain: n.parentChain,
+    }));
+
+  const waitSliceTotalMs =
+    waitSlices.length > 0
+      ? roundNumber(
+          waitSlices.reduce((sum, s) => sum + (s.totalMs ?? 0), 0),
+          3
+        ) ?? null
+      : null;
+  const sleepingMs =
+    durMs != null && sleepingPct != null
+      ? roundNumber((durMs * sleepingPct) / 100, 3) ?? null
+      : null;
+  const coveragePct =
+    sleepingMs != null && sleepingMs > 0 && waitSliceTotalMs != null
+      ? roundNumber((waitSliceTotalMs / sleepingMs) * 100, 2) ?? null
+      : null;
+
+  return {
+    data: {
+      available: sleepingPct != null || waitSlices.length > 0,
+      thread,
+      runningPct,
+      sleepingPct,
+      runnablePct,
+      waitSlices,
+      sleepingMs,
+      waitSliceTotalMs,
+      coveragePct,
+      note,
+    },
+    provenance: perfettoProvenance('queryOffCpuAttribution', args, run),
   };
 }

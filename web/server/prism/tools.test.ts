@@ -25,6 +25,9 @@ import {
   queryCpuFreq,
   getPerfettoCallTree,
   correlateFrameSchedCpu,
+  queryCallTreeSubtree,
+  querySliceDeltas,
+  queryOffCpuAttribution,
 } from './tools.js';
 
 // ─────────────────────────── Test harness ──────────────────────────
@@ -646,6 +649,104 @@ console.log('\n[11] WT-013 Perfetto JSON query tools');
     'correlateFrameSchedCpu reports throttling suspected signal',
     corr.data.signals
   );
+}
+
+// ─────────────────────────── 12. WT-019 Perfetto query content expansion ─
+
+console.log('\n[12] WT-019 Perfetto query content expansion');
+{
+  // queryCallTreeSubtree — generic pattern filter (no hardcoded module asserts on exact names beyond discovery)
+  const subtree = queryCallTreeSubtree(null, { role: 'cur', pattern: 'Mgr', minTotalPct: 0.5, topN: 50 });
+  assert(subtree.data.available === true, 'cur queryCallTreeSubtree available');
+  assert(subtree.data.rows.length >= 2, `cur Mgr pattern rows>=2 (got ${subtree.data.rows.length})`, subtree.data.rows.map(r => r.name));
+  assert(
+    subtree.data.rows.every(r => r.parentChain.includes('>')),
+    'cur callTreeSubtree rows have parentChain paths'
+  );
+  assert(
+    subtree.data.rows.some(r => /Mgr/i.test(r.name) && (r.parentChain?.length ?? 0) > 0),
+    'cur callTreeSubtree discovers Mgr-named nodes via pattern',
+    subtree.data.rows.slice(0, 5).map(r => ({ name: r.name, chain: r.parentChain }))
+  );
+  // Broad scan: enough business-relevant nodes (≥10) with parentChain
+  const broad = queryCallTreeSubtree(null, { role: 'cur', minTotalPct: 1.0, topN: 50 });
+  assert(broad.data.totalNodes >= 10, `cur callTreeSubtree totalNodes>=10 (got ${broad.data.totalNodes})`);
+  assert(
+    broad.data.rows.every(r => typeof r.parentChain === 'string' && r.parentChain.length > 0),
+    'cur callTreeSubtree parentChain present on all rows'
+  );
+
+  // querySliceDeltas — base→cur foldChange ranking
+  const deltas = querySliceDeltas(null, {
+    baseRole: 'base',
+    compareRole: 'cur',
+    tool: 'callTreeSubtree',
+    minFoldChange: 1.0,
+    minTotalPct: 0.5,
+    topN: 20,
+  });
+  assert(deltas.data.available === true, 'querySliceDeltas base→cur available');
+  assert(deltas.data.rows.length > 0, 'querySliceDeltas rows non-empty');
+  assert(
+    deltas.data.rows.every((r, i, arr) => i === 0 || (arr[i - 1].foldChange ?? 0) >= (r.foldChange ?? 0)),
+    'querySliceDeltas sorted by foldChange desc',
+    deltas.data.rows.slice(0, 5).map(r => ({ name: r.name, foldChange: r.foldChange }))
+  );
+  assert(
+    typeof deltas.data.rows[0]?.foldChange === 'number' && deltas.data.rows[0].foldChange >= 1,
+    'querySliceDeltas top foldChange >= 1',
+    deltas.data.rows[0]
+  );
+
+  // queryOffCpuAttribution — wait slices + coveragePct on throttle
+  const offCpu = queryOffCpuAttribution(null, { role: 'throttle' });
+  assert(offCpu.data.available === true, 'throttle queryOffCpuAttribution available');
+  assert(offCpu.data.waitSlices.length > 0, 'throttle waitSlices non-empty', offCpu.data.waitSlices);
+  assert(
+    offCpu.data.waitSlices.some(s => /Wait|Present|Sleep|Block/i.test(s.name)),
+    'throttle waitSlices match generic Wait/Present/Sleep/Block patterns',
+    offCpu.data.waitSlices.map(s => s.name)
+  );
+  assert(
+    offCpu.data.coveragePct == null || typeof offCpu.data.coveragePct === 'number',
+    `throttle coveragePct is number|null (got ${offCpu.data.coveragePct})`
+  );
+  assert(offCpu.data.sleepingPct != null, `throttle sleepingPct present (got ${offCpu.data.sleepingPct})`);
+
+  // queryFrameTimeline — choreographer percentiles exposed; PlayerLoop marked unavailable
+  const frame = queryFrameTimeline(null, { role: 'cur' });
+  assert(frame.data.choreographer.available === true, 'cur choreographer available');
+  assert(
+    frame.data.choreographer.p50Ms != null && frame.data.choreographer.fps != null,
+    'cur choreographer exposes p50Ms/fps',
+    frame.data.choreographer
+  );
+  assert(
+    frame.data.choreographer.slowFrameRate != null,
+    'cur choreographer exposes slowFrameRate',
+    frame.data.choreographer
+  );
+  assert(
+    frame.data.playerLoopPercentiles.available === false,
+    'playerLoopPercentiles honestly unavailable'
+  );
+
+  // queryCpuFreq — perCpu + clusterSummary
+  const cpu = queryCpuFreq(null, { role: 'throttle' });
+  assert(cpu.data.perCpu.length >= 8, `throttle perCpu length>=8 (got ${cpu.data.perCpu.length})`);
+  assert(
+    cpu.data.clusterSummary.small.cpuCount === 4 &&
+      cpu.data.clusterSummary.mid.cpuCount === 3 &&
+      cpu.data.clusterSummary.big.cpuCount === 1,
+    'throttle clusterSummary small/mid/big counts 4/3/1',
+    cpu.data.clusterSummary
+  );
+  assert(
+    cpu.data.clusterSummary.big.avgReachPct != null,
+    'throttle big cluster avgReachPct present',
+    cpu.data.clusterSummary.big
+  );
+  assert(cpu.provenance.tool === 'queryCpuFreq', 'cpu provenance.tool=queryCpuFreq');
 }
 
 // ─────────────────────────── Summary ───────────────────────────────

@@ -9,7 +9,8 @@
  *           scanPeakMarkers | queryFrameCounters | aggregateSubtree |
  *           drillDownMarker | getSourceForSymbol |
  *           querySchedState | queryAtraceSlices | queryFrameTimeline |
- *           queryCpuFreq | getPerfettoCallTree | correlateFrameSchedCpu
+ *           queryCpuFreq | getPerfettoCallTree | correlateFrameSchedCpu |
+ *           queryCallTreeSubtree | querySliceDeltas | queryOffCpuAttribution
  *
  * SINGLE mode:
  *   node --import tsx server/prism/tools.cli.ts single '{"tool":"querySchedState","args":{"role":"cur"}}'
@@ -39,6 +40,9 @@ import {
   queryCpuFreq,
   getPerfettoCallTree,
   correlateFrameSchedCpu,
+  queryCallTreeSubtree,
+  querySliceDeltas,
+  queryOffCpuAttribution,
 } from './tools.js';
 import type Database from 'better-sqlite3';
 
@@ -51,6 +55,9 @@ const PERFETTO_JSON_TOOL_NAMES = new Set([
   'queryCpuFreq',
   'getPerfettoCallTree',
   'correlateFrameSchedCpu',
+  'queryCallTreeSubtree',
+  'querySliceDeltas',
+  'queryOffCpuAttribution',
 ]);
 
 type ToolRunner = (db: Database.Database | null, args: Record<string, unknown>) => unknown;
@@ -72,6 +79,9 @@ const TOOLS: Record<string, ToolRunner> = {
   queryCpuFreq:          (db, a) => queryCpuFreq(db, a as unknown as Parameters<typeof queryCpuFreq>[1]),
   getPerfettoCallTree:   (db, a) => getPerfettoCallTree(db, a as unknown as Parameters<typeof getPerfettoCallTree>[1]),
   correlateFrameSchedCpu:(db, a) => correlateFrameSchedCpu(db, a as unknown as Parameters<typeof correlateFrameSchedCpu>[1]),
+  queryCallTreeSubtree:  (db, a) => queryCallTreeSubtree(db, a as unknown as Parameters<typeof queryCallTreeSubtree>[1]),
+  querySliceDeltas:      (db, a) => querySliceDeltas(db, a as unknown as Parameters<typeof querySliceDeltas>[1]),
+  queryOffCpuAttribution:(db, a) => queryOffCpuAttribution(db, a as unknown as Parameters<typeof queryOffCpuAttribution>[1]),
 };
 
 function usage(): never {
