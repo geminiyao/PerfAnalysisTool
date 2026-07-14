@@ -206,6 +206,119 @@ def _slice_tree(tp, utid, win_dur_ns, min_pct=0.5, max_depth=12):
     return fallback_nodes, note
 
 
+def _gc_alloc_by_chain(tp, main_utid, win, call_trees, player_loop_frame_count):
+    """GC.Alloc 业务子树归因：遍历 callTree 全树，不预设模块名清单。
+
+    对每个 GC.Alloc slice 沿 parent_id 向上找第一个出现在 callTree 节点集合里的 name
+    （最深业务节点），避免祖先重复累加。
+    """
+    empty = {
+        "available": False,
+        "playerLoopFrameCount": player_loop_frame_count,
+        "totalGcAllocSlices": 0,
+        "byChain": [],
+    }
+    if main_utid is None:
+        return empty
+
+    # name -> {depth, parentChain}；同名取最深
+    name_meta = {}
+
+    def walk_tree(node, ancestors, depth):
+        name = node.get("name")
+        if not name:
+            return
+        chain = ancestors + [name]
+        prev = name_meta.get(name)
+        if prev is None or depth > prev["depth"]:
+            name_meta[name] = {"depth": depth, "parentChain": chain}
+        for child in node.get("children") or []:
+            walk_tree(child, chain, depth + 1)
+
+    for tree in call_trees or []:
+        root = tree.get("root") or {}
+        walk_tree(root, [], 0)
+
+    calltree_names = set(name_meta.keys())
+    if not calltree_names:
+        return empty
+
+    win_s = win.replace("ts >=", "s.ts >=") if win else ""
+    rows = _safe(tp, """
+        SELECT s.id id, s.parent_id parent_id, s.name name, s.dur dur
+        FROM slice s JOIN thread_track tt ON s.track_id=tt.id
+        WHERE tt.utid=%d %s
+    """ % (main_utid, win_s), "slices for gcAllocByChain")
+    if not rows:
+        return empty
+
+    by_id = {}
+    for r in rows:
+        try:
+            by_id[int(r.id)] = r
+        except (TypeError, ValueError):
+            continue
+
+    gc_slices = [r for r in rows if r.name and str(r.name).startswith("GC.Alloc")]
+    agg = {}  # name -> {count, totalNs}
+    for g in gc_slices:
+        cur = g.parent_id
+        attributed = None
+        seen = set()
+        while cur is not None:
+            try:
+                cid = int(cur)
+            except (TypeError, ValueError):
+                break
+            if cid in seen:
+                break
+            seen.add(cid)
+            parent = by_id.get(cid)
+            if parent is None:
+                break
+            pname = str(parent.name or "")
+            if pname in calltree_names and not pname.startswith("GC.Alloc"):
+                attributed = pname
+                break
+            cur = parent.parent_id
+        if attributed is None:
+            continue
+        entry = agg.setdefault(attributed, {"count": 0, "totalNs": 0})
+        entry["count"] += 1
+        dur = int(g.dur or 0) if g.dur is not None else 0
+        if dur > 0:
+            entry["totalNs"] += dur
+
+    by_chain = []
+    for name, e in agg.items():
+        meta = name_meta.get(name, {"depth": 0, "parentChain": [name]})
+        per_frame = None
+        if player_loop_frame_count and player_loop_frame_count > 0:
+            per_frame = _round(e["count"] / float(player_loop_frame_count), 2)
+        by_chain.append({
+            "name": name,
+            "count": e["count"],
+            "totalMs": _round(e["totalNs"] / 1e6, 3),
+            "perFrame": per_frame,
+            "depth": meta["depth"],
+            "parentChain": meta["parentChain"],
+        })
+    by_chain.sort(
+        key=lambda x: (
+            x["perFrame"] is not None,
+            x["perFrame"] if x["perFrame"] is not None else -1,
+            x["count"],
+        ),
+        reverse=True,
+    )
+    return {
+        "available": len(by_chain) > 0,
+        "playerLoopFrameCount": player_loop_frame_count,
+        "totalGcAllocSlices": len(gc_slices),
+        "byChain": by_chain,
+    }
+
+
 # ------------------------------------------------------------
 # 降频推断 (推测级; 确认级需 sysfs 旁路 scaling_max vs cpuinfo_max)
 # ------------------------------------------------------------
@@ -564,6 +677,31 @@ def build_profile_dict(
                 "fps": _round(1000.0 / avg if avg else 0, 1), "slowFrameRate": _round(slow),
             })
 
+    # --- PlayerLoop 帧 (应用一帧实际耗时; 与 choreographer 并列) ---
+    player_loop_frame_count = None
+    if main_utid is not None:
+        win_pl = win.replace("ts >=", "s.ts >=") if win else ""
+        pl_frames = _safe(tp, """
+            SELECT s.ts ts, s.dur dur
+            FROM slice s JOIN thread_track tt ON s.track_id=tt.id
+            WHERE tt.utid=%d AND s.name='PlayerLoop' %s
+            ORDER BY s.ts
+        """ % (main_utid, win_pl), "playerloop frames")
+        if pl_frames:
+            durs = sorted([int(r.dur) / 1e6 for r in pl_frames
+                           if r.dur is not None and int(r.dur) > 0 and int(r.dur) / 1e6 < 500])
+            if durs:
+                avg = sum(durs) / len(durs)
+                p50, p95, p99 = _pct(durs, 50), _pct(durs, 95), _pct(durs, 99)
+                slow = len([d for d in durs if d > 1000.0 / 30]) / len(durs) * 100
+                player_loop_frame_count = len(durs)
+                core_frame.append({
+                    "source": SOURCE, "frameDefinition": "playerloop",
+                    "count": len(durs),
+                    "p50Ms": _round(p50), "p95Ms": _round(p95), "p99Ms": _round(p99),
+                    "fps": _round(1000.0 / avg if avg else 0, 1), "slowFrameRate": _round(slow),
+                })
+
     # --- FrameTimeline (expected vs actual jank, 若 trace 含) ---
     frame_timeline = None
     ft = _safe(tp, "SELECT jank_type, COUNT(*) n FROM actual_frame_timeline_slice GROUP BY jank_type", "frametimeline")
@@ -598,6 +736,16 @@ def build_profile_dict(
                 atrace_slices[sname] = {"count": int(q[0].cnt), "avgMs": _round(float(q[0].avg_ns) / 1e6, 3),
                                         "totalMs": _round(float(q[0].sum_ns) / 1e6, 2)}
 
+    # --- GC.Alloc 业务子树归因 (遍历 callTree 全树, 不预设模块名) ---
+    gc_alloc = {
+        "available": False,
+        "playerLoopFrameCount": player_loop_frame_count,
+        "totalGcAllocSlices": 0,
+        "byChain": [],
+    }
+    if main_utid is not None and call_trees:
+        gc_alloc = _gc_alloc_by_chain(tp, main_utid, win, call_trees, player_loop_frame_count)
+
     # --- binder / pss ---
     if main_utid is not None:
         bq = _safe(tp, """
@@ -625,12 +773,39 @@ def build_profile_dict(
     if throttling.get("level") == "suspected":
         system["cpuThrottled"] = True
 
-    # --- off-CPU 归因 (主线程睡眠占比; 细分阻塞原因需内核 sched_blocked_reason) ---
+    # --- off-CPU 归因 (byState 细分; byReason/blockedFunction 需内核 sched_blocked_reason) ---
+    # offCpuAttribution 与 offCpuReasons 共享同一对象 (向后兼容扩展字段)
     off_cpu = None
-    if main_running_pct is not None:
+    if main_utid is not None:
+        state_rows = _safe(tp, """
+            SELECT state, SUM(dur) total_ns, COUNT(*) cnt
+            FROM thread_state
+            WHERE utid=%d %s
+            GROUP BY state
+        """ % (main_utid, win), "main thread state by state")
+        by_state = []
+        total_off = 0
+        if state_rows:
+            for r in state_rows:
+                s = str(r.state or "Unknown")
+                ns = int(r.total_ns or 0)
+                cnt = int(r.cnt or 0)
+                if s == "Running":
+                    continue  # off-CPU = 非 Running
+                total_off += ns
+                by_state.append({"state": s, "totalMs": _round(ns / 1e6, 1),
+                                  "count": cnt, "pctOfOffCpu": None})
+            for b in by_state:
+                b["pctOfOffCpu"] = _round(b["totalMs"] / (total_off / 1e6) * 100, 2) if total_off else 0.0
         ms = threads_sched.get("UnityMain", {})
-        off_cpu = {"sleepingPct": ms.get("sleepingPct"), "runnablePct": ms.get("runnablePct"),
-                   "note": "主线程非运行时间拆分 (GPU 等待/锁/binder/vsync) 需内核 sched_blocked_reason, 本 trace 未含细分。"}
+        off_cpu = {
+            "sleepingPct": ms.get("sleepingPct"),
+            "runnablePct": ms.get("runnablePct"),
+            "totalOffCpuMs": _round(total_off / 1e6, 1) if total_off else 0.0,
+            "byState": by_state,
+            "note": ("byState 直接从 thread_state 表分组求和; "
+                     "byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."),
+        }
 
     tp.close()
 
@@ -653,6 +828,8 @@ def build_profile_dict(
         "atraceSlices": atrace_slices,
         "throttling": throttling,
         "offCpuReasons": off_cpu,
+        "offCpuAttribution": off_cpu,  # 同一对象; query 可从任一字段读 byState
+        "gcAllocByChain": gc_alloc,
         "frameTimeline": frame_timeline,
         "gpu": gpu,
         "parseStatus": parse_status,
@@ -698,6 +875,20 @@ def _prune(node, min_pct, max_depth, depth=0):
 
 def _build_summary(profile, throttling, atrace_slices, frame_timeline, threads_sched, call_trees,
                    summary_min_pct=1.0, summary_max_depth=8):
+    detail = profile["detail"][SOURCE]
+    gc_full = detail.get("gcAllocByChain") or {}
+    gc_chain = gc_full.get("byChain") or []
+    # summary 剪枝: perFrame ≥ 0.1 或 count ≥ 10
+    gc_pruned = [
+        c for c in gc_chain
+        if (c.get("perFrame") is not None and c.get("perFrame") >= 0.1) or (c.get("count") or 0) >= 10
+    ]
+    gc_summary = {
+        "available": bool(gc_full.get("available")),
+        "playerLoopFrameCount": gc_full.get("playerLoopFrameCount"),
+        "totalGcAllocSlices": gc_full.get("totalGcAllocSlices", 0),
+        "byChain": gc_pruned,
+    } if gc_full else None
     return {
         "source": SOURCE,
         "schemaVersion": SCHEMA_VERSION,
@@ -710,10 +901,13 @@ def _build_summary(profile, throttling, atrace_slices, frame_timeline, threads_s
         "atraceSlices": atrace_slices,
         "frameTimeline": frame_timeline,
         "throttling": throttling,
-        "offCpuReasons": profile["detail"][SOURCE]["offCpuReasons"],
+        "offCpuReasons": detail.get("offCpuReasons"),
+        "offCpuAttribution": detail.get("offCpuAttribution"),
+        "gcAllocByChain": gc_summary,
         "callTrees": [{"thread": t["thread"], "label": t["label"],
                        "root": _prune(t["root"], summary_min_pct, summary_max_depth)} for t in call_trees],
         "_meta": {"note": "单源 perfetto PerfProfile 摘要。全量 slice 树在 perfetto-profile.json 的 detail.perfetto.callTrees "
-                  "(此处剪枝 totalPct>=%s%%, depth<=%d)。" % (summary_min_pct, summary_max_depth),
-                  "parseStatus": profile["detail"][SOURCE]["parseStatus"]},
+                  "(此处剪枝 totalPct>=%s%%, depth<=%d)。gcAllocByChain 剪枝 perFrame≥0.1 或 count≥10。"
+                  % (summary_min_pct, summary_max_depth),
+                  "parseStatus": detail["parseStatus"]},
     }

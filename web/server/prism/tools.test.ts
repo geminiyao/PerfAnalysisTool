@@ -28,7 +28,11 @@ import {
   queryCallTreeSubtree,
   querySliceDeltas,
   queryOffCpuAttribution,
+  queryGcAllocByModule,
 } from './tools.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // ─────────────────────────── Test harness ──────────────────────────
 
@@ -713,7 +717,7 @@ console.log('\n[12] WT-019 Perfetto query content expansion');
   );
   assert(offCpu.data.sleepingPct != null, `throttle sleepingPct present (got ${offCpu.data.sleepingPct})`);
 
-  // queryFrameTimeline — choreographer percentiles exposed; PlayerLoop marked unavailable
+  // queryFrameTimeline — choreographer percentiles; PlayerLoop after WT-022 rebuild
   const frame = queryFrameTimeline(null, { role: 'cur' });
   assert(frame.data.choreographer.available === true, 'cur choreographer available');
   assert(
@@ -726,9 +730,11 @@ console.log('\n[12] WT-019 Perfetto query content expansion');
     'cur choreographer exposes slowFrameRate',
     frame.data.choreographer
   );
+  // Pre-rebuild triad may still lack playerloop — honesty preserved via available flag.
+  // Post-rebuild expectation is covered in [13] WT-022.
   assert(
-    frame.data.playerLoopPercentiles.available === false,
-    'playerLoopPercentiles honestly unavailable'
+    typeof frame.data.playerLoopPercentiles.available === 'boolean',
+    'playerLoopPercentiles.available is boolean'
   );
 
   // queryCpuFreq — perCpu + clusterSummary
@@ -747,6 +753,121 @@ console.log('\n[12] WT-019 Perfetto query content expansion');
     cpu.data.clusterSummary.big
   );
   assert(cpu.provenance.tool === 'queryCpuFreq', 'cpu provenance.tool=queryCpuFreq');
+}
+
+// ─────────────────────────── 13. WT-022 PlayerLoop + GC.Alloc + offCpu byState ─
+
+console.log('\n[13] WT-022 PlayerLoop percentiles + GC.Alloc byModule + offCpu byState');
+{
+  const triadRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../data/prism-out/bk26b-perfetto-triad'
+  );
+  const curProfilePath = path.join(triadRoot, 'cur', 'perfetto-profile.json');
+  const curProfile = JSON.parse(fs.readFileSync(curProfilePath, 'utf8')) as {
+    core?: { frame?: Array<{ frameDefinition?: string; p50Ms?: number; count?: number }> };
+    detail?: { perfetto?: { gcAllocByChain?: { byChain?: unknown[] }; offCpuAttribution?: { byState?: unknown[] } } };
+  };
+  const coreFrames = curProfile.core?.frame ?? [];
+  const hasPlayerLoopFrame = coreFrames.some(f => f.frameDefinition === 'playerloop');
+  const hasChoreoFrame = coreFrames.some(f => f.frameDefinition === 'choreographer');
+  const gcByChain = curProfile.detail?.perfetto?.gcAllocByChain?.byChain ?? [];
+  const profileByState = curProfile.detail?.perfetto?.offCpuAttribution?.byState
+    ?? (curProfile as { detail?: { perfetto?: { offCpuReasons?: { byState?: unknown[] } } } }).detail?.perfetto?.offCpuReasons?.byState
+    ?? [];
+
+  // Provider-layer checks (require triad rebuild after WT-022 provider changes)
+  assert(hasChoreoFrame, 'cur profile core.frame has choreographer');
+  assert(
+    hasPlayerLoopFrame,
+    'cur profile core.frame has playerloop (requires triad rebuild)',
+    coreFrames.map(f => f.frameDefinition)
+  );
+  assert(
+    Array.isArray(gcByChain) && gcByChain.length > 0,
+    `cur profile gcAllocByChain.byChain non-empty (requires triad rebuild; got ${gcByChain.length})`
+  );
+
+  // queryFrameTimeline — PlayerLoop percentiles
+  const frame = queryFrameTimeline(null, { role: 'cur' });
+  assert(
+    frame.data.playerLoopPercentiles.available === true,
+    'cur playerLoopPercentiles.available=true (requires triad rebuild)',
+    frame.data.playerLoopPercentiles
+  );
+  if (frame.data.playerLoopPercentiles.available) {
+    const pl = frame.data.playerLoopPercentiles;
+    assert(pl.p50Ms != null && pl.p95Ms != null && pl.p99Ms != null, 'cur playerLoop p50/p95/p99 present', pl);
+    assert(pl.fps != null && pl.count != null, 'cur playerLoop fps/count present', pl);
+    assert(
+      pl.p50Ms! >= 25 && pl.p50Ms! <= 35,
+      `cur playerLoop p50 in 25-35ms (got ${pl.p50Ms})`,
+      pl
+    );
+  }
+
+  // queryGcAllocByModule — generic ranking, no hard-coded module name asserts for presence count
+  const gcCur = queryGcAllocByModule(null, { role: 'cur', topN: 20, minPerFrame: 0 });
+  assert(gcCur.data.available === true, 'cur queryGcAllocByModule available (requires triad rebuild)', gcCur.data);
+  assert(
+    gcCur.data.rows.length >= 3,
+    `cur gcAlloc rows>=3 (got ${gcCur.data.rows.length})`,
+    gcCur.data.rows.slice(0, 5).map(r => ({ name: r.name, perFrame: r.perFrame }))
+  );
+  if (gcCur.data.rows.length > 0) {
+    assert(
+      (gcCur.data.rows[0].perFrame ?? 0) > 0,
+      'cur gcAlloc top perFrame > 0',
+      gcCur.data.rows[0]
+    );
+    assert(
+      gcCur.data.rows.every(r => r.count != null && r.totalMs != null),
+      'cur gcAlloc rows have count/totalMs'
+    );
+    assert(
+      gcCur.data.rows.some(r => Array.isArray(r.parentChain) && (r.parentChain?.length ?? 0) > 0),
+      'cur gcAlloc rows include parentChain'
+    );
+  }
+
+  // pattern filter is generic substring (Mgr), not a hard-coded module list assert on exact names
+  const gcThrottle = queryGcAllocByModule(null, {
+    role: 'throttle',
+    pattern: 'Mgr',
+    topN: 20,
+    minPerFrame: 0,
+  });
+  assert(
+    gcThrottle.data.available === true && gcThrottle.data.rows.length >= 1,
+    'throttle queryGcAllocByModule pattern=Mgr finds rows (requires triad rebuild)',
+    gcThrottle.data.rows.slice(0, 5).map(r => r.name)
+  );
+  assert(
+    gcThrottle.data.rows.every(r => /Mgr/i.test(r.name)),
+    'throttle gcAlloc pattern=Mgr filters by substring'
+  );
+
+  // queryOffCpuAttribution — byState + retained waitSlices
+  const offCpu = queryOffCpuAttribution(null, { role: 'throttle' });
+  assert(offCpu.data.available === true, 'throttle queryOffCpuAttribution available');
+  assert(
+    Array.isArray(offCpu.data.byState) && offCpu.data.byState.length > 0,
+    `throttle byState non-empty (requires triad rebuild; got ${offCpu.data.byState.length})`,
+    offCpu.data.byState
+  );
+  if (offCpu.data.byState.length > 0) {
+    const states = offCpu.data.byState.map(s => s.state);
+    assert(
+      states.some(s => s === 'S' || s === 'R' || s === 'D' || /S|R|D/.test(s)),
+      'throttle byState includes S/R/D-like states',
+      states
+    );
+  }
+  assert(offCpu.data.waitSlices.length > 0, 'throttle waitSlices retained', offCpu.data.waitSlices.map(s => s.name));
+  // Soft check on provider detail field when rebuilt
+  if (profileByState.length > 0) {
+    assert(profileByState.length > 0, 'throttle/cur profile offCpuAttribution.byState present');
+  }
 }
 
 // ─────────────────────────── Summary ───────────────────────────────

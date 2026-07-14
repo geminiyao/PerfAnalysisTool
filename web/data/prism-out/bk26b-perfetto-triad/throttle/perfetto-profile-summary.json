@@ -186,6 +186,16 @@
       "p99Ms": 17.47,
       "fps": 60.1,
       "slowFrameRate": 0.0
+    },
+    {
+      "source": "perfetto",
+      "frameDefinition": "playerloop",
+      "count": 427,
+      "p50Ms": 45.94,
+      "p95Ms": 55.62,
+      "p99Ms": 66.32,
+      "fps": 21.4,
+      "slowFrameRate": 98.83
     }
   ],
   "system": {
@@ -393,7 +403,289 @@
   "offCpuReasons": {
     "sleepingPct": 38.99,
     "runnablePct": 2.83,
-    "note": "主线程非运行时间拆分 (GPU 等待/锁/binder/vsync) 需内核 sched_blocked_reason, 本 trace 未含细分。"
+    "totalOffCpuMs": 8581.0,
+    "byState": [
+      {
+        "state": "D",
+        "totalMs": 111.4,
+        "count": 751,
+        "pctOfOffCpu": 1.3
+      },
+      {
+        "state": "R",
+        "totalMs": 564.5,
+        "count": 6707,
+        "pctOfOffCpu": 6.58
+      },
+      {
+        "state": "R+",
+        "totalMs": 238.6,
+        "count": 3983,
+        "pctOfOffCpu": 2.78
+      },
+      {
+        "state": "S",
+        "totalMs": 7666.5,
+        "count": 3113,
+        "pctOfOffCpu": 89.34
+      }
+    ],
+    "note": "byState 直接从 thread_state 表分组求和; byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."
+  },
+  "offCpuAttribution": {
+    "sleepingPct": 38.99,
+    "runnablePct": 2.83,
+    "totalOffCpuMs": 8581.0,
+    "byState": [
+      {
+        "state": "D",
+        "totalMs": 111.4,
+        "count": 751,
+        "pctOfOffCpu": 1.3
+      },
+      {
+        "state": "R",
+        "totalMs": 564.5,
+        "count": 6707,
+        "pctOfOffCpu": 6.58
+      },
+      {
+        "state": "R+",
+        "totalMs": 238.6,
+        "count": 3983,
+        "pctOfOffCpu": 2.78
+      },
+      {
+        "state": "S",
+        "totalMs": 7666.5,
+        "count": 3113,
+        "pctOfOffCpu": 89.34
+      }
+    ],
+    "note": "byState 直接从 thread_state 表分组求和; byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."
+  },
+  "gcAllocByChain": {
+    "available": true,
+    "playerLoopFrameCount": 427,
+    "totalGcAllocSlices": 59518,
+    "byChain": [
+      {
+        "name": "URP.BeforeRendering",
+        "count": 13237,
+        "totalMs": 22.15,
+        "perFrame": 31.0,
+        "depth": 6,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PostLateUpdate.FinishFrameRendering",
+          "URP.Render",
+          "URP.RenderCameraStack",
+          "URP.RenderSingleCamera",
+          "URP.BeforeRendering"
+        ]
+      },
+      {
+        "name": "Inl_OpaquePass",
+        "count": 12810,
+        "totalMs": 22.69,
+        "perFrame": 30.0,
+        "depth": 7,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PostLateUpdate.FinishFrameRendering",
+          "URP.Render",
+          "URP.RenderCameraStack",
+          "URP.RenderSingleCamera",
+          "URP.MainRenderingTransparent",
+          "Inl_OpaquePass"
+        ]
+      },
+      {
+        "name": "TimeText.7",
+        "count": 10543,
+        "totalMs": 18.205,
+        "perFrame": 24.69,
+        "depth": 9,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate",
+          "Core.Update",
+          "CS:AOE.LuaMgr",
+          "LuaMgr.OnTick&UpdateSchedule",
+          "BattleHeadMgr",
+          "BattleHeadMgr.OnUpdate",
+          "TimeText.7"
+        ]
+      },
+      {
+        "name": "CS:AOE.Outside.MapManager",
+        "count": 5537,
+        "totalMs": 10.87,
+        "perFrame": 12.97,
+        "depth": 5,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate",
+          "Core.Update",
+          "CS:AOE.Outside.MapManager"
+        ]
+      },
+      {
+        "name": "Core.PostEndOfFrame",
+        "count": 5254,
+        "totalMs": 19.522,
+        "perFrame": 12.3,
+        "depth": 5,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PostLateUpdate.PlayerSendFrameComplete",
+          "PlayerEndOfFrame",
+          "CoroutinesDelayedCalls",
+          "Core.PostEndOfFrame"
+        ]
+      },
+      {
+        "name": "BehaviourUpdate",
+        "count": 3852,
+        "totalMs": 8.957,
+        "perFrame": 9.02,
+        "depth": 3,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate"
+        ]
+      },
+      {
+        "name": "Core.Update",
+        "count": 2935,
+        "totalMs": 6.442,
+        "perFrame": 6.87,
+        "depth": 4,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate",
+          "Core.Update"
+        ]
+      },
+      {
+        "name": "PostLateUpdate.FinishFrameRendering",
+        "count": 1916,
+        "totalMs": 3.882,
+        "perFrame": 4.49,
+        "depth": 2,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PostLateUpdate.FinishFrameRendering"
+        ]
+      },
+      {
+        "name": "LuaMgr.OnTick&UpdateSchedule",
+        "count": 1334,
+        "totalMs": 2.769,
+        "perFrame": 3.12,
+        "depth": 6,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate",
+          "Core.Update",
+          "CS:AOE.LuaMgr",
+          "LuaMgr.OnTick&UpdateSchedule"
+        ]
+      },
+      {
+        "name": "CS:AOE.MeshUIManager",
+        "count": 899,
+        "totalMs": 1.793,
+        "perFrame": 2.11,
+        "depth": 5,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+          "LateBehaviourUpdate",
+          "Core.LateUpdate",
+          "CS:AOE.MeshUIManager"
+        ]
+      },
+      {
+        "name": "LuaMgr.OnLateUpdateSchedule",
+        "count": 624,
+        "totalMs": 1.422,
+        "perFrame": 1.46,
+        "depth": 6,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+          "LateBehaviourUpdate",
+          "Core.LateUpdate",
+          "CS:AOE.LuaMgr",
+          "LuaMgr.OnLateUpdateSchedule"
+        ]
+      },
+      {
+        "name": "LateBehaviourUpdate",
+        "count": 483,
+        "totalMs": 1.429,
+        "perFrame": 1.13,
+        "depth": 3,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+          "LateBehaviourUpdate"
+        ]
+      },
+      {
+        "name": "Render",
+        "count": 56,
+        "totalMs": 0.087,
+        "perFrame": 0.13,
+        "depth": 5,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "PostLateUpdate.PlayerUpdateCanvases",
+          "UIEvents.WillRenderCanvases",
+          "UGUI.Rendering.UpdateBatches",
+          "Render"
+        ]
+      },
+      {
+        "name": "MapSignificanceMgr.EntityTask",
+        "count": 33,
+        "totalMs": 0.047,
+        "perFrame": 0.08,
+        "depth": 10,
+        "parentChain": [
+          "UnityMain",
+          "PlayerLoop",
+          "Update.ScriptRunBehaviourUpdate",
+          "BehaviourUpdate",
+          "Core.Update",
+          "CS:AOE.LuaMgr",
+          "LuaMgr.OnTick&UpdateSchedule",
+          "MapSignificanceMgr",
+          "MapSignificanceMgr.sampler_OnUpdate",
+          "MapSignificanceMgr.ProcessTasks",
+          "MapSignificanceMgr.EntityTask"
+        ]
+      }
+    ]
   },
   "callTrees": [
     {
@@ -841,7 +1133,7 @@
     }
   ],
   "_meta": {
-    "note": "单源 perfetto PerfProfile 摘要。全量 slice 树在 perfetto-profile.json 的 detail.perfetto.callTrees (此处剪枝 totalPct>=1.0%, depth<=8)。",
+    "note": "单源 perfetto PerfProfile 摘要。全量 slice 树在 perfetto-profile.json 的 detail.perfetto.callTrees (此处剪枝 totalPct>=1.0%, depth<=8)。gcAllocByChain 剪枝 perFrame≥0.1 或 count≥10。",
     "parseStatus": "partial"
   }
 }

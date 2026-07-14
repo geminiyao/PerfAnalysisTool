@@ -2558,10 +2558,20 @@ export interface QueryFrameTimelineResult {
       fps: number | null;
       slowFrameRate: number | null;
     };
-    playerLoopPercentiles: {
-      available: false;
-      reason: string;
-    };
+    playerLoopPercentiles:
+      | {
+          available: true;
+          count: number | null;
+          p50Ms: number | null;
+          p95Ms: number | null;
+          p99Ms: number | null;
+          fps: number | null;
+          slowFrameRate: number | null;
+        }
+      | {
+          available: false;
+          reason: string;
+        };
   };
   provenance: Provenance;
 }
@@ -2577,6 +2587,15 @@ function findChoreographerFrame(run: LoadedPerfettoRun): Record<string, unknown>
   return isRecord(nested) ? nested : null;
 }
 
+function findPlayerLoopFrame(run: LoadedPerfettoRun): Record<string, unknown> | null {
+  const coreFrames = Array.isArray(run.core.frame) ? run.core.frame : [];
+  const fromCore = coreFrames.find(f => asRecord(f).frameDefinition === 'playerloop');
+  if (fromCore) return asRecord(fromCore);
+  const summaryFrames = Array.isArray(run.summary.frame) ? run.summary.frame : [];
+  const fromSummary = summaryFrames.find(f => asRecord(f).frameDefinition === 'playerloop');
+  return fromSummary ? asRecord(fromSummary) : null;
+}
+
 export function queryFrameTimeline(
   _db: Database.Database | null | undefined,
   args: QueryFrameTimelineArgs
@@ -2584,12 +2603,16 @@ export function queryFrameTimeline(
   const run = loadPerfettoRun(args);
   const rawFrameTimeline = run.perfetto.frameTimeline ?? run.summary.frameTimeline;
   const choreographer = findChoreographerFrame(run);
+  const plFrame = findPlayerLoopFrame(run);
   const androidAvailable = isNonEmptyObject(rawFrameTimeline);
   const hasChoreo =
     choreographer != null &&
     (asNumber(choreographer.p50Ms) != null ||
       asNumber(choreographer.fps) != null ||
       isNonEmptyObject(choreographer));
+  const hasPlayerLoop =
+    plFrame != null &&
+    (asNumber(plFrame.p50Ms) != null || asNumber(plFrame.fps) != null || asNumber(plFrame.count) != null);
 
   return {
     data: {
@@ -2607,10 +2630,21 @@ export function queryFrameTimeline(
         fps: asNumber(choreographer?.fps) ?? null,
         slowFrameRate: asNumber(choreographer?.slowFrameRate) ?? null,
       },
-      playerLoopPercentiles: {
-        available: false,
-        reason: 'provider 未提取 PlayerLoop 分位数，仅有 choreographer；需另开工单补 provider',
-      },
+      playerLoopPercentiles: hasPlayerLoop
+        ? {
+            available: true,
+            count: asNumber(plFrame?.count) ?? null,
+            p50Ms: asNumber(plFrame?.p50Ms) ?? null,
+            p95Ms: asNumber(plFrame?.p95Ms) ?? null,
+            p99Ms: asNumber(plFrame?.p99Ms) ?? null,
+            fps: asNumber(plFrame?.fps) ?? null,
+            slowFrameRate: asNumber(plFrame?.slowFrameRate) ?? null,
+          }
+        : {
+            available: false,
+            reason:
+              'provider 未提取 PlayerLoop 分位数 (trace 无 PlayerLoop slice 或 provider 未跑该逻辑)',
+          },
     },
     provenance: perfettoProvenance('queryFrameTimeline', args, run),
   };
@@ -3209,6 +3243,13 @@ export interface QueryOffCpuAttributionResult {
     runningPct: number | null;
     sleepingPct: number | null;
     runnablePct: number | null;
+    totalOffCpuMs: number | null;
+    byState: Array<{
+      state: string;
+      totalMs: number | null;
+      count: number | null;
+      pctOfOffCpu: number | null;
+    }>;
     waitSlices: Array<{
       name: string;
       totalMs: number | null;
@@ -3241,7 +3282,13 @@ export function queryOffCpuAttribution(
     sched[thread] ??
       Object.entries(sched).find(([name]) => name.toLowerCase().includes(thread.toLowerCase()))?.[1]
   );
-  const offCpu = asRecord(run.perfetto.offCpuReasons ?? run.summary.offCpuReasons);
+  // Prefer expanded offCpuAttribution; fall back to offCpuReasons (same object after WT-022)
+  const offCpu = asRecord(
+    run.perfetto.offCpuAttribution ??
+      run.summary.offCpuAttribution ??
+      run.perfetto.offCpuReasons ??
+      run.summary.offCpuReasons
+  );
   const window = getPerfettoProfileWindow(run);
   const durMs = asNumber(window?.durMs);
 
@@ -3249,7 +3296,22 @@ export function queryOffCpuAttribution(
     asNumber(offCpu.sleepingPct) ?? asNumber(schedEntry.sleepingPct) ?? null;
   const runnablePct =
     asNumber(offCpu.runnablePct) ?? asNumber(schedEntry.runnablePct) ?? null;
-  const runningPct = asNumber(schedEntry.runningPct) ?? null;
+  const runningPct =
+    asNumber(schedEntry.runningPct) ??
+    (sleepingPct != null
+      ? roundNumber(100 - sleepingPct - (runnablePct ?? 0), 2) ?? null
+      : null);
+  const totalOffCpuMs = asNumber(offCpu.totalOffCpuMs) ?? null;
+  const rawByState = Array.isArray(offCpu.byState) ? offCpu.byState : [];
+  const byState = rawByState.map(row => {
+    const r = asRecord(row);
+    return {
+      state: typeof r.state === 'string' ? r.state : String(r.state ?? 'Unknown'),
+      totalMs: asNumber(r.totalMs) ?? null,
+      count: asNumber(r.count) ?? null,
+      pctOfOffCpu: asNumber(r.pctOfOffCpu) ?? null,
+    };
+  });
   const note =
     (typeof offCpu.note === 'string' && offCpu.note) ||
     'offCpuReasons / wait-slice coverage derived from summary + callTree; no synthetic blocked-reason rows.';
@@ -3275,9 +3337,11 @@ export function queryOffCpuAttribution(
         ) ?? null
       : null;
   const sleepingMs =
-    durMs != null && sleepingPct != null
-      ? roundNumber((durMs * sleepingPct) / 100, 3) ?? null
-      : null;
+    totalOffCpuMs != null && sleepingPct != null
+      ? roundNumber((totalOffCpuMs * sleepingPct) / 100, 1) ?? null
+      : durMs != null && sleepingPct != null
+        ? roundNumber((durMs * sleepingPct) / 100, 3) ?? null
+        : null;
   const coveragePct =
     sleepingMs != null && sleepingMs > 0 && waitSliceTotalMs != null
       ? roundNumber((waitSliceTotalMs / sleepingMs) * 100, 2) ?? null
@@ -3285,11 +3349,13 @@ export function queryOffCpuAttribution(
 
   return {
     data: {
-      available: sleepingPct != null || waitSlices.length > 0,
+      available: byState.length > 0 || sleepingPct != null || waitSlices.length > 0,
       thread,
       runningPct,
       sleepingPct,
       runnablePct,
+      totalOffCpuMs,
+      byState,
       waitSlices,
       sleepingMs,
       waitSliceTotalMs,
@@ -3297,5 +3363,102 @@ export function queryOffCpuAttribution(
       note,
     },
     provenance: perfettoProvenance('queryOffCpuAttribution', args, run),
+  };
+}
+
+// ─────────────────────────── WT-022: GC.Alloc by module ───────────
+
+export interface QueryGcAllocByModuleArgs extends PerfettoJsonToolArgs {
+  /** Filter by perFrame threshold (default 0.1) */
+  minPerFrame?: number;
+  /** Filter by count threshold (default 1) */
+  minCount?: number;
+  /** Generic substring match — not a hard-coded module list */
+  pattern?: string;
+  /** Top-N by perFrame desc (default 20) */
+  topN?: number;
+  /** Include parentChain (default true) */
+  includeParentChain?: boolean;
+}
+
+export interface QueryGcAllocByModuleRow {
+  name: string;
+  count: number | null;
+  totalMs: number | null;
+  perFrame: number | null;
+  depth: number | null;
+  parentChain?: string[];
+}
+
+export interface QueryGcAllocByModuleResult {
+  data: {
+    available: boolean;
+    playerLoopFrameCount: number | null;
+    totalGcAllocSlices: number | null;
+    rows: QueryGcAllocByModuleRow[];
+  };
+  provenance: Provenance;
+}
+
+export function queryGcAllocByModule(
+  _db: Database.Database | null | undefined,
+  args: QueryGcAllocByModuleArgs
+): QueryGcAllocByModuleResult {
+  const run = loadPerfettoRun(args);
+  const minPerFrame = args.minPerFrame ?? 0.1;
+  const minCount = args.minCount ?? 1;
+  const topN = Math.min(args.topN ?? 20, 200);
+  const includeParentChain = args.includeParentChain !== false;
+  const pattern = args.pattern?.toLowerCase();
+
+  const fromSummary = asRecord(run.summary.gcAllocByChain);
+  const fromDetail = asRecord(run.perfetto.gcAllocByChain);
+  const summaryChain = Array.isArray(fromSummary.byChain) ? fromSummary.byChain : [];
+  const src = summaryChain.length > 0 ? fromSummary : fromDetail;
+  const rawRows = Array.isArray(src.byChain) ? src.byChain : [];
+
+  let rows: QueryGcAllocByModuleRow[] = rawRows.map(row => {
+    const r = asRecord(row);
+    const parentChain = Array.isArray(r.parentChain)
+      ? r.parentChain.filter((x): x is string => typeof x === 'string')
+      : typeof r.parentChain === 'string'
+        ? r.parentChain.split(/\s*>\s*/).filter(Boolean)
+        : undefined;
+    const out: QueryGcAllocByModuleRow = {
+      name: typeof r.name === 'string' ? r.name : String(r.name ?? ''),
+      count: asNumber(r.count) ?? null,
+      totalMs: asNumber(r.totalMs) ?? null,
+      perFrame: asNumber(r.perFrame) ?? null,
+      depth: asNumber(r.depth) ?? null,
+    };
+    if (includeParentChain && parentChain) out.parentChain = parentChain;
+    return out;
+  });
+
+  if (pattern) rows = rows.filter(r => r.name.toLowerCase().includes(pattern));
+  // AND thresholds: default minPerFrame=0.1 && minCount=1
+  rows = rows.filter(
+    r => (r.perFrame ?? 0) >= minPerFrame && (r.count ?? 0) >= minCount
+  );
+  // Prefer perFrame desc; fall back to count
+  rows.sort((a, b) => {
+    const pa = a.perFrame ?? -1;
+    const pb = b.perFrame ?? -1;
+    if (pb !== pa) return pb - pa;
+    return (b.count ?? 0) - (a.count ?? 0);
+  });
+  rows = rows.slice(0, topN);
+
+  const available =
+    (src.available === true || rawRows.length > 0) && rows.length > 0;
+
+  return {
+    data: {
+      available,
+      playerLoopFrameCount: asNumber(src.playerLoopFrameCount) ?? null,
+      totalGcAllocSlices: asNumber(src.totalGcAllocSlices) ?? null,
+      rows,
+    },
+    provenance: perfettoProvenance('queryGcAllocByModule', args, run),
   };
 }

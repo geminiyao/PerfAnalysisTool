@@ -116,6 +116,16 @@
         "p99Ms": 17.27,
         "fps": 60.1,
         "slowFrameRate": 0.15
+      },
+      {
+        "source": "perfetto",
+        "frameDefinition": "playerloop",
+        "count": 680,
+        "p50Ms": 16.69,
+        "p95Ms": 18.68,
+        "p99Ms": 21.37,
+        "fps": 59.8,
+        "slowFrameRate": 0.0
       }
     ],
     "threads": [
@@ -1151,7 +1161,349 @@
       "offCpuReasons": {
         "sleepingPct": 12.04,
         "runnablePct": 0.97,
-        "note": "主线程非运行时间拆分 (GPU 等待/锁/binder/vsync) 需内核 sched_blocked_reason, 本 trace 未含细分。"
+        "totalOffCpuMs": 1492.0,
+        "byState": [
+          {
+            "state": "D",
+            "totalMs": 23.4,
+            "count": 331,
+            "pctOfOffCpu": 1.57
+          },
+          {
+            "state": "R",
+            "totalMs": 111.1,
+            "count": 2499,
+            "pctOfOffCpu": 7.45
+          },
+          {
+            "state": "R+",
+            "totalMs": 6.2,
+            "count": 122,
+            "pctOfOffCpu": 0.42
+          },
+          {
+            "state": "S",
+            "totalMs": 1351.3,
+            "count": 2685,
+            "pctOfOffCpu": 90.57
+          }
+        ],
+        "note": "byState 直接从 thread_state 表分组求和; byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."
+      },
+      "offCpuAttribution": {
+        "sleepingPct": 12.04,
+        "runnablePct": 0.97,
+        "totalOffCpuMs": 1492.0,
+        "byState": [
+          {
+            "state": "D",
+            "totalMs": 23.4,
+            "count": 331,
+            "pctOfOffCpu": 1.57
+          },
+          {
+            "state": "R",
+            "totalMs": 111.1,
+            "count": 2499,
+            "pctOfOffCpu": 7.45
+          },
+          {
+            "state": "R+",
+            "totalMs": 6.2,
+            "count": 122,
+            "pctOfOffCpu": 0.42
+          },
+          {
+            "state": "S",
+            "totalMs": 1351.3,
+            "count": 2685,
+            "pctOfOffCpu": 90.57
+          }
+        ],
+        "note": "byState 直接从 thread_state 表分组求和; byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."
+      },
+      "gcAllocByChain": {
+        "available": true,
+        "playerLoopFrameCount": 680,
+        "totalGcAllocSlices": 201035,
+        "byChain": [
+          {
+            "name": "URP.BeforeRendering",
+            "count": 84692,
+            "totalMs": 102.838,
+            "perFrame": 124.55,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.BeforeRendering"
+            ]
+          },
+          {
+            "name": "Inl_OpaquePass",
+            "count": 84009,
+            "totalMs": 112.017,
+            "perFrame": 123.54,
+            "depth": 7,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.MainRenderingTransparent",
+              "Inl_OpaquePass"
+            ]
+          },
+          {
+            "name": "LoaderManagerOnFrameEnd",
+            "count": 6865,
+            "totalMs": 7.852,
+            "perFrame": 10.1,
+            "depth": 7,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.PlayerSendFrameComplete",
+              "PlayerEndOfFrame",
+              "CoroutinesDelayedCalls",
+              "Core.PostEndOfFrame",
+              "CS:AOE.ResManager",
+              "LoaderManagerOnFrameEnd"
+            ]
+          },
+          {
+            "name": "BehaviourUpdate",
+            "count": 6156,
+            "totalMs": 8.126,
+            "perFrame": 9.05,
+            "depth": 3,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate"
+            ]
+          },
+          {
+            "name": "CS:AOE.Outside.MapManager",
+            "count": 2972,
+            "totalMs": 3.778,
+            "perFrame": 4.37,
+            "depth": 5,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.Outside.MapManager"
+            ]
+          },
+          {
+            "name": "Core.Update",
+            "count": 2795,
+            "totalMs": 3.073,
+            "perFrame": 4.11,
+            "depth": 4,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update"
+            ]
+          },
+          {
+            "name": "CS:AOE.Outside.OutsideRoadsMgr",
+            "count": 2732,
+            "totalMs": 3.421,
+            "perFrame": 4.02,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate",
+              "Core.LateUpdate",
+              "CS:AOE.Outside.MapManager",
+              "CS:AOE.Outside.OutsideRoadsMgr"
+            ]
+          },
+          {
+            "name": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "count": 2732,
+            "totalMs": 3.47,
+            "perFrame": 4.02,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate",
+              "Core.LateUpdate",
+              "CS:AOE.Outside.MapManager",
+              "CS:AOE.Outside.WorldEnvironmentMeshItemMgr"
+            ]
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "count": 2726,
+            "totalMs": 3.776,
+            "perFrame": 4.01,
+            "depth": 2,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering"
+            ]
+          },
+          {
+            "name": "CS:AOE.ResManager",
+            "count": 1368,
+            "totalMs": 1.651,
+            "perFrame": 2.01,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.PlayerSendFrameComplete",
+              "PlayerEndOfFrame",
+              "CoroutinesDelayedCalls",
+              "Core.PostEndOfFrame",
+              "CS:AOE.ResManager"
+            ]
+          },
+          {
+            "name": "URP.MainRenderingTransparent",
+            "count": 1366,
+            "totalMs": 1.887,
+            "perFrame": 2.01,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.MainRenderingTransparent"
+            ]
+          },
+          {
+            "name": "LuaMgr.OnTick&UpdateSchedule",
+            "count": 1161,
+            "totalMs": 1.568,
+            "perFrame": 1.71,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule"
+            ]
+          },
+          {
+            "name": "LateBehaviourUpdate",
+            "count": 709,
+            "totalMs": 1.06,
+            "perFrame": 1.04,
+            "depth": 3,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate"
+            ]
+          },
+          {
+            "name": "LuaMgr.OnLateUpdateSchedule",
+            "count": 704,
+            "totalMs": 0.865,
+            "perFrame": 1.04,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate",
+              "Core.LateUpdate",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnLateUpdateSchedule"
+            ]
+          },
+          {
+            "name": "Render",
+            "count": 25,
+            "totalMs": 0.025,
+            "perFrame": 0.04,
+            "depth": 5,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.PlayerUpdateCanvases",
+              "UIEvents.WillRenderCanvases",
+              "UGUI.Rendering.UpdateBatches",
+              "Render"
+            ]
+          },
+          {
+            "name": "MapSignificanceMgr.sampler_OnUpdate",
+            "count": 11,
+            "totalMs": 0.013,
+            "perFrame": 0.02,
+            "depth": 8,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule",
+              "MapSignificanceMgr",
+              "MapSignificanceMgr.sampler_OnUpdate"
+            ]
+          },
+          {
+            "name": "URP.AfterRendering",
+            "count": 8,
+            "totalMs": 0.008,
+            "perFrame": 0.01,
+            "depth": 6,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.AfterRendering"
+            ]
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "count": 4,
+            "totalMs": 0.005,
+            "perFrame": 0.01,
+            "depth": 4,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack"
+            ]
+          }
+        ]
       },
       "frameTimeline": null,
       "gpu": {},
