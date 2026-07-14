@@ -1,0 +1,69 @@
+# collect.yaml — 通用兜底采集配置（C1）
+#
+# 无项目特化常量。当 --project 未指定且无法自动检测时使用。
+# 实际使用时需把 <TODO> 占位符替换为目标项目的真实值。
+# Schema 详见 docs/collector/plan/collect-yaml-schema.md
+
+# === 项目标识 ===
+project:
+  name: _generic
+  package: <TODO: com.example.game>
+  activity: <TODO: com.example.game.MainActivity>
+  intentAction: <TODO: com.example.PROFILE>
+
+# === 设备路径 ===
+device:
+  simpleperfPath: /data/local/tmp/simpleperf
+  pdataDir: <TODO: /storage/emulated/0/Android/data/com.example.game/files/doc/log/profile_data/>
+
+# === 采集工具 ===
+tools:
+  simpleperf:
+    enabled: true
+    ndkDir: <TODO: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf>
+    recordOpts: "-e cpu-clock --call-graph fp --clockid boottime -f 4000"
+    durationPadding: 15
+  perfetto:
+    enabled: true
+    script: <TODO: path/to/record_android_trace.py>
+    bufferSize: 64mb
+    durationPadding: 15
+    events:
+      - sched
+      - freq
+      - idle
+      - am
+      - wm
+      - gfx
+      - view
+      - binder_driver
+      - hal
+      - dalvik
+      - camera
+      - input
+      - res
+      - memory
+
+# === 场景定义 ===
+scenes:
+  aliases: {}
+  default:
+    label: collect
+    scene: <TODO: DefaultScene>
+
+# === 动作默认值 ===
+action:
+  defaultDuration: 60
+
+# === 输出配置 ===
+output:
+  baseDir: output/collect
+  webApiBase: http://localhost:3000/api
+
+# === 符号配置 ===
+symbols:
+  libDir: output/maple/symbols
+
+# === Meta 默认值 ===
+meta:
+  project: _generic

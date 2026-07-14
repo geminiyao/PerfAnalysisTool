@@ -1,0 +1,26 @@
+{
+  "package": "com.tencent.aoeyz",
+  "activity": "com.tencent.aoeyz.MainActivity",
+  "intentAction": "com.aoe.EXTERNAL_PROFILE",
+
+  "deviceSimpleperfPath": "/data/local/tmp/simpleperf",
+  "devicePdataDir": "/storage/emulated/0/Android/data/com.tencent.aoeyz/files/doc/log/profile_data/",
+
+  "perfettoScript": "g:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts/record_android_trace.py",
+  "perfettoEvents": [
+    "sched", "freq", "idle",
+    "am", "wm", "gfx", "view",
+    "binder_driver", "hal",
+    "dalvik", "camera", "input", "res", "memory"
+  ],
+
+  "ndkSimpleperfDir": "D:/Android/android-ndk-r21e-windows-x86_64/simpleperf",
+  "symbolLibDir": "output/maple/symbols",
+  "outputBase": "output/collect",
+  "webApiBase": "http://localhost:3000/api",
+
+  "sceneAliases": {
+    "VG\u5bf9\u6bd4": { "label": "vg_compare", "scene": "StressTestBattleSimpleMode" },
+    "\u538b\u529b\u6d4b\u8bd5": { "label": "stress_test", "scene": "StressTestBattleSimpleMode" }
+  }
+}

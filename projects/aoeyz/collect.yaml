@@ -1,0 +1,75 @@
+# collect.yaml — AOEYZ 项目采集配置（C1）
+#
+# 这是 Collector 的项目级配置，和 pack.yaml 并列。
+# 换项目只需创建 projects/<name>/collect.yaml 并通过 --project 指定。
+# Schema 详见 docs/collector/plan/collect-yaml-schema.md
+
+# === 项目标识（原 config.json: package/activity/intentAction）===
+project:
+  name: aoeyz
+  package: com.tencent.aoeyz
+  activity: com.tencent.aoeyz.MainActivity
+  intentAction: com.aoe.EXTERNAL_PROFILE
+
+# === 设备路径（原 config.json: deviceSimpleperfPath/devicePdataDir）===
+device:
+  simpleperfPath: /data/local/tmp/simpleperf
+  pdataDir: /storage/emulated/0/Android/data/com.tencent.aoeyz/files/doc/log/profile_data/
+
+# === 采集工具（原 config.json: ndkSimpleperfDir/perfettoScript/perfettoEvents）===
+tools:
+  simpleperf:
+    enabled: true
+    ndkDir: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf
+    recordOpts: "-e cpu-clock --call-graph fp --clockid boottime -f 4000"
+    durationPadding: 15
+  perfetto:
+    enabled: true
+    script: g:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts/record_android_trace.py
+    bufferSize: 64mb
+    durationPadding: 15
+    events:
+      - sched
+      - freq
+      - idle
+      - am
+      - wm
+      - gfx
+      - view
+      - binder_driver
+      - hal
+      - dalvik
+      - camera
+      - input
+      - res
+      - memory
+
+# === 场景定义（原 config.json: sceneAliases）===
+scenes:
+  aliases:
+    "VG对比":
+      label: vg_compare
+      scene: StressTestBattleSimpleMode
+    "压力测试":
+      label: stress_test
+      scene: StressTestBattleSimpleMode
+  default:
+    label: collect
+    scene: StressTestBattleSimpleMode
+
+# === 动作默认值 ===
+action:
+  defaultDuration: 60
+
+# === 输出配置（原 config.json: outputBase/webApiBase）===
+output:
+  baseDir: output/collect
+  webApiBase: http://localhost:3000/api
+
+# === 符号配置（原 config.json: symbolLibDir）===
+symbols:
+  libDir: output/maple/symbols
+
+# === Meta 默认值 ===
+meta:
+  project: aoeyz
