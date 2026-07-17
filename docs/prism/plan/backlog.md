@@ -92,7 +92,8 @@
 | **BK-20 单源三维热点判定 + 诚实标注能判/判不了** | ✅ **DONE（WT-004，2026-07-11 验收PASS）**：narrative-types 加可选 `dimensions`(absoluteCost/shareHigh/outlier)+`judgability`(judgable/needsBaseline/needsDomainKnowledge)+顶层 `judgmentBoundary`(canJudge/cannotJudge)；narrative-prompt 加三维显式标注写作纪律+判定边界诚实声明+降级链逻辑(有知识用知识→有基线用基线→通用三维+诚实标注判不了)。renderer 向后兼容(新字段可选)。**内核隐式三维→显式化+诚实边界完成。** 真实报告效果待整体重跑探索验证。原描述：把单源"热点判定"从单靠耗时排序升级为三维定位并诚实标注 | 用户困扰拆解(本轮)/Charter F8 | ✅ DONE |
 | **BK-21 回归哨兵(单源自动对标历史基线)** | 把"哪里烫"升级成"哪里**开始**烫了"。用户**早已在diff模式手动做**(报告里"ArmyLineMgr 0.02→2.84ms +16594%🔴"就是雏形)。回归哨兵=每次分析自动跟该场景历史基线比、自动报变化,**单源模式也能有**。"涨3倍"可采纳性极高(不需业务知识就成立的强信号)。天然依赖跨run记忆(BK-LOOP),是"agent loop>作文机"最有说服力的证明 | 用户Q3(本轮)/回归哨兵讨论 | ⬜（依赖BK-LOOP,框架后做） |
 | **BK-22 清理prompt业务词·提升F2纯度** | explore-prompt 里混入了游戏专属业务词作举例：第241行 finding title 示范用了`'行军线模块每帧常驻开销'`(AOEYZ专属)，第119行候选清单举例含"相机"等。虽是**举例/示范非硬编码逻辑**(发现机制仍数据驱动:ArmyLine/YzEntity 都是从榜单扫出来的,非名字命中),但业务专属词写进prompt降低了F2「自由发现·不预设盯防名单」的纯度(违反DR-2废白名单精神)。**修:业务专属词(尤其"行军线")换成纯通用类别或占位符;通用引擎概念(GC/渲染/UI)可保留因任何游戏都有**。低成本、纯prompt改动 | 用户本轮追问(相机/行军线是否写死) | ⬜ P1候选 |
-| **BK-25 报告图文流 + 调用树聚焦** | 当前 HTML 已有 narrative+调用树，但体验仍像"大段文字 + 一棵原始调用树"。调用树即使不截字，也存在**信息冗余、重点不明**：例如 `600帧全超预算` 下展示 PlayerLoop 大树，读者看不出重点在哪里。需求：报告从“文字后贴树”升级为**图文流**：按结论选择合适可视化（总账用贡献拆分/小型瀑布或Top contributors，不贴完整 PlayerLoop；单热点用聚焦 hot path；低价值分支折叠/弱化；每棵树有“为什么看这棵树/看哪几行”的标注）。验收：用户不用读完整树，也能在第一眼知道关键路径、贡献比例、下一步动作。**用户已明确：当前优先级不高，先关注引擎层/三回路/三源能力。** | 用户 2026-07-13 report.html review | ⏸ 体验层低优先 |
+| **BK-25 报告图文流 + 调用树聚焦** | 当前 HTML 已有 narrative+调用树，但体验仍像"大段文字 + 一棵原始调用树"。调用树即使不截字，也存在**信息冗余、重点不明**：例如 `600帧全超预算` 下展示 PlayerLoop 大树，读者看不出重点在哪里。需求：报告从"文字后贴树"升级为**图文流**：按结论选择合适可视化（总账用贡献拆分/小型瀑布或Top contributors，不贴完整 PlayerLoop；单热点用聚焦 hot path；低价值分支折叠/弱化；每棵树有"为什么看这棵树/看哪几行"的标注）。验收：用户不用读完整树，也能在第一眼知道关键路径、贡献比例、下一步动作。**2026-07-14 升级为 P0**：WT-021 返工二次打回，用户指出"文字一大段、信息难分辨、缺图文穿插"。DR-41 已沉淀报告层五条硬规则，BK-25 对应规则 4（图文穿插四段式）。拆入 WT-023 执行。 | 用户 2026-07-13/07-14 report.html review | 🔴 P0（升级） |
+| **BK-26 热点模块归并（top 列表 child 不重复）** | **2026-07-14 新增**：WT-021 返工红线矩阵 top 8 里 6 行是 URP 子树不同层（Render/CameraStack/SingleCamera/AfterRendering/Submit/WaitForPresent），顶部结论 #3/#4 也是同一模块。之前只沉淀了"剥洋葱防重复计数"（lessons-learned #1/#2），没沉淀"top 列表 child 归并"。DR-41 规则 2 补上：top 列表（红线矩阵/顶部结论/ROI）必须做子树归并——若模块 A 的 parentChain 包含模块 B，且 B 已在列表，A 不单独成行。归并用 parentChain 包含关系，不硬编码业务知识。拆入 WT-023 执行。 | 用户 2026-07-14 WT-021 返工二次打回 | 🔴 P0（新增） |
 
 ---
 
@@ -175,3 +176,65 @@
 - **BK-17 HTML美化** ✅ **DONE（WT-001）**：目录导航(6锚点一一对应)+主题群按序号上色+§0空正文修复，均已验收PASS。
 - **bug B-A** ✅ **FIXED（WT-001）**：md版§0改用 narrative.topConclusions 渲染(problem+【kind】+contribution)，回退 verdict.primaryDrivers。每条主因下有实在正文。(B-B 误报已撤销。)
 - **开工顺序校准**：原"BK-15打头"→改为**先BK-17+B-A修复(纯前端跑顺流程)✅，再BK-16(最硬真缺)**。WT-001 已 DONE，下一张 WT-002=BK-16。
+
+---
+
+## 📌 perfetto 报告对标 v5.3 · 模板注入断链修复 + 内容厚度差距（DR-45 · 2026-07-16）
+
+> **触发**：2026-07-16 用户对比 Prism perfetto 报告与 v5.3 标杆（`docs/report/performance-report_perfetto_ULTIMATE_v5.3.md`），指出"报告框架有了但内容厚度差一截"。诊断见 DR-45（rationale.md）。
+>
+> **已完成（WT-029，本轮）**：DR-45 三处断链修复——`resolveReportTemplate` return '' 短路→真读模板；`report-pipeline.ts` perfetto `reportTemplatePath: null`→填路径；`render-html.ts` perfetto callTree 走错工具（drillDownMarker/sqlite）→改读 perfetto-profile-summary.json + 名字归一化模糊匹配；扩 `narrative-types.ts` + `render-html.ts` 5 个可选视觉资产字段（metaInfo/threadOverview/throttlingMatrix/redlineMatrix/asciiArt）。harness 35 PASS/0 FAIL。端到端重渲染成功（7 sections / 6 callTree / 65.7KB）。
+>
+> **但对照 v5.3 仍有 4 个内容厚度差距**（用户 review 后诊断）：
+
+| ID | 需求 | 来源 | 状态 |
+|----|------|------|------|
+| **WT-030 差距1·markdown 表格渲染** | render-html 的 `section.intro` 当纯文本 `htmlEsc`，LLM 写在 intro 里的 markdown 表格显示成原始文本 `\| 指标 \| base \| cur \|`。修：intro 里的 markdown 表格/代码块解析成 HTML 表格/`<pre>`，或引导 LLM 填结构化字段（metaInfo/threadOverview 等）而非写进 intro。**render 层 bug，立刻可修** | DR-45 差距1/用户review | ⬜ P0 |
+| **WT-031 差距2·多线程覆盖不全** | v5.3 §3 有 7 类线程（UnityMain/Render/RHI/LuaMtGC/ECSWorker×4/Audio/Choreographer）独立三态数据表+判定；当前报告只有 2 个（UnityMain/UnityGfxRenderS）。RHI/LuaMtGC/ECSWorker/Audio 全缺。根因：narrative-prompt 没强制"多线程宏观必须覆盖所有识别线程"。修：narrative-prompt 加引导 + findings 侧确认所有线程 sched 数据已查 | DR-45 差距2/用户review | ⬜ P0 |
+| **WT-032 差距3·核心结论缺配套调用树** | v5.3 §0 三大结论每条配 ASCII 调用树/柱状图穿插；当前 topConclusions 是纯文本表格无可视化。修：扩 TopConclusionRow 加可选 `callTree`/`asciiArt` 关联，render-html 核心结论表每行下挂调用树 | DR-45 差距3/用户review | ⬜ P1 |
+| **WT-033 差距4·callTree 节点缺红线标注** | v5.3 §6.2 每节点有 `🔴 单次 1.50ms 触红线`/`🟡 临近红线`/`📈 ×4.2`/`🟢 健康` 标注；当前 render-html 调用树只显示 name/ms/pct。修：扩 DrillDownNode 加 `redlineFlag`/`foldChange`/`severityTag`，perfetto 节点的 `layer` 字段 + findings 里的红线判定传递到 render 层 | DR-45 差距4/用户review | ⬜ P1 |
+| **WT-034 narrative 红队回扫 + lessons 回路** | **打通 F4 跨run螺旋的 narrative 侧**：narrative 产出后加"红队回扫"环节——对照标杆检查产出差距（多线程覆盖/视觉资产填充/结论配树），差距沉淀进 `prism-memory/lessons/`，下次注入 narrative-prompt。让 narrative-prompt 从静态变自举。**这是 narrative 报告质量的决定性瓶颈**：narrative-prompt 是死的，LLM 产出决定性受它影响，不接回路就永远靠人手改 prompt。设计参考 explore 阶段已有的自我批判回合（DR-24②/DR-27） | DR-45 §二/用户"打通回路"要求 | ⬜ P0（核心） |
+| **WT-035 harness 内容质量软约束** | harness [2] 节加软约束 warning：可选视觉资产字段全空/多线程覆盖不足 2 个/核心结论无配调用树/callTree 节点无红线标注。不阻塞但暴露差距，防"验收只看合规性标记"（DR-45 §8.3 教训重演） | DR-45 §三/用户"补 harness"要求 | ⬜ P1 |
+
+**开工顺序建议**：WT-030（render bug，立刻见效）→ WT-034（核心回路，决定性）→ WT-031（多线程，prompt 引导）→ WT-032/033（schema 扩展）→ WT-035（harness 兜底）。
+**验收标准**：重跑端到端后 report.html 对照 v5.3 逐项核——7 类线程全覆盖 / 表格正常渲染 / 核心结论配调用树 / callTree 有红线标注。harness 全 PASS + 新软约束 warning 为 0。
+
+---
+
+## 📌 长期阅读体验优化（WT-030 派生，2026-07-16 用户指示另外开单）
+
+| ID | 需求 | 来源 | 状态 |
+|----|------|------|------|
+| **BK-阅读体验优化** | WT-030 的简单 markdown 解析器只支持 5 类 token（表格/代码围栏/粗体/行内代码/换行），复杂 markdown 降级为纯文本。长期需要更完整的渲染体验：完整 GFM 支持、Mermaid/流程图、交互式折叠 callTree、主题切换等。属 F6 呈现层打磨，引擎层完善后做（dev-conventions.md §五优先级）。 | WT-030 派生/用户 2026-07-16 指示 | ⬜ P2（引擎层完善后做） |
+| **BK-能力回路数据源区分** | `prism-memory/capabilities/` 当前不区分数据源——所有 DataRequest 进同一目录，frontmatter 只有 `source: <runId>`，没有 `dataSource: perfetto\|unity` 字段。perfetto 缺的工具（如 sched_blocked_reason ftrace）和 unity 缺的工具（如 per-marker GC 分配）完全不同，不区分数据源注入时 explore-prompt 会拿到无关数据源的缺口。修：appendMemory 时加 `dataSource` 字段，formatMemoryForPrompt 按 explore 的 source 筛选注入。**已拆为 WT-040 工单**。 | 用户 2026-07-16 追问/WT-034 派生 | 🔄 WT-040 已开工单 |
+
+---
+
+## 📌 M5 多源扩展 · unity 多态接入 + 通用前置（2026-07-17 用户对齐概念后入表）
+
+> **触发**：2026-07-17 用户提 unity diff（VG baseline vs current）需求，对齐概念后确认"diff = 2 态多态，multi = ≥3 态多态，统一叫多态，不区分 diff/multi"。同时指出 narrative-prompt/explore-prompt/模板硬写 perfetto+AOE 业务词，需要数据源无关化。
+>
+> **概念对齐**（重要）：
+> - 单态（DR-42）：1 个样本，相对占比判定
+> - 多态（DR-43 扩展）：≥2 个样本，相对倍数 + 绝对增量判定。2 态是 N=2 的多态，≥3 态是 N≥3 的多态，判定逻辑本质相同，只是 ≥3 态多了"演化趋势单调性"增强信号
+> - **不新建 DR-46 diff 方法论**——DR-43 扩展覆盖 2 态即可
+> - 模板文件名：`unity-multi-state.txt`（不区分 2 态还是 ≥3 态，统一一个多态模板）
+
+| ID | 需求 | 来源 | 状态 |
+|----|------|------|------|
+| **WT-038 narrative-prompt + 模板数据源无关化** | narrative-prompt.txt 号称数据源无关骨架，但硬写了 perfetto+AOE 业务词（Gfx.WaitForPresent/bigCoreReach/LuaMgr/行军线等）。perfetto-multi-state.txt 硬写了 Choreographer/AudioTrack/AAudio。explore-prompt.txt 文件名没带 unity 前缀但内容是 unity 专属。修：narrative-prompt 范例改占位符 + perfetto-multi-state 清业务词 + explore-prompt.txt 重命名为 unity-explore-prompt.txt + 新建 unity-single-state.txt 模板。**unity 多态接入的前置**。 | 用户 2026-07-17 追问"unity 提示词为什么在通用 txt 里" | ⬜ P0（通用前置） |
+| **WT-039 红线归并规则调整** | 当前规则"55:45 平均→统筹"是错的。新规则：判定依据改为"分布形态"（有无明显大头）+ "语义独立性"（大头是否不同模块）。URP.Render 下 6 个差不多→统筹；LuaMgr 下 BattleHeadMgr+MapSignificanceMgr 是明确大头 + 语义不同→拆出。适用所有数据源所有调用树层级。 | 用户 2026-07-17 纠正 WT-036 v5 归并判定 | ⬜ P0（通用前置） |
+| **WT-040 prism-memory 加 dataSource 字段** | 当前 prism-memory frontmatter 没有 dataSource 字段，perfetto/unity/simpleperf 的 capabilities 混在一起注入。修：appendMemory 加 dataSource 参数 + formatMemoryForPrompt 按数据源筛选 + 批量给现有 79 priors+24 capabilities+10 lessons 补字段。**unity 多态接入的前置**。 | 用户 2026-07-17 追问/原 BK-能力回路数据源区分 | ⬜ P0（通用前置） |
+| **WT-041 DR-43 扩展覆盖 2 态** | DR-43 当前只讲"三态演化"，补一段"2 态是 N=2 的特例"。2 态和 ≥3 态判定逻辑本质相同（foldChange + 绝对增量），只是 ≥3 态多了单调性。不新建 DR-46 diff 方法论。 | 用户 2026-07-17 对齐概念"diff 就是 2 multi 就是多" | ⬜ P0（unity 多态前置） |
+| **WT-042 unity-multi-state.txt 模板** | 基于 DR-43 扩展后，写 unity 多态报告章节模板（§0-§4）。不硬写业务名 + 不写 perfetto 特有概念（降频/Choreographer/bigCoreReach）。2 态和 ≥3 态通用一个模板。 | 用户 2026-07-17 提 unity diff 需求 | ⬜ P0（unity 多态前置） |
+| **WT-043 unity-explore-prompt 加多态引导** | 当前 unity-explore-prompt 是单态模式。加多态模式引导（≥2 样本对比 + foldChange + 绝对增量 + 回归判定）。2 态和 ≥3 态通用一段引导。 | 用户 2026-07-17 提 unity diff 需求 | ⬜ P0（unity 多态前置） |
+| **WT-044 跑 VG unity profiler 多态报告** | 用 VG 的 unity profiler 数据（baseline vs current 2 态）跑完整三段管线，产出多态报告。依赖 WT-038/039/040/041/042/043 全部完成。 | 用户 2026-07-17 提 VG diff 需求 | ⬜ P0（unity 多态主线） |
+
+**开工顺序建议**：
+- **通用前置（并行，无依赖）**：WT-038（数据源无关化）+ WT-039（红线归并规则）+ WT-040（dataSource 字段）
+- **unity 多态前置**：WT-041（DR-43 扩展，无依赖）→ WT-042（模板，依赖 038/039/041）+ WT-043（explore 多态引导，依赖 038/040/041）
+- **unity 多态主线**：WT-044（跑 VG 数据，依赖 038/039/040/041/042/043 全部完成）
+- **perfetto 善后**：WT-037（harness 防呆，无依赖）+ DR-43 定稿（依赖 039/041）+ DR-42 定稿（依赖 044/041）
+
+**验收标准**：WT-044 产出的 unity 多态报告对照标杆 diff 报告逐项核结构 + 叙事可读性，harness 全 PASS。
+
