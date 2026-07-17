@@ -137,6 +137,56 @@ if (!registry.get('unity')) {
 
 **不硬写**业务名（用占位符）。**不硬写**perfetto 特有概念（如 bigCoreReach/降频——unity 没有 CPU 频率概念，不写降频章节）。
 
+### 需求 F：补规约（dev-conventions.md §六.1）
+
+**文件**：`docs/prism/memory/dev/conventions.md`
+
+**已由主 agent 完成（2026-07-17）**：在 §六 末尾追加 §6.1 "prompt 文件硬编码"小节，明确：
+- prompt 范例不许用业务名，用占位符
+- 数据源无关骨架（narrative-prompt.txt）不许有数据源特定词
+- 数据源特定模板可保留该数据源概念，但不许有业务名
+- 验收靠 harness grep 扫描
+
+开发 agent **不需要再改规约**，但要读 §6.1 确认理解，并按 §6.1 执行需求 A-E。
+
+### 需求 G：harness 加 prompt 文件硬编码扫描
+
+**文件**：`web/server/prism/harness.ts`
+
+在 `[1] 占位符填充检查` 节后新增"prompt 文件硬编码扫描"断言组（FAIL 不是 warning）：
+
+```ts
+// G1. narrative-prompt.txt 不许有业务名
+const narrativePromptSrc = fs.readFileSync(path.join(__dirname, 'prompts/narrative-prompt.txt'), 'utf-8');
+const businessNames = [/行军线/, /ArmyLine/, /MapSignificance/, /BattleHead/, /LuaMgr/, /MapManager/, /OutSideView/];
+for (const re of businessNames) {
+  assert(!re.test(narrativePromptSrc), `narrative-prompt.txt 无业务名硬编码: ${re.source}`);
+}
+
+// G2. narrative-prompt.txt 不许有 perfetto 特定词（它是数据源无关骨架）
+const perfettoSpecificTerms = [/Choreographer/, /AudioTrack/, /AAudio/, /bigCoreReach/, /Gfx\.WaitForPresent/];
+for (const re of perfettoSpecificTerms) {
+  assert(!re.test(narrativePromptSrc), `narrative-prompt.txt 无 perfetto 特定词: ${re.source}`);
+}
+
+// G3. perfetto-multi-state.txt 不许有业务名（perfetto 概念可保留）
+const perfettoTemplateSrc = fs.readFileSync(path.join(__dirname, 'prompts/report-templates/perfetto-multi-state.txt'), 'utf-8');
+for (const re of businessNames) {
+  assert(!re.test(perfettoTemplateSrc), `perfetto-multi-state.txt 无业务名硬编码: ${re.source}`);
+}
+
+// G4. unity-explore-prompt.txt 不许有 AOE 专属业务名（unity 概念可保留）
+const unityPromptPath = path.join(__dirname, 'prompts/unity-explore-prompt.txt');
+if (fs.existsSync(unityPromptPath)) {
+  const unityPromptSrc = fs.readFileSync(unityPromptPath, 'utf-8');
+  for (const re of businessNames) {
+    assert(!re.test(unityPromptSrc), `unity-explore-prompt.txt 无业务名硬编码: ${re.source}`);
+  }
+}
+```
+
+**关键**：这些断言是 `assert`（FAIL），不是 `warn`（warning）。prompt 文件里有业务名 = harness FAIL = 开发 agent 不能交差。
+
 ## 硬约束
 
 1. **narrative-prompt.txt 必须数据源无关**：grep 不到"行军线|ArmyLine|MapSignificance|BattleHead|LuaMgr|MapManager|OutSideView"等业务词，grep 不到"Choreographer|AudioTrack|AAudio|bigCoreReach|Gfx.WaitForPresent"等数据源特定词（在 narrative-prompt 里）
@@ -144,6 +194,7 @@ if (!registry.get('unity')) {
 3. **unity-explore-prompt.txt 保留 unity 概念**：unity 特有概念（PlayerLoop/URP/MonoBehaviour）可保留，但 AOE 专属业务名必须改占位符
 4. **不破坏现有 perfetto 报告产出**：改完重跑 perfetto 报告，harness 全 PASS，质量不退化
 5. **占位符用尖括号**：`<模块名>` / `<子模块>` / `<等待 slice>`，不用方括号或其它
+6. **harness 加 prompt 文件硬编码扫描**（需求 G）：grep 到业务名/数据源特定词 = FAIL，不是 warning
 
 ## 验收 harness（必填，开发 agent 完成前自己跑通）
 
@@ -182,6 +233,14 @@ ls web/server/prism/prompts/report-templates/unity-single-state.txt
 # 7. 占位符使用（narrative-prompt.txt 含 <模块名> 或 <子模块> 等占位符）
 grep -c "<模块\|<子模块\|<等待 slice\|<业务模块" web/server/prism/prompts/narrative-prompt.txt
 # 期望 ≥3
+
+# 8. harness 含 prompt 文件硬编码扫描（需求 G）
+grep -c "narrative-prompt.txt 无业务名硬编码\|narrative-prompt.txt 无 perfetto 特定词\|prompt 文件硬编码" web/server/prism/harness.ts
+# 期望 ≥1
+
+# 9. dev-conventions.md 含 §6.1（需求 F，主 agent 已完成，开发 agent 确认存在即可）
+grep -c "6.1 prompt 文件硬编码\|prompt 范例不许用业务名" docs/prism/memory/dev/conventions.md
+# 期望 ≥1
 ```
 
 **端到端冒烟**（重跑 perfetto 报告，确认数据源无关化不破坏 perfetto）：
@@ -192,7 +251,7 @@ cd web && npx tsx server/prism/run-perfetto-pipeline.ts --skip-explore --out dat
 
 ## 完成标准
 
-1. 通用 harness FAIL=0（perfetto 报告不退化）
+1. 通用 harness FAIL=0（perfetto 报告不退化，且含需求 G 的 prompt 文件硬编码扫描）
 2. 工单特定断言全 PASS
 3. 端到端冒烟成功，perfetto report.html 产出且结构不退化
 4. 把 report.html 路径 + 改动清单告诉主 agent
@@ -208,7 +267,9 @@ harness 跑不通就继续改，改到全 PASS 为止。
 3. grep 确认 narrative-prompt.txt 无业务词 + 无 perfetto 特定词
 4. 确认 unity-explore-prompt.txt 重命名 + report-pipeline.ts 路由更新
 5. 确认 unity-single-state.txt 模板存在且无业务词
-6. 任一不通过 = 打回
+6. 确认 harness 含 prompt 文件硬编码扫描（需求 G）
+7. 确认 dev-conventions.md §6.1 存在（需求 F，主 agent 已完成）
+8. 任一不通过 = 打回
 
 ## 注意事项
 
