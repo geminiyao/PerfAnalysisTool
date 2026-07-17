@@ -1,0 +1,208 @@
+# Perfetto 多态报告章节模板（DR-44 §3.2 第 2 层，对照 v5.3 标杆）
+
+> 本模板定义 perfetto 多态报告的章节骨架，注入 narrative-prompt 的 {{REPORT_TEMPLATE}} 占位符。
+> **和作文机的区别**：模板只定义章节结构 + 写作纪律，内容由 LLM 按 narrative-prompt 契约写。
+> **不硬编码**业务名/绝对阈值/死模板（DR-41 + dev/conventions.md）。
+
+---
+
+## 章节骨架（§0-§7，对照 v5.3 §0-§7）
+
+★【sections 必须建全 §0-§7 八章节·不许漏章】
+你的 narrative.json sections 数组必须建全 8 个 section，每个 section 的 heading 以 §X 开头（如 "§1 采集元信息：..."）。
+漏建任何一章 = 报告结构残缺。即使某章内容不多，也要建 section（intro 一句话 + 1 个 item 即可），不要跳过。
+
+### §0 结论先行（3 条独立结论 + ASCII 图穿插，四段式）
+
+写 3 条按强度排序的独立结论，每条用四段式块（DR-41 规则 4）：
+- 引用块 + 加粗一句话结论（人话，无字段名）
+- ASCII 图（柱状/缩进树/对照，数据源无关渲染工具产出）
+- 关键数字解读（每条一行，数字配解读）
+- 详见 §X 引用
+
+典型维度（从 findings 自然浮现，不预设盯防）：
+- 主线程瓶颈形态演化（Run/Sleep 三态 + wait slice 重叠）
+- 业务侧涨幅模块（foldChange + perFrameMs 三态）
+- 降频/温度形态（bigCoreReach + 温度 Δ）
+
+★【§0 与 topConclusions 不重复】
+§0 是"结论先行的叙事展开"——把 topConclusions 的结论用叙事方式讲出来（配 ASCII 图/关键数字/详见 §X）。
+**不是 topConclusions 的复述**——topConclusions 是结构化表格（problem/kind/contribution/dimensions），§0 是人话叙事。
+两者内容可以对应（都讲同一批结论），但表达形式不同：topConclusions 是表格行，§0 是四段式块。
+不许 §0 的 item.title 和 topConclusions 的 problem 文本高度相似——那是重复。
+
+### §1 采集元信息（一张表）
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="采集元信息"。
+render 会把 visualAsset.table 渲染成表格放在 item 的 narrative 下方。
+
+item.visualAsset 填法：
+```json
+{
+  "title": "采集元信息",
+  "type": "table",
+  "table": {
+    "headers": ["指标", "值"],
+    "rows": [
+      ["采集窗口", "base 11.4s / cur 14.7s / throttle 19.9s"],
+      ["帧数", "base 683 / cur 483 / throttle 427"],
+      ["fps", "59.8 → 33.1 → 21.4"],
+      ["p50", "16.69 → 30.15 → 45.94 ms"],
+      ["p99", "21.37 → 42.54 → 66.32 ms"],
+      ["slowFrameRate", "0% → 11.18% → 98.83%"],
+      ["Choreographer fps", "60.1（三态稳定）"],
+      ["温度", "缺失（无 thermal sidecar）"]
+    ]
+  }
+}
+```
+一张表：帧数/fps/p50/p95/p99/温度/binder/count。不硬编码具体数字（从 findings 取）。
+
+### §2 多线程宏观（所有线程三态健康度表 + 一句话定位）
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="多线程宏观"。
+
+- 每个识别到的线程一行：Run/Sleep/Runnable 三态百分比 + 关键 atrace 特征 + 一句话定位
+- 多态对照：三态 run/sleep 演化（单调下降/上升）
+- 线程识别用通用名（如 UnityMain/Render/RHI/LuaMtGC/ECSWorker），不写 comm 名/tid 硬匹
+- 排除项声明（如 Audio 线程池 Sleep ≥99% 不是瓶颈）
+
+★【多线程覆盖必须全·不许合并线程】
+findings 里 querySchedState 查过的每个线程都要在 visualAsset.table 里有独立一行。
+Audio 线程池的 5 个子线程（AudioTrack/AAudio_1/Audio Mixer/Audio Stream/GVoiceRender）必须各占一行，
+**不许合并成"Audio 线程池"一行**——合并 = 丢内容（v4 退化教训）。
+AsyncWorker 也要独立一行。
+
+item.visualAsset 填法：
+```json
+{
+  "title": "多线程宏观",
+  "type": "table",
+  "table": {
+    "headers": ["线程", "Run%", "Sleep%", "Runnable%", "关键特征", "定位"],
+    "rows": [
+      ["UnityMain", "86.94%→77.82%→56.99%", "12.04%→20.40%→38.99%", "0.62%→1.38%→2.83%", "PlayerLoop/Core.Update/Gfx.WaitForPresent", "主线程，业务/Lua/ECS 调度主入口"],
+      ["UnityGfxRenderS", "25.98%→22.3%→16.71%", "70.32%→~77%→79.85%", "—", "URP.Render/URP.Submit", "Unity 渲染命令录制层"],
+      ["AudioTrack", "0.42% (throttle)", "99.11% (throttle)", "—", "Audio 播放", "Audio 线程池，Sleep ≥99% 非瓶颈"],
+      ["AAudio_1", "3.84% (throttle)", "94.59% (throttle)", "—", "AAudio 音频后端", "Audio 线程池，Sleep ≥94% 非瓶颈"],
+      ["...其它 Audio 子线程各一行..."]
+    ]
+  }
+}
+```
+
+### §3 主线程 off-CPU 归因（byState + wait slice 重叠 + ASCII 状态分布 + ASCII 因果链）
+★ 本 section 的 item 可填 `visualAsset`，type="ascii"，放状态分布图/因果链图。
+
+- byState 分布表（S/R/D/R+ 三态对照）
+- wait slice 重叠法（核心证据）：主线程 Sleeping totalMs vs Gfx.WaitForPresent totalMs 重合度
+- ASCII 状态分布图（三态 Run/Sleep/Runnable 柱状对照 + 解读行）——填进 item.visualAsset (type=ascii)
+- ASCII 因果链（throttle 一帧的等待因果链，从主线程发起渲染 → 等 swapchain → GPU）——填进 item.visualAsset (type=ascii)
+- 排除项（binder/锁/其它线程阻塞）
+
+item.visualAsset 填法（ASCII 图）：
+```json
+{
+  "title": "throttle 一帧的等待因果链",
+  "type": "ascii",
+  "ascii": {
+    "content": "主线程 PlayerLoop\n  ├─ Core.Update (业务 7.32ms/帧)\n  └─ URP.Render (渲染提交)\n     └─ URP.AfterRendering (throttle 占 41%)\n        └─ Gfx.WaitForPresentOnGfxThread 17.8ms/帧 (超 vsync 16.66ms)",
+    "caption": "throttle 一帧的等待因果链：主线程发起渲染 → 等 swapchain → GPU 撑爆"
+  }
+}
+```
+
+### §4 降频时序（per-CPU + 形态 ASCII + 判定矩阵）
+★ 本 section 的 item 必须填 `visualAsset`，type="matrix"，title="降频判定矩阵"，levelColumn="判定档"。
+render 会把 matrix 类型的 visualAsset 按 levelColumn 列的值（confirmed/likely/suspected）上色。
+
+- 三份对照表（cpu7/cpu4-6/cpu0-3 reach% + 温度 Δ + UnityMain run% + p50/p99）
+- 降频形态 ASCII（每态特征 + 形态名 + evidence + 推断）——可填进 item.visualAsset (type=ascii)
+- per-CPU 实测表（avg/max + cpuinfo 上限对照）
+- 降频判定矩阵（confirmed/likely/suspected 三档，多信号同向）——填进 item.visualAsset (type=matrix)
+
+item.visualAsset 填法（矩阵）：
+```json
+{
+  "title": "降频判定矩阵",
+  "type": "matrix",
+  "levelColumn": "判定档",
+  "table": {
+    "headers": ["信号", "判定档", "证据"],
+    "rows": [
+      ["大核 bigCoreReach 59.2%", "likely", "cpu7 reach 三态 73.7%→77%→61.4%，throttle 跌破 65% 严重低频线"],
+      ["中核 max-freq 被压到 2227MHz", "likely", "cpu4-6 observed max 三态 2419→2342→2227MHz，cpuinfo 上限始终 2419MHz"],
+      ["R+ 被抢占暴涨 ×6.6", "suspected", "主线程 R+ 从 base 0.42% 涨到 throttle 2.78%"],
+      ["温度信号缺失", "suspected", "thermal sidecar 文件不存在，无法用温度 Δ 做第二信号确认"]
+    ]
+  }
+}
+```
+
+### §5 主线程一帧时间去向（callTree 缩进树 + 红线矩阵 + Top 模块下钻）
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="红线触发清单"。
+
+- PlayerLoop 帧分位数对比表（p50/p95/p99/slowFrame/fps/帧数）
+- 主线程 callTrees 缩进树（├─/└─ + [base/cur/throttle ms/帧] + 涨幅% + 严重程度标注）
+- Top 红线热点子函数下钻（每个红线模块一张卡片：单次 avg + 红线判定 + GC 归因 + 优化方向）
+- 红线触发清单（按 cur ms/帧排序，含模块/单次/红线类型/子函数热点）——填进 item.visualAsset (type=table)
+- 慢帧形态差异（p95-p50 范围 + 匀慢/尖峰判定）
+
+★【每个红线条目都要下钻·不只 Top 1】
+红线触发清单里的每个模块都要有独立的下钻 item（给 callTree.rootMarker + narrative 讲内部拆分）。
+**不许只给 Top 1 下钻，其它红线条目只列在表里不下钻**——v4 退化教训：只有 OutSideViewArmyLineMgr 下钻，其它 5 个红线条目没下钻。
+每个下钻 item 要讲：
+- 该模块的 callTree 子树（子节点占比/热点）
+- 红线判定（占 p50 百分比 / foldChange 涨幅）
+- GC 归因（如果 findings 有 gcAllocByModule 数据）
+- 优化方向（基于代码/数据推理，不许套话）
+
+★【红线清单必须细到子模块·不许只到父级·统筹与拆出互斥】
+redlineMatrix 的 module 列要细到子模块（如 OutSideViewArmyLineMgr/LuaMgr），
+**不许只列父级 Core.Update 一行**——只到父级 = 丢内容（v4 退化教训）。
+但也不许父子都列（DR-41 规则 2 子树归并，递归应用）——详见 narrative-prompt 的"红线清单子树归并原则"。
+**统筹与拆出互斥**：对同一个父模块，要么统筹（列父模块 + hotspot 列子节点），要么拆出（列大头子节点 + 不列父模块）——不能同时列父模块和子节点。
+
+item.visualAsset 填法（红线表，递归归并正确）：
+```json
+{
+  "title": "红线触发清单",
+  "type": "table",
+  "table": {
+    "headers": ["模块", "单次 avg ms", "红线类型", "子函数热点"],
+    "rows": [
+      ["CS:AOE.LuaMgr", "cur 3.80ms/帧", "占 p50 的 12.51%（远超 5% 红线）", "BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%（子节点统筹，不单独列）"],
+      ["OutSideViewArmyLineMgr", "cur 1.575ms/帧", "cur→throttle 涨 ×1.37", "CalculateVertexJob (Burst) count=57820（父 MapManager 不列，大头拆出）"],
+      ["URP.AfterRendering", "throttle 占 41.36%", "cur→throttle 涨 ×2.5", "URP.Submit 40.43% + URP.WaitForPresent 38.12%"],
+      ["...其它子模块各一行（不许父子同时列）..."]
+    ]
+  }
+}
+```
+
+### §6 GPU-bound 判定（矩阵 + 结论，不与 §3 重复）
+
+- Gfx.WaitForPresent 单次 avg 演化表（三态 + vsync 周期对照）
+- RHI/Render 顶层辅证（三态 run/sleep 演化）
+- GPU bound 判定矩阵（多信号同向：wait slice/Render RHI 变闲/Choreographer 稳定/binder 低/ECS 均衡）
+- 判定结论（throttle 强/cur 中等/base 健康，诚实声明 GPU 满载硬证给不出）
+
+### §7 ROI 优化方向（按 severity + 贡献排序）
+
+- 按 severity + 贡献排序的优化方向列表
+- 每条：具体模块 + 问题 + 优化建议（基于代码/数据推理，不许套话）
+- 优化方向要具体（v5.3 §0 ROI 范例：不是"建议优化"，是"把 OnUpdate 内 head 信息每帧重建改成 dirty-flag 增量"）
+
+---
+
+## 写作纪律（DR-41 五条硬规则）
+
+1. **报告 = 呈现层**：无 evidence id / tool name / 字段名（claim/boundary/relativeBaseline）
+2. **子树归并**：同一子树的节点不重复出现在 top 列表（用 mergeBySubtree）
+3. **结构 = 宏观 → 各线程 → 下钻**：不按 finding kind 罗列
+4. **图文穿插四段式**：引用块 + ASCII 图 + 关键数字 + 详见 §X，禁止超过 3 行的文字段落
+5. **人话先行**：技术数字沉底（narrative.json 的 findings[].claim + boundary），HTML 正文只有人话 + 关键数字
+
+## 叙事形态（多态专用，DR-43）
+
+- 演化型叙事："从 base 的 X 经 cur 的 Y 演化到 throttle 的 Z"
+- 三态对照表 + ASCII 柱状图 + foldChange 涨幅%
+- 红线判定用 foldChange（相对倍数，不硬编码绝对阈值）

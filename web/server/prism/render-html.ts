@@ -21,7 +21,7 @@ import * as path from 'path';
 import { openPrismDb } from './db.js';
 import { drillDownMarker } from './tools.js';
 import type { DrillDownNode } from './tools.js';
-import type { NarrativeReport, NarrativeItem } from './narrative-types.js';
+import type { NarrativeReport, NarrativeItem, VisualAsset } from './narrative-types.js';
 
 // ─────────────────────── Verdict numeric metrics shape ───────────────────────
 
@@ -52,6 +52,178 @@ function htmlEsc(s: unknown): string {
 function num(v: unknown, digits = 1): string {
   if (typeof v === 'number' && isFinite(v)) return v.toFixed(digits);
   return '—';
+}
+
+// ─────────────────────── Minimal markdown renderer (WT-030) ───────────────────────
+// 支持 5 类 token：GFM 表格 / 代码围栏 / 粗体 / 行内代码 / 换行。
+// 不引入 markdown 库（marked/markdown-it 等都不引），手写最小解析器。
+// 复杂 markdown（标题 # / 列表 - / 链接 []() / 图片 ![]()）降级为纯文本，不报错。
+// 先 htmlEsc 再解析 token，避免 XSS（narrative.json 是 LLM 产的，内容不可信）。
+
+/**
+ * 把已经 htmlEsc 过的单元格文本做行内 token 解析（粗体 / 行内代码）。
+ * 不解析表格/代码围栏/换行（这些是块级 token，由 renderMarkdownLite 处理）。
+ */
+export function renderInlineMarkdown(s: string): string {
+  // 行内代码 `x` → <code>x</code>（先处理代码，避免代码内的 ** 被解析成粗体）
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '`') {
+      // 找下一个反引号
+      const end = s.indexOf('`', i + 1);
+      if (end === -1) {
+        out += ch;
+        i++;
+        continue;
+      }
+      const code = s.slice(i + 1, end);
+      out += `<code>${code}</code>`;
+      i = end + 1;
+      continue;
+    }
+    if (ch === '*' && s[i + 1] === '*') {
+      // 粗体 **x** → <strong>x</strong>
+      const end = s.indexOf('**', i + 2);
+      if (end === -1) {
+        out += ch;
+        i++;
+        continue;
+      }
+      const inner = s.slice(i + 2, end);
+      out += `<strong>${renderInlineMarkdown(inner)}</strong>`;
+      i = end + 2;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+/** 判断一行是否是 GFM 表格的分隔行（|---|---| 形式） */
+function isTableSeparatorRow(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return false;
+  // 去掉首尾 | 后，每段应全是 -、:、空格
+  const inner = trimmed.replace(/^\|/, '').replace(/\|$/, '').trim();
+  if (inner === '') return false;
+  const cells = inner.split('|');
+  if (cells.length === 0) return false;
+  return cells.every(c => /^\s*:?-+:?\s*$/.test(c));
+}
+
+/** 判断一行是否是表格行（含 | 且不是分隔行） */
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return false;
+  if (isTableSeparatorRow(line)) return false;
+  // 至少有一个 | 把行分成 >=2 段
+  return trimmed.split('|').filter(s => s.trim() !== '' || true).length >= 2;
+}
+
+/** 解析表格行（去首尾 |，按 | 分列，trim 每格） */
+function parseTableRow(line: string): string[] {
+  let trimmed = line.trim();
+  // 去掉首尾的 |（如果有）
+  if (trimmed.startsWith('|')) trimmed = trimmed.slice(1);
+  if (trimmed.endsWith('|')) trimmed = trimmed.slice(0, -1);
+  return trimmed.split('|').map(c => c.trim());
+}
+
+/**
+ * 把一段 markdown 文本渲染成 HTML 片段（不含外层 <p>）。
+ *
+ * 流程：
+ *   1. 先 htmlEsc 整个文本（XSS 防护）
+ *   2. 按代码围栏 ``` 切段（代码优先，围栏内的 | 不解析为表格）
+ *   3. 在非代码段里按连续表格行切块（表格优先，表格外才做行内 token）
+ *   4. 行内 token（粗体 / 行内代码）最后处理
+ */
+export function renderMarkdownLite(md: string): string {
+  if (!md) return '';
+
+  // Step 1: htmlEsc 整个文本
+  const escaped = htmlEsc(md);
+
+  // Step 2: 按代码围栏切段
+  const fenceRe = /```[^\n]*\n?[\s\S]*?```/g;
+  const segments: { type: 'code' | 'text'; content: string }[] = [];
+  let lastIdx = 0;
+  let fenceMatch: RegExpExecArray | null;
+  while ((fenceMatch = fenceRe.exec(escaped)) !== null) {
+    if (fenceMatch.index > lastIdx) {
+      segments.push({ type: 'text', content: escaped.slice(lastIdx, fenceMatch.index) });
+    }
+    segments.push({ type: 'code', content: fenceMatch[0] });
+    lastIdx = fenceMatch.index + fenceMatch[0].length;
+  }
+  if (lastIdx < escaped.length) {
+    segments.push({ type: 'text', content: escaped.slice(lastIdx) });
+  }
+
+  const blocks: string[] = [];
+
+  for (const seg of segments) {
+    if (seg.type === 'code') {
+      // 代码围栏：```lang\ncode\n``` → <pre><code>code</code></pre>
+      // 去掉开头的 ```lang 和结尾的 ```
+      let content = seg.content;
+      // 去掉开头 ``` 和可选语言标识
+      content = content.replace(/^```[^\n]*\n?/, '');
+      content = content.replace(/```$/, '');
+      // content 已经 htmlEsc 过（整个 escaped 已 esc），直接放 <pre><code>
+      blocks.push(`<pre><code>${content}</code></pre>`);
+      continue;
+    }
+
+    // 文本段：按行扫描，识别表格块
+    const lines = seg.content.split('\n');
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // 检测表格块：连续的表格行 + 分隔行
+      if (isTableRow(line)) {
+        // 看下面是否紧跟分隔行 + 数据行
+        // 标准 GFM 表格：表头行 + 分隔行 + 数据行+
+        if (i + 1 < lines.length && isTableSeparatorRow(lines[i + 1])) {
+          // 完整表格：收集表头 + 分隔行 + 后续数据行
+          const headerCells = parseTableRow(line);
+          let j = i + 2;
+          const dataRows: string[][] = [];
+          while (j < lines.length && isTableRow(lines[j])) {
+            dataRows.push(parseTableRow(lines[j]));
+            j++;
+          }
+          // 渲染表格
+          const thead = `<thead><tr>${headerCells.map(c => `<th>${renderInlineMarkdown(c)}</th>`).join('')}</tr></thead>`;
+          const tbody = dataRows.length
+            ? `<tbody>${dataRows.map(row => `<tr>${row.map(c => `<td>${renderInlineMarkdown(c)}</td>`).join('')}</tr>`).join('')}</tbody>`
+            : '';
+          blocks.push(`<table>${thead}${tbody}</table>`);
+          i = j;
+          continue;
+        }
+        // 不是完整表格（无分隔行）→ 当普通文本行处理（降级）
+      }
+
+      // 普通文本行：行内 token + 换行
+      // 空行不渲染（避免连续 <br>）
+      if (line.trim() === '') {
+        i++;
+        continue;
+      }
+      blocks.push(renderInlineMarkdown(line) + '<br>');
+      i++;
+    }
+  }
+
+  // 拼接所有块，去掉末尾多余的 <br>
+  let result = blocks.join('\n');
+  result = result.replace(/(<br>)\s*$/,'');
+  return result;
 }
 
 /** Category color from marker name (Unity Timeline palette). */
@@ -124,13 +296,25 @@ function renderTreeHTML(node: DrillDownNode, rootMs: number, depth: number): str
       : `${totalMs.toFixed(2)}ms`;
   const pctStr = (node.pctOfRoot * 100).toFixed(1);
 
+  // WT-033: 节点红线/涨幅/严重度标注（从 findings 注入，render 只呈现不判定）
+  let annotationHTML = '';
+  if (node.redlineFlag) {
+    annotationHTML += `<span class="tree-redline" title="${htmlEsc(node.redlineFlag)}">🔴 ${htmlEsc(node.redlineFlag)}</span>`;
+  }
+  if (node.foldChange) {
+    annotationHTML += `<span class="tree-fold" title="涨幅 ${htmlEsc(node.foldChange)}">📈 ${htmlEsc(node.foldChange)}</span>`;
+  }
+  // severityTag 通过 data-sev 属性 + CSS 左边框色体现（不额外加文字标注，避免冗余）
+  const sevAttr = node.severityTag ? `data-sev="${htmlEsc(node.severityTag)}"` : '';
+
   let html = `
   <div class="tree-row" style="--tree-indent:${indent}px;--tree-width:${widthPct.toFixed(1)}%;--tree-bg:${col.bg};--tree-border:${col.border};">
-    <div class="tree-bar">
+    <div class="tree-bar" ${sevAttr}>
       <span class="tree-fill" aria-hidden="true"></span>
       <span class="tree-label" style="color:${col.text}" title="${htmlEsc(node.name)}">${htmlEsc(node.name)}</span>
       <span class="tree-ms">${htmlEsc(displayMs)}</span>
       <span class="tree-pct">${pctStr}%</span>
+      ${annotationHTML}
     </div>
   </div>`;
 
@@ -147,6 +331,55 @@ const TREE_LEGEND = `
   <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
   <span class="legend-item" style="color:#ce93d8">■ Job</span>
   <span class="legend-item" style="color:#4db6ac">■ 网络</span>`;
+
+// ─────────────────────── Visual asset rendering (WT-036) ───────────────────────
+// 视觉资产从顶层字段移到 NarrativeItem.visualAsset，render 按 type 渲染。
+// 通用类型：table（表格）/ ascii（ASCII 图）/ matrix（矩阵，按 levelColumn 上色）。
+// 不硬编码 perfetto 特有字段名（metaInfo/threadOverview/throttlingMatrix/redlineMatrix）。
+
+/** 矩阵判定档颜色（confirmed/likely/suspected 三档，通用） */
+function matrixLevelClass(level: string): string {
+  const l = String(level).toLowerCase();
+  if (l === 'confirmed') return 'tm-confirmed';
+  if (l === 'likely') return 'tm-likely';
+  return 'tm-suspected';
+}
+
+/** 渲染视觉资产（WT-036：item.visualAsset，按 type 渲染） */
+function renderVisualAsset(asset: VisualAsset): string {
+  if (asset.type === 'ascii') {
+    const content = asset.ascii?.content ?? '';
+    if (!content) return '';
+    return `<div class="ascii-art-block">
+      <div class="ascii-art-title">${htmlEsc(asset.title)}</div>
+      <pre class="ascii-art-content">${htmlEsc(content)}</pre>
+      ${asset.ascii?.caption ? `<div class="ascii-art-caption">${htmlEsc(asset.ascii.caption)}</div>` : ''}
+    </div>`;
+  }
+
+  // table 或 matrix：都渲染成 <table>，matrix 按 levelColumn 上色
+  const table = asset.table;
+  if (!table || !Array.isArray(table.headers) || table.headers.length === 0) return '';
+
+  const levelColIdx = asset.type === 'matrix' && asset.levelColumn
+    ? table.headers.findIndex(h => h === asset.levelColumn)
+    : -1;
+
+  const headerHTML = `<thead><tr>${table.headers.map(h => `<th>${htmlEsc(h)}</th>`).join('')}</tr></thead>`;
+  const bodyHTML = `<tbody>${table.rows.map(row => {
+    const cells = Array.isArray(row) ? row : [];
+    // matrix 行按 levelColumn 的值上色
+    const levelVal = levelColIdx >= 0 ? String(cells[levelColIdx] ?? '') : '';
+    const rowClass = asset.type === 'matrix' && levelVal ? matrixLevelClass(levelVal) : '';
+    const cellsHTML = table.headers.map((_, i) => `<td>${htmlEsc(String(cells[i] ?? '—'))}</td>`).join('');
+    return `<tr${rowClass ? ` class="${rowClass}"` : ''}>${cellsHTML}</tr>`;
+  }).join('')}</tbody>`;
+
+  return `<div class="visual-asset-block">
+    <div class="visual-asset-title">${htmlEsc(asset.title)}</div>
+    <table class="asset-table${asset.type === 'matrix' ? ' matrix-table' : ''}">${headerHTML}${bodyHTML}</table>
+  </div>`;
+}
 
 // ─────────────────────── Narrative item card ───────────────────────
 
@@ -175,16 +408,20 @@ function renderItemCard(item: NarrativeItem, tree: DrillDownNode | null | undefi
     </div>`;
   }
 
-  // sourceInsight callout
+  // WT-036: 视觉资产渲染在 narrative 下方、callTree 上方（item.visualAsset，不是顶层字段）
+  const visualAssetHTML = item.visualAsset ? renderVisualAsset(item.visualAsset) : '';
+
+  // sourceInsight callout（保持 htmlEsc + <br>——它是代码片段，不需要表格）
   const insightSection = item.sourceInsight
     ? `<div class="source-insight"><span class="insight-label">源码归因</span>${htmlEsc(item.sourceInsight).replace(/\n/g, '<br>')}</div>`
     : '';
 
   // Recommendations numbered list
-  const recsHTML = item.recommendations.length
+  const recs = Array.isArray(item.recommendations) ? item.recommendations : [];
+  const recsHTML = recs.length
     ? `<div class="rec-section">
         <div class="rec-label">优化建议</div>
-        <ol class="rec-list">${item.recommendations.map(r => `<li>${htmlEsc(r)}</li>`).join('')}</ol>
+        <ol class="rec-list">${recs.map(r => `<li>${htmlEsc(r)}</li>`).join('')}</ol>
       </div>`
     : '';
 
@@ -196,7 +433,8 @@ function renderItemCard(item: NarrativeItem, tree: DrillDownNode | null | undefi
       <span class="chip sev-chip" style="color:${sc.dot};background:${sc.badge}">${SEV_CN[item.severity] ?? item.severity}</span>
     </div>
     <div class="item-body">
-      <p class="narrative-text">${htmlEsc(item.narrative).replace(/\n/g, '<br>')}</p>
+      <p class="narrative-text">${renderMarkdownLite(item.narrative)}</p>
+      ${visualAssetHTML}
       ${treeSection}
       ${insightSection}
       ${recsHTML}
@@ -214,6 +452,8 @@ interface RenderOptions {
 
 function renderHTML(opts: RenderOptions): string {
   const { narrative, verdict, treesByItemKey } = opts;
+  // WT-032: treesByKey 现在含 section items（key=<heading>::<i>）+ topConclusions（key=tc::<rank>）
+  const treesByKey = treesByItemKey;
 
   const ratingInfo = RATING_MAP[narrative.rating] ?? { emoji: '—', label: narrative.rating ?? '—', color: '#9e9e9e', bg: '#9e9e9e20' };
 
@@ -239,15 +479,36 @@ function renderHTML(opts: RenderOptions): string {
   </div>`).join('');
 
   // ── § 核心结论 table ──
+  // WT-032: critical/high 的 topConclusion 行下挂 callTree 或 asciiArt（v5.3 §0 标杆：每条结论配图）
   const conclusionsHTML = narrative.topConclusions.map(row => {
     const sc = sevStyle(row.severity);
+    // 查这行结论的 callTree（key=tc::rank，由 requeryTrees 收集）
+    const tree = treesByKey.get(`tc::${row.rank}`);
+    let extraHTML = '';
+    if (tree) {
+      const rootMs = tree.totalMsPerFrame;
+      extraHTML = `<tr><td colspan="5"><div class="tc-tree-section">
+        <div class="tree-header">
+          <span class="tree-title">调用树（per-frame avg）</span>
+          <span class="tree-legend">${TREE_LEGEND}</span>
+        </div>
+        <div class="tree-container">${renderTreeHTML(tree, rootMs, 0)}</div>
+      </div></td></tr>`;
+    } else if (row.asciiArt) {
+      // LLM 产的 ASCII 图，原样渲染在 <pre> 块
+      extraHTML = `<tr><td colspan="5"><div class="tc-ascii-section">
+        <div class="ascii-art-title">${htmlEsc(row.asciiArt.title)}</div>
+        <pre class="ascii-art-content">${htmlEsc(row.asciiArt.content)}</pre>
+        ${row.asciiArt.caption ? `<div class="ascii-art-caption">${htmlEsc(row.asciiArt.caption)}</div>` : ''}
+      </div></td></tr>`;
+    }
     return `<tr>
       <td class="tc-rank">${row.rank}</td>
       <td class="tc-problem">${htmlEsc(row.problem)}</td>
       <td class="tc-kind">${htmlEsc(KIND_CN[row.kind] ?? row.kind)}</td>
       <td class="tc-contribution">${htmlEsc(row.contribution)}</td>
       <td class="tc-severity"><span class="chip sev-chip" style="color:${sc.dot};background:${sc.badge}">${SEV_CN[row.severity] ?? row.severity}</span></td>
-    </tr>`;
+    </tr>${extraHTML}`;
   }).join('');
 
   // ── ruledOut strip ──
@@ -257,6 +518,10 @@ function renderHTML(opts: RenderOptions): string {
         ${narrative.ruledOut!.map(r => `<span class="ruled-out-item" title="${htmlEsc(r.why)}">${htmlEsc(r.name)}: <em>${htmlEsc(r.why)}</em></span>`).join('')}
       </div>`
     : '';
+
+  // ── 视觉资产（WT-036：从顶层字段移到 section item.visualAsset，不再独立渲染） ──
+  // 视觉资产现在挂在 NarrativeItem.visualAsset 里，由 renderItemCard 内部渲染。
+  // 顶层不再有 metaInfo/threadOverview/throttlingMatrix/redlineMatrix/asciiArt 字段（perfetto 特有字段已删）。
 
   // ── TOC anchors ──
   const tocItems = [
@@ -273,11 +538,14 @@ function renderHTML(opts: RenderOptions): string {
 </div>`;
 
   // ── § sections ──
+  // WT-036: 视觉资产在 item.visualAsset 里（由 renderItemCard 渲染），section 级不再关联视觉资产
   const sectionsHTML = narrative.sections.map((sec, secIdx) => {
     const gc = sectionGroupColor(secIdx);
     const introHTML = sec.intro
-      ? `<p class="section-intro">${htmlEsc(sec.intro).replace(/\n/g, '<br>')}</p>`
+      ? `<p class="section-intro">${renderMarkdownLite(sec.intro)}</p>`
       : '';
+
+    // WT-036: 视觉资产在 item.visualAsset 里，由 renderItemCard 渲染，section 级不再关联视觉资产
     const itemsHTML = sec.items.map((item, i) => {
       const key = `${sec.heading}::${i}`;
       const tree = treesByItemKey.get(key);
@@ -498,6 +766,33 @@ a { color: var(--accent2); }
 .tc-contribution { color: #b0bec5; }
 .tc-severity { white-space: nowrap; }
 
+/* WT-032: topConclusions 行下挂的 callTree / asciiArt 容器 */
+.tc-tree-section {
+  padding: 0 !important;
+  background: #080d14;
+  border-left: 3px solid var(--border);
+}
+.tc-tree-section .tree-container { padding: 10px 12px; }
+.tc-tree-section .tree-header {
+  padding: 8px 12px;
+  background: #0f1b2d;
+  border-bottom: 1px solid var(--border);
+}
+.tc-ascii-section {
+  padding: 10px 14px !important;
+  background: #080d14;
+  border-left: 3px solid var(--accent2);
+}
+.tc-ascii-section .ascii-art-content { margin: 0; }
+.tc-ascii-section .ascii-art-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* ── Ruled-out strip ── */
 .ruled-out-strip {
   display: flex;
@@ -697,6 +992,30 @@ a { color: var(--accent2); }
   flex-shrink: 0;
 }
 
+/* WT-033: callTree 节点红线/涨幅/严重度标注 */
+.tree-redline {
+  color: #ff7961;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tree-fold {
+  color: #ffb74d;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* severityTag 通过 tree-bar 的 data-sev 属性 + CSS 左边框色体现 */
+.tree-bar[data-sev="critical"] { border-left-color: #f44336 !important; box-shadow: inset 3px 0 0 #f44336; }
+.tree-bar[data-sev="high"]     { border-left-color: #ff9800 !important; box-shadow: inset 3px 0 0 #ff9800; }
+.tree-bar[data-sev="medium"]   { border-left-color: #ffc107 !important; }
+.tree-bar[data-sev="low"]      { border-left-color: #4caf50 !important; }
+.tree-bar[data-sev="healthy"]  { border-left-color: #4caf50 !important; }
+
 /* ── Source insight callout ── */
 .source-insight {
   margin: 12px 0;
@@ -765,6 +1084,98 @@ a { color: var(--accent2); }
 .pri-action { color: #e8eaf6; }
 .pri-benefit { color: #90a4ae; }
 
+/* ── 可选视觉资产（DR-45 §1.3，WT-036 移到 item.visualAsset）── */
+.asset-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+  table-layout: fixed;   /* WT-036: 防长内容撑超框 */
+  word-break: break-word; /* WT-036: 长文本自动换行 */
+}
+.asset-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+  word-break: break-word;
+}
+.asset-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  vertical-align: top;
+  word-break: break-word;
+}
+.asset-table tr:last-child td { border-bottom: none; }
+.asset-label { color: var(--text-muted); font-weight: 600; white-space: nowrap; width: 140px; }
+.asset-value { color: #e0e0e0; font-family: var(--font-mono); }
+.ao-thread { font-weight: 600; color: #e8eaf6; white-space: nowrap; }
+
+/* WT-036: visual-asset-block（item.visualAsset 渲染容器） */
+.visual-asset-block {
+  margin: 12px 0 16px 0;
+}
+.visual-asset-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+/* 降频判定矩阵：confirmed/likely/suspected 三档配色 */
+.tm-confirmed td { background: #1a1020; }
+.tm-confirmed .tm-level { color: #f44336; font-weight: 700; }
+.tm-likely td { background: #1a1a1020; }
+.tm-likely .tm-level { color: #ff9800; font-weight: 700; }
+.tm-suspected td { background: var(--surface); }
+.tm-suspected .tm-level { color: #ffc107; font-weight: 700; }
+
+/* 红线矩阵 */
+.rm-module { font-weight: 600; color: #ff7961; }
+
+/* ASCII 图块（LLM 产文本，render 原样渲染在等宽 <pre>） */
+.ascii-art-block {
+  margin: 14px 0 20px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--accent2);
+}
+.ascii-art-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ascii-art-content {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cfd8dc;
+  background: #080d14;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+.ascii-art-caption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ── Footer ── */
 .page-footer {
   margin-top: 48px;
@@ -796,7 +1207,7 @@ a { color: var(--accent2); }
 </div>
 
 <!-- Overview lead -->
-<div class="overview-block">${htmlEsc(narrative.overview).replace(/\n/g, '<br>')}</div>
+<div class="overview-block">${renderMarkdownLite(narrative.overview)}</div>
 
 <!-- ═══════════════════ Metrics strip ═══════════════════ -->
 <div class="metrics-strip">
@@ -820,7 +1231,7 @@ ${tocHTML}
 </table>
 ${ruledOutHTML}
 
-<!-- ═══════════════════ § 主题分群 ═══════════════════ -->
+<!-- ═══════════════════ § 主题分群（视觉资产在 item.visualAsset 里，由 renderItemCard 渲染） ═══════════════════ -->
 <div class="section-title">主题分群</div>
 ${sectionsHTML || '<p class="muted">（暂无分群内容）</p>'}
 
@@ -848,9 +1259,238 @@ ${sectionsHTML || '<p class="muted">（暂无分群内容）</p>'}
 
 // ─────────────────────── Re-query call trees ───────────────────────
 
+/**
+ * 判断 narrative 是否来自 perfetto 源。
+ * perfetto runId 形如 "bk26b-perfetto-triad/2026-07-15_10-36-27"（含 perfetto）。
+ */
+function isPerfettoSource(narrative: NarrativeReport): boolean {
+  return /perfetto/i.test(narrative.runId);
+}
+
+/**
+ * perfetto callTree 节点（来自 perfetto-profile-summary.json）的松散结构。
+ * 字段：name/totalMs/totalPct/count/layer/children。
+ */
+interface PerfettoNode {
+  name: string;
+  totalMs?: number;
+  totalPct?: number;
+  count?: number;
+  layer?: string;
+  children?: PerfettoNode[];
+}
+
+// ─── WT-033: callTree 节点标注（从 findings.json 的 evidence.resultDigest.callTreeAnnotations 注入） ───
+
+/** explore LLM 在 finding 的 evidence.resultDigest.callTreeAnnotations 里产的结构化标注 */
+interface CallTreeAnnotation {
+  nodeName: string;
+  redlineFlag?: string | null;
+  foldChange?: string | null;
+  severityTag?: 'critical' | 'high' | 'medium' | 'low' | 'healthy' | null;
+}
+
+/**
+ * 从 findings.json 读所有 finding 的 evidence.resultDigest.callTreeAnnotations，建 nodeName → annotation map。
+ * render 只读取并呈现，不写判定逻辑（判定在 explore LLM）。
+ * findings.json 不存在或字段缺失时返回空 map（容错，不报错）。
+ */
+function loadCallTreeAnnotations(dir: string): Map<string, CallTreeAnnotation> {
+  const map = new Map<string, CallTreeAnnotation>();
+  const findingsPath = path.join(dir, 'findings.json');
+  if (!fs.existsSync(findingsPath)) return map;
+  try {
+    const findings = JSON.parse(fs.readFileSync(findingsPath, 'utf-8'));
+    if (!Array.isArray(findings)) return map;
+    for (const f of findings) {
+      // evidence 可能是数组或对象，resultDigest 在 evidence 里
+      const evidence = f?.evidence;
+      if (!evidence) continue;
+      const evidenceList = Array.isArray(evidence) ? evidence : [evidence];
+      for (const ev of evidenceList) {
+        const annotations = ev?.resultDigest?.callTreeAnnotations;
+        if (!Array.isArray(annotations)) continue;
+        for (const ann of annotations) {
+          if (ann && typeof ann.nodeName === 'string') {
+            // 后写的覆盖先写的（同一节点名多次出现时取最新）
+            map.set(ann.nodeName, ann as CallTreeAnnotation);
+          }
+        }
+      }
+    }
+  } catch {
+    // findings.json 解析失败 = 容错，返回空 map（render 不报错，只是没标注）
+  }
+  return map;
+}
+
+/**
+ * 在 perfetto callTree 里按节点名搜索子树。
+ * 先精确匹配 rootMarker；失败则按名字核心部分（去前缀/去 Gfx./URP. 等命名空间差异）子串回退。
+ *
+ * 名字归一化（呈现层职责，非判定）：narrative LLM 可能用 atrace slice 名
+ * （如 Gfx.WaitForPresentOnGfxThread）而 callTree 用 Unity marker 名（如 URP.WaitForPresent），
+ * 两者指同一等待点。render 层做名字归一化让树能渲染，不做任何性能判定。
+ */
+function findPerfettoSubtree(root: PerfettoNode, targetName: string): PerfettoNode | null {
+  // 1. 精确匹配
+  const exact = findPerfettoSubtreeExact(root, targetName);
+  if (exact) return exact;
+
+  // 2. 子串回退：取 targetName 的核心部分（去前缀，取最后一个 CamelCase 词组）
+  //    如 Gfx.WaitForPresentOnGfxThread → WaitForPresent；Core.Update → Update
+  //    在树里找 name 包含核心词的节点，唯一匹配则用，多匹配则不用（避免误匹配）
+  const core = extractNameCore(targetName);
+  if (!core || core.length < 4) return null;  // 太短的核心词易误匹配，不回退
+  const candidates: PerfettoNode[] = [];
+  collectContainsMatch(root, core, candidates);
+  if (candidates.length === 1) return candidates[0];
+  return null;
+}
+
+function findPerfettoSubtreeExact(node: PerfettoNode, targetName: string): PerfettoNode | null {
+  if (node.name === targetName) return node;
+  for (const child of node.children ?? []) {
+    const found = findPerfettoSubtreeExact(child, targetName);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * 提取 marker 名的核心部分用于模糊回退匹配。
+ * Gfx.WaitForPresentOnGfxThread → WaitForPresent（去 Gfx. 前缀，去 OnGfxThread 后缀）
+ * URP.WaitForPresent → WaitForPresent
+ * Core.Update → Update
+ */
+function extractNameCore(name: string): string {
+  // 去前缀（Gfx./URP./Core./Inl_ 等）
+  let core = name.replace(/^(Gfx|URP|Core|Inl|PlayerLoop|PostLateUpdate|FinishFrameRendering)\./, '');
+  // 去常见后缀（OnGfxThread/OnMainThread 等）
+  core = core.replace(/On(GfxThread|MainThread|RenderThread)$/i, '');
+  // 取第一个 CamelCase 词组（WaitForPresentOnGfxThread → WaitForPresent）
+  const m = core.match(/^([A-Z][a-z]+(?:[A-Z][a-z]+)*)/);
+  return m ? m[1] : core;
+}
+
+function collectContainsMatch(node: PerfettoNode, core: string, out: PerfettoNode[]): void {
+  if (node.name.includes(core)) out.push(node);
+  for (const child of node.children ?? []) collectContainsMatch(child, core, out);
+}
+
+/**
+ * 把 perfetto 节点转成 DrillDownNode 兼容结构（renderTreeHTML 只读这些字段）。
+ * per-frame avg = totalMs / count（count = 出现帧数）。
+ * selfMsPerFrame：perfetto 没直接给 self，置 0（renderTreeHTML 仅在 self>0 且 <total 时显示）。
+ * pctOfRoot：用 totalPct/100（相对 UnityMain 总窗口）。
+ *
+ * WT-033: annotations 是从 findings.json 读的 callTreeAnnotations map（按 nodeName 查）。
+ *         转换时若 map 命中则透传 redlineFlag/foldChange/severityTag——render 只呈现不判定。
+ */
+function perfettoNodeToDrillDown(
+  node: PerfettoNode,
+  thread: string,
+  rootPctOfRoot: number,
+  annotations?: Map<string, CallTreeAnnotation>,
+): DrillDownNode {
+  const totalMs = node.totalMs ?? 0;
+  const count = node.count ?? 1;
+  const totalMsPerFrame = count > 0 ? totalMs / count : 0;
+  const pctOfRoot = node.totalPct != null ? node.totalPct / 100 : 0;
+  // WT-033: 从 findings 注入节点标注（按 nodeName 匹配）
+  const ann = annotations?.get(node.name);
+  return {
+    name: node.name,
+    thread,
+    totalMsPerFrame,
+    selfMsPerFrame: 0,  // perfetto summary 无 self 字段，置 0（renderTreeHTML 不显示 self 行）
+    pctOfRoot,
+    presentFrames: count,
+    children: (node.children ?? []).map(c => perfettoNodeToDrillDown(c, thread, rootPctOfRoot, annotations)),
+    // WT-033: 透传 findings 的 callTreeAnnotations（只在 map 命中时填，否则 undefined）
+    redlineFlag: ann?.redlineFlag ?? undefined,
+    foldChange: ann?.foldChange ?? undefined,
+    severityTag: ann?.severityTag ?? undefined,
+  };
+}
+
+/**
+ * perfetto 源的 callTree 重查：读 perfetto-profile-summary.json 的 callTrees，
+ * 按 rootMarker 名在树里搜索子树，转成 DrillDownNode。
+ * 不走 sqlite / drillDownMarker（那是 unity 工具）。
+ *
+ * @param dir  run 输出目录（含 narrative.json），形如 .../bk26b-perfetto-triad/2026-07-15_10-36-27
+ *             perfetto triad 数据在 dir 的父目录下的 cur/perfetto-profile-summary.json
+ */
+function requeryPerfettoTrees(
+  narrative: NarrativeReport,
+  refs: { key: string; rootMarker: string }[],
+  dir: string,
+): Map<string, DrillDownNode | null> {
+  const map = new Map<string, DrillDownNode | null>();
+  if (refs.length === 0) return map;
+
+  // perfetto triad 数据目录：dir 是 .../<runBase>/<timestamp>，triad root = <runBase>
+  // perfetto-profile-summary.json 在 <runBase>/cur/ 下（多态报告用 cur 态作主树）
+  const triadRoot = path.dirname(dir);  // 去掉时间戳子目录
+  const summaryPath = path.join(triadRoot, 'cur', 'perfetto-profile-summary.json');
+
+  if (!fs.existsSync(summaryPath)) {
+    console.warn(`[render-html] perfetto summary not found: ${summaryPath} — all callTrees fallback`);
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  let summary: { callTrees?: { thread?: string; root?: PerfettoNode }[] };
+  try {
+    summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8'));
+  } catch (e) {
+    console.warn(`[render-html] perfetto summary parse failed: ${(e as Error).message} — all callTrees fallback`);
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  const callTrees = Array.isArray(summary.callTrees) ? summary.callTrees : [];
+  if (callTrees.length === 0) {
+    console.warn('[render-html] perfetto callTrees empty in summary — all callTrees fallback');
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  // 用第一棵树（UnityMain）作主搜索树
+  const mainTree = callTrees[0];
+  const thread = mainTree.thread ?? 'UnityMain';
+  const root = mainTree.root;
+  if (!root) {
+    console.warn('[render-html] perfetto main tree root missing — all callTrees fallback');
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  // WT-033: 从 findings.json 读 callTreeAnnotations（explore LLM 产的节点标注），建 nodeName → annotation map
+  const annotations = loadCallTreeAnnotations(dir);
+  if (annotations.size > 0) {
+    console.log(`[render-html] loaded ${annotations.size} callTree annotations from findings.json`);
+  }
+
+  for (const ref of refs) {
+    const subtree = findPerfettoSubtree(root, ref.rootMarker);
+    if (subtree) {
+      const tree = perfettoNodeToDrillDown(subtree, thread, 1, annotations);
+      map.set(ref.key, tree);
+      console.log(`[render-html] perfetto tree OK: "${ref.rootMarker}" → ${tree.totalMsPerFrame.toFixed(2)}ms/frame`);
+    } else {
+      console.warn(`[render-html] perfetto tree NOT FOUND: "${ref.rootMarker}" — fallback to note`);
+      map.set(ref.key, null);
+    }
+  }
+  return map;
+}
+
 async function requeryTrees(
   narrative: NarrativeReport,
   dbPath: string | undefined,
+  dir: string,
 ): Promise<Map<string, DrillDownNode | null>> {
   const map = new Map<string, DrillDownNode | null>();
 
@@ -864,9 +1504,21 @@ async function requeryTrees(
       }
     });
   }
+  // WT-032: 也收集 topConclusions 的 callTree refs（key=tc::rank）
+  narrative.topConclusions.forEach((row) => {
+    if (row.callTree?.rootMarker) {
+      refs.push({ key: `tc::${row.rank}`, rootMarker: row.callTree.rootMarker });
+    }
+  });
 
   if (refs.length === 0) return map;
 
+  // perfetto 源：走 perfetto-profile.json，不走 sqlite（DR-45 断链 4 修复）
+  if (isPerfettoSource(narrative)) {
+    return requeryPerfettoTrees(narrative, refs, dir);
+  }
+
+  // unity 源：走 sqlite + drillDownMarker
   let db: ReturnType<typeof openPrismDb> | null = null;
   try {
     db = openPrismDb(dbPath);
@@ -923,6 +1575,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // DR-44 A2: provenance 强制校验——非 LLM 产出的 narrative.json 拒绝渲染。
+  // 脚本拼的 narrative.json（无 narrativeProvenance 或 generatedBy !== 'LLM'）会被拦截，
+  // 强制走 narrative LLM 阶段。
+  if (
+    !narrative.narrativeProvenance ||
+    narrative.narrativeProvenance.generatedBy !== 'LLM'
+  ) {
+    const actual = narrative.narrativeProvenance?.generatedBy ?? 'missing';
+    console.error(
+      `[render-html] ERROR: narrative.json 的 narrativeProvenance.generatedBy 不是 'LLM'（实际：${actual}）。` +
+        `脚本拼的 narrative.json 会被拒绝渲染——必须走 narrative LLM 阶段（DR-44 A2）。`,
+    );
+    process.exit(1);
+  }
+
   // Optional verdict.json for numeric metrics
   let verdict: Verdict | null = null;
   const verdictPath = path.join(dir, 'verdict.json');
@@ -938,7 +1605,7 @@ async function main(): Promise<void> {
   console.log(`[render-html] dir=${dir}  runId=${narrative.runId}  rating=${narrative.rating}`);
   console.log(`[render-html] sections=${narrative.sections.length}  topConclusions=${narrative.topConclusions.length}`);
 
-  const treesByItemKey = await requeryTrees(narrative, dbPath);
+  const treesByItemKey = await requeryTrees(narrative, dbPath, dir);
 
   const html = renderHTML({ narrative, verdict, treesByItemKey });
 
@@ -951,7 +1618,13 @@ async function main(): Promise<void> {
   console.log(`[render-html] Call-trees re-queried: ${treesByItemKey.size}`);
 }
 
-main().catch(e => {
-  console.error('[render-html] Fatal:', e);
-  process.exit(1);
-});
+// ESM: only run main() when this file is the entry point (not when imported by tests)
+import { fileURLToPath } from 'node:url';
+const __renderHtmlFilename = fileURLToPath(import.meta.url);
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === __renderHtmlFilename;
+if (isMainModule) {
+  main().catch(e => {
+    console.error('[render-html] Fatal:', e);
+    process.exit(1);
+  });
+}

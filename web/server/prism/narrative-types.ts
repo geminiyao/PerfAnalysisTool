@@ -32,6 +32,40 @@ export interface NarrativeItem {
   recommendations: string[];
   /** 严重度（叙事作者按"对整体帧率的贡献"判定，不按单帧峰值） */
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  /**
+   * 可选：视觉资产（表格/ASCII 图/矩阵），LLM 按 {{REPORT_TEMPLATE}} 注入的模板填。
+   * render 按类型渲染：table→<table>、ascii→<pre>、matrix→<table> 按 levelColumn 上色。
+   * 这是通用的（不硬编码 perfetto 特有概念），任何数据源的模板都能用。
+   */
+  visualAsset?: VisualAsset;
+}
+
+/**
+ * 视觉资产（WT-036：从顶层字段移到 section item 里，去 perfetto 特有字段污染通用 schema）。
+ * LLM 按 {{REPORT_TEMPLATE}} 注入的模板填，render 按 type 渲染。
+ * 通用类型：table（表格）/ ascii（ASCII 图）/ matrix（矩阵，按 levelColumn 上色）。
+ */
+export interface VisualAsset {
+  /** 资产类型：table（表格）/ ascii（ASCII 图）/ matrix（矩阵） */
+  type: 'table' | 'ascii' | 'matrix';
+  /** 资产标题（如"采集元信息"/"多线程宏观"/"降频判定矩阵"） */
+  title: string;
+  /** 表格数据（type=table 或 type=matrix 时填） */
+  table?: {
+    headers: string[];      // 表头
+    rows: string[][];       // 数据行
+  };
+  /** ASCII 图内容（type=ascii 时填） */
+  ascii?: {
+    content: string;         // ASCII 图文本
+    caption?: string;        // 图下方解读
+  };
+  /**
+   * 矩阵的判定档列名（type=matrix 时可选）。
+   * 指向 table.headers 里某一列的列名，该列的值是 confirmed/likely/suspected（或类似三档），
+   * render 按值上色。如 perfetto 降频矩阵的 levelColumn="判定档"。
+   */
+  levelColumn?: string;
 }
 
 /** 一个主题群（如"稳态开销群"/"偶发尖峰群"/"工作线程"/"已排除"） */
@@ -41,6 +75,20 @@ export interface NarrativeSection {
   /** 群导语（一段话，讲这一组问题的共性——如"这三项每帧都在，合计6.6ms/帧"） */
   intro?: string;
   items: NarrativeItem[];
+}
+
+/**
+ * narrative.json 产出溯源（DR-44 A2）。
+ * render-html 校验 generatedBy==='LLM'，非 LLM 拒绝渲染——
+ * 机制上拦截脚本拼的 narrative.json 绕过 narrative LLM 阶段。
+ */
+export interface NarrativeProvenance {
+  /** 产出阶段标记，固定 'narrative-llm' */
+  stage: 'narrative-llm';
+  /** narrative-prompt 版本（如 'narrative-prompt.txt@v1'） */
+  promptVersion: string;
+  /** 产出方标记——必须是 'LLM'。脚本拼的 = 'script'，会被 render-html 拒绝渲染 */
+  generatedBy: 'LLM' | 'script';
 }
 
 /** 三维定性维度：热点主要属于哪一类（可多选） */
@@ -60,6 +108,25 @@ export interface TopConclusionRow {
   dimensions?: HotspotDimension[];
   /** 单源可判性：这条结论单源能不能下定论。judgable=能判(有绝对基线/内生可比)；needsBaseline=该不该管需历史基线；needsDomainKnowledge=需业务知识 */
   judgability?: HotspotJudgability;
+  /** 可选：挂在这条结论下的调用树（render 重查渲染，复用 NarrativeItem.callTree 的 CallTreeRef 类型） */
+  callTree?: CallTreeRef;
+  /** 可选：挂在这条结论下的 ASCII 图（LLM 产文本，render 原样渲染在 <pre> 块，复用 AsciiArt 类型） */
+  asciiArt?: AsciiArt;
+}
+
+// ─────────────────────── 视觉资产类型（WT-036：通用，不硬编码 perfetto 特有概念） ───────────────────────
+// 视觉资产现在挂在 NarrativeItem.visualAsset 字段里（不再有顶层 metaInfo/threadOverview 等 perfetto 特有字段）。
+// render 层只做呈现（画表格/原样渲染 ASCII），不写判定逻辑（判定在 explore LLM）。
+// 详见上方 VisualAsset 接口。
+
+/** ASCII 图资产（通用——任何数据源的核心结论/section item 都可能挂 ASCII 图） */
+export interface AsciiArt {
+  /** 图标题（如"主线程三态状态分布"） */
+  title: string;
+  /** ASCII 图文本（原样渲染在等宽 <pre> 块，不转义换行） */
+  content: string;
+  /** 可选：图下方的一句话解读 */
+  caption?: string;
 }
 
 export interface NarrativeReport {
@@ -78,4 +145,7 @@ export interface NarrativeReport {
   sections: NarrativeSection[];
   /** 六、优化优先级汇总（P0/P1/P2 + 补采需求） */
   prioritySummary: { priority: string; action: string; benefit: string }[];
+
+  /** 产出溯源（DR-44 A2）：render-html 校验 generatedBy==='LLM'，非 LLM 拒绝渲染 */
+  narrativeProvenance: NarrativeProvenance;
 }
