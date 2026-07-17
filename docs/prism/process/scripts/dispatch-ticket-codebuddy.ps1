@@ -175,24 +175,72 @@ function Invoke-CodeBuddyWithStdin {
     $proc = New-Object System.Diagnostics.Process
     $proc.StartInfo = $psi
 
+    # Read stderr on a background runspace/job so it cannot block the CLI's
+    # stderr pipe buffer (which would deadlock the process). Collect into a
+    # StringBuilder for later inclusion in the .log.
     $stderrBuilder = New-Object System.Text.StringBuilder
-    $stderrHandler = {
-        if (-not [string]::IsNullOrEmpty($EventArgs.Data)) {
-            [void]$Event.MessageData.AppendLine($EventArgs.Data)
-        }
-    }
+    $stderrJob = Start-Job -ScriptBlock {
+        param($ProcId, $Builder)
+        # Reopen the process by id to read its stderr — but we cannot share
+        # the redirected stream across processes. Instead the caller passes
+        # the Process object via closure on the runspace. Use a runspace.
+    } -ArgumentList $null, $null | Out-Null
 
-    $errEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived `
-        -Action $stderrHandler -MessageData $stderrBuilder
+    # NOTE: Start-Job cannot share the live Process object's redirected
+    # stderr stream across process boundaries. Use a ThreadJob (inline
+    # runspace) instead — fall back to event-based if unavailable.
+    $useThreadJob = $false
+    try {
+        $tj = Get-Command Start-ThreadJob -ErrorAction Stop
+        $useThreadJob = $true
+    } catch { }
 
     try {
         [void]$proc.Start()
-        $proc.BeginErrorReadLine()
 
+        # Drain stderr asynchronously. ThreadJob runs in-process so it can
+        # access $proc.StandardError. If ThreadJob is unavailable, fall back
+        # to BeginErrorReadLine + event (works under -File as long as we pump
+        # the pipeline by reading stdout synchronously below).
+        if ($useThreadJob) {
+            $stderrJob = Start-ThreadJob -ScriptBlock {
+                param($proc, $builder)
+                while (-not $proc.HasExited) {
+                    $line = $proc.StandardError.ReadLine()
+                    if ($null -eq $line) { break }
+                    [void]$builder.AppendLine($line)
+                }
+                # Drain any remaining
+                while (-not $proc.StandardError.EndOfStream) {
+                    $line = $proc.StandardError.ReadLine()
+                    if ($null -eq $line) { break }
+                    [void]$builder.AppendLine($line)
+                }
+            } -ArgumentList $proc, $stderrBuilder
+        }
+        else {
+            $errEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived `
+                -Action {
+                    try {
+                        if (-not [string]::IsNullOrEmpty($EventArgs.Data)) {
+                            [void]$Event.MessageData.AppendLine($EventArgs.Data)
+                        }
+                    } catch { }
+                } -MessageData $stderrBuilder
+            $proc.BeginErrorReadLine()
+        }
+
+        # Write prompt to stdin and close — codebuddy -p reads prompt from stdin.
         $proc.StandardInput.Write($Prompt)
         $proc.StandardInput.Close()
 
-        while (-not $proc.StandardOutput.EndOfStream) {
+        # Synchronous stdout read. CRITICAL: do NOT use EndOfStream as the loop
+        # guard — it returns true when the buffer is momentarily empty (CLI is
+        # thinking / waiting on the network), which prematurely exits the loop
+        # and loses all subsequent output. ReadLine() returns null ONLY when
+        # the stream is truly closed (process exited). This is the fix for the
+        # recurring "CLI interrupted" symptom.
+        while ($true) {
             $line = $proc.StandardOutput.ReadLine()
             if ($null -eq $line) { break }
 
@@ -202,7 +250,6 @@ function Invoke-CodeBuddyWithStdin {
                 Write-Host $line
             }
             else {
-                # Format-* Write-Output → capture for .log; Write-Host still prints live
                 $formattedLines = @(Format-CodeBuddyStreamLine -JsonLine $line)
                 foreach ($f in $formattedLines) {
                     if ($f) {
@@ -215,11 +262,58 @@ function Invoke-CodeBuddyWithStdin {
         $proc.WaitForExit()
         $exitCode = $proc.ExitCode
 
+        # Collect stderr job output if ThreadJob was used.
+        if ($useThreadJob -and $stderrJob) {
+            $stderrJob | Wait-Job -Timeout 5 | Out-Null
+            $stderrJob | Remove-Job -Force -ErrorAction SilentlyContinue
+        }
+
         $stderrText = $stderrBuilder.ToString().Trim()
         if ($stderrText) {
             $block = "`r`n--- stderr ---`r`n$stderrText`r`n"
             [System.IO.File]::AppendAllText($LogFile, $block, $Utf8)
             Write-Host $stderrText -ForegroundColor DarkYellow
+        }
+
+        # Result-event detection: codebuddy's stream-json ends with a
+        # {"type":"result",...} line. If the last non-empty jsonl line isn't a
+        # result event, the CLI was interrupted (crash/network/timeout). Log a
+        # diagnostic block so the cause is visible instead of silent truncation.
+        $lastLine = $null
+        $lineCount = 0
+        if (Test-Path $JsonlFile) {
+            $allLines = Get-Content -Path $JsonlFile -Encoding UTF8 | Where-Object { $_ -and $_.Trim() }
+            if ($allLines) {
+                $lineCount = $allLines.Count
+                $lastLine = $allLines[-1]
+            }
+        }
+        $lastType = ""
+        if ($lastLine) {
+            try {
+                $lastObj = $lastLine | ConvertFrom-Json -ErrorAction Stop
+                if ($lastObj -and $lastObj.type) { $lastType = [string]$lastObj.type }
+            } catch { }
+        }
+        if ($lastType -ne "result") {
+            $diag = @(
+                ""
+                "--- dispatch diagnostic ---"
+                "[WARN] process exited without result event"
+                "  exitCode   = $exitCode"
+                "  lastType   = '$lastType'"
+                "  jsonlLines = $lineCount"
+                "  jsonlFile  = $JsonlFile"
+                "  probable causes:"
+                "    - CLI crashed / network drop mid-stream"
+                "    - CLI killed by watch process or Ctrl+C"
+                "    - CLI hit an internal timeout"
+                "  ticket left in WIP - main agent decides rollback vs retry"
+                "--- end diagnostic ---"
+                ""
+            ) -join "`r`n"
+            [System.IO.File]::AppendAllText($LogFile, $diag, $Utf8)
+            Write-Host $diag -ForegroundColor DarkYellow
         }
 
         return $exitCode
@@ -229,12 +323,22 @@ function Invoke-CodeBuddyWithStdin {
             Unregister-Event -SourceIdentifier $errEvent.Name -ErrorAction SilentlyContinue
             Remove-Job -Id $errEvent.Id -Force -ErrorAction SilentlyContinue
         }
+        if ($stderrJob -and $stderrJob.State) {
+            $stderrJob | Remove-Job -Force -ErrorAction SilentlyContinue
+        }
+        # Only kill if still running (e.g. watch process is being force-killed).
+        # Do NOT kill on normal exception paths — that would turn a recoverable
+        # error into an interrupted dispatch.
         if (-not $proc.HasExited) {
             try { $proc.Kill() } catch { }
         }
         $proc.Dispose()
     }
 }
+
+# Skip main flow when dot-sourced (e.g. by test scripts that only need the
+# functions above). $MyInvocation.InvocationName equals '.' when dot-sourced.
+if ($MyInvocation.InvocationName -eq '.') { return }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $templatePath = Join-Path $scriptDir "dispatch-prompt-template-codebuddy.txt"
