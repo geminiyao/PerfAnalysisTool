@@ -177,3 +177,45 @@ export async function runPostIngestAnalysis(
 
   throw new Error(`不支持的 Run 源: ${sources.join(', ')}`);
 }
+
+/**
+ * 按指定源子集分析 (Dashboard 抽屉: 用户选单源/双源/三源)。
+ * - sources 为空 → 用 run 全部源 (同 runPostIngestAnalysis)
+ * - 1 个源且是已知 skill 源 → 单源 skill
+ * - 2+ 个源 → cross-source
+ */
+export async function runAnalysisForSources(
+  runId: string,
+  sources: string[],
+  opts: RunAnalysisOptions = {},
+): Promise<{ skill: string; markdownPath?: string }> {
+  const run = getRun(runId);
+  if (!run) throw new Error(`Run 不存在: ${runId}`);
+
+  // 校验: 请求的源必须是 Run 实际含有的
+  const invalid = sources.filter(s => !run.sources.includes(s as SourceId));
+  if (invalid.length > 0) {
+    throw new Error(`Run 不含以下源: ${invalid.join(', ')} (Run 实际源: ${run.sources.join(', ')})`);
+  }
+
+  if (sources.length === 0) {
+    return runPostIngestAnalysis(runId, opts);
+  }
+
+  if (sources.length === 1 && isSingleSourceSkill(sources[0] as SourceId)) {
+    const source = sources[0] as SkillKind;
+    const res = await runSingleSourceSkillAnalysis(runId, source, {
+      ...opts,
+      targetFps: resolveUnityTargetFps(opts.targetFps, run.meta),
+    });
+    return { skill: SINGLE_SOURCE_SKILLS[source].skill, markdownPath: res.markdownPath };
+  }
+
+  if (sources.length >= 2) {
+    opts.onLog?.(`[skill] ${sources.length} 源交叉分析 (${sources.join('+')})…`);
+    const res = await generateCrossSourceAnalysisForRun(runId, { onLog: opts.onLog });
+    return { skill: 'cross-source-analysis', markdownPath: res.markdownPath };
+  }
+
+  throw new Error(`不支持的分析源组合: ${sources.join(', ')}`);
+}

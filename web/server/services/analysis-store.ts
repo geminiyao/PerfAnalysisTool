@@ -96,6 +96,58 @@ export function getAnalysisReportByRunId(runId: string): { analysis: Analysis; r
   return getAnalysisReport(match.id);
 }
 
+/** 分析摘要 (Dashboard 抽屉用: 列出 Run 的所有分析, 标注类型)。 */
+export interface AnalysisSummary {
+  id: string;
+  skill: string;
+  /** 友好类型标签: Unity单源 / simpleperf单源 / Perfetto单源 / 2源交叉 / 3源交叉 */
+  typeLabel: string;
+  status: string;
+  headline?: string;
+  hasReport: boolean;
+  createdAt: number;
+}
+
+/** skill → 中文类型标签映射。 */
+const SKILL_LABELS: Record<string, string> = {
+  'unity-profiler-analysis': 'Unity 单源',
+  'simpleperf-native-analysis': 'simpleperf 单源',
+  'perfetto-trace-analysis': 'Perfetto 单源',
+  'cross-source-analysis': '多源交叉',
+};
+
+/** 列出一个 Run 关联的所有分析任务 (含报告摘要), 按 createdAt 降序。 */
+export function listAnalysesByRunId(runId: string): AnalysisSummary[] {
+  const db = getDb();
+  const all = db.select().from(analyses).all();
+  const matched = all.filter(a => {
+    try {
+      const ids = JSON.parse(a.runIds) as string[];
+      return ids.includes(runId);
+    } catch {
+      return false;
+    }
+  });
+  return matched
+    .map(a => {
+      // 查关联报告
+      const r = a.reportId
+        ? db.select().from(analysisReports).where(eq(analysisReports.id, a.reportId)).get()
+        : db.select().from(analysisReports).where(eq(analysisReports.analysisId, a.id)).get();
+      const skill = a.skill ?? 'cross-source-analysis';
+      return {
+        id: a.id,
+        skill,
+        typeLabel: SKILL_LABELS[skill] ?? skill,
+        status: a.status,
+        headline: r?.headline ?? undefined,
+        hasReport: !!(r && r.markdown),
+        createdAt: a.createdAt,
+      } as AnalysisSummary;
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
 /** 读取某 analysis 的报告 (验收 / API)。 */
 export function getAnalysisReport(analysisId: string): { analysis: Analysis; report: Report } | null {
   const db = getDb();

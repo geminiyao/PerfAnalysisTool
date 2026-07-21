@@ -470,6 +470,7 @@ export function mergeRuns(
 export interface TriadVersionPoint {
   version: string;
   runCount: number;
+  runIds: string[];
   createdAt: number;
 }
 
@@ -497,6 +498,42 @@ export async function fetchTriadTrends(params?: {
   if (params?.scene) qs.set('scene', params.scene);
   const query = qs.toString();
   return request<TriadTrendsData>(`/runs/triad-trends${query ? `?${query}` : ''}`);
+}
+
+// ============================================================
+// 版本下钻 + 分析管理 API (Dashboard 抽屉)
+// ============================================================
+
+/** 已有分析摘要 (Dashboard 抽屉标注用) */
+export interface AnalysisSummary {
+  id: string;
+  skill: string;
+  typeLabel: string;  // Unity 单源 / simpleperf 单源 / Perfetto 单源 / 多源交叉
+  status: string;
+  headline?: string;
+  hasReport: boolean;
+  createdAt: number;
+}
+
+/** 版本下钻: 某版本下所有 Run + 各自已有分析 */
+export interface VersionRunItem extends RunListItem {
+  analyses: AnalysisSummary[];
+}
+
+export async function fetchRunsByVersion(version: string): Promise<{ version: string; items: VersionRunItem[] }> {
+  const encoded = encodeURIComponent(version);
+  return request(`/runs/by-version/${encoded}`);
+}
+
+/** 触发分析 (可选指定源子集: 单源/双源/三源) */
+export async function generateRunAnalysisWithSources(
+  runId: string,
+  opts?: { cliProvider?: CliProvider; targetFps?: number; sources?: string[] },
+) {
+  return request<{ skill: string; markdownPath?: string; analysis?: unknown; report?: unknown }>(
+    `/runs/${runId}/generate-analysis`,
+    { method: 'POST', body: JSON.stringify(opts ?? {}) },
+  );
 }
 
 // ============================================================

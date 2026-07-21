@@ -67,6 +67,7 @@ export async function triadTrendsRoutes(app: FastifyInstance) {
       return {
         version: v,
         runCount: group.length,
+        runIds: group.map(r => r.id),
         createdAt: Math.min(...group.map(r => r.createdAt)),
       };
     });

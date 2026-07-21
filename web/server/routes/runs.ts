@@ -8,11 +8,11 @@ import { FastifyInstance } from 'fastify';
 
 import { getRun, listRuns } from '../services/run-store.js';
 
-import { getAnalysisReportByRunId } from '../services/analysis-store.js';
+import { getAnalysisReportByRunId, listAnalysesByRunId } from '../services/analysis-store.js';
 
 import { compareRuns } from '../services/run-compare.js';
 
-import { runPostIngestAnalysis } from '../services/run-analysis-service.js';
+import { runPostIngestAnalysis, runAnalysisForSources } from '../services/run-analysis-service.js';
 
 import { ensureCompareFlamegraph, getCachedFlamegraphPath } from '../services/run-compare-flame.js';
 
@@ -31,6 +31,27 @@ export async function runsRoutes(app: FastifyInstance) {
     const offset = parseInt(q.offset ?? '0', 10) || 0;
 
     return listRuns(limit, offset);
+
+  });
+
+
+
+  /** GET /runs/by-version/:version — 某版本下所有 Run + 各自已有分析 (Dashboard 抽屉用) */
+
+  app.get('/runs/by-version/:version', async (request, reply) => {
+
+    const { version } = request.params as { version: string };
+
+    const { items } = listRuns(200, 0);
+
+    const matched = items.filter(r => (r.version || '(未标注版本)') === decodeURIComponent(version));
+
+    const result = matched.map(run => ({
+      ...run,
+      analyses: listAnalysesByRunId(run.id),
+    }));
+
+    return { version: decodeURIComponent(version), items: result };
 
   });
 
@@ -104,17 +125,13 @@ export async function runsRoutes(app: FastifyInstance) {
 
     const { id } = request.params as { id: string };
 
-    const body = (request.body ?? {}) as { cliProvider?: 'codebuddy' | 'claude' | 'mock'; targetFps?: number };
+    const body = (request.body ?? {}) as { cliProvider?: 'codebuddy' | 'claude' | 'mock'; targetFps?: number; sources?: string[] };
 
     try {
 
-      const result = await runPostIngestAnalysis(id, {
-
-        cliProvider: body.cliProvider,
-
-        targetFps: body.targetFps,
-
-      });
+      const result = body.sources && body.sources.length > 0
+        ? await runAnalysisForSources(id, body.sources, { cliProvider: body.cliProvider, targetFps: body.targetFps })
+        : await runPostIngestAnalysis(id, { cliProvider: body.cliProvider, targetFps: body.targetFps });
 
       const analysis = getAnalysisReportByRunId(id);
 

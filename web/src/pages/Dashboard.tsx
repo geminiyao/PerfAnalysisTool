@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Button,
   Card,
   Col,
+  Drawer,
+  Dropdown,
   Empty,
   Row,
   Select,
@@ -11,16 +14,31 @@ import {
   Spin,
   Tag,
   Typography,
+  message,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   ReloadOutlined,
   LineChartOutlined,
   AreaChartOutlined,
   BarsOutlined,
+  EyeOutlined,
+  ThunderboltOutlined,
+  DownOutlined,
+  CheckCircleOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
-import { fetchTriadTrends, listRuns, type TriadTrendsData } from '@/services/api';
+import {
+  fetchTriadTrends,
+  fetchRunsByVersion,
+  generateRunAnalysisWithSources,
+  listRuns,
+  type TriadTrendsData,
+  type VersionRunItem,
+} from '@/services/api';
 
 const { Text, Title } = Typography;
 
@@ -30,12 +48,20 @@ const TRIAD_GROUP = 'triad-trends';
 echarts.connect(TRIAD_GROUP);
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<TriadTrendsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | undefined>(undefined);
   const [device, setDevice] = useState<string | undefined>(undefined);
   const [scene, setScene] = useState<string | undefined>(undefined);
+
+  // 抽屉状态: 点击版本点 → 展开该版本的 Run 列表
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerVersion, setDrawerVersion] = useState('');
+  const [drawerItems, setDrawerItems] = useState<VersionRunItem[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState<string | null>(null); // 正在分析的 runId
 
   // 筛选器选项: 从 runs 列表提取去重
   const [projectOptions, setProjectOptions] = useState<{ label: string; value: string }[]>([]);
@@ -77,6 +103,41 @@ const Dashboard: React.FC = () => {
 
   const versions = data?.versions ?? [];
   const versionLabels = useMemo(() => versions.map(v => v.version), [versions]);
+
+  // 点击图表上的版本点 → 打开抽屉
+  const onChartClick = useCallback(async (params: any) => {
+    if (!params || params.componentType !== 'series' && params.componentType !== 'xAxis') return;
+    const version = params.name ?? params.value;
+    if (!version) return;
+    setDrawerVersion(version);
+    setDrawerOpen(true);
+    setDrawerLoading(true);
+    setDrawerItems([]);
+    try {
+      const res = await fetchRunsByVersion(version);
+      setDrawerItems(res.items);
+    } catch (e: any) {
+      message.error(`加载版本 Run 列表失败: ${e.message}`);
+    } finally {
+      setDrawerLoading(false);
+    }
+  }, []);
+
+  // 触发分析 (指定源子集)
+  const handleAnalyze = useCallback(async (runId: string, sources: string[]) => {
+    setAnalyzing(runId);
+    try {
+      await generateRunAnalysisWithSources(runId, { sources });
+      message.success('分析完成');
+      // 刷新抽屉数据
+      const res = await fetchRunsByVersion(drawerVersion);
+      setDrawerItems(res.items);
+    } catch (e: any) {
+      message.error(`分析失败: ${e.message}`);
+    } finally {
+      setAnalyzing(null);
+    }
+  }, [drawerVersion]);
 
   if (loading && !data) {
     return (
@@ -180,6 +241,7 @@ const Dashboard: React.FC = () => {
               style={{ height: 320 }}
               notMerge
               group={TRIAD_GROUP}
+              onEvents={{ click: onChartClick }}
               opts={{ renderer: 'canvas' }}
             />
           </ChartCard>
@@ -195,6 +257,7 @@ const Dashboard: React.FC = () => {
               style={{ height: 320 }}
               notMerge
               group={TRIAD_GROUP}
+              onEvents={{ click: onChartClick }}
               opts={{ renderer: 'canvas' }}
             />
           </ChartCard>
@@ -210,6 +273,7 @@ const Dashboard: React.FC = () => {
               style={{ height: 320 }}
               notMerge
               group={TRIAD_GROUP}
+              onEvents={{ click: onChartClick }}
               opts={{ renderer: 'canvas' }}
             />
           </ChartCard>
@@ -217,14 +281,162 @@ const Dashboard: React.FC = () => {
           {/* 联动说明 */}
           <Card size="small" style={{ marginTop: 8 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              提示: 三张图共用版本号横轴。拖拽任一图的缩放条, 可对照"FPS 下降的版本, simpleperf 哪个 so 涨了、Perfetto 哪个线程 Running 变高"。
+              提示: 点击任意图的版本点可下钻到该版本的 Run 列表。拖拽缩放条可三图联动, 对照"FPS 下降的版本, simpleperf 哪个 so 涨了、Perfetto 哪个线程 Running 变高"。
             </Text>
           </Card>
         </>
       )}
+
+      {/* 版本下钻抽屉 */}
+      <Drawer
+        title={`版本 ${drawerVersion} · Run 列表`}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        width={620}
+      >
+        <VersionRunDrawer
+          items={drawerItems}
+          loading={drawerLoading}
+          analyzing={analyzing}
+          onAnalyze={handleAnalyze}
+          onViewRun={(runId) => { setDrawerOpen(false); navigate(`/runs/${runId}`); }}
+        />
+      </Drawer>
     </div>
   );
 };
+
+// ============================================================
+// 源组合 → 分析选项生成
+// ============================================================
+
+const SOURCE_LABELS: Record<string, string> = {
+  unity_profiler: 'Unity',
+  simpleperf: 'simpleperf',
+  perfetto: 'Perfetto',
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  unity_profiler: 'green',
+  simpleperf: 'blue',
+  perfetto: 'purple',
+};
+
+/** 根据 Run 的 sources 生成可分析选项 (单源 + 多源组合)。 */
+function buildAnalysisOptions(sources: string[]): { label: string; sources: string[] }[] {
+  const opts: { label: string; sources: string[] }[] = [];
+  // 单源
+  for (const s of sources) {
+    opts.push({ label: `${SOURCE_LABELS[s] ?? s} 单源`, sources: [s] });
+  }
+  // 全源交叉
+  if (sources.length >= 2) {
+    opts.push({
+      label: sources.length === 2 ? '双源交叉' : sources.length === 3 ? '三源交叉' : `${sources.length} 源交叉`,
+      sources,
+    });
+  }
+  return opts;
+}
+
+/** 抽屉内的 Run 列表 */
+function VersionRunDrawer({
+  items,
+  loading,
+  analyzing,
+  onAnalyze,
+  onViewRun,
+}: {
+  items: VersionRunItem[];
+  loading: boolean;
+  analyzing: string | null;
+  onAnalyze: (runId: string, sources: string[]) => void;
+  onViewRun: (runId: string) => void;
+}) {
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载 Run 列表..." /></div>;
+  }
+  if (items.length === 0) {
+    return <Empty description="该版本暂无 Run" />;
+  }
+
+  return (
+    <Space direction="vertical" size={12} style={{ width: '100%' }}>
+      {items.map(run => {
+        const analysisOptions = buildAnalysisOptions(run.sources);
+        const menuItems: MenuProps['items'] = analysisOptions.map(opt => ({
+          key: opt.sources.join('+'),
+          label: opt.label,
+          onClick: () => onAnalyze(run.id, opt.sources),
+        }));
+
+        return (
+          <Card key={run.id} size="small" bodyStyle={{ padding: 12 }}>
+            {/* 第一行: 源标签 + 设备/场景 */}
+            <Space wrap size={[6, 6]}>
+              {run.sources.map(s => (
+                <Tag key={s} color={SOURCE_COLORS[s] ?? 'default'} style={{ fontSize: 11 }}>
+                  {SOURCE_LABELS[s] ?? s}
+                </Tag>
+              ))}
+              <Text style={{ fontSize: 12 }}>{run.device || '—'} / {run.scene || '—'}</Text>
+            </Space>
+
+            {/* 第二行: 时间 + label */}
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                {dayjs(run.createdAt).format('MM-DD HH:mm')}
+                {run.label ? ` · ${run.label}` : ''}
+              </Text>
+            </div>
+
+            {/* 第三行: 已有分析 */}
+            {run.analyses.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: 11 }}>已有 AI 分析:</Text>
+                <Space wrap size={[4, 4]} style={{ marginTop: 4 }}>
+                  {run.analyses.map(a => (
+                    <Tag
+                      key={a.id}
+                      icon={a.hasReport ? <CheckCircleOutlined /> : undefined}
+                      color={a.hasReport ? 'success' : 'default'}
+                      style={{ fontSize: 11, cursor: 'pointer' }}
+                      onClick={() => onViewRun(run.id)}
+                    >
+                      {a.typeLabel}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            {/* 第四行: 操作按钮 */}
+            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => onViewRun(run.id)}
+              >
+                查看详情
+              </Button>
+              <Dropdown menu={{ items: menuItems }}>
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  icon={<ThunderboltOutlined />}
+                  loading={analyzing === run.id}
+                >
+                  新建分析 <DownOutlined />
+                </Button>
+              </Dropdown>
+            </div>
+          </Card>
+        );
+      })}
+    </Space>
+  );
+}
 
 function ChartCard({
   icon,
