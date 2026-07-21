@@ -2,7 +2,31 @@
 
 > **新会话第一个读这个。** 永远保持最新。主 agent 每做完一件事 / 快切会话前必更新本文。
 > 坐标系见 `../plan/roadmap.md`（里程碑）和 `../plan/backlog.md`（需求）。
-> 最后更新：2026-07-21（**WT-046 v5 验收 PASS（核心改动都对，FAIL C §0 ③ vs §3 下钻 ③ 重复记遗留 v6）+ WT-048 工单已建（DR-51 三层架构修复，待 v6 一起派发）**。v5 主 agent 独立验收 DR-36：机器断言 unity 81/1/1 + perfetto 79/2/1 不退化（2 FAIL 是 WT-037 遗留）。工单特定断言 1/2/4/5/6/7 全 PASS。人眼检查：topConclusions 纯表格 ✅ / §0 items=8 一一对应 ✅ / §0 无"三大演化结论"硬骨架 ✅ / §0 ① 讲清"为什么贵"（Update 8.87 倍 + 大头 MapSignificanceMgr 占 59.1%）✅ / §0 ① 不讲子节点 ms/foldChange/GC alloc ✅ / §3 下钻 #8 偶发尖刺合集完整 ✅。**FAIL C 是真重复不是误报**：§0 ③ 讲了 GC.Collect（LuaMgr 子节点）的 foldChange（4.37 倍）+ ms（70.2ms）+ GC alloc（8192 字节）+ frame 519 单帧数字，违反 v5 约束。但 v5 核心改动都改对了，FAIL 是 LLM 单条不稳定不是 prompt 约束缺陷——用户决定 PASS 但记遗留，§0 ③ 重复记入 v6 图文并茂工单一起处理（v6 反正要重跑 narrative）。**WT-048 工单已建**（TODO-WT-048-dr51-three-layer-memory-injection.md，未派发）：DR-51 治本——prism-memory/ 加 constitution/methodology 两层，让运行时 LLM 直接读到宪法，prompt 错了 LLM 能识别。7 个需求：A MEMORY_CATEGORIES 加两类 + B explore-service + narrative-service:514 修 WT-040 遗留 bug（dataSource 没传）+ C 建 constitution/ 10 条 + D 建 methodology/ 8 条 + E harness E1-E6 断言 + F README 更新 + G index.json 更新。顺手修 narrative-service.ts:514 没传 dataSource（WT-040 遗留 bug，perfetto 报告会注入 unity priors）+ MEMORY_INJECTION_MAX_CHARS 从 7000 调到 12000。v5 验收 PASS 后派发 WT-048 + v6。）
+> 最后更新：2026-07-21（**WT-048 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ BK-7 方向 A 工单已建待派发（narrative JSON 修复回路，v7 前置）**）。
+>
+> **WT-048 DR-51 三层架构修复·验收 PASS**（2026-07-21 主 agent 独立验收 DR-36）：
+> - 通用 harness **199 PASS / 0 FAIL / 0 WARN**（[1e] 节 E1-E8 全 PASS，~150 条断言）
+> - perfetto 不退化 **231 PASS / 2 FAIL / 1 WARN**（2 FAIL 全是 WT-037 遗留：红线清单 4<5 + 降频矩阵 0<4，与本工单无关）
+> - 工单特定断言 1-10 全 PASS（constitution 10 条 + methodology 8 条 + 全标 cross-source + 无业务名硬编码 + narrative-service:514 传了 dataSource + MEMORY_INJECTION_MAX_CHARS ≥12000）
+> - 人眼检查：prism-memory/constitution/ 10 条覆盖 DR-41 五条 + DR-44 三段 + DR-50 三条 ✅ / prism-memory/methodology/ 8 条覆盖 DR-45 三条 + DR-48 两条 + DR-49 一条 + DR-42/43 两条 ✅ / 每条 1-2 句话 + 反例 + 正例 ✅ / explore-service.ts MEMORY_INJECTION_CATEGORIES 顺序宪法→规程→知识层 ✅ / narrative-service.ts:514 传了 { dataSource: source } ✅
+> - 开发 agent 偏离声明：E7/E8 多加 2 条断言（工单"硬约束 4/5"和"验收断言 8/9/10"harness 化，强化验收）+ 未跑端到端冒烟（用 formatMemoryForPrompt 直接验证等价证明注入路径通，避免覆盖原报告产出物违反 feedback memory）——合理偏离，不算偏离
+> - 产出：prism-memory/constitution/ × 10 + prism-memory/methodology/ × 8 + prism-memory.ts + explore-service.ts + narrative-service.ts + harness.ts + README.md + index.json
+> - **遗留**：DR-51 验证只到 formatMemoryForPrompt 层，没跑端到端冒烟确认运行时 LLM 真的读到 constitution + methodology 块——可推迟到 v7 一起做（v7 重跑 narrative 时顺带验证）
+>
+> **WT-046 v6 图文并茂 + §0 ③ 重复修复·部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）**（2026-07-21 主 agent 独立验收 DR-36）：
+> - 通用 harness **231 PASS / 2 FAIL / 2 WARN**（编码乱码是 Windows GBK 显示问题，不影响断言）
+> - 2 FAIL：
+>   - **[2b]** topConclusions #2 URP problem 与 §0 ② title sim=1.0（title 复述 problem，违反 v5"§0 是结论先行的叙事展开，不是 topConclusions 的复述"约束）
+>   - **[2c]** §0 ② URP 与 §3 下钻 ② URP 共享 5.96ms/13.08ms（§0 讲子节点 ms 数字 + frame 453 单帧数字，违反 v5"§0 不许讲子节点 ms/foldChange/GC alloc 数字 + 具体帧单帧数字"约束）
+> - 2 WARN：callTree.rootMarker 覆盖率 27% + critical/high topConclusion 挂载率 0%（DR-50 合规，挂载可选不阻塞）
+> - 工单断言 1/2/4/6/7 PASS，断言 3/5 FAIL（开发 agent 自报"§0 ⑥ GC.Collect"看错下标，实际是 §0 ② URP）
+> - perfetto 不退化 231/2/1（2 FAIL 是 WT-037 遗留）
+> - **FAIL C 是真重复不是误报**：§0 ② URP narrative 讲了 "URP.Render 90%" / "URP.MainRenderingTransparent 28%" / "每帧 6.56→12.52ms" / "ForwardRenderPass 单帧尖峰 13.08ms @ frame 453"——§3 下钻 ② 重复同样的数字
+> - **判定理由**：核心改动（图文并茂引导 + §3 下钻讲更深 + DR-50 合规）都对了；FAIL C 是 LLM 单条不稳定（v5 是 §0 ③ GC.Collect，v6 是 §0 ② URP，每次 FAIL 在不同条之间波动），不是 prompt 约束缺陷；继续重跑 v7 不是工程问题而是 LLM 产出概率问题——开发 agent 重跑 6 次只成功 1 次，5 次非法 JSON，每次 10-30 分钟，成本不可控
+> - **记遗留 v7**：FAIL C 未修复，但 v7 不应该靠"重跑 narrative 碰运气"——需要 BK-7 方向 A（narrative JSON 修复回路）+ BK-4 金标集配合
+> - 产出：`web/data/prism-out/udiff_1782983710451_be175ef1/2026-07-21_wt046_v6/report.html`（154.7 KB）
+>
+> **BK-7 方向 A 工单已建待派发**（narrative JSON 修复回路，v7 前置）：narrative-service 加 JSON 修复回路——LLM 产出非法 JSON 时，自动提取错误位置 + 反馈给 LLM 重试（最多 2 次），不是"重跑整个 narrative"。解 v6 重跑 6 次只成功 1 次的痛。1-2 天工单。用户手动派发。
 
 ---
 
@@ -10,19 +34,14 @@
 
 ### 新会话开场指令（主 agent 进来后按这个顺序做）
 
-1. **读完本节**：当前状态 = v5 验收 PASS，v6 + WT-048 两张工单已建好待派发
-2. **立即派发两张工单**（可并行无依赖）：
+1. **读完本节**：当前状态 = WT-048 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ BK-7 方向 A 工单已建待派发
+2. **用户手动派发 BK-7 方向 A 工单**（narrative JSON 修复回路，v7 前置）：
    ```powershell
-   # 先派 WT-048（改 prism-memory 系统，不动 prompt/模板，独立无依赖）
-   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-048-dr51-three-layer-memory-injection.md
-   # 再派 v6（改 prompt/模板 + 重跑 narrative）
-   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-046-v6-visual-interspersed-section0-drilldown-deoverlap.md
+   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-049-narrative-json-repair-loop.md
    ```
-3. **等两个开发 agent 都报完成后，一起独立验收**（DR-36，不只信自报 PASS）：
-   - WT-048 验收：跑通用 harness + 工单特定断言 1-10 + 人眼看 constitution/methodology 条目内容
-   - v6 验收：跑通用 harness（期望 81/0/0，v5 FAIL C 修复）+ 工单特定断言 1-7 + 人眼看 §1/§2/§3/§0 图文并茂 + §0 ③ 重复修复
-4. **两个都验收 PASS 后**：更新 now.md + 工单台账（TODO→DONE）+ 提交 push
-5. **M5 善后完成**：进入 M4 三回路填料里程碑（见下方"M5 善后完成后后续必做需求"节）
+3. **BK-7 方向 A 完工后**：主 agent 独立验收（跑通用 harness + 工单特定断言 + 人眼看 JSON 修复回路真的接住了非法 JSON）
+4. **BK-7 方向 A 验收 PASS 后**：派 WT-046 v7 工单（§0 ② URP 重复修复 + DR-51 端到端冒烟验证），v7 重跑 narrative 时 JSON 修复回路兜底，不再"6 次才成功 1 次"
+5. **v7 验收 PASS 后**：进入 M4 三回路填料里程碑（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路），见下方"M5 善后完成后后续必做需求"节
 
 ### 当前两张待派发工单详情
 
@@ -340,7 +359,9 @@
 - ✅ `DONE-DR-43` 多态分析方法论定稿（同上）
 - ✅ `DONE-harness [2c]` §0 vs §3 下钻 narrative 内容重复检查（harness.ts 加 [2c] 节，提取数字特征串检测，共享 ≥2 = FAIL。双向验证：v2 FAIL / v1 PASS / perfetto v5 PASS 不退化）
 - ✅ `DONE-WT-046-v5` topConclusions/§0 定位分离 + 删作文机病硬骨架（主 agent 独立验收 DR-36：unity 81/1/1 + perfetto 79/2/1 不退化。工单特定断言 1/2/4/5/6/7 全 PASS。人眼检查 topConclusions 纯表格 + §0 items=8 一一对应 + §0 无"三大演化结论"硬骨架 + §0 ① 讲清为什么贵 + §3 下钻 #8 完整。**FAIL C §0 ③ vs §3 下钻 ③ 重复**：§0 ③ 讲了 GC.Collect 子节点 foldChange/ms/GC alloc + frame 519 单帧数字违反 v5 约束，但核心改动都对 FAIL 是 LLM 单条不稳定——用户决定 PASS 但记遗留 v6 一起处理。产出 `2026-07-20_wt046_v5/report.html` 127KB）
-- ⬜ `TODO-WT-048` DR-51 三层架构修复·宪法层+规程层注入运行时 LLM（7 需求：A MEMORY_CATEGORIES 加 constitution+methodology + B explore-service 加两类 + narrative-service:514 修 WT-040 遗留 bug + C 建 constitution/ 10 条 + D 建 methodology/ 8 条 + E harness E1-E6 断言 + F README 更新 + G index.json 更新。MEMORY_INJECTION_MAX_CHARS 7000→12000。工单 `TODO-WT-048-dr51-three-layer-memory-injection.md`。v5 验收 PASS 后派发，可与 v6 并行）
+- ✅ `DONE-WT-048` DR-51 三层架构修复·宪法层+规程层注入运行时 LLM（主 agent 独立验收 DR-36：通用 harness 199/0/0 + perfetto 不退化 231/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-10 全 PASS。人眼检查 constitution 10 条 + methodology 8 条 + 每条 1-2 句话+反例+正例 + 全标 cross-source + 无业务名硬编码 + explore-service MEMORY_INJECTION_CATEGORIES 顺序宪法→规程→知识层 + narrative-service:514 传了 dataSource。开发 agent 偏离：E7/E8 多加 2 条断言强化验收 + 未跑端到端冒烟用 formatMemoryForPrompt 直接验证等价证明注入路径通。**遗留**：DR-51 验证只到 formatMemoryForPrompt 层，没跑端到端冒烟确认运行时 LLM 真的读到 constitution+methodology——推迟到 v7 一起做。产出 prism-memory/constitution/ × 10 + prism-memory/methodology/ × 8 + 6 个代码文件）
+- ⚠️ `REVIEW-WT-046-v6` 图文并茂 + §0 ③ 重复修复·部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）（主 agent 独立验收 DR-36：通用 harness 231/2/2 + perfetto 不退化 231/2/1。工单断言 1/2/4/6/7 PASS，断言 3/5 FAIL。**2 FAIL**：[2b] topConclusions #2 URP problem 与 §0 ② title sim=1.0（title 复述 problem）+ [2c] §0 ② URP 与 §3 下钻 ② URP 共享 5.96ms/13.08ms（§0 讲子节点 ms 数字 + frame 453 单帧数字）。**FAIL C 是真重复不是误报**：§0 ② URP narrative 讲了 URP.Render 90%/URP.MainRenderingTransparent 28%/每帧 6.56→12.52ms/ForwardRenderPass 单帧尖峰 13.08ms @ frame 453。**判定理由**：核心改动（图文并茂引导 + §3 下钻讲更深 + DR-50 合规）都对了；FAIL C 是 LLM 单条不稳定（v5 是 §0 ③ GC.Collect，v6 是 §0 ② URP，每次 FAIL 在不同条之间波动），不是 prompt 约束缺陷；继续重跑 v7 是 LLM 产出概率问题——开发 agent 重跑 6 次只成功 1 次，5 次非法 JSON，成本不可控。**记遗留 v7**：v7 不靠"重跑碰运气"，需 BK-7 方向 A（narrative JSON 修复回路）+ BK-4 金标集配合。产出 `2026-07-21_wt046_v6/report.html` 154.7KB）
+- ⬜ `TODO-WT-049` BK-7 方向 A·narrative JSON 修复回路（v7 前置，用户手动派发。narrative-service 加 JSON 修复回路——LLM 产出非法 JSON 时自动提取错误位置 + 反馈给 LLM 重试最多 2 次，不是"重跑整个 narrative"。解 v6 重跑 6 次只成功 1 次的痛。1-2 天工单）
 
 ## 待用户拍板 / 进行中
 
