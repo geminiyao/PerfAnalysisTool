@@ -370,6 +370,89 @@ if (reportIfaceMatch) {
 //     WT-035 警告 1 的 visualAssetKeys = ['metaInfo', ...] 是过渡方案，WT-036 后应删
 assert(!/visualAssetKeys\s*=\s*\[/.test(typesSrc), 'narrative-types.ts 无 visualAssetKeys 顶层字段数组（WT-036 后改为扫 item.visualAsset）');
 
+// ─────────────────────── 1e. DR-51 三层架构注入路径检查 ───────────────────────
+// DR-51：宪法层（constitution/）+ 规程层（methodology/）必须通过 {{MEMORY_INJECTION}} 注入运行时 LLM。
+// 当前架构缺陷：宪法+规程只给开发 agent 看（docs/prism/memory/），运行时 LLM 读不到，
+// 导致 prompt 错了 LLM 跟着错（DR-51 触发事件：narrative-prompt.txt"必须挂 callTree"违反 DR-50）。
+
+console.log('\n[1e] DR-51 三层架构注入路径检查（constitution + methodology 注入运行时 LLM）');
+
+// E1. prism-memory/constitution/ 目录存在且非空
+const constitutionDir = path.join(__dirname, 'prism-memory', 'constitution');
+if (fs.existsSync(constitutionDir)) {
+  const constitutionFiles = fs.readdirSync(constitutionDir).filter(f => f.endsWith('.md') && f !== 'README.md');
+  assert(constitutionFiles.length >= 10, `prism-memory/constitution/ 有 ≥10 条宪法条目（DR-41 五条 + DR-44 三段 + DR-50 三条）`, {
+    count: constitutionFiles.length,
+  });
+} else {
+  assert(false, 'prism-memory/constitution/ 目录存在（DR-51 宪法层注入路径）');
+}
+
+// E2. prism-memory/methodology/ 目录存在且非空
+const methodologyDir = path.join(__dirname, 'prism-memory', 'methodology');
+if (fs.existsSync(methodologyDir)) {
+  const methodologyFiles = fs.readdirSync(methodologyDir).filter(f => f.endsWith('.md') && f !== 'README.md');
+  assert(methodologyFiles.length >= 8, `prism-memory/methodology/ 有 ≥8 条规程条目（DR-45 三条 + DR-48 两条 + DR-49 一条 + DR-42/43 两条）`, {
+    count: methodologyFiles.length,
+  });
+} else {
+  assert(false, 'prism-memory/methodology/ 目录存在（DR-51 规程层注入路径）');
+}
+
+// E3. prism-memory.ts MEMORY_CATEGORIES 注册了 constitution + methodology
+const prismMemorySrc = fs.readFileSync(path.join(__dirname, 'prism-memory.ts'), 'utf-8');
+assert(/name:\s*['"]constitution['"]/.test(prismMemorySrc), 'prism-memory.ts MEMORY_CATEGORIES 注册了 constitution 类');
+assert(/name:\s*['"]methodology['"]/.test(prismMemorySrc), 'prism-memory.ts MEMORY_CATEGORIES 注册了 methodology 类');
+
+// E4. explore-service.ts MEMORY_INJECTION_CATEGORIES 包含 constitution + methodology
+const exploreServiceSrc = fs.readFileSync(path.join(__dirname, 'explore-service.ts'), 'utf-8');
+assert(/['"]constitution['"]/.test(exploreServiceSrc), 'explore-service.ts MEMORY_INJECTION_CATEGORIES 包含 constitution');
+assert(/['"]methodology['"]/.test(exploreServiceSrc), 'explore-service.ts MEMORY_INJECTION_CATEGORIES 包含 methodology');
+
+// E5. narrative-service.ts 的 formatMemoryForPrompt 调用传了 dataSource 参数（WT-040 遗留 bug 修复）
+const narrativeServiceSrc = fs.readFileSync(path.join(__dirname, 'narrative-service.ts'), 'utf-8');
+assert(/formatMemoryForPrompt\(\s*\{\s*dataSource:\s*source\s*\}\s*\)/.test(narrativeServiceSrc), 'narrative-service.ts:514 formatMemoryForPrompt 传了 dataSource 参数（WT-040 遗留 bug 修复）', {
+  hint: 'DR-51 顺手修 WT-040 遗留 bug：narrative-service.ts:514 没传 dataSource，perfetto 报告会注入 unity priors',
+});
+
+// E6. constitution/methodology 条目都标 dataSource: cross-source（按数据源筛选时不被过滤）
+if (fs.existsSync(constitutionDir)) {
+  for (const f of fs.readdirSync(constitutionDir).filter(f => f.endsWith('.md') && f !== 'README.md')) {
+    const content = fs.readFileSync(path.join(constitutionDir, f), 'utf-8');
+    assert(/dataSource:\s*cross-source/.test(content), `constitution/${f} 标了 dataSource: cross-source（按数据源筛选时不被过滤）`);
+  }
+}
+if (fs.existsSync(methodologyDir)) {
+  for (const f of fs.readdirSync(methodologyDir).filter(f => f.endsWith('.md') && f !== 'README.md')) {
+    const content = fs.readFileSync(path.join(methodologyDir, f), 'utf-8');
+    assert(/dataSource:\s*cross-source/.test(content), `methodology/${f} 标了 dataSource: cross-source（按数据源筛选时不被过滤）`);
+  }
+}
+
+// E7. MEMORY_INJECTION_MAX_CHARS 调到 ≥12000（容纳 18 条新条目）
+assert(/MEMORY_INJECTION_MAX_CHARS\s*=\s*1[2-9]\d{3}/.test(exploreServiceSrc) || /MEMORY_INJECTION_MAX_CHARS\s*=\s*[2-9]\d{4}/.test(exploreServiceSrc), 'MEMORY_INJECTION_MAX_CHARS ≥ 12000（容纳 constitution + methodology + 知识层）', {
+  hint: 'DR-51：从 7000 调到 12000，容纳 constitution (~3000) + methodology (~2400) + 知识层 (~6600)',
+});
+
+// E8. constitution/methodology 条目无业务名硬编码（DR-41 §六）
+const businessNameRes = [/LuaMgr/, /MapSignificance/, /BattleHead/, /ArmyLine/, /行军线/, /MapManager/, /OutSideView/];
+if (fs.existsSync(constitutionDir)) {
+  for (const f of fs.readdirSync(constitutionDir).filter(f => f.endsWith('.md') && f !== 'README.md')) {
+    const content = fs.readFileSync(path.join(constitutionDir, f), 'utf-8');
+    for (const re of businessNameRes) {
+      assert(!re.test(content), `constitution/${f} 无业务名硬编码: ${re.source}`);
+    }
+  }
+}
+if (fs.existsSync(methodologyDir)) {
+  for (const f of fs.readdirSync(methodologyDir).filter(f => f.endsWith('.md') && f !== 'README.md')) {
+    const content = fs.readFileSync(path.join(methodologyDir, f), 'utf-8');
+    for (const re of businessNameRes) {
+      assert(!re.test(content), `methodology/${f} 无业务名硬编码: ${re.source}`);
+    }
+  }
+}
+
 // ─────────────────────── 2. narrative.json 结构契约 ───────────────────────
 // DR-45 §3.2：narrative LLM 产出后，校验 sections 结构是否符合模板章节骨架。
 // 需 --dir 指向 run 输出目录。

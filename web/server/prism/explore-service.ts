@@ -16,11 +16,13 @@ import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { resolveCliExecutable, spawnCliProcess, cliUnavailableHint } from '../utils/cli-resolver.js';
 import { getConfig } from '../utils/config.js';
-import { appendMemory, loadMemory, type MemoryCategory } from './prism-memory.js';
+import { appendMemory, loadMemory, type MemoryCategory, type MemoryEntry } from './prism-memory.js';
 import type { Finding, DataRequest, ExploreResult } from './types.js';
 
 /** Categories injected at explore startup (M3-B). Adjust here, not inline in formatters. */
 export const MEMORY_INJECTION_CATEGORIES: MemoryCategory[] = [
+  'constitution',   // DR-51 宪法层（DR-41/44/50）
+  'methodology',    // DR-51 规程层（DR-45/48/49）
   'priors',
   'knowledge',
   'lessons',
@@ -30,8 +32,11 @@ export const MEMORY_INJECTION_CATEGORIES: MemoryCategory[] = [
 /** M3-C: persist run DataRequests into capabilities/ at explore end (default on). */
 export const DATA_REQUEST_MEMORY_PERSIST_ENABLED = true;
 
-/** Max characters for the {{MEMORY_INJECTION}} block (~7KB). */
-export const MEMORY_INJECTION_MAX_CHARS = 7000;
+/**
+ * Max characters for the {{MEMORY_INJECTION}} block.
+ * DR-51: 从 7000 调到 12000，容纳 constitution (~3000) + methodology (~2400) + 知识层 (~6600)。
+ */
+export const MEMORY_INJECTION_MAX_CHARS = 12000;
 
 // ─────────────────────────────────────────────
 // M3-B: memory injection for explore prompt
@@ -40,26 +45,56 @@ export const MEMORY_INJECTION_MAX_CHARS = 7000;
 export interface FormatMemoryForPromptOptions {
   /** Override memory root (tests). */
   root?: string;
+  /**
+   * 数据源筛选（WT-040 / DR-45 §二）：给定后只注入该数据源 + cross-source + 无 dataSource 字段的旧条目。
+   * 未给定 → 注入全部（兼容现有行为）。
+   */
+  dataSource?: 'unity' | 'perfetto' | 'simpleperf';
 }
 
-/** Load persistent brain entries and format as compact reference text for the explore prompt. */
+/**
+ * Load persistent brain entries and format as compact reference text for the explore prompt.
+ *
+ * WT-040: 当 opts.dataSource 给定时，按数据源筛选——只保留该数据源条目 + cross-source 通用条目
+ * + 无 dataSource 字段的旧条目（兼容期，避免老条目被过滤导致 explore 退化）。
+ */
 export function formatMemoryForPrompt(opts?: FormatMemoryForPromptOptions): string {
   const { byCategory } = loadMemory({
     categories: MEMORY_INJECTION_CATEGORIES,
     root: opts?.root,
   });
 
+  const dataSource = opts?.dataSource;
+  const filterByDataSource = (entries: MemoryEntry[]): MemoryEntry[] => {
+    if (!dataSource) return entries;
+    return entries.filter((e) => {
+      // 旧条目无 dataSource 字段 → 包含（兼容期，不排除）
+      if (e.dataSource === undefined) return true;
+      // 该数据源条目 → 包含
+      if (e.dataSource === dataSource) return true;
+      // 跨源通用条目 → 包含
+      if (e.dataSource === 'cross-source') return true;
+      // 其它数据源 → 排除
+      return false;
+    });
+  };
+
   // Per-category budget so a large category (e.g. 79 priors) can't starve
   // later categories (e.g. freshly-sedimented capabilities). Split the total
   // budget across categories that actually have entries.
-  const activeCats = MEMORY_INJECTION_CATEGORIES.filter((c) => byCategory[c]?.length);
+  // WT-040: 先按 dataSource 筛选，再算 activeCats（避免某分类筛完后为空仍占预算）
+  const byCategoryFiltered: Record<string, MemoryEntry[]> = {};
+  for (const cat of MEMORY_INJECTION_CATEGORIES) {
+    byCategoryFiltered[cat] = filterByDataSource(byCategory[cat] ?? []);
+  }
+  const activeCats = MEMORY_INJECTION_CATEGORIES.filter((c) => byCategoryFiltered[c]?.length);
   if (activeCats.length === 0) return '';
   const perCatBudget = Math.floor(MEMORY_INJECTION_MAX_CHARS / activeCats.length);
 
   const blocks: string[] = [];
 
   for (const cat of activeCats) {
-    const catEntries = byCategory[cat]!;
+    const catEntries = byCategoryFiltered[cat]!;
     const catLines: string[] = [`## ${cat} (${catEntries.length})`];
     let catChars = catLines[0].length + 1;
     let catTruncated = false;
@@ -157,7 +192,7 @@ function formatDataRequestContent(dr: DataRequest): string {
 /** Append run DataRequests to capabilities/ (incremental; same id overwrites, never clears). */
 export function persistDataRequestsToMemory(
   dataRequests: DataRequest[],
-  opts?: { runId?: string; root?: string; enabled?: boolean },
+  opts?: { runId?: string; root?: string; enabled?: boolean; dataSource?: 'unity' | 'perfetto' | 'simpleperf' },
 ): number {
   const enabled = opts?.enabled ?? DATA_REQUEST_MEMORY_PERSIST_ENABLED;
   if (!enabled || dataRequests.length === 0) {
@@ -178,6 +213,8 @@ export function persistDataRequestsToMemory(
           title,
           content: formatDataRequestContent(dr),
           source,
+          // WT-040: 沉淀时带上数据源，避免跨源噪音（unity explore 不再注入 perfetto 的 capabilities）
+          ...(opts?.dataSource ? { dataSource: opts.dataSource } : {}),
         },
         { root: opts?.root },
       );
@@ -258,6 +295,13 @@ export interface RunPrismExploreOpts {
   timeoutMs?: number;
   /** F8 判定基准：帧预算 ms/帧。默认取 aoe-watch-spec deviceTier 默认 16.67 (60fps)。 */
   frameBudgetMs?: number;
+  /**
+   * 数据源标识（DR-44 B1）：决定加载哪个 explore-prompt。
+   * - 'unity'（默认）：prompts/unity-explore-prompt.txt（Unity marker 工具集）
+   * - 'perfetto'：prompts/perfetto-explore-prompt.txt（Perfetto JSON 工具集）
+   * 路由到不同 prompt，但复用同一份 spawn CLI + ledger + verify 逻辑。
+   */
+  source?: 'unity' | 'perfetto';
 }
 
 // ─────────────────────────────────────────────
@@ -657,7 +701,8 @@ export function verifyFindings(
 export async function runPrismExplore(
   opts: RunPrismExploreOpts = {},
 ): Promise<ExploreRunResult> {
-  const runId = opts.runId ?? 'unity-outside-stressmove';
+  const source = opts.source ?? 'unity';
+  const runId = opts.runId ?? (source === 'perfetto' ? 'bk26b-perfetto-triad' : 'unity-outside-stressmove');
   const config = getConfig();
 
   // Resolve repo root robustly: this file is at web/server/prism/, so ../../.. from __dirname
@@ -680,8 +725,12 @@ export async function runPrismExplore(
   const verdictPath = path.join(outputDir, 'verdict.json');
   const exploreResultPath = path.join(outputDir, 'explore-result.json');
 
-  // Read and substitute prompt template
-  const promptTemplatePath = path.join(__dirname, 'prompts', 'explore-prompt.txt');
+  // Read and substitute prompt template.
+  // DR-44 B1: 按 source 路由到不同 explore-prompt（unity / perfetto），复用同一份 spawn+ledger+verify 逻辑。
+  const promptFileName = source === 'perfetto'
+    ? 'perfetto-explore-prompt.txt'
+    : 'unity-explore-prompt.txt';
+  const promptTemplatePath = path.join(__dirname, 'prompts', promptFileName);
   if (!fs.existsSync(promptTemplatePath)) {
     return makeError(runId, ledgerPath, findingsPath, `Prompt template not found: ${promptTemplatePath}`);
   }
@@ -696,7 +745,7 @@ export async function runPrismExplore(
   const targetFps = Math.round(1000 / frameBudgetMs);
   promptText = promptText.replace(/\{\{FRAME_BUDGET_MS\}\}/g, String(frameBudgetMs));
   promptText = promptText.replace(/\{\{TARGET_FPS\}\}/g, String(targetFps));
-  promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt());
+  promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt({ dataSource: source }));
 
   // Resolve CLI
   const provider = opts.cliProvider ?? 'codebuddy';
@@ -873,7 +922,7 @@ export async function runPrismExplore(
 
       // M3-C: sediment DataRequests into persistent brain capabilities/ (incremental, never clear).
       try {
-        const persisted = persistDataRequestsToMemory(dataRequests, { runId });
+        const persisted = persistDataRequestsToMemory(dataRequests, { runId, dataSource: source });
         if (persisted > 0) {
           console.log(`[explore] Persisted ${persisted} DataRequest(s) to capabilities memory`);
         }

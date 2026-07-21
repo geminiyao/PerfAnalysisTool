@@ -2,14 +2,21 @@
 
 Prism 跨 run 的持久记忆存储区。每次探索 run 不再"空白投胎"——M3-B 开局从此加载注入 prompt，M3-C 收尾往此写回。
 
-## 四类内容
+## 七类内容（DR-51 三层架构）
 
-| 分类 | 目录 | 装什么 |
-|------|------|--------|
-| **priors** | `priors/` | 先验知识：人工种的种子（Unity CPU 通用 + AOE 业务专属等） |
-| **knowledge** | `knowledge/` | 知识回路：run 确认的业务归因（来自 `findings.json`） |
-| **capabilities** | `capabilities/` | 能力回路：DataRequest 池高频项（缺什么工具/采集） |
-| **lessons** | `lessons/` | 质量回路：对错教训（依赖金标 BK-4 验收） |
+> 三层架构命名定稿（对齐工程开发口语"宪法层→规程层→执行层"，但第 3 层叫"知识层"因为 prism-memory/ 是参考资料不是执行指令）：
+> - **宪法层**：不可漂移的硬规则（DR-41/44/50），约束"什么不能做"
+> - **规程层**：必须遵守的执行规则（DR-45/48/49），约束"怎么做"
+> - **知识层**：参考资料（priors/capabilities/lessons/knowledge），提供"知道什么"
+
+| 层 | 分类 | 目录 | 装什么 |
+|---|------|------|--------|
+| **宪法层** | `constitution` | `constitution/` | 不可漂移的硬规则（DR-41 五条 + DR-44 三段管线 + DR-50 纪律 vs 内容边界） |
+| **规程层** | `methodology` | `methodology/` | 必须遵守的执行规则（DR-45 占位符 + DR-48 剪枝 + DR-49 禁内容 + 单态/多态方法论） |
+| **知识层** | `priors` | `priors/` | 先验知识：人工种的种子（Unity CPU 通用 + AOE 业务专属等） |
+| **知识层** | `knowledge` | `knowledge/` | 知识回路：run 确认的业务归因（来自 `findings.json`） |
+| **知识层** | `capabilities` | `capabilities/` | 能力回路：DataRequest 池高频项（缺什么工具/采集） |
+| **知识层** | `lessons` | `lessons/` | 质量回路：对错教训（依赖金标 BK-4 验收） |
 
 `index.json` 记录各分类条目数与最后更新时间，供 `loadMemory` 快速概览。
 

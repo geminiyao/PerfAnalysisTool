@@ -1,7 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-11T07:22:30.520Z",
+  "updatedAt": "2026-07-21T13:16:31.214Z",
   "categories": {
+    "constitution": {
+      "count": 10,
+      "lastUpdated": "2026-07-21T00:00:00.000Z"
+    },
+    "methodology": {
+      "count": 8,
+      "lastUpdated": "2026-07-21T00:00:00.000Z"
+    },
     "priors": {
       "count": 79,
       "lastUpdated": "2026-07-11T06:29:27.766Z"
@@ -11,12 +19,12 @@
       "lastUpdated": null
     },
     "capabilities": {
-      "count": 6,
-      "lastUpdated": "2026-07-11T07:22:30.498Z"
+      "count": 39,
+      "lastUpdated": "2026-07-20T08:41:45.664Z"
     },
     "lessons": {
-      "count": 0,
-      "lastUpdated": null
+      "count": 20,
+      "lastUpdated": "2026-07-21T13:16:31.073Z"
     }
   }
 }

@@ -90,18 +90,79 @@ function makeNarrativeError(
 // ──────────────────────────────── 占位符替换 ────────────────────────────────
 
 /**
+ * 检测报告是单态还是多态（WT-043 需求 C）。
+ *
+ * 检测策略：从 outputDir 往上找 run base 目录，看是否含多态样本子目录：
+ *   - perfetto triad 约定：base / cur / throttle（≥3 态）或 base / cur（2 态）
+ *   - unity 多态约定：基线 / 当前（2 态）或 base / cur / throttle（≥3 态）
+ *
+ * ≥2 个样本子目录 → 'multi'；否则 → 'single'。
+ *
+ * 与 report-utils.ts:detectStateMode(summaries) 不同——那个基于已加载的 summaries 数组长度，
+ * 这个基于文件系统结构（在 narrative 阶段没有 summaries 数组，只能从目录结构推断）。
+ *
+ * WT-044: 对 unity 多态源，runId=udiff_xxx，VG 数据在 web/data/results/udiff_xxx/ 下
+ * （不是 outputDir 的父目录）。除了检查 outputDir 祖先，还要检查 web/data/results/<runId>。
+ */
+function detectStateMode(outputDir: string, runId?: string): 'single' | 'multi' {
+  try {
+    // outputDir 通常是 .../<runId>/<timestamp> 或 .../<runId>
+    // run base = outputDir 本身 或 outputDir 的父目录（去掉时间戳子目录）
+    const candidates = [outputDir, path.dirname(outputDir)];
+
+    // WT-044: unity 多态源 runId=udiff_xxx，数据在 web/data/results/udiff_xxx/ 下。
+    // 加这个候选路径，让 detectStateMode 能检测到 unity 多态。
+    if (runId && /udiff_/.test(runId)) {
+      const repoRoot = path.resolve(__dirname, '../../..');
+      const udiffResultsDir = path.join(repoRoot, 'web', 'data', 'results', runId);
+      candidates.push(udiffResultsDir);
+    }
+
+    // 多态样本子目录名约定（perfetto + unity 通用）
+    const multiStateDirNames = ['base', 'cur', 'throttle', '基线', '当前'];
+
+    for (const dir of candidates) {
+      if (!dir || !fs.existsSync(dir)) continue;
+      let entries: string[] = [];
+      try {
+        entries = fs.readdirSync(dir);
+      } catch {
+        continue;
+      }
+      const sampleDirs = entries.filter(e => multiStateDirNames.includes(e));
+      if (sampleDirs.length >= 2) {
+        return 'multi';
+      }
+    }
+  } catch {
+    // 检测失败 = 保守判单态（单态是降级安全选项）
+  }
+  return 'single';
+}
+
+/**
  * 注入数据源特定的报告章节模板（DR-44 §3.2 + DR-45 §三 断链 1 修复）。
  *
- * 按 source 选 prompts/report-templates/<source>-multi-state.txt。
+ * 按 source + 态数选模板：
+ *   - 多态（≥2 个样本）→ prompts/report-templates/<source>-multi-state.txt
+ *   - 单态（1 个样本）→ prompts/report-templates/<source>-single-state.txt
+ *
+ * 态数检测（detectStateMode）：检查 outputDir 的祖先目录是否含 base/cur/throttle
+ * 子目录（perfetto triad 约定）或 基线/当前 子目录（unity 2 态约定）。≥2 个即多态。
+ *
  * 模板文件存在则读出全文注入 {{REPORT_TEMPLATE}}；不存在则注入降级提示
  * （narrative-prompt 看到提示就知道模板没注入，用默认骨架）。
  *
  * DR-45 §8.1：占位符填充必须可测。harness 会断言本函数不返回空字符串且含 readFileSync。
  * 严禁硬编码返回空字符串短路——占位符被短路 = 注入机制形同虚设，是隐蔽性最强的 bug。
  */
-function resolveReportTemplate(source: string, _outputDir: string): string {
+function resolveReportTemplate(source: string, _outputDir: string, runId?: string): string {
   const templateDir = path.join(__dirname, 'prompts', 'report-templates');
-  const templatePath = path.join(templateDir, `${source}-multi-state.txt`);
+  const stateMode = detectStateMode(_outputDir, runId);
+  const templateName = stateMode === 'multi'
+    ? `${source}-multi-state.txt`
+    : `${source}-single-state.txt`;
+  const templatePath = path.join(templateDir, templateName);
   if (!fs.existsSync(templatePath)) {
     // 降级：模板文件不存在（如 single-state 模式或未建模板的数据源）
     // 不报错，但 harness [1] 节会标记 SKIP 并提示检查。
@@ -109,6 +170,7 @@ function resolveReportTemplate(source: string, _outputDir: string): string {
     console.warn(`[narrative] report template not found, using default skeleton: ${templatePath}`);
     return `[NOTE: report template for source="${source}" not found at ${templatePath}. Using default narrative skeleton.]\n`;
   }
+  console.log(`[narrative] resolved report template: ${templateName} (stateMode=${stateMode})`);
   return fs.readFileSync(templatePath, 'utf-8');
 }
 
@@ -384,7 +446,7 @@ function runNarrativeRedTeam(
       gaps.push({
         type: 'redline-parent-child-dup',
         benchmarkRef: 'DR-41 规则 2 子树归并（递归）+ v5.3 §5 红线清单',
-        lessonText: `runId=${runId} 的红线清单 visualAsset.table 父子节点同时出现：${duplicates.join('; ')}。违反 DR-41 规则 2 子树归并——同一开销被计算两次。归并规则要递归应用每一层：Core.Update → LuaMgr（大头拆出）→ BattleHeadMgr/MapSignificanceMgr（LuaMgr 下子节点比较平均，统筹在 LuaMgr，hotspot 列子节点）。MapManager → OutSideViewArmyLineMgr（大头拆出，不列 MapManager）。修法：如果父模块下的子节点都比较平均 → 统筹在父模块，hotspot 列列前 2 个子节点；如果父模块下有明显大头子节点 → 拆分出大头子节点，不列父模块。递归应用——拆出来的大头子节点，如果它下面还有大头子节点，继续拆。`,
+        lessonText: `runId=${runId} 的红线清单 visualAsset.table 父子节点同时出现：${duplicates.join('; ')}。违反 DR-41 规则 2 子树归并——同一开销被计算两次。归并规则要递归应用每一层，判定依据是"分布形态 + 语义独立性"（不是 top-2 比例）：(1) 分布形态：所有子节点占比都比较小且接近（无明显大头）→ 统筹在父模块；有明确大头子节点（top-N 占绝大部分）→ 拆出大头。(2) 语义独立性（有大头时再判，由 LLM 判不是机器判）：大头之间语义不同（不同业务模块）→ 每个大头独立拆出；大头之间语义相同（同一模块不同阶段）→ 可统筹在父模块。修法：检查红线清单里父子同列的模块，按"分布形态 + 语义独立性"重新判定——如果父模块下有明确大头且大头语义不同，把大头独立拆出（不列父模块）；如果父模块下子节点都比较小且接近（无明显大头），统筹在父模块（不列子节点）。递归应用——拆出来的大头子节点，如果它下面还有大头子节点，继续按规则判定。`,
       });
     }
   }
@@ -445,11 +507,12 @@ export async function runPrismNarrative(
   promptText = promptText.replace(/\{\{OUTPUT_DIR\}\}/g, outputDirPosix);
   promptText = promptText.replace(/\{\{RUN_ID\}\}/g, runId);
   // DR-44 §3.2: {{REPORT_TEMPLATE}} 按数据源注入章节模板（WT-028 填，本阶段为空）
-  const reportTemplate = resolveReportTemplate(source, outputDir);
+  const reportTemplate = resolveReportTemplate(source, outputDir, runId);
   promptText = promptText.replace(/\{\{REPORT_TEMPLATE\}\}/g, reportTemplate);
   // WT-034: {{MEMORY_INJECTION}} 注入 lessons 回路（对称 explore-service.ts:711）
   // 沉淀历次 narrative 红队复扫的写作缺口教训，让本次写作吸收历史经验
-  promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt());
+  // DR-51 / WT-040: 补 dataSource 参数，避免 perfetto 报告注入 unity priors（WT-040 遗留 bug）
+  promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt({ dataSource: source }));
 
   // Resolve CLI
   const provider = opts.cliProvider ?? 'codebuddy';

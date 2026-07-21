@@ -10,11 +10,36 @@ import { fileURLToPath } from 'url';
 
 export type MemoryCategory = string;
 
+/**
+ * 数据源标识（DR-45 §一 / WT-040）：用于按数据源筛选注入。
+ * - `perfetto`  — Perfetto trace 分析
+ * - `unity`     — Unity profiler 分析
+ * - `simpleperf` — simpleperf 分析
+ * - `cross-source` — 跨源通用（如"GC.Collect 卡顿判定"任何源都适用）
+ * 未设置时视为兼容期旧条目，所有数据源都注入（不排除）。
+ */
+export type MemoryDataSource = 'perfetto' | 'unity' | 'simpleperf' | 'cross-source';
+
+/** 合法 dataSource 取值集合（WT-040 硬约束 4：不许自创） */
+export const VALID_DATA_SOURCES: readonly MemoryDataSource[] = [
+  'perfetto',
+  'unity',
+  'simpleperf',
+  'cross-source',
+];
+
+/** 判断一个 dataSource 字符串是否合法（WT-040） */
+export function isValidDataSource(value: string): value is MemoryDataSource {
+  return (VALID_DATA_SOURCES as readonly string[]).includes(value);
+}
+
 export interface MemoryEntry {
   id: string;
   category: MemoryCategory;
   content: string;
   source?: string;
+  /** 数据源标识（WT-040）：用于按数据源筛选注入；缺省视为兼容期旧条目 */
+  dataSource?: MemoryDataSource;
   createdAt: string;
   [k: string]: unknown;
 }
@@ -28,29 +53,44 @@ export interface MemoryCategoryConfig {
 
 /** 分类注册表：加新类只改这里，不动读写逻辑 */
 export const MEMORY_CATEGORIES: MemoryCategoryConfig[] = [
+  // ─── 宪法层（DR-51 新增，约束"什么不能做"）───
+  {
+    name: 'constitution',
+    dir: 'constitution',
+    enabled: true,
+    description: '宪法层·不可漂移的硬规则（DR-41 五条 + DR-44 三段管线 + DR-50 纪律 vs 内容边界）',
+  },
+  // ─── 规程层（DR-51 新增，约束"怎么做"）───
+  {
+    name: 'methodology',
+    dir: 'methodology',
+    enabled: true,
+    description: '规程层·必须遵守的执行规则（DR-45 占位符 + DR-48 剪枝 + DR-49 禁内容 + 单态/多态方法论）',
+  },
+  // ─── 知识层（原有，提供"知道什么"）───
   {
     name: 'priors',
     dir: 'priors',
     enabled: true,
-    description: '先验知识（人工种子，如 Unity/AOE 分析知识）',
+    description: '知识层·先验知识（人工种子，如 Unity/AOE 分析知识）',
   },
   {
     name: 'knowledge',
     dir: 'knowledge',
     enabled: true,
-    description: '知识回路（run 确认的业务归因 findings）',
+    description: '知识层·知识回路（run 确认的业务归因 findings）',
   },
   {
     name: 'capabilities',
     dir: 'capabilities',
     enabled: true,
-    description: '能力回路（DataRequest 池高频项）',
+    description: '知识层·能力回路（DataRequest 池高频项）',
   },
   {
     name: 'lessons',
     dir: 'lessons',
     enabled: true,
-    description: '质量回路（对错教训，依赖金标 BK-4）',
+    description: '知识层·质量回路（对错教训，依赖金标 BK-4）',
   },
 ];
 

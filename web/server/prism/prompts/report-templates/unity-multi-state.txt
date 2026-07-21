@@ -125,6 +125,13 @@ unity 多态有基线可对比，不用单态的"占 p50%"判定，用：
 - perFrameMs 占 p50 ≥ 5% + foldChange ≥ 2 → 触红线
 - ≥3 态可用单调性增强信号（base→cur→throttle 是否单调下降/上升），2 态只能讲涨/跌
 
+★【§0 每条必须有 ASCII 图·不许只有文字】
+§0 每个 item 的四段式块必须有 ASCII 图——不许只有引用块+文字+详见 §X。
+- ❌ 反例：§0 ② 只有引用块+文字段落+详见 §3 下钻 ②，没有 ASCII 图——读者看文字疲劳
+- ✅ 正例：§0 ② 有引用块+ASCII 图（如尖峰时序图/柱状图）+关键数字+详见 §3 下钻 ②
+
+**注意 DR-50 边界**：只给纪律"每条必须有 ASCII 图"不给内容"必须画什么类型"——画什么由 findings 决定。
+
 ### §1 采集元信息（多态：基线/当前 fps/p50/帧数对照表）
 
 ★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="采集元信息"。
@@ -175,6 +182,13 @@ item.visualAsset 填法（≥3 态示例）：
 }
 ```
 一张表：帧数/fps/p50/p95/p99/slowFrameRate/帧预算/超预算帧占比。不硬编码具体数字（从 findings 取）。
+
+★【§1 图文并茂·必须有 ASCII 图】
+§1 除了表格外，必须有至少 1 个 ASCII 图（柱状图/趋势图/对比图，由 findings 自然决定）。
+- ❌ 反例：§1 只有表格，没有 ASCII 图——读者看表格数字没有视觉感知
+- ✅ 正例：§1 表格 + ASCII 柱状图（如基线 vs 当前 msPerFrame 对比柱状图，或基线 vs 当前 GC.Collect 次数对比柱状图）
+
+**注意 DR-50 边界**：只给纪律"必须有 ASCII 图"不给内容"必须画什么类型"——画什么由 findings 决定。
 
 ### §2 多线程宏观（多态：基线/当前 msPerFrameTotal 对照 + 涨幅）
 
@@ -229,6 +243,13 @@ item.visualAsset 填法（≥3 态示例）：
 }
 ```
 
+★【§2 图文并茂·必须有 ASCII 图】
+§2 除了表格外，必须有至少 1 个 ASCII 图（柱状图/线程健康度图/对比图，由 findings 自然决定）。
+- ❌ 反例：§2 只有表格，没有 ASCII 图——读者看表格数字没有视觉感知
+- ✅ 正例：§2 表格 + ASCII 柱状图（如 UnityMain/UnityGfxRenderS/Job.Worker 的 msPerFrame 对比柱状图，或线程健康度三态柱状图）
+
+**注意 DR-50 边界**：只给纪律"必须有 ASCII 图"不给内容"必须画什么类型"——画什么由 findings 决定。
+
 ### §3 主线程一帧时间去向（多态：callTree 对照 + 红线矩阵 foldChange 列 + 下钻）
 
 ★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="红线触发清单"。
@@ -256,6 +277,22 @@ item.visualAsset 填法（≥3 态示例）：
 §3 下钻 ②③④⑤⑥⑦⑧ 同理——**所有 §3 下钻 item 都不许在开头重复 §0 对应 item 的父模块/聚合摘要**，直接从子节点细节开始。具体来说：
 - §3 下钻 ⑤ 不许开头重复 §0 ⑤ 的"Gfx.PresentFrame 从基线 0.923ms 涨到 8.8ms(×9.53)"——这是 §0 ⑤ 的父模块摘要，§3 下钻 ⑤ 直接从子节点细节开始（如"frame 184 的线程视角证实 GPU bound: Submit Thread topLevelMs 56.143ms..."）
 - §3 下钻 ⑥ 不许开头重复 §0 ⑥ 的"GC.Collect 涨 4.37 倍"——直接从子节点细节开始
+
+★【§3 下钻图文并茂·每个 item 必须有 ASCII 图穿插】
+§3 下钻每个 item 的 narrative 不能只有 callTree + 文字，必须有至少 1 个 ASCII 图穿插（因果链/子树占比柱状图/尖峰时序图，由 findings 自然决定）。
+- ❌ 反例：§3 下钻 ① narrative 是大段 callTree 子树描述 + 文字段落，没有 ASCII 图——读者看大段文字疲劳
+- ✅ 正例：§3 下钻 ① narrative 是 callTree 子树 + ASCII 因果链图（如"PostLateUpdate→CoroutinesDelayedCalls→EndOfFrame→<Lua 入口模块>→GC.Collect"箭头图）+ 文字解读——图文穿插
+
+**注意 DR-50 边界**：只给纪律"每个 item 必须有 ASCII 图"不给内容"必须画什么类型"——画什么由 findings 决定。
+
+★【§3 下钻讲更深的东西·不和 §0 重复】
+§3 下钻每个 item 的 narrative 要讲比 §0 更深的东西——不只是重复 §0 的聚合统计数字。
+- §0 讲聚合统计（foldChange + ms/帧均值 + 占 p50% + 绝对增量）
+- §3 下钻讲深入细节（callTree 路径 + 源码定位 + 是否增量 GC 溢出 + 触发条件 + 优化建议）
+- ❌ 反例：§3 下钻 ③ 重复 §0 ③ 的"涨 4.37 倍 70.2ms frame 519"——和 §0 重复
+- ✅ 正例：§3 下钻 ③ 讲"callTree 路径 PostLateUpdate→CoroutinesDelayedCalls→EndOfFrame→<Lua 入口模块>→GC.Collect + frame 483 是增量 GC 溢出升级为同步 GC 的场景 + Lua 端主动调用 collectgarbage('collect') 的触发条件"——比 §0 更深
+
+**注意 DR-50 边界**：只给纪律"讲更深的东西"不给内容"必须讲什么"——讲什么由 findings 决定。
 
 ★【§3 下钻覆盖 topConclusions 所有 critical/high/medium 条目】
 §3 下钻的 items 数量 ≥ topConclusions 的 critical+high+medium 条目数。topConclusions #8 "多个偶发尖刺：<尖峰模块A>/<尖峰模块B>"（severity=medium）在 §3 下钻也要有对应 item。
