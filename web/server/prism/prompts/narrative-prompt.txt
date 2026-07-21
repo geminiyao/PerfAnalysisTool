@@ -61,7 +61,7 @@ render 会把 visualAsset 渲染在 item 的 narrative 下方、callTree 上方�
 
 以下是历次 narrative 红队复扫沉淀的 lessons（对照 v5.3 标杆的写作缺口 + 修法）。
 本次写作必须吸收这些教训——如果 lesson 说"多线程覆盖不足"，本次 threadOverview 必须覆盖全线程；
-如果 lesson 说"callTree 没挂"，本次 critical/high topConclusion 必须给 callTree.rootMarker。
+如果 lesson 说"callTree 没挂"，本次 critical/high topConclusion 可以给 callTree.rootMarker（有就给，没有不硬挂——DR-50 边界）。
 （lessons 为空 = 首次跑或无历史沉淀，按模板正常写即可。）
 
 ═══════════════════════════════════════════════════════════════
@@ -80,32 +80,35 @@ render 会把 visualAsset 渲染在 item 的 narrative 下方、callTree 上方�
 >   cur        ██████████████████████████ ░░░░░░     Run 77.82% / Sleep 20.40%
 >   throttle   ███████████████████ ░░░░░░░░░░       Run 56.99% / Sleep 38.99%
 >
-> 关键数字：Gfx.WaitForPresent 占整 trace base 5.4% → cur 19.3% → throttle 38.1%
+> 关键数字：<等待 slice> 占整 trace base 5.4% → cur 19.3% → throttle 38.1%
 > （Sleep 增量几乎 100% 是等 GPU）。详见 §3。
 ```
 学法：引用块 + 加粗一句话 + ASCII 图 + 关键数字解读 + 详见 §X。四段缺一不可。
+**`<等待 slice>` 是占位符**——由 findings 自然浮现（perfetto 数据源会填它的等待 slice 名，unity 数据源填 unity 的等待 marker 名），不是写死在骨架里。
 
 **范例 2：callTree ├─/└─ 缩进 + 涨幅% + 标注（§5 主线程一帧时间去向）**
 ```
-Core.Update  base 1.73 / cur 7.32 / throttle 8.05 ms/帧 (📈 ×4.2 → ×4.7)
-├─ CS:AOE.LuaMgr  base 1.00 / cur 3.80 / throttle 3.47 ms/帧 (📈 ×3.8)
-│  └─ LuaMgr.OnTick&UpdateSchedule  base 0.95 / cur 3.74 / throttle 3.41
-│     ├─ BattleHeadMgr  base ~0 / cur 1.51 / throttle 1.10 ms/帧 🔴 cur 单次 1.50ms 触红线
-│     └─ MapSignificanceMgr  base 0.32 / cur 1.30 / throttle 1.07 ms/帧 🟡 临近红线
-└─ CS:AOE.Outside.MapManager  base 0.44 / cur 2.90 / throttle 3.99 ms/帧 (📈 ×6.6 → ×9.1)
+<主入口>  base 1.73 / cur 7.32 / throttle 8.05 ms/帧 (📈 ×4.2 → ×4.7)
+├─ <业务模块A>  base 1.00 / cur 3.80 / throttle 3.47 ms/帧 (📈 ×3.8)
+│  └─ <子调度层>  base 0.95 / cur 3.74 / throttle 3.41
+│     ├─ <子模块A1>  base ~0 / cur 1.51 / throttle 1.10 ms/帧 🔴 cur 单次 1.50ms 触红线
+│     └─ <子模块A2>  base 0.32 / cur 1.30 / throttle 1.07 ms/帧 🟡 临近红线
+└─ <业务模块B>  base 0.44 / cur 2.90 / throttle 3.99 ms/帧 (📈 ×6.6 → ×9.1)
 ```
 学法：├─/└─ 缩进 + [base/cur/throttle ms/帧] + 📈 涨幅倍数 + 🔴/🟡/🟢 严重程度标注。
 callTree 用 renderCallTreeTriad 产出，severityOf 回调由你根据 findings 判定。
+**学的是写法（缩进/倍数/标注），不是抄名字**——占位符只是示意，你写的时候用本次真实数据里的模块名替换。
 
 **范例 3：GC 归因换算（§5 Top 模块下钻，"子树 N 次 → N 次/帧"）**
 ```
-GC.Alloc 业务归因（perfetto 独家，gcAllocByModule）：
-  base:       BattleHeadMgr 子树 0 次/帧（callTree 无该模块痕迹）
-  cur:        BattleHeadMgr 子树 5341 次 → 11.0 次/帧（头号 GC 源）
-  throttle:   BattleHeadMgr 子树 2396 次 → 5.6 次/帧
+GC 归因换算（如数据源支持 gcAllocByModule）：
+  base:       <模块名> 子树 0 次/帧（callTree 无该模块痕迹）
+  cur:        <模块名> 子树 5341 次 → 11.0 次/帧（头号 GC 源）
+  throttle:   <模块名> 子树 2396 次 → 5.6 次/帧
 ```
 学法：子树总次数 → 除以帧数 → 次/帧。用 gcAllocToPerFrame 换算。
 关键：不是写"5341 次"这种 raw 数字，是写"11.0 次/帧"这种带分母的解读。
+**`<模块名>` 是占位符**——由 findings 自然浮现，不是写死在骨架里。
 
 ═══════════════════════════════════════════════════════════════
 【叙事的灵魂 · 这不是把 findings 换个格式重贴一遍】
@@ -114,7 +117,7 @@ GC.Alloc 业务归因（perfetto 独家，gcAllocByModule）：
 作文机式报告好在"叙事流"——你要超过它：
 
 1. **概览讲一个故事，不是甩发现**：一句话说清这次采集的整体性能故事。
-   例："这不是单一元凶，是一组稳态开销（行军线+UI+渲染）每帧雷打不动吃掉近7ms打底，再被相机移动、GC等偶发尖峰反复捅刀。"
+   例："这不是单一元凶，是一组稳态开销（<业务模块1> + <业务模块2> + 渲染）每帧雷打不动吃掉近7ms打底，再被相机移动、GC等偶发尖峰反复捅刀。"
 
 2. **问题先行 + 按"对整体帧率的贡献"排序**（★关键，别犯老错）：
    排序看"对整体帧率的贡献"，**不看"单帧数字多吓人"**。一个每帧稳定2.3ms的开销(600帧累计1.38秒)，
@@ -137,7 +140,7 @@ GC.Alloc 业务归因（perfetto 独家，gcAllocByModule）：
    报告必须有一处诚实声明——单源这次**能判什么、判不了什么**，写进 `judgmentBoundary` 字段：
    - **canJudge**：单源能确定的（整体超没超 16.6ms 预算、各项相对大小/离群度、本次采集内谁最大）。
    - **cannotJudge**：单源判不了的（单个 marker"这笔开销该不该管/正不正常"——需历史基线 diff 或业务知识）。
-   正例：{"canJudge":["整体帧时中位数X ms,超/未超16.6ms预算","相机移动是本次采集内离群最严重的尖峰源"],"cannotJudge":["行军线每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了"]}
+   正例：{"canJudge":["整体帧时中位数X ms,超/未超16.6ms预算","相机移动是本次采集内离群最严重的尖峰源"],"cannotJudge":["<业务模块A>每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了"]}
    ❌ 反例：把"判不了该不该管"的项硬写成"这是问题必须优化"——违背诚实标注。
    ❌ 反例：因为"单源判不了该不该管"就对所有热点不给任何 dimensions 定性——降级链要求至少给通用三维。
 
@@ -171,6 +174,128 @@ GC.Alloc 业务归因（perfetto 独家，gcAllocByModule）：
    没读到源码的诚实说"未能定位到行级"，别硬编。
 
 ═══════════════════════════════════════════════════════════════
+【人话化硬规则 · 不许技术数字+字段名+"吻合"风】
+═══════════════════════════════════════════════════════════════
+
+报告正文（narrative 字段、topConclusions.problem/contribution、sections[].items[].narrative/title）
+必须是人话，不是技术报告。读者是工程师同事，不是查日志的脚本。
+
+**1. 不许用字段名**：foldChange / GcAllocCount / perFrameMs / pctOfRoot / spikeRatio / pctAinB
+等字段名不许出现在正文，用人话替代：
+- ❌ "foldChange 10.5" → ✅ "涨 10.5 倍"
+- ❌ "GcAllocCount 10.8 倍增长" → ✅ "GC 分配暴增 10.8 倍（4777→51365）"
+- ❌ "perFrameMs 12.88ms" → ✅ "每帧 12.88ms"
+- ❌ "spikeRatio ∞" → ✅ "尖峰/平峰比无穷大（平峰接近 0）"
+- ❌ "pctOfRoot 30.7%" → ✅ "占主线程 30.7%"
+
+**2. 不许用"吻合/一致/佐证"风**：要说原因，不说"吻合"。"吻合"是统计描述，不是因果解释。
+读者要的是"为什么会这样"，不是"两个数字看起来对得上"。
+- ❌ "GcAllocCount 10.8 倍增长与 foldChange 10.5 吻合，互相佐证"
+   → ✅ "GC 分配暴增 10.8 倍，和 Core.Update 涨 10.5 倍同步发生——说明退化主因是 Lua 侧
+      临时表/字符串分配爆增，不是计算变重"
+- ❌ "correlateFrameSets 验证 100% 落在慢帧集合"
+   → ✅ "19 次尖峰全部落在慢帧里（>33ms 的帧），100% 命中——是确定性卡顿源"
+- ❌ "与 foldChange 趋势一致" → ✅ "和涨幅同步——说明 X 是 Y 的原因"（给因果，不给"一致"）
+
+**3. 不许用"详见 §X"代替叙事**：详见 §X 是引用，不是替代。本处仍要给一句话结论，§X 是给想看细节的读者。
+- ❌ "详见 §3 下钻" → ✅ "详见 §3 下钻 ①"（要给具体编号）+ 本处仍要给一句话结论
+   正例："相机移动必卡——19 次尖峰每次 43ms，100% 落在慢帧里（详见 §3 下钻 ①）"
+   反例："相机移动有问题（详见 §3 下钻）"——本处没结论，只甩引用
+
+**4. 技术数字沉底**：字段名/绝对阈值/调用工具名留在 findings.json，正文只有人话+关键数字。
+- findings.json 保留 foldChange / pctAinB / spikeRatio / tool 名 / args 等审计信息（供核查）
+- narrative.json 正文只有人话+关键数字（如"涨 10.5 倍"/"占 30.7%"/"每次 43ms"）
+- ❌ 在 narrative 里写 "queryAggCallTreeMultiState 返回 foldChange=10.5" → ✅ "Core.Update 涨 10.5 倍"
+
+**5. 章节标题也要人话**：title 字段不许用字段名或工具名。
+- ❌ "foldChange top 1 模块下钻" → ✅ "涨幅最大的模块下钻：Core.Update 涨 10.5 倍"
+- ❌ "GcAllocCount 归因" → ✅ "GC 分配归因：Lua 临时表爆增"
+
+═══════════════════════════════════════════════════════════════
+【ASCII 图硬规则 · 每章节都要有 ASCII 图 · 图文并茂】
+═══════════════════════════════════════════════════════════════
+
+报告不许只有表格和文字，**每章节都要有 ASCII 图**（visualAsset.type="ascii"），做到图文并茂。
+render 会把 ASCII 图渲染成 `<pre class="ascii">` 块，挂在 item 的 narrative 下方。
+大段文字不直观，图文并茂对人阅读更友好——perfetto v5 标杆有 10 个 ASCII 图，unity 报告要对齐。
+
+**各章节 ASCII 图类型**（参考 perfetto v5 实际产出，学写法不抄内容）：
+
+| 章节 | ASCII 图类型 | 范例 |
+|---|---|---|
+| §0 全量结论 | 每条结论配 1 个 ASCII 图：父模块 base vs cur 柱状对比 + 子节点占比分布（**不许画完整 callTree 缩进树，不许讲子节点 ms/foldChange/GC alloc 数字**——但可以画子节点名字+占比柱状图） | `Update 子树大头分布: <子节点A1> 28.6% ████████ / <子节点A2> 12.5% ████ / 其它 59% ████` |
+| §1 采集元信息 | p50/p99 柱状图（base vs cur） | `p50: base ████ 16.66ms / cur ████████████ 41.92ms (×2.52)` |
+| §2 多线程宏观 | 多线程 ms/帧柱状图（base vs cur） | `Main Thread: base ████ 16.66 / cur ████████████ 44.59 (×2.68)` |
+| §3 红线清单 | 表格（已有，不强求 ASCII） | — |
+| §3 下钻 | narrative 只讲子树占比/热点描述 + 红线判定 + GC 归因 + 优化建议；**不许嵌 callTree 摘要文字**（``` 包裹的 ├─/└─ 缩进块）——callTree 用 item.callTree.rootMarker 让 render 渲染 HTML 树 | `<主入口> 12.88ms (30.7%)，子树大头 <大头子模块B1> 6.14ms，<业务模块A> 3.44ms——红线判定 foldChange ×N.N + 占 p50 Y%` |
+| §4 ROI | foldChange × 占 p50% 散点图（ASCII）+ 一句话行动方向（**不重复 §3 下钻的 recommendations**，只给"先治哪个 + 详见 §3 下钻 ①"） | `<相机移动模块>: ×∞ × 95.4% ████████████ P0 优先治（详见 §3 下钻 ②）` |
+
+**ASCII 图要点**（4 条硬要求）：
+
+1. **紧凑**：10 行内讲完一个子树/一个对比。不要 50 行全展开——那是 render 的 tree-row 职责。
+   ASCII 图是 LLM 主动画的摘要，不是全树 dump。
+2. **有焦点**：LLM 主动选重点节点 + 标注（🔴/🟡/📈 ×N.N），不是全展开。
+   选"有故事的节点"（大头/红线/涨幅显著/新出现），低价值分支折叠或不列。
+3. **有归并说明**：统筹/大头拆出/语义独立性 要在 ASCII 图里标注（如 `── 统筹` / `── 大头拆出`）。
+   这和红线清单归并原则一致——父子不同时列，ASCII 图里也要体现归并。
+4. **人话 caption**：caption 用人话说明这张图讲什么（如"Sleep 增量几乎 100% 是等 GPU"），
+   不是"图 1：foldChange 对比"这种机器风。
+
+**ASCII 图范例**（参考 perfetto v5，学写法不抄内容——占位符示意，不硬编码业务名）：
+
+```
+三态/二态柱状图（§0 演化结论）：
+  base       ████████████████████████████ ░░░░    Run 86.94% / Sleep 12.04%
+  cur        ████████████████████████ ░░░░░░░    Run 77.82% / Sleep 20.40%
+  throttle   ██████████████████ ░░░░░░░░░░░░       Run 56.99% / Sleep 38.99%
+
+callTree 渲染（**只用于 §3 下钻**，由 render-html.ts 渲染 HTML 树，LLM 不在 narrative 里画 callTree 摘要文字）：
+- LLM 在 item.callTree.rootMarker 填入 root marker 名（如 <主入口>）
+- LLM 在 item.callTree.note 填入一句话备注（如"子树大头 <大头子模块B1> 6.14ms，foldChange ×N.N"）
+- render-html.ts 会自动渲染 HTML 树（含剪枝 + 红线标注 + 归并说明）
+- §3 下钻 narrative 只讲子树占比/热点描述 + 红线判定 + GC 归因 + 优化建议，**不嵌 callTree 摘要文字**（``` 包裹的 ├─/└─ 缩进块）——callTree 由 render 渲染
+
+因果链（§0 或 §3 下钻，讲等待/调用因果；**不是 callTree 子树**——用箭头 → 而非 ├─/└─ 树状缩进）：
+  主线程 <主入口> → <业务模块A> (业务 7.32ms/帧) → <渲染管线节点> (渲染提交) → <渲染子节点> (throttle 占 41%) → <等待 slice> 17.8ms/帧 (超 vsync 16.66ms) → GPU 撑爆 swapchain 排队
+
+p50/p99 柱状图（§1 采集元信息）：
+  p50:  base ████ 16.66ms / cur ████████████ 41.92ms  (×2.52)
+  p99:  base ████ 21.37ms / cur ██████████████ 66.32ms (×3.10)
+
+多线程柱状图（§2 多线程宏观）：
+  Main Thread:    base ████ 16.66 / cur ████████████ 44.59  (×2.68)
+  Render Thread:  base ████ 16.66 / cur ████████████ 44.60  (×2.68)
+  Job.Worker.1:   base ▏ 0.42 / cur ▏ 0.51  (—, 空闲非瓶颈)
+
+ROI 散点图（§4 ROI 优化方向）：
+  <相机移动模块>:  ×∞    × 95.4%  ████████████  P0
+  <主入口>:        ×10.5 × 30.7%  ███████       P0
+  <业务模块A>:     ×3.8  × 12.5%  ███           P1
+  <大头子模块B1>:  ×5.25 × 5.19%  ██            P1
+```
+
+**关键**：ASCII 图是 LLM 主动画的摘要，不是 render 全展开。LLM 根据叙事需要选重点节点 + 标注 + 归并说明，
+10 行讲清一个子树。这是 ASCII 图比 HTML tree-row 更可读的核心原因——有焦点、有归并、有人话 caption。
+
+**ASCII 图放在 item.visualAsset 里**（不是顶层字段）：
+```json
+{
+  "findingIds": ["..."],
+  "title": "...",
+  "narrative": "...",
+  "visualAsset": {
+    "type": "ascii",
+    "title": "三态主线程 Run/Sleep 对比",
+    "ascii": {
+      "content": "base ████████░░ Run 86% / Sleep 12%\ncur ██████░░░░ Run 77% / Sleep 20%",
+      "caption": "Sleep 增量几乎 100% 是等 GPU——主线程从'几乎全程在算'退化成'半睡型'"
+    }
+  },
+  "severity": "critical"
+}
+```
+
+═══════════════════════════════════════════════════════════════
 【铁律 · 审计信息不进报告】
 ═══════════════════════════════════════════════════════════════
 
@@ -182,31 +307,27 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在 
 【输出结构 narrative.json】
 ═══════════════════════════════════════════════════════════════
 {
-  "runId": "...",
+  "runId": "{{RUN_ID}}",
   "overview": "一句话整体故事",
   "rating": "excellent|pass|weak|fail",
   "topConclusions": [
     {"rank":1, "problem":"相机移动必卡", "kind":"高频尖峰", "contribution":"19次移动100%命中极慢帧,占极慢帧70%", "dimensions":["outlier","shareHigh"], "judgability":"judgable", "severity":"critical"},
-    {"rank":2, "problem":"行军线管理", "kind":"稳态大头", "contribution":"每帧2.3ms×600=1381ms,全场self最高", "dimensions":["absoluteCost","shareHigh"], "judgability":"needsBaseline", "severity":"high"},
+    {"rank":2, "problem":"<业务模块A>常驻税", "kind":"稳态大头", "contribution":"每帧2.3ms×600=1381ms,全场self最高", "dimensions":["absoluteCost","shareHigh"], "judgability":"needsBaseline", "severity":"high"},
     ...按对整体贡献排序,稳态大头和高频尖峰排前,低频尖峰(如仅2帧的GC)排后;每条必须带 dimensions + judgability
   ],
 
-  ★【critical/high 的 topConclusion 必须挂 callTree 或 asciiArt】
-  rank 1-3 的 topConclusion（severity=critical 或 high）必须给 callTree.rootMarker 或 asciiArt。
-
-  - callTree.rootMarker 指向 findings 里查过的调用树根节点（如 "Core.Update" / "CS:AOE.Outside.MapManager" / "URP.Submit"）。
-    render 会重查这棵树画彩色 flame-bar，挂在核心结论表对应行下方。
-  - asciiArt 给文本柱状图/对比图（如三态 Run/Sleep 对比、foldChange 涨幅柱状图）。
-    render 原样渲染在 <pre> 块里，挂在核心结论表对应行下方。
-
-  medium/low 的可选，不强制。但 critical/high 不挂 = 结论干说无配图，对照 v5.3 §0 差距大。
-  示例：{"rank":1,"problem":"...","callTree":{"rootMarker":"Core.Update","note":"base 1.73 → cur 7.32 ms/帧，涨×4.2"}}
-        {"rank":2,"problem":"...","asciiArt":{"title":"三态 Run/Sleep 对比","content":"base ████████░░ Run 86% / Sleep 12%\ncur ██████░░░░ Run 77% / Sleep 20%","caption":"Sleep 增量几乎 100% 是等 GPU"}}
+  ★【topConclusions 是纯索引表·挂载可选】
+  topConclusions 填 problem/kind/contribution/dimensions/judgability/severity 6 个字段。callTree/asciiArt 字段**可选**——有就填，没有不硬挂。
+  - 有 callTree 的（如稳态大头模块）可以填 callTree.rootMarker + note
+  - 有 ASCII 图的（如 GPU bound 周期性尖峰）可以填 asciiArt
+  - 都没有的（如"多个偶发尖刺"合集条目）只填表格 6 字段，不硬挂
+  - ❌ 反例（DR-50 违规）：topConclusions #1 填 callTree.note="base 1.57 → cur 13.96 ms/帧..."——这是 §0 ① 的叙事内容，不该挂在 topConclusions 表
+  - ✅ 正例：topConclusions #1 只填 problem="Update 路径退化" + contribution="每帧 13.96ms × 600 帧..."——纯表格行，叙事在 §0 ①
   "judgmentBoundary": {
-    "canJudge": ["整体帧时中位数X ms,超/未超16.6ms预算", "相机移动是本次采集内离群最严重的尖峰源", "行军线是本次采集累计self最高的稳态项"],
-    "cannotJudge": ["行军线每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了"]
+    "canJudge": ["整体帧时中位数X ms,超/未超16.6ms预算", "相机移动是本次采集内离群最严重的尖峰源", "<业务模块A>是本次采集累计self最高的稳态项"],
+    "cannotJudge": ["<业务模块A>每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了"]
   },
-  "ruledOut": [{"name":"Semaphore.WaitForSignal", "why":"Job系统正常空闲等待,非热点"}],
+  "ruledOut": [{"name":"<等待类 marker>", "why":"<工作线程>正常空闲等待,非热点"}],
   "sections": [
     {
       "heading":"稳态开销:决定帧率天花板的常驻税",
@@ -214,23 +335,23 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在 
       "items":[
         {
           "findingIds":["F03"],
-          "title":"行军线管理:每帧2.3ms的全场最大常驻开销",
+          "title":"<业务模块A>:每帧2.3ms的全场最大常驻开销",
           "narrative":"人话讲清问题+为什么+影响",
-          "callTree":{"rootMarker":"CS:AOE.Outside.OutSideViewArmyLineMgr", "note":"82%是自身逻辑,子节点仅18%"},
+          "callTree":{"rootMarker":"<业务模块A>", "note":"82%是自身逻辑,子节点仅18%"},
           "sourceInsight":"OnUpdate里三个每帧全量foreach:m_targetToEffectDict/m_armyPredictDict/m_armyPreviewDict",
           "recommendations":["改脏标记,只在状态变化时处理","缓存GetRelation结果"],
           "severity":"high",
           "visualAsset": {
             "type": "table",
-            "title": "行军线子模块三态对照",
-            "table": { "headers": ["子模块","cur ms/帧","占 p50%","涨幅"], "rows": [["OutSideViewArmyLineMgr","1.575","5.19%","×1.37"]] }
+            "title": "<业务模块A>子模块三态对照",
+            "table": { "headers": ["子模块","cur ms/帧","占 p50%","涨幅"], "rows": [["<大头子模块>","1.575","5.19%","×1.37"]] }
           }
         }
       ]
     }
   ],
   "prioritySummary":[
-    {"priority":"P0", "action":"行军线OnUpdate改脏标记+缓存relation", "benefit":"稳态省最多,全场第一大self"}
+    {"priority":"P0", "action":"<业务模块A>OnUpdate改脏标记+缓存relation", "benefit":"稳态省最多,全场第一大self"}
   ],
 
   ★【视觉资产填在 item.visualAsset 里·不填顶层字段】
@@ -245,50 +366,64 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在 
 
   ★【不丢内容·视觉资产行数要够】
   - 多线程宏观表必须覆盖 findings 里所有识别线程，Audio 线程池 5 个子线程各占一行（不许合并成一行）
-  - 红线触发清单必须细到子模块（不许只列父级 Core.Update 一行）
-  - 降频判定矩阵至少 4 行（bigCoreReach/中核 max-freq/R+ 被抢占/温度信号）
+  - 红线触发清单必须细到子模块（不许只列父级 <主入口> 一行）
+  - 降频判定矩阵至少 4 行（如数据源支持：大核 reach/中核 max-freq/R+ 被抢占/温度信号）
   - ASCII 图至少 3 个（§0 三态对比/§3 因果链/§4 降频形态）
   v4 退化教训：threadOverview 8→4、redlineMatrix 8→3、asciiArt 4→3 = 丢内容，不许重犯。
+  **降频/温度/CPU 频率是 perfetto 数据源特定概念**——unity 数据源没有这些，相关章节跳过即可，不要硬凑。
 
   ★【红线清单子树归并原则·父子不同时列·递归应用·统筹与拆出互斥】
   红线触发清单 visualAsset.table 的 module 列不许父子节点同时出现——违反 = 同一开销被计算两次。
-  归并规则（DR-41 规则 2 子树归并）**递归应用每一层**：
-  - 如果父模块下的子节点都比较平均（没有绝对大头）→ **统筹在父模块**，hotspot 列列前 2 个子节点，**子节点不许单独列**
-  - 如果父模块下有明显大头子节点 → **拆分出大头子节点**，不列父模块
-  - **递归**：拆分出来的大头子节点，如果它下面还有明显大头子节点，继续拆分；如果它下面子节点比较平均，就统筹在它
+  归并规则（DR-41 规则 2 子树归并）**递归应用每一层**，判定依据是**分布形态 + 语义独立性**（不是 top-2 比例）：
+
+  1. **分布形态**（先判这一步）：
+     - 所有子节点占比都比较小且接近（无明显大头，如某渲染节点下 6 个子 Pass 各占 ~5%）→ **统筹在父模块**，hotspot 列列前 2 个子节点，**子节点不许单独列**
+     - 有明确大头子节点（top-N 占绝大部分，其它都是小头）→ **拆出大头**，进入第 2 步判语义独立性
+  2. **语义独立性**（有大头时再判）：
+     - 大头之间语义不同（不同业务模块，如战斗头管理 vs 地图显著性管理）→ **每个大头独立拆出**，不列父模块
+     - 大头之间语义相同（同一模块的不同阶段，如同一渲染管线的不同 Pass）→ **可统筹在父模块**，hotspot 列列前 2 个大头
+  3. **递归**：拆分出来的大头子节点，如果它下面还有明确大头子节点，继续按"分布形态 + 语义独立性"判定；如果它下面子节点都比较小且接近（无明显大头），就统筹在它
+
+  ★【语义独立性由你（LLM）判·机器只检测父子关系】
+  机器（红队回路）只能检测 callTree 真实父子关系——即"模块 A 是模块 B 的祖先"这种结构关系。
+  **语义独立性（大头是否不同业务模块）由你判**——这是 LLM 才能做的语义判断：
+  - 如果两个大头是不同业务模块（如战斗头管理 vs 地图显著性管理，业务上独立）→ 每个独立拆出
+  - 如果两个大头是同一模块的不同阶段（如同一渲染管线的不同 Pass，业务上同属一个流程）→ 可统筹在父模块
+  判语义独立性时看模块名/职责/调用上下文，**不要只看占比接近不接近**——占比接近但语义不同的，必须独立拆出（统筹会掩盖两个独立模块各自的特性）。
 
   ★【统筹与拆出互斥·不许混用】
   对同一个父模块，要么统筹（列父模块 + hotspot 列子节点），要么拆出（列大头子节点 + 不列父模块）——**不能同时列父模块和子节点**。
-  ❌ 反例（v4 退化重犯，混用）：列了 LuaMgr（hotspot="BattleHeadMgr + MapSignificanceMgr"）+ 又列 BattleHeadMgr.OnUpdate + 又列 MapSignificanceMgr.ProcessTasks → LuaMgr 的开销被算了两次（一次在 LuaMgr 行，一次在子节点行）
-  ✅ 正例（统筹）：只列 LuaMgr（hotspot="BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%"），子节点不单独列
-  ✅ 正例（拆出）：只列 BattleHeadMgr.OnUpdate + MapSignificanceMgr.ProcessTasks，LuaMgr 不列（因为子节点要单独拆出）
+  ❌ 反例（v4 退化重犯，混用）：列了 <模块A>（hotspot="<大头子节点A1> + <大头子节点A2>"）+ 又列 <大头子节点A1>.OnUpdate + 又列 <大头子节点A2>.ProcessTasks → <模块A> 的开销被算了两次（一次在 <模块A> 行，一次在子节点行）
+  ✅ 正例（语义不同→独立拆出）：只列 <大头子节点A1>.OnUpdate + <大头子节点A2>.ProcessTasks，<模块A> 不列（两个大头语义不同，各自独立拆出）
+  ✅ 正例（语义相同→统筹）：只列 <渲染管线节点>（hotspot="<子 Pass A> 40.43% + <子 Pass B> 38.12%"），子 Pass 不单独列（两个大头语义相同，同属渲染管线，统筹在父）
 
   ★【红线清单归并 ≠ 下钻独立·两个维度别混】
-  - **红线清单**（visualAsset.table）：遵守归并规则，父子不同时列。LuaMgr 下子节点比较平均 → 统筹在 LuaMgr，子节点不单独列。
+  - **红线清单**（visualAsset.table）：遵守归并规则，父子不同时列。<模块A> 下两个大头语义不同 → 各自独立拆出，<模块A> 不列。
   - **下钻 items**（§5 的 items，不是红线清单）：每个值得下钻的模块都可以独立下钻，**不受红线清单归并约束**。
-  - 即：红线清单可以只列 LuaMgr（统筹），但 §5 仍然可以独立下钻 BattleHeadMgr/MapSignificanceMgr（下钻 item 给 callTree.rootMarker）。
+  - 即：红线清单可以只列 <大头子节点A1>（拆出），但 §5 仍然可以独立下钻 <大头子节点A1>/<大头子节点A2>（下钻 item 给 callTree.rootMarker）。
   - ❌ 错误理解："下钻要独立 = 红线清单也要独立列子节点"——红线清单归并和下钻独立是两个维度，别混。
 
-  callTree 真实父子关系（从 Core.Update 下钻）：
+  callTree 真实父子关系（从 <主入口> 下钻）：
   ```
-  Core.Update
-  ├─ CS:AOE.LuaMgr                    ← 12.51%（大头，拆出，不列 Core.Update）
-  │  ├─ BattleHeadMgr.OnUpdate        ← 4.92%（LuaMgr 下的子节点）
-  │  └─ MapSignificanceMgr.ProcessTasks ← 3.99%（LuaMgr 下的子节点）
-  └─ CS:AOE.Outside.MapManager        ← 9.54%（大头，拆出，不列 Core.Update）
-     ├─ OutSideViewArmyLineMgr        ← 5.19%（MapManager 下的大头，拆出，不列 MapManager）
-     └─ BattleUIManager               ← 2.38%（MapManager 下的子节点）
+  <主入口>
+  ├─ <模块A>                          ← 12.51%（大头，拆出，不列 <主入口>）
+  │  ├─ <大头子节点A1>.OnUpdate       ← 4.92%（<模块A> 下的子节点，大头）
+  │  └─ <大头子节点A2>.ProcessTasks   ← 3.99%（<模块A> 下的子节点，大头）
+  └─ <模块B>                          ← 9.54%（大头，拆出，不列 <主入口>）
+     ├─ <大头子节点B1>                ← 5.19%（<模块B> 下的大头，拆出，不列 <模块B>）
+     └─ <其它子节点B2>                ← 2.38%（<模块B> 下的子节点）
   ```
 
-  正确归并（递归拆大头，统筹与拆出互斥）：
-  - CS:AOE.LuaMgr 12.51%（hotspot="BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%"）← LuaMgr 下子节点比较平均，**统筹在 LuaMgr**，BattleHeadMgr/MapSignificanceMgr **不许单独列在红线清单**
-  - OutSideViewArmyLineMgr 5.19%（hotspot="CalculateVertexJob"）← MapManager 下的大头，**拆出**，MapManager 不列
-  - BattleUIManager 2.38% ← MapManager 下的子节点，MapManager 已被 OutSideViewArmyLineMgr 拆出替代，BattleUIManager 可独立列（它的父 MapManager 不在清单里）
-  - **不许同时列** LuaMgr 和 BattleHeadMgr（父子关系）
-  - **不许同时列** LuaMgr 和 MapSignificanceMgr（父子关系）
-  - **不许同时列** MapManager 和 OutSideViewArmyLineMgr（父子关系）
+  正确归并（分布形态 + 语义独立性，递归应用）：
+  - <大头子节点A1>.OnUpdate 4.92% ← <模块A> 下的大头（top-2 占绝大部分），且与 <大头子节点A2> 语义不同（不同业务模块）→ **独立拆出**，<模块A> 不列
+  - <大头子节点A2>.ProcessTasks 3.99% ← 同上，与 <大头子节点A1> 语义不同 → **独立拆出**
+  - <大头子节点B1> 5.19%（hotspot="<叶子节点>"）← <模块B> 下的大头，**拆出**，<模块B> 不列
+  - <其它子节点B2> 2.38% ← <模块B> 下的子节点，<模块B> 已被 <大头子节点B1> 拆出替代，<其它子节点B2> 可独立列（它的父 <模块B> 不在清单里）
+  - **不许同时列** <模块A> 和 <大头子节点A1>（父子关系）
+  - **不许同时列** <模块A> 和 <大头子节点A2>（父子关系）
+  - **不许同时列** <模块B> 和 <大头子节点B1>（父子关系）
 
-  但"不列父模块"不等于"只列父模块"——必须细到子模块，不许只列 Core.Update 一行（v4 退化教训）。
+  但"不列父模块"不等于"只列父模块"——必须细到子模块，不许只列 <主入口> 一行（v4 退化教训）。
 
 要求：
 - topConclusions 严格按"对整体贡献"排序，别把只出现2帧的GC排第一；每条必须带 dimensions + judgability。

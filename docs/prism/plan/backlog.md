@@ -236,5 +236,27 @@
 - **unity 多态主线**：WT-044（跑 VG 数据，依赖 038/039/040/041/042/043 全部完成）
 - **perfetto 善后**：WT-037（harness 防呆，无依赖）+ DR-43 定稿（依赖 039/041）+ DR-42 定稿（依赖 044/041）
 
+---
+
+## 📌 M5 善后 · 报告可读性收尾 + 架构修复（2026-07-21 WT-046 v4 验收后入表）
+
+> **触发**：2026-07-21 WT-046 v4 验收 PASS（3 层重复根因治本），但用户提了 5 个新问题（topConclusions/§0 定位重叠 + §0 父模块摘要干瘪 + topConclusions/§0 能否合并 + topConclusions 每条图文并茂 + §3 下钻缺 #8）+ 诊断"4 个模板有作文机即时感，prompt 约束报告内容、限定问题范围"+ 问"方法论有没有沉淀给 prism agent"+ 指出"报告展示生涩文字缺图文并茂是反复陷入报告的另一个重要原因"。已沉淀 DR-50（纪律 vs 内容边界）+ DR-51（宪法层未注入运行时 LLM）。
+>
+> **三层架构命名定稿**（对齐工程开发口语"宪法层→规程层→执行层"，但第 3 层叫"知识层"因为 prism-memory/ 是参考资料不是执行指令）：
+> - **宪法层**：不可漂移的硬规则（DR-41 五条硬规则 + DR-44 三段管线 + DR-50 纪律 vs 内容边界），约束"什么不能做"
+> - **规程层**：必须遵守的执行规则（DR-45 占位符校验 + DR-48 剪枝 + DR-49 禁内容 + 单态/多态方法论），约束"怎么做"
+> - **知识层**：参考资料（priors 业务模块 + capabilities 工具能力 + lessons 红队沉淀），提供"知道什么"
+
+| ID | 需求 | 来源 | 状态 |
+|----|------|------|------|
+| **WT-046-v5 topConclusions/§0 定位分离 + 删作文机病硬骨架** | v4 验收后用户提 5 个新问题，核心是 topConclusions 和 §0 定位重叠 + unity-multi-state.txt 有"三大演化结论"硬骨架（作文机病）。修：A render-html.ts topConclusions 改纯表格（删 extraHTML/asciiArt/note 挂载）+ B narrative-prompt.txt topConclusions schema 改"挂载可选"（DR-50 合规，删"必须挂 callTree"）+ C unity-multi-state.txt §0 删"三大演化结论"硬骨架改"典型维度（不预设盯防）"+ §0 松绑 v3 约束（允许讲子节点名字+占比，禁止子节点 ms/foldChange/GC alloc 数字）+ D §3 下钻补 #8 偶发尖刺合集 item + E 重跑产出 v5。**图文并茂留 v6**（用户担心 v5 同时改太多维度调不过来）。 | 用户 2026-07-21 v4 验收后反馈 + DR-50 沉淀 | ✅ DONE（2026-07-21 验收 PASS，核心改动都对，FAIL C §0 ③ vs §3 下钻 ③ 重复记遗留 v6） |
+| **WT-046-v6 图文并茂引导 + §0 ③ 重复修复** | v5 验收 PASS 但 §0 ③ 重复记遗留 v6。两个方向：①图文并茂引导——§1 采集元信息表加柱状图 + §2 多线程宏观表加柱状图（如 UnityMain/UnityGfxRenderS/Job.Worker msPerFrame 对比）+ §3 下钻 narrative 加因果链/子树占比柱状图穿插（不是整段文字）+ §0 8 条都配 ASCII 图（v5 §0 ① 有柱状图，要确认 8 条都有）。**注意 DR-50 边界**：只给纪律约束"每章节有 ASCII 图"不给内容约束"必须画什么类型"。②§0 ③ 重复修复——v5 §0 ③ 讲了 GC.Collect（LuaMgr 子节点）的 foldChange（4.37 倍）+ ms（70.2ms）+ GC alloc（8192 字节）+ frame 519 单帧数字，违反 v5 约束。**但用户反馈"看上去也很好"——v6 需先讨论清楚是禁 §0 讲数字还是改 §3 下钻讲更深的东西（如 callTree 路径/源码定位/是否增量 GC 溢出），避免和 §0 重复。不要急着加反例硬写**。 | 用户 2026-07-21 指出"报告展示生涩文字缺图文并茂是反复陷入报告的另一个重要原因" + v5 §0 ③ 重复遗留 | ⬜ P0（待派发） |
+| **WT-048 DR-51 三层架构修复·宪法层+规程层注入运行时 LLM** | 当前架构缺陷：宪法层（DR-41/44/50）+ 规程层（DR-45/48/49）只给开发 agent 看（docs/prism/memory/），运行时 LLM 通过 `{{MEMORY_INJECTION}}` 只注入知识层（priors/capabilities/lessons）。导致 prompt 错了 LLM 跟着错（DR-51 触发事件：narrative-prompt.txt"必须挂 callTree"违反 DR-50，但运行时 LLM 没有宪法对照就跟着错）。修：在 `prism-memory/` 下加 `constitution/`（宪法层——DR-41/44/50 浓缩成 LLM 可读条目）+ `methodology/`（规程层——DR-45/48/49 浓缩成 LLM 可读条目）目录，formatMemoryForPrompt 加读 constitution/methodology，通过 `{{MEMORY_INJECTION}}` 注入运行时 LLM。**条目要浓缩**（每条 1-2 句话 + 反例，类似 lessons 格式），不能是 docs/prism/memory/ 全文复制（太长会撑爆 prompt token）。**顺手修**：narrative-service.ts:514 没传 dataSource（WT-040 遗留 bug，perfetto 报告会注入 unity priors）+ MEMORY_INJECTION_MAX_CHARS 7000→12000。工单已建：`docs/prism/process/worktickets/TODO-WT-048-dr51-three-layer-memory-injection.md`。 | DR-51 沉淀/用户 2026-07-21 问"方法论有没有沉淀给 prism agent" | ⬜ P1（工单已建，v5 验收后派发，可与 v6 并行无依赖） |
+
+**开工顺序建议**：
+- **v5 验收 DONE**（2026-07-21 PASS，FAIL C 记遗留 v6）
+- **并行派发**（无依赖）：WT-046-v6（图文并茂 + §0 ③ 重复修复，P0）+ WT-048（DR-51 三层架构修复，P1）
+- **WT-037 遗留 bug**（不阻塞）：harness.ts `findVisualAssetByTitle(/降频/)` 正则歧义
+
 **验收标准**：WT-044 产出的 unity 多态报告对照标杆 diff 报告逐项核结构 + 叙事可读性，harness 全 PASS。
 

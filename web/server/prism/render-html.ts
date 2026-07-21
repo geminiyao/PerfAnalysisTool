@@ -18,10 +18,26 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 import { openPrismDb } from './db.js';
 import { drillDownMarker } from './tools.js';
 import type { DrillDownNode } from './tools.js';
 import type { NarrativeReport, NarrativeItem, VisualAsset } from './narrative-types.js';
+
+// udiff 根目录：web/data/results/。与 tools.ts:3576 UNITY_UDIFF_ROOT 对齐。
+// LLM 默认 runId=udiff_1782983710451_be175ef1，按 runId 拼路径 web/data/results/<runId>/<role>/preprocess-result.json。
+const UNITY_UDIFF_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../data/results'
+);
+
+// ─────────────────────── WT-045: callTree 渲染剪枝阈值 ───────────────────────
+// 数据源无关的通用阈值（不是硬编码业务名），仿 drillDownMarker 的 maxDepth/minMsPerFrame/topPerLevel。
+// 适用于 unityAggNodeToDrillDown / perfettoNodeToDrillDown 数据转换层（renderTreeHTML 不改，只渲染）。
+// 红线条目（redlineFlag/foldChange/severityTag）例外：即使 perFrameMs 低也必保留，不剪枝。
+const MAX_TREE_DEPTH = 8;       // 递归深度超过 8 层不再展开 children
+const MIN_MS_PER_FRAME = 0.05;  // 子节点 perFrameMs < 0.05ms 且无红线标注的，不渲染
+const TOP_PER_LEVEL = 8;        // 每层只取 perFrameMs top 8 个子节点（红线标注的例外，必保留）
 
 // ─────────────────────── Verdict numeric metrics shape ───────────────────────
 
@@ -452,7 +468,7 @@ interface RenderOptions {
 
 function renderHTML(opts: RenderOptions): string {
   const { narrative, verdict, treesByItemKey } = opts;
-  // WT-032: treesByKey 现在含 section items（key=<heading>::<i>）+ topConclusions（key=tc::<rank>）
+  // WT-046 v5: treesByKey 只含 section items（key=<heading>::<i>）——topConclusions 是纯索引表，不挂 HTML 树/ASCII/note
   const treesByKey = treesByItemKey;
 
   const ratingInfo = RATING_MAP[narrative.rating] ?? { emoji: '—', label: narrative.rating ?? '—', color: '#9e9e9e', bg: '#9e9e9e20' };
@@ -479,36 +495,17 @@ function renderHTML(opts: RenderOptions): string {
   </div>`).join('');
 
   // ── § 核心结论 table ──
-  // WT-032: critical/high 的 topConclusion 行下挂 callTree 或 asciiArt（v5.3 §0 标杆：每条结论配图）
+  // WT-046 v5: topConclusions 是纯索引表（problem/kind/contribution/severity 4 列），不挂 extraHTML。
+  // 叙事展开（ASCII 图 + 人话 + 详见 §X）是 §0 的职责——§0 讲全部 N 条，和 topConclusions 一一对应。
   const conclusionsHTML = narrative.topConclusions.map(row => {
     const sc = sevStyle(row.severity);
-    // 查这行结论的 callTree（key=tc::rank，由 requeryTrees 收集）
-    const tree = treesByKey.get(`tc::${row.rank}`);
-    let extraHTML = '';
-    if (tree) {
-      const rootMs = tree.totalMsPerFrame;
-      extraHTML = `<tr><td colspan="5"><div class="tc-tree-section">
-        <div class="tree-header">
-          <span class="tree-title">调用树（per-frame avg）</span>
-          <span class="tree-legend">${TREE_LEGEND}</span>
-        </div>
-        <div class="tree-container">${renderTreeHTML(tree, rootMs, 0)}</div>
-      </div></td></tr>`;
-    } else if (row.asciiArt) {
-      // LLM 产的 ASCII 图，原样渲染在 <pre> 块
-      extraHTML = `<tr><td colspan="5"><div class="tc-ascii-section">
-        <div class="ascii-art-title">${htmlEsc(row.asciiArt.title)}</div>
-        <pre class="ascii-art-content">${htmlEsc(row.asciiArt.content)}</pre>
-        ${row.asciiArt.caption ? `<div class="ascii-art-caption">${htmlEsc(row.asciiArt.caption)}</div>` : ''}
-      </div></td></tr>`;
-    }
     return `<tr>
       <td class="tc-rank">${row.rank}</td>
       <td class="tc-problem">${htmlEsc(row.problem)}</td>
       <td class="tc-kind">${htmlEsc(KIND_CN[row.kind] ?? row.kind)}</td>
       <td class="tc-contribution">${htmlEsc(row.contribution)}</td>
       <td class="tc-severity"><span class="chip sev-chip" style="color:${sc.dot};background:${sc.badge}">${SEV_CN[row.severity] ?? row.severity}</span></td>
-    </tr>${extraHTML}`;
+    </tr>`;
   }).join('');
 
   // ── ruledOut strip ──
@@ -766,32 +763,7 @@ a { color: var(--accent2); }
 .tc-contribution { color: #b0bec5; }
 .tc-severity { white-space: nowrap; }
 
-/* WT-032: topConclusions 行下挂的 callTree / asciiArt 容器 */
-.tc-tree-section {
-  padding: 0 !important;
-  background: #080d14;
-  border-left: 3px solid var(--border);
-}
-.tc-tree-section .tree-container { padding: 10px 12px; }
-.tc-tree-section .tree-header {
-  padding: 8px 12px;
-  background: #0f1b2d;
-  border-bottom: 1px solid var(--border);
-}
-.tc-ascii-section {
-  padding: 10px 14px !important;
-  background: #080d14;
-  border-left: 3px solid var(--accent2);
-}
-.tc-ascii-section .ascii-art-content { margin: 0; }
-.tc-ascii-section .ascii-art-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent2);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+/* WT-046 v5: topConclusions 是纯索引表，不挂 extraHTML（.tc-ascii-section/.tc-note-section 已删） */
 
 /* ── Ruled-out strip ── */
 .ruled-out-strip {
@@ -1268,6 +1240,232 @@ function isPerfettoSource(narrative: NarrativeReport): boolean {
 }
 
 /**
+ * WT-044: 判断 narrative 是否来自 unity 多态源。
+ * unity 多态 runId 形如 "udiff_1782983710451_be175ef1"（含 udiff_）。
+ * 多态数据在 dir 的祖先目录下的 base/ + cur/ 子目录里（preprocess-result.json）。
+ */
+function isUnityMultiStateSource(narrative: NarrativeReport): boolean {
+  return /udiff_/i.test(narrative.runId);
+}
+
+/**
+ * WT-044: unity 多态 callTree 节点（来自 preprocess-result.json 的 aggregatedCallTrees）。
+ * 字段：name/depth/msTotal/msPerFrameTotal/msSelf/msPerFrameSelf/presentOnFrameCount/
+ *      presentRate/threadPct/count/gcAllocCount/children。
+ */
+interface UnityAggNode {
+  name: string;
+  depth?: number;
+  msTotal?: number;
+  msPerFrameTotal?: number;
+  msSelf?: number;
+  msPerFrameSelf?: number;
+  presentOnFrameCount?: number;
+  presentRate?: number;
+  threadPct?: number;
+  count?: number;
+  gcAllocCount?: number;
+  children?: UnityAggNode[];
+}
+
+/**
+ * WT-044: 把 unity 多态节点转成 DrillDownNode 兼容结构（renderTreeHTML 只读这些字段）。
+ * 多态报告用 cur 态作主树（和 perfetto 一致），base 态数据通过 foldChange/delta 标注呈现。
+ *
+ * WT-045: 加三重剪枝（maxDepth≤8 + minMsPerFrame≥0.05 + topPerLevel≤8），仿 drillDownMarker。
+ * 红线条目（redlineFlag/foldChange/severityTag）例外必保留，即使 perFrameMs 低也不剪枝。
+ * 剪枝在数据转换层做，renderTreeHTML 不改（它只是纯渲染）。
+ *
+ * @param annotations 从 findings.json 读的 callTreeAnnotations map（按 nodeName 查）。
+ * @param depth 当前递归深度，根节点传 0。depth >= MAX_TREE_DEPTH 不再展开 children。
+ */
+function unityAggNodeToDrillDown(
+  node: UnityAggNode,
+  thread: string,
+  rootMsPerFrame: number,
+  annotations?: Map<string, CallTreeAnnotation>,
+  depth: number = 0,
+): DrillDownNode {
+  const totalMsPerFrame = node.msPerFrameTotal ?? 0;
+  const selfMsPerFrame = node.msPerFrameSelf ?? 0;
+  const pctOfRoot = rootMsPerFrame > 0 ? totalMsPerFrame / rootMsPerFrame : 0;
+  const ann = annotations?.get(node.name);
+
+  // WT-045: 三重剪枝 — depth 超过上限不再展开 children
+  let children: DrillDownNode[] = [];
+  if (depth < MAX_TREE_DEPTH && node.children && node.children.length > 0) {
+    // 1. 过滤：perFrameMs < MIN_MS_PER_FRAME 且无红线标注的，剪掉
+    // 2. 排序：按 msPerFrameTotal 降序（top contributors 优先）
+    // 3. 取 top N：slice(0, TOP_PER_LEVEL)
+    // 红线条目（ann 命中的）必保留，即使 perFrameMs 低
+    const pruned = node.children
+      .filter(c => {
+        const cMs = c.msPerFrameTotal ?? 0;
+        const cAnn = annotations?.get(c.name);
+        const hasAnnotation = !!(cAnn?.redlineFlag || cAnn?.foldChange || cAnn?.severityTag);
+        return cMs >= MIN_MS_PER_FRAME || hasAnnotation;
+      })
+      .sort((a, b) => (b.msPerFrameTotal ?? 0) - (a.msPerFrameTotal ?? 0));
+
+    // 红线条目必保留（即使排在 TOP_PER_LEVEL 之外），非红线取 top N
+    const kept: UnityAggNode[] = [];
+    let nonRedlineAdded = 0;
+    for (const c of pruned) {
+      const cAnn = annotations?.get(c.name);
+      const hasAnnotation = !!(cAnn?.redlineFlag || cAnn?.foldChange || cAnn?.severityTag);
+      if (hasAnnotation) {
+        kept.push(c);  // 红线条目必保留
+      } else if (nonRedlineAdded < TOP_PER_LEVEL) {
+        kept.push(c);
+        nonRedlineAdded++;
+      }
+    }
+    children = kept.map(c => unityAggNodeToDrillDown(c, thread, rootMsPerFrame, annotations, depth + 1));
+  }
+
+  return {
+    name: node.name,
+    thread,
+    totalMsPerFrame,
+    selfMsPerFrame,
+    pctOfRoot,
+    presentFrames: node.presentOnFrameCount ?? node.count ?? 0,
+    children,
+    redlineFlag: ann?.redlineFlag ?? undefined,
+    foldChange: ann?.foldChange ?? undefined,
+    severityTag: ann?.severityTag ?? undefined,
+  };
+}
+
+/**
+ * WT-044: 在 unity aggregatedCallTree 里按节点名搜索子树。
+ * 先精确匹配；失败则按名字核心部分子串回退（narrative LLM 可能用简写名）。
+ */
+function findUnityAggSubtree(root: UnityAggNode, targetName: string): UnityAggNode | null {
+  // 1. 精确匹配
+  const exact = findUnityAggSubtreeExact(root, targetName);
+  if (exact) return exact;
+  // 2. 子串回退：取 targetName 的核心部分（去前缀）
+  const core = extractNameCore(targetName);
+  if (!core || core.length < 4) return null;
+  const candidates: UnityAggNode[] = [];
+  collectUnityAggContainsMatch(root, core, candidates);
+  if (candidates.length === 1) return candidates[0];
+  return null;
+}
+
+function findUnityAggSubtreeExact(node: UnityAggNode, targetName: string): UnityAggNode | null {
+  if (node.name === targetName) return node;
+  for (const child of node.children ?? []) {
+    const found = findUnityAggSubtreeExact(child, targetName);
+    if (found) return found;
+  }
+  return null;
+}
+
+function collectUnityAggContainsMatch(node: UnityAggNode, core: string, out: UnityAggNode[]): void {
+  if (node.name.includes(core)) out.push(node);
+  for (const child of node.children ?? []) collectUnityAggContainsMatch(child, core, out);
+}
+
+/**
+ * WT-044: unity 多态源的 callTree 重查：读 preprocess-result.json 的 aggregatedCallTrees，
+ * 按 rootMarker 名在树里搜索子树，转成 DrillDownNode。
+ * 不走 sqlite / drillDownMarker（VG 数据没灌库，走 JSON 路线）。
+ *
+ * @param dir  run 输出目录（含 narrative.json），形如 .../udiff_xxx/<timestamp>
+ *             udiff 数据在 dir 的父目录下的 cur/preprocess-result.json
+ */
+function requeryUnityMultiStateTrees(
+  narrative: NarrativeReport,
+  refs: { key: string; rootMarker: string }[],
+  dir: string,
+): Map<string, DrillDownNode | null> {
+  const map = new Map<string, DrillDownNode | null>();
+  if (refs.length === 0) return map;
+
+  // udiff 数据目录：用 narrative.runId（=udiff_xxx）从 UNITY_UDIFF_ROOT 拼。
+  // preprocess-result.json 在 <UNITY_UDIFF_ROOT>/<runId>/cur/ 下（多态报告用 cur 态作主树）。
+  // 与 tools.ts:3576 UNITY_UDIFF_ROOT 对齐。
+  //
+  // WT-046: narrative LLM 可能把 runId 写成 "udiff_xxx/<timestamp>"（含输出子目录），
+  // 但数据在 web/data/results/udiff_xxx/ 下（不含时间戳）。提取 udiff_xxx 部分拼路径。
+  const rawRunId = narrative.runId ?? '';
+  const udiffRunId = rawRunId.includes('/')
+    ? rawRunId.split('/')[0]  // "udiff_xxx/<timestamp>" → "udiff_xxx"
+    : rawRunId;
+  const udiffRoot = path.join(UNITY_UDIFF_ROOT, udiffRunId);
+  const resultPath = path.join(udiffRoot, 'cur', 'preprocess-result.json');
+
+  if (!fs.existsSync(resultPath)) {
+    console.warn(`[render-html] unity multi-state result not found: ${resultPath} — all callTrees fallback`);
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  let result: { aggregatedCallTrees?: { threadName?: string; roots?: UnityAggNode[] }[] };
+  try {
+    result = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
+  } catch (e) {
+    console.warn(`[render-html] unity multi-state result parse failed: ${(e as Error).message} — all callTrees fallback`);
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  const callTrees = Array.isArray(result.aggregatedCallTrees) ? result.aggregatedCallTrees : [];
+  if (callTrees.length === 0) {
+    console.warn('[render-html] unity aggregatedCallTrees empty — all callTrees fallback');
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+
+  // 优先选主线程树（threadName 含 "Main Thread"），否则取第一个
+  const mainTree = callTrees.find(t => /Main Thread/i.test(String(t.threadName ?? ''))) ?? callTrees[0];
+  const thread = mainTree.threadName ?? '1:Main Thread';
+  const roots = mainTree.roots ?? [];
+  if (roots.length === 0) {
+    console.warn('[render-html] unity main tree roots empty — all callTrees fallback');
+    for (const ref of refs) map.set(ref.key, null);
+    return map;
+  }
+  const primaryRoot = roots[0];
+
+  // WT-033: 从 findings.json 读 callTreeAnnotations（explore LLM 产的节点标注）
+  const annotations = loadCallTreeAnnotations(dir);
+  if (annotations.size > 0) {
+    console.log(`[render-html] loaded ${annotations.size} callTree annotations from findings.json`);
+  }
+
+  for (const ref of refs) {
+    // 先在主 root 子树里找；若 ref.rootMarker 就是主 root 名，直接用主 root
+    let subtree: UnityAggNode | null = null;
+    if (primaryRoot.name === ref.rootMarker) {
+      subtree = primaryRoot;
+    } else {
+      subtree = findUnityAggSubtree(primaryRoot, ref.rootMarker);
+      // 若主 root 子树里找不到，遍历其它 roots
+      if (!subtree) {
+        for (const r of roots) {
+          if (r.name === ref.rootMarker) { subtree = r; break; }
+          const found = findUnityAggSubtree(r, ref.rootMarker);
+          if (found) { subtree = found; break; }
+        }
+      }
+    }
+    if (subtree) {
+      const rootMsPerFrame = subtree.msPerFrameTotal ?? 0;
+      const tree = unityAggNodeToDrillDown(subtree, thread, rootMsPerFrame, annotations);
+      map.set(ref.key, tree);
+      console.log(`[render-html] unity multi-state tree OK: "${ref.rootMarker}" → ${tree.totalMsPerFrame.toFixed(2)}ms/frame`);
+    } else {
+      console.warn(`[render-html] unity multi-state tree NOT FOUND: "${ref.rootMarker}" — fallback to note`);
+      map.set(ref.key, null);
+    }
+  }
+  return map;
+}
+
+/**
  * perfetto callTree 节点（来自 perfetto-profile-summary.json）的松散结构。
  * 字段：name/totalMs/totalPct/count/layer/children。
  */
@@ -1386,12 +1584,19 @@ function collectContainsMatch(node: PerfettoNode, core: string, out: PerfettoNod
  *
  * WT-033: annotations 是从 findings.json 读的 callTreeAnnotations map（按 nodeName 查）。
  *         转换时若 map 命中则透传 redlineFlag/foldChange/severityTag——render 只呈现不判定。
+ *
+ * WT-045: 加三重剪枝（maxDepth≤8 + minMsPerFrame≥0.05 + topPerLevel≤8）。
+ * perfetto 数据层已剪枝（totalPct≥1.0% + depth≤8），这里双保险，不依赖数据层。
+ * 红线条目例外必保留，即使 perFrameMs 低也不剪枝。
+ *
+ * @param depth 当前递归深度，根节点传 0。depth >= MAX_TREE_DEPTH 不再展开 children。
  */
 function perfettoNodeToDrillDown(
   node: PerfettoNode,
   thread: string,
   rootPctOfRoot: number,
   annotations?: Map<string, CallTreeAnnotation>,
+  depth: number = 0,
 ): DrillDownNode {
   const totalMs = node.totalMs ?? 0;
   const count = node.count ?? 1;
@@ -1399,6 +1604,41 @@ function perfettoNodeToDrillDown(
   const pctOfRoot = node.totalPct != null ? node.totalPct / 100 : 0;
   // WT-033: 从 findings 注入节点标注（按 nodeName 匹配）
   const ann = annotations?.get(node.name);
+
+  // WT-045: 三重剪枝 — depth 超过上限不再展开 children
+  let children: DrillDownNode[] = [];
+  if (depth < MAX_TREE_DEPTH && node.children && node.children.length > 0) {
+    const pruned = node.children
+      .filter(c => {
+        const cTotal = c.totalMs ?? 0;
+        const cCount = c.count ?? 1;
+        const cMsPerFrame = cCount > 0 ? cTotal / cCount : 0;
+        const cAnn = annotations?.get(c.name);
+        const hasAnnotation = !!(cAnn?.redlineFlag || cAnn?.foldChange || cAnn?.severityTag);
+        return cMsPerFrame >= MIN_MS_PER_FRAME || hasAnnotation;
+      })
+      .sort((a, b) => {
+        const aMs = (a.totalMs ?? 0) / Math.max(1, a.count ?? 1);
+        const bMs = (b.totalMs ?? 0) / Math.max(1, b.count ?? 1);
+        return bMs - aMs;
+      });
+
+    // 红线条目必保留（即使排在 TOP_PER_LEVEL 之外），非红线取 top N
+    const kept: PerfettoNode[] = [];
+    let nonRedlineAdded = 0;
+    for (const c of pruned) {
+      const cAnn = annotations?.get(c.name);
+      const hasAnnotation = !!(cAnn?.redlineFlag || cAnn?.foldChange || cAnn?.severityTag);
+      if (hasAnnotation) {
+        kept.push(c);
+      } else if (nonRedlineAdded < TOP_PER_LEVEL) {
+        kept.push(c);
+        nonRedlineAdded++;
+      }
+    }
+    children = kept.map(c => perfettoNodeToDrillDown(c, thread, rootPctOfRoot, annotations, depth + 1));
+  }
+
   return {
     name: node.name,
     thread,
@@ -1406,7 +1646,7 @@ function perfettoNodeToDrillDown(
     selfMsPerFrame: 0,  // perfetto summary 无 self 字段，置 0（renderTreeHTML 不显示 self 行）
     pctOfRoot,
     presentFrames: count,
-    children: (node.children ?? []).map(c => perfettoNodeToDrillDown(c, thread, rootPctOfRoot, annotations)),
+    children,
     // WT-033: 透传 findings 的 callTreeAnnotations（只在 map 命中时填，否则 undefined）
     redlineFlag: ann?.redlineFlag ?? undefined,
     foldChange: ann?.foldChange ?? undefined,
@@ -1504,12 +1744,8 @@ async function requeryTrees(
       }
     });
   }
-  // WT-032: 也收集 topConclusions 的 callTree refs（key=tc::rank）
-  narrative.topConclusions.forEach((row) => {
-    if (row.callTree?.rootMarker) {
-      refs.push({ key: `tc::${row.rank}`, rootMarker: row.callTree.rootMarker });
-    }
-  });
+  // WT-046 v4: 不再收集 topConclusions 的 callTree refs——topConclusions 行下不挂 HTML 树，
+  // 完整 callTree 只在 §3 下钻出现。topConclusions 行下最多只挂 ASCII 摘要图或 callTree.note。
 
   if (refs.length === 0) return map;
 
@@ -1518,7 +1754,12 @@ async function requeryTrees(
     return requeryPerfettoTrees(narrative, refs, dir);
   }
 
-  // unity 源：走 sqlite + drillDownMarker
+  // WT-044: unity 多态源（udiff_*）：走 preprocess-result.json 的 aggregatedCallTrees，不走 sqlite
+  if (isUnityMultiStateSource(narrative)) {
+    return requeryUnityMultiStateTrees(narrative, refs, dir);
+  }
+
+  // unity 单态源：走 sqlite + drillDownMarker
   let db: ReturnType<typeof openPrismDb> | null = null;
   try {
     db = openPrismDb(dbPath);
@@ -1619,7 +1860,6 @@ async function main(): Promise<void> {
 }
 
 // ESM: only run main() when this file is the entry point (not when imported by tests)
-import { fileURLToPath } from 'node:url';
 const __renderHtmlFilename = fileURLToPath(import.meta.url);
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === __renderHtmlFilename;
 if (isMainModule) {

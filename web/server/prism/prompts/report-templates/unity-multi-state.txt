@@ -1,0 +1,366 @@
+# Unity 多态报告章节模板（DR-44 §3.2 第 2 层，对照 DR-43 多态方法论）
+
+> 本模板定义 unity 多态报告的章节骨架，注入 narrative-prompt 的 {{REPORT_TEMPLATE}} 占位符。
+> **和作文机的区别**：模板只定义章节结构 + 写作纪律，内容由 LLM 按 narrative-prompt 契约写。
+> **不硬编码**业务名/绝对阈值/死模板（DR-41 + dev/conventions.md §六 + §6.1）。
+>
+> 多态适用场景：unity profiler 多样本对比（2 态 = 基线/当前，或 ≥3 态 = base/cur/throttle）。判定方法论对照 DR-43：用"相对倍数"（foldChange）+ "绝对增量"（防误判）+ "演化趋势"（单调性，≥3 态专属），不硬编码绝对 ms 阈值。
+>
+> **2 态和 ≥3 态通用本模板**：不区分 diff 还是 multi，统一叫多态。2 态是 N=2 的多态（基线/当前），≥3 态是 N≥3 的多态（base/cur/throttle）。表头写法兼容两种：2 态用"基线/当前"，≥3 态用"base/cur/throttle"。
+>
+> **unity 特有概念可保留**：PlayerLoop / URP / MonoBehaviour / UnityMain / UnityGfxRenderS / Job.Worker / GC.Alloc / GC.Collect 等 unity 引擎概念是数据源特定的，模板里可写。
+> **AOE 专属业务名不许出现**：游戏专属业务名（如各类 Mgr / 业务模块名）用占位符 `<业务模块A>` / `<子模块A1>` / `<大头子模块B1>` / `<等待 slice>` / `<线程名>` 等，不写死在模板里。
+> **perfetto 特有概念不许出现**：unity 没有 CPU 频率/温度/Android 帧时间线/Android 音频线程池等概念——不写降频章节、不写大核 reach、不写音频线程。
+
+---
+
+## 章节职责分工 · 防重复 · 每个 finding 只在一个地方详细展开
+
+★【主战场原则·同一 finding 不许在多个章节重复详细展开】
+同一个 finding 在报告里只能有一个"主战场"（详细展开的地方），其它章节只引用（一句话结论 + "详见 §X 下钻 ①"）。
+违反 = 同一内容在 4 个地方重复展开（topConclusions / §0 / §3 红线清单 / §3 下钻 都写完整 callTree 子树描述），读者读到第三遍就烦了。
+
+各章节职责（严格分工）：
+
+| 章节 | 职责 | 不许做的事 |
+|---|---|---|
+| **topConclusions** | 结构化表格（problem/kind/contribution/dimensions/judgability/severity） | 不写 callTree 子树描述（├─/└─ 缩进树是 §3 下钻的职责） |
+| **§0 全量结论叙事展开** | 人话叙事 + ASCII 图 + 关键数字 + "详见 §3 下钻 ①" | **不写 callTree 子树描述**（callTree 子树是 §3 下钻的职责）；§0 的 ASCII 图用三态/二态柱状图/因果链/演化对照，**不许用 ├─/└─ 缩进树** |
+| **§3 红线清单** | 只给表格（模块/基线 ms/当前 ms/foldChange/占 p50%/红线类型/子函数热点），narrative 一句话定位 | **不详细展开**（不写 GC 归因/优化建议/源码归因，那是 §3 下钻的职责） |
+| **§3 下钻** | 才是详细展开的地方（callTree 子树 + 红线判定 + GC 归因 + 源码归因 + 优化建议） | 不许重复 §0 的演化叙事（§0 讲"从基线到当前涨了多少"，§3 下钻讲"具体哪个子函数贵、为什么、怎么治"） |
+
+**例：OnCameraMove finding 的正确分工**（占位符示意，不硬编码业务名）：
+- topConclusions #1：表格行，problem="<相机移动模块>必卡：19 次尖峰 100% 命中慢帧"，contribution="19次×43ms,占极慢帧70%"
+- §0 ①：人话"<相机移动模块>必卡——19 次尖峰每次 43ms，100% 落在慢帧里" + ASCII 图（三态柱状图或尖峰时序图）+ "详见 §3 下钻 ①"
+- §3 红线清单：表格行，<相机移动模块> 0→43.14ms ×∞ 95.4% 新出现+占 p50≥5%
+- §3 下钻 ①：详细展开（callTree 子树 frame 144 hotPath + 红线判定 + GC 归因 + 源码归因 + 优化建议）
+
+**不许**：
+- ❌ §0 和 §3 下钻都写完整 callTree 子树描述（├─/└─ 缩进 + 每个节点的 ms/占比）——那是重复
+- ❌ §3 红线清单和 §3 下钻都详细展开（红线清单只给表格，下钻才详细）
+- ❌ topConclusions 的 problem 文本和 §0 ① 的 title 高度相似（那是 topConclusions 复述，违反 §0 与 topConclusions 不重复规则）
+- ❌ §0 ① 的 narrative 写"Core.Update 子树：├─ <大头子节点A1> 4.92% ├─ <大头子节点A2> 3.99%..."（完整 callTree 子树是 §3 下钻的职责，§0 只给 ASCII 摘要图 + 一句话结论 + 引用）
+- ❌ §0 ① 的 narrative 写"下钻到 <大头子节点A1> 涨 57.88 倍（0.069→3.994ms），GC alloc 0→14043"（用任何形式讲子节点 ms/占比/foldChange/GC alloc，包括 narrative 文字/柱状图/因果链）——子节点细节是 §3 下钻的职责，§0 只给父模块"涨 X 倍 + 占 p50 Y%"级摘要
+- ❌ §0 ① 的 narrative 写"核心增量来自 Lua 端：Core.Update→<Lua 入口模块>（涨 ×8.75）→...→<大头子节点A1>（涨 ×57.88，从 0.069ms 涨到 3.994ms）"——用因果链（→ 箭头）讲子节点名字 + 子节点 foldChange + 子节点 ms = 讲子节点细节 = 违规。LLM 易钻空子：认为"用 → 串起来的是因果链不是子节点"——错，因果链里的下游节点也是子节点。§0 只许讲父模块自身的 foldChange + 占 p50% + 绝对增量，下游子节点链全部放 §3 下钻
+- ❌ §0 ② 的 narrative 写"frame 144 的 callTree 显示 <子模块> 在 LateUpdate 路径里炸了 56.4ms"——具体帧 + 子节点 ms = 讲子节点尖峰细节 = 和 §3 下钻重复。§0 只许讲父模块聚合统计（19 次尖峰 + 平均 43ms + 100% 命中慢帧），具体帧 + 子节点 ms 全部放 §3 下钻
+- ❌ §0 ③ 的 narrative 写"worst frame 519 单帧 113.56ms"或"max frame 单帧 Xms"——具体帧的单帧数字总是和某个子节点尖峰绑定（frame 519 = GC.Collect 70ms 那帧），讲了 = 变相讲子节点尖峰细节 = 和 §3 下钻重复。§0 只许讲聚合统计（p50/p99/foldChange/占 p50%），具体帧的单帧 ms 全部放 §3 下钻
+- ❌ §0 ③ 的引用写"详见 §3 下钻 ③（GC.Collect 单帧 70ms 是 worst frame 主因）"——引用不许带括号说明子节点 ms/帧号，只许写"详见 §3 下钻 ③"。括号里偷塞子节点细节 = 在引用里讲子节点细节 = 和 §3 下钻重复
+
+**§0 的 ASCII 图和 §3 下钻的 callTree 子树区别**：
+- §0 ASCII 图：摘要级（10 行内），三态/二态柱状图/因果链/演化对照，讲"演化趋势"（base→cur→throttle 涨了多少）——**不许用 ├─/└─ 缩进树**
+- §3 下钻 callTree：完整子树（├─/└─ 缩进 + 每个节点的 ms/占比/标注），讲"具体哪个子函数贵、怎么治"
+两者不重复——§0 讲趋势，§3 下钻讲细节。
+
+---
+
+## 章节骨架（§0-§4，对照 DR-43 多态方法论）
+
+★【sections 必须建全 §0-§4 五章节·不许漏章】
+你的 narrative.json sections 数组必须建全 5 个 section，每个 section 的 heading 以 §X 开头（如 "§1 采集元信息：..."）。
+漏建任何一章 = 报告结构残缺。即使某章内容不多，也要建 section（intro 一句话 + 1 个 item 即可），不要跳过。
+
+### §0 结论先行（多态版，全量结论叙事展开 + ASCII 图穿插，四段式）
+
+§0 写**全量结论**（和 topConclusions 一一对应——topConclusions N 条就 §0 N 个 item），每条用四段式块（DR-41 规则 4）：
+- 引用块 + 加粗一句话结论（人话，无字段名）
+- ASCII 图（柱状/因果链/二态对照，数据源无关渲染工具产出）
+- 关键数字解读（每条一行，数字配解读）
+- 详见 §X 引用
+
+★【§0 item 和 topConclusions 一一对应】
+§0 的 items 数量 = topConclusions 数量。topConclusions N 条 → §0 N 个 item，每个 item 的 ①②③④... 编号和 topConclusions 的 rank 一一对应。
+- topConclusions 是索引表（problem/kind/contribution/severity 4 列），§0 是叙事展开（人话+ASCII 图+详见 §X）
+- 读者看 topConclusions 表扫一遍"有哪些问题"，读 §0 看每条结论的"为什么贵+影响多大+详见哪里"
+- ❌ 反例：§0 只写 3 条，topConclusions 8 条——后 5 条只有表格行无叙事展开，读者看了 topConclusions #4-8 不知道为什么这些结论重要
+- ✅ 正例：§0 写 N 条（N=topConclusions 数量），每条和 topConclusions rank 一一对应——全量结论都有叙事展开
+
+★【§0 讲清"为什么贵"·允许讲子节点名字+占比·禁止子节点 ms/foldChange/GC alloc 数字】
+§0 的叙事要讲清"为什么贵"——不能只讲"<父模块> 涨 ×N 倍"父模块摘要（读者看了不知道为什么 <父模块> 贵），要讲"<父模块> 涨 ×N 倍，大头是子节点 <大头子节点>（占 <父模块> 子树 X%）"——让读者知道父模块为什么贵。
+
+**§0 允许讲**：
+- 父模块自身的 foldChange + ms/帧 + 占 p50% + 绝对增量
+- 子节点的**名字**（如"大头是 <大头子节点>"）+ **父子关系**（如"<父模块> 下大头子节点 <大头子节点>"）+ **占比**（如"占 <父模块> 子树 X%"）
+- 子节点的"新出现/退化形态"定性描述（如"<大头子节点> 基线无当前新出现"）
+
+**§0 不许讲**（v3 禁内容约束保留这部分）：
+- 子节点的 ms/帧数字（如"<大头子节点> X.Xms"——这是 §3 下钻的职责）
+- 子节点的 foldChange 数字（如"涨 ×N 倍"——这是 §3 下钻的职责）
+- 子节点的 GC alloc 数字（如"GC alloc 0→N"——这是 §3 下钻的职责）
+- 具体帧的单帧数字（如"frame #N 单帧 Xms"——这是 §3 下钻的职责）
+
+**边界判定**：§0 讲"子节点名字+占比"是 OK 的（让读者知道为什么贵），讲"子节点 ms/foldChange/GC alloc 数字"是违规的（和 §3 下钻重复）。
+
+❌ 反例 1（v3 禁过头）：§0 ① 只写"<父模块> 涨 ×N 倍，每帧多花 Xms"——读者不知道为什么 <父模块> 贵，要看 §3 下钻才知道是 <大头子节点> 涨 ×N 倍。§0 失去叙事价值，变成"父模块名+涨幅"的干瘪摘要。
+✅ 正例 1（v5 松绑）：§0 ① 写"<父模块> 涨 ×N 倍（X→Y ms/帧），大头是子节点 <大头子节点>（占 <父模块> 子树 X%，基线无当前新出现）——是 <业务模块> 的回归主因"——讲清父模块为什么贵（子节点名字+占比+定性），但不讲子节点 ms/foldChange/GC alloc 数字。
+
+❌ 反例 2（v4 残留）：§0 ① 的 ASCII 图写"<父模块>.<子入口> 每帧 ms: base ████ Xms / cur ████████████ Yms"——只画父模块 base vs cur，没讲为什么贵。读者看了不知道 <父模块> 里什么贵。
+✅ 正例 2（v5 松绑）：§0 ① 的 ASCII 图画"<父模块> 子树大头分布: <大头子节点A> X% ████████ / <大头子节点B> Y% ████ / 其它 Z% ████"——画子节点占比分布，让读者一眼看到大头是谁。
+
+★【§0 结论类型由 findings 自然浮现·不预设盯防】
+§0 写什么类型的结论，由 findings 自然浮现，**不预设盯防**。典型维度（参考，不是约束——findings 里有什么就讲什么）：
+- 最大涨幅模块（foldChange top N + 绝对增量 + 占当前 p50%）
+- 新出现瓶颈（基线无 + 当前触红线）——只有 findings 里有才讲，没有不硬凑
+- 退化形态（基线健康态 → 当前病态的形态变化）——只有 findings 里有才讲
+- 稳态大头（每帧雷打不动的常驻税）
+- 高频尖峰（多次出现的尖峰源）
+- 低频尖峰（单次猛但帧数少）
+- GPU bound / 降频 / GC / 工作线程退化 等
+
+findings 里没有的维度，不硬凑。findings 里有的维度，按"对整体帧率贡献"排序讲。
+
+★【§0 与 topConclusions 不重复·item.title 不许复述 problem】
+§0 是"结论先行的叙事展开"——把 topConclusions 的结论用叙事方式讲出来（配 ASCII 图/关键数字/详见 §X）。
+**不是 topConclusions 的复述**——topConclusions 是结构化表格（problem/kind/contribution/dimensions），§0 是人话叙事。
+两者内容可以对应（都讲同一批结论），但表达形式不同：topConclusions 是表格行，§0 是四段式块。
+
+**§0 item.title 必须和 topConclusions.problem 文本不同**——item.title 是叙事标题（人话+影响），不是 problem 的复述。
+- ❌ 反例 1（v5 复述病）：topConclusions #1 problem="Lua 脚本更新模块退化：Update 路径涨 8.87 倍，每帧 14ms"，§0 ① title="① Lua 脚本更新模块退化：Update 路径涨 8.87 倍，每帧 14ms"——sim=1，完全复述，违规
+- ✅ 正例 1：§0 ① title="① Update 路径退化是本次回归主因——Lua 脚本每帧多花 12ms 拖垮帧率"——换措辞+加影响，和 problem 文本不同
+- ✅ 正例 2：§0 ① title="① Update 路径退化：从基线 1.57ms 涨到 14ms 的核心增量来源"——换角度+加数字解读，和 problem 文本不同
+- 判定：如果 §0 item.title 去掉 ①②③ 编号后和 topConclusions.problem 的相似度 >0.8，就是复述，违规
+
+★【多态判定用 foldChange + 绝对增量，不用占 p50%】
+unity 多态有基线可对比，不用单态的"占 p50%"判定，用：
+- foldChange ≥ 2（相对基线涨 2 倍以上）+ 绝对增量 ≥ p50 的 1%（防误判）→ 涨幅显著
+- perFrameMs 占 p50 ≥ 5% + foldChange ≥ 2 → 触红线
+- ≥3 态可用单调性增强信号（base→cur→throttle 是否单调下降/上升），2 态只能讲涨/跌
+
+### §1 采集元信息（多态：基线/当前 fps/p50/帧数对照表）
+
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="采集元信息"。
+render 会把 visualAsset.table 渲染成表格放在 item 的 narrative 下方。
+
+多态对照表（2 态和 ≥3 态兼容写法）：
+- 2 态：表头 ["指标", "基线", "当前"]
+- ≥3 态：表头 ["指标", "base", "cur", "throttle"]
+
+item.visualAsset 填法（2 态示例）：
+```json
+{
+  "title": "采集元信息",
+  "type": "table",
+  "table": {
+    "headers": ["指标", "基线", "当前"],
+    "rows": [
+      ["采集窗口", "基线 11.4s / 当前 14.7s"],
+      ["帧数", "基线 683 / 当前 483"],
+      ["fps", "59.8 → 33.1"],
+      ["p50", "16.69 → 30.15 ms"],
+      ["p95", "18.20 → 42.54 ms"],
+      ["p99", "21.37 → 66.32 ms"],
+      ["slowFrameRate", "0% → 11.18%"],
+      ["帧预算", "16.67 ms (60fps) / 33.33 ms (30fps)"],
+      ["超预算帧占比", "0% → 100%"]
+    ]
+  }
+}
+```
+
+item.visualAsset 填法（≥3 态示例）：
+```json
+{
+  "title": "采集元信息",
+  "type": "table",
+  "table": {
+    "headers": ["指标", "base", "cur", "throttle"],
+    "rows": [
+      ["采集窗口", "base 11.4s / cur 14.7s / throttle 19.9s"],
+      ["帧数", "base 683 / cur 483 / throttle 427"],
+      ["fps", "59.8 → 33.1 → 21.4"],
+      ["p50", "16.69 → 30.15 → 45.94 ms"],
+      ["p99", "21.37 → 42.54 → 66.32 ms"],
+      ["slowFrameRate", "0% → 11.18% → 98.83%"]
+    ]
+  }
+}
+```
+一张表：帧数/fps/p50/p95/p99/slowFrameRate/帧预算/超预算帧占比。不硬编码具体数字（从 findings 取）。
+
+### §2 多线程宏观（多态：基线/当前 msPerFrameTotal 对照 + 涨幅）
+
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="多线程宏观"。
+
+- 每个识别到的 unity 线程一行：msPerFrameTotal 多态对照 + foldChange 涨幅 + 关键 marker 特征 + 一句话定位
+- 多态对照：2 态用"基线/当前"，≥3 态用"base/cur/throttle"演化（单调下降/上升）
+- 线程识别用 unity 通用名（Main Thread / Render Thread / Submit Thread / Job.Worker / Lua.GC / Profiler.Dispatcher 等），不写 tid 硬匹
+- 线程间对比定位（如 Render Thread msPerFrameTotal < Main Thread 的 50% → 渲染线程在等主线程发命令）
+- 排除项声明（如 Job.Worker 空闲 msPerFrameTotal 极小不是瓶颈，但要查一次写进 findings——"已排除"是结论，不是不查）
+
+★【多线程覆盖必须全·不许合并线程】
+findings 里 queryThreadsMultiState / getThreadTimeline 查过的每个线程都要在 visualAsset.table 里有独立一行。
+Job.Worker 1/2/3 等多线程各占一行，**不许合并成"Job.Worker 池"一行**——合并 = 丢内容（v4 退化教训）。
+
+★【不写 perfetto 特有线程】
+unity 多线程宏观不写 Android 音频线程池（那是 perfetto+Android 特有的音频线程池，unity 数据源不暴露，具体线程名不在此列出以防误用）。
+unity 的线程池是 Job.Worker（ECS/Burst Job）+ Lua.GC（Lua 多线程 GC），不是 Android 音频线程。
+unity threads 数据没有 perfetto 的 Run/Sleep/Runnable 百分比（那是 perfetto sched 才有）——unity 用 msPerFrameTotal 对照 + foldChange 涨幅。
+
+item.visualAsset 填法（2 态示例）：
+```json
+{
+  "title": "多线程宏观",
+  "type": "table",
+  "table": {
+    "headers": ["线程", "基线 ms/帧", "当前 ms/帧", "foldChange", "关键特征", "定位"],
+    "rows": [
+      ["Main Thread", "16.66", "44.59", "×2.68", "PlayerLoop/<业务模块A>/<业务模块B>", "主线程，业务/Lua/ECS 调度主入口"],
+      ["Render Thread", "16.66", "44.60", "×2.68", "URP.Render/Gfx.RenderSlaver.ThreadRun", "Unity 渲染命令录制层"],
+      ["Submit Thread", "16.66", "44.60", "×2.68", "Gfx.PresentFrame/RenderLoop.Draw", "渲染提交线程"],
+      ["Job.Worker.1", "0.42", "0.51", "—", "Burst Job 空闲", "Job 线程池，msPerFrameTotal 极小非瓶颈"],
+      ["...其它 Job.Worker 各一行..."]
+    ]
+  }
+}
+```
+
+item.visualAsset 填法（≥3 态示例）：
+```json
+{
+  "title": "多线程宏观",
+  "type": "table",
+  "table": {
+    "headers": ["线程", "base ms/帧", "cur ms/帧", "throttle ms/帧", "演化趋势", "关键特征", "定位"],
+    "rows": [
+      ["Main Thread", "16.66", "44.59", "60.21", "单调上升（16→44→60）", "PlayerLoop/<业务模块A>", "主线程，业务/Lua/ECS 调度主入口"],
+      ["Render Thread", "16.66", "44.60", "60.20", "单调上升", "URP.Render/Gfx.RenderSlaver", "Unity 渲染命令录制层"],
+      ["Job.Worker.1", "0.42", "0.51", "0.38", "—", "Burst Job 空闲", "Job 线程池，msPerFrameTotal 极小非瓶颈"]
+    ]
+  }
+}
+```
+
+### §3 主线程一帧时间去向（多态：callTree 对照 + 红线矩阵 foldChange 列 + 下钻）
+
+★ 本 section 的 item 必须填 `visualAsset`，type="table"，title="红线触发清单"。
+
+- PlayerLoop 帧分位数对比表（多态：基线/当前 p50/p95/p99/slowFrame/fps/帧数）
+- 主线程 callTrees 缩进树（├─/└─ + [基线/当前 ms/帧] 或 [base/cur/throttle ms/帧] + 涨幅% + 严重程度标注）
+  - 多态用 foldChange 判定热点（≥2 + 绝对增量 ≥ p50 的 1% 为涨幅显著）
+- 红线触发清单（按 foldChange 排序，含模块/单次/红线类型/子函数热点）——填进 item.visualAsset (type=table)
+- Top 红线热点子函数下钻（每个红线模块一张卡片：单次 avg + 红线判定 + GC 归因 + 优化方向）
+- 慢帧形态差异（p95-p50 范围 + 匀慢/尖峰判定）
+
+★【每个红线条目都要下钻·不只 Top 1】
+红线触发清单里的每个模块都要有独立的下钻 item（给 callTree.rootMarker + narrative 讲内部拆分）。
+**不许只给 Top 1 下钻，其它红线条目只列在表里不下钻**——v4 退化教训：只有 <大头子模块> 下钻，其它 5 个红线条目没下钻。
+每个下钻 item 要讲：
+- 该模块的 callTree 子树（子节点占比/热点）
+- 红线判定（foldChange 涨幅 + 占 p50 百分比 + 单次 avg vs vsync）
+- GC 归因（如果 findings 有 queryFrameCounters 的 gc_allocated_in_frame 数据）
+- 优化方向（基于代码/数据推理，不许套话）
+
+★【§3 下钻 narrative 不许重复 §0 的父模块摘要·DR-49 反向约束】
+§3 下钻 ① 的 narrative **不许在开头重复 §0 ① 的父模块摘要**（如"Update 路径从基线 1.57ms 涨到当前 13.96ms,涨 8.87 倍"——这是 §0 ① 的职责，§3 下钻 ① 不许重复）。
+§3 下钻 ① 的 narrative 直接从子节点细节开始（如"<大头子节点A1> 是 Update 路径下涨幅最猛的子节点,从 0.069ms 涨到 3.994ms,GC alloc 0→14043..."），父模块上下文由 §0 ① 提供，§3 下钻 ① 不需要重复。
+**Why**：DR-49 harness 断言检查 §0 和 §3 下钻共享数字特征串 <2，如果 §3 下钻 ① 开头重复 §0 ① 的父模块摘要（"涨 8.87 倍 + 1.57ms + 13.96ms"），会触发断言 FAIL（误判为内容重复）。§3 下钻 ① 只讲子节点细节（<大头子节点A1> 0.069→3.994ms + GC alloc 14043 等），不讲父模块摘要，既符合职责分工又能让断言通过。
+§3 下钻 ②③④⑤⑥⑦⑧ 同理——**所有 §3 下钻 item 都不许在开头重复 §0 对应 item 的父模块/聚合摘要**，直接从子节点细节开始。具体来说：
+- §3 下钻 ⑤ 不许开头重复 §0 ⑤ 的"Gfx.PresentFrame 从基线 0.923ms 涨到 8.8ms(×9.53)"——这是 §0 ⑤ 的父模块摘要，§3 下钻 ⑤ 直接从子节点细节开始（如"frame 184 的线程视角证实 GPU bound: Submit Thread topLevelMs 56.143ms..."）
+- §3 下钻 ⑥ 不许开头重复 §0 ⑥ 的"GC.Collect 涨 4.37 倍"——直接从子节点细节开始
+
+★【§3 下钻覆盖 topConclusions 所有 critical/high/medium 条目】
+§3 下钻的 items 数量 ≥ topConclusions 的 critical+high+medium 条目数。topConclusions #8 "多个偶发尖刺：<尖峰模块A>/<尖峰模块B>"（severity=medium）在 §3 下钻也要有对应 item。
+
+§3 下钻 #8 可以是"合集 item"——把多个低频尖峰模块合在一个 item 里讲（如"其它偶发尖刺：<尖峰模块A> peak Xms @ frame N + <尖峰模块B> peak Yms @ frame M + ..."），每个模块一句话定位 + 是否需要下钻。
+- ❌ 反例：topConclusions #8 提了"<尖峰模块A>/<尖峰模块B> 偶发尖刺"，但 §3 下钻没有对应 item——读者看了 topConclusions #8 想看下钻，翻 §3 找不到
+- ✅ 正例：§3 下钻 ⑥ 是"其它偶发尖刺合集"item，讲 <尖峰模块A>/<尖峰模块B> 等的帧号+单次 ms+是否需要进一步排查
+
+★【红线清单必须细到子模块·不许只到父级·统筹与拆出互斥】
+redlineMatrix 的 module 列要细到子模块（如 <大头子模块B1>），
+**不许只列父级 PlayerLoop 一行**——只到父级 = 丢内容（v4 退化教训）。
+但也不许父子都列（DR-41 规则 2 子树归并，递归应用）——详见 narrative-prompt 的"红线清单子树归并原则"。
+**统筹与拆出互斥**：对同一个父模块，要么统筹（列父模块 + hotspot 列子节点），要么拆出（列大头子节点 + 不列父模块）——不能同时列父模块和子节点。
+
+红线归并用新规则（WT-039 完成后）——**分布形态 + 语义独立性**，递归应用每一层：
+- **分布形态**：所有子节点占比都比较小且接近（无明显大头）→ 统筹在父模块
+- **分布形态**：有明确大头子节点（top-N 占绝大部分）→ 拆出大头
+- **语义独立性**：大头之间语义不同（不同业务模块）→ 每个大头独立拆出
+- **语义独立性**：大头之间语义相同（同模块不同阶段）→ 可统筹在父模块
+
+**语义独立性由 LLM 判**——机器只能检测 callTree 真实父子关系，大头是否不同业务模块由 LLM 在 narrative 阶段判断。占比接近但语义不同的，必须独立拆出（统筹会掩盖两个独立模块各自的特性）。
+
+item.visualAsset 填法（红线表，分布形态 + 语义独立性递归归并，2 态示例）：
+```json
+{
+  "title": "红线触发清单",
+  "type": "table",
+  "table": {
+    "headers": ["模块", "基线 ms/帧", "当前 ms/帧", "foldChange", "占当前 p50%", "红线类型", "子函数热点"],
+    "rows": [
+      ["<业务模块A>", "1.00", "3.80", "×3.8", "12.51%", "foldChange≥2 + 占 p50≥5%", "<大头子节点A1> 4.92% + <大头子节点A2> 3.99%（父 <模块A> 不列，大头独立拆出：与 <大头子节点A2> 语义不同）"],
+      ["<大头子模块B1>", "0.30", "1.575", "×5.25", "5.19%", "foldChange≥2 + 占 p50≥5%", "<叶子节点> (Burst) count=57820（父 <模块B> 不列，大头拆出）"],
+      ["<渲染管线节点>", "2.50", "10.64", "×4.26", "35.43%", "foldChange≥2 + 占 p50≥5%", "<子 Pass A> 40.43% + <子 Pass B> 38.12%（语义相同同属渲染管线，统筹在父）"],
+      ["...其它子模块各一行（不许父子同时列）..."]
+    ]
+  }
+}
+```
+
+item.visualAsset 填法（红线表，≥3 态示例）：
+```json
+{
+  "title": "红线触发清单",
+  "type": "table",
+  "table": {
+    "headers": ["模块", "base ms/帧", "cur ms/帧", "throttle ms/帧", "foldChange", "占 throttle p50%", "红线类型", "子函数热点"],
+    "rows": [
+      ["<业务模块A>", "1.00", "3.80", "3.47", "×3.8 → ×3.47", "7.55%", "foldChange≥2 + 占 p50≥5%", "<大头子节点A1>（父 <模块A> 不列，大头拆出）"],
+      ["<大头子模块B1>", "0.30", "1.575", "2.10", "×5.25 → ×7.0", "4.57%", "foldChange≥2 + 占 p50≥5%", "<叶子节点> (Burst) count=57820"]
+    ]
+  }
+}
+```
+
+### §4 ROI 优化方向（多态：按 foldChange × 占 p50% 排序）
+
+★【§4 ROI 不重复 §3 下钻的 recommendations】
+§4 ROI 只给"优先级排序 + 散点图 + 一句话行动方向"，**不重复 §3 下钻的详细 recommendations**。
+§3 下钻是"详细展开的地方"（callTree + 红线 + GC + 源码 + 优化建议），§4 只是指路牌——告诉读者"先治哪个"，具体怎么治去 §3 下钻看。
+- ❌ 反例：§4 P0-1 的 recommendations 写"复用 entity task 对象池 + ProcessTask_MapEntityAdd 分帧化"——这是 §3 下钻 ① 的 recommendations，§4 重复了
+- ✅ 正例：§4 P0-1 只写"<相机移动模块> 对象池 + 分帧处理（详见 §3 下钻 ①）"——一句话行动方向 + 引用
+
+- 按 foldChange × 占当前 p50% 排序的优化方向列表（优先治涨幅最大的回归）
+- 每条：具体模块 + 问题 + **一句话行动方向**（不重复 §3 下钻的详细 recommendations，只给"先治哪个 + 详见 §3 下钻 ①"）
+- 优化方向要具体（不是"建议优化"，是具体的代码层建议，如"把 OnUpdate 内 head 信息每帧重建改成 dirty-flag 增量"）
+- 多态 ROI 排序用"foldChange + 占当前 p50%"（不用单态的"占 p50% + severity"）
+
+★【优化建议必须基于源码·不许套话】
+对进入主因的热点，给建议前必须先 getSourceForSymbol 看真实代码——建议要基于代码里实际看到的东西（已有/缺少哪些优化、有无每帧全遍历的循环等）。
+看不到源码的（marker 无法锚定符号）就如实说"需要看 XX 的实现才能给具体建议"，别硬猜。
+❌ 反例："建议单次任务削峰" / "考虑加缓存" / "降频处理"——没看代码的万能套话。
+✅ 正例："<业务模块A>.OnUpdate 里三个每帧全量 foreach（m_targetToEffectDict/m_armyPredictDict/m_armyPreviewDict），改脏标记只在状态变化时处理"。
+
+---
+
+## 写作纪律（DR-41 五条硬规则）
+
+1. **报告 = 呈现层**：无 evidence id / tool name / 字段名（claim/boundary/relativeBaseline）
+2. **子树归并**：同一子树的节点不重复出现在 top 列表（用 mergeBySubtree）
+3. **结构 = 宏观 → 各线程 → 下钻**：不按 finding kind 罗列
+4. **图文穿插四段式**：引用块 + ASCII 图 + 关键数字 + 详见 §X，禁止超过 3 行的文字段落
+5. **人话先行**：技术数字沉底（narrative.json 的 findings[].claim + boundary），HTML 正文只有人话 + 关键数字
+
+## 叙事形态（多态专用，DR-43）
+
+- 演化型叙事：2 态用"从基线的 X 到当前的 Y——核心增量是 Z"；≥3 态用"从 base 的 X 经 cur 的 Y 演化到 throttle 的 Z"
+- 多态对照表 + ASCII 柱状图 + foldChange 涨幅%
+- 红线判定用 foldChange（相对倍数，不硬编码绝对阈值）+ 绝对增量（防误判，< p50 的 1% 不算回归）
+- ≥3 态可用单调性增强信号（base→cur→throttle 是否单调下降/上升），2 态只能讲涨/跌
+
+## unity vs perfetto 多态差异（避免硬搬 perfetto 模板）
+
+| 维度 | perfetto 多态 | unity 多态（本模板） |
+|---|---|---|
+| 主线程入口 | UnityMain + atrace slice | PlayerLoop + marker |
+| 帧分位数 | Android 帧时间线 + vsync 节拍 | PlayerLoop p50/p95/p99 + slowFrame |
+| 多线程 | UnityMain/UnityGfxRenderS + Android 音频线程池 + sched | UnityMain/UnityGfxRenderS/Job.Worker/LuaMtGC + mainThreadWaits |
+| GPU-bound | wait slice 重叠法 + byState S/R/D | mainThreadWaits + getThreadTimeline（主线程等谁） |
+| 降频 | 大核 reach + 温度 + per-CPU | **无（unity 不暴露 CPU 频率，不写降频章节）** |
+| GC 归因 | per-marker GC 分配（perfetto 独家） | queryFrameCounters gc_allocated_in_frame（整帧总量，无 per-marker） |
+| 红线判定 | foldChange + perFrameMs | foldChange + 绝对增量 + perFrameMs（相同） |
+
+**关键差异**：
+- **unity 多态没有 perfetto 的降频/CPU 频率概念**——不写降频章节（perfetto §4 降频时序在 unity 多态下跳过，§0/§3 不提大核 reach/中核 max-freq/温度）
+- **unity 多态没有 perfetto 的 off-CPU 归因/GPU-bound wait slice 重叠法**——主线程等待归因用 unity 的 mainThreadWaits + getThreadTimeline（主线程在等哪根线程），不写 byState S/R/D/R+ 分布
+- **unity 多态没有 perfetto 的 Android 帧时间线/vsync 节拍**——用 PlayerLoop 分位数 + slowFrameRate
+- **unity 多态的 GC 归因比 perfetto 弱**：queryFrameCounters 只有整帧 gc_allocated_in_frame 总量，给不了 per-marker 分配源（perfetto 有 per-marker GC 分配）——GC 卡顿根因分水岭（分配尖峰 vs 定时 GC）只能用整帧总量对照，诚实声明"per-marker 分配源需 DR-POOL-1 补"
+- **unity 多态的 GPU-bound 判定比 perfetto 弱**：没有 wait slice 重叠法，只能用 mainThreadWaits 占比 + 渲染线程 run% + Semaphore/WaitForSignal marker 时序间接推断，诚实声明"单源无法断言 GPU 满载"

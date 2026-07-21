@@ -22,7 +22,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { NarrativeReport } from './narrative-types.js';
+import type { NarrativeReport, VisualAsset } from './narrative-types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +73,79 @@ if (hasFlag('--help') || hasFlag('-h')) {
   process.exit(0);
 }
 
+// ─────────────────────── WT-037 辅助函数 ───────────────────────
+// 视觉资产 schema 兼容期：WT-036 后视觉资产在 sections[].items[].visualAsset，
+// 但历史 narrative.json（v1/v4 标杆）仍是旧 schema（顶层 metaInfo/threadOverview/throttlingMatrix/redlineMatrix/asciiArt）。
+// 辅助函数同时扫新 schema (item.visualAsset) 和旧 schema (顶层字段)，兼容期双向都扫。
+
+/**
+ * 在 sections[].items[].visualAsset 里按 title 正则找视觉资产（新 schema）。
+ * 旧 schema 没有这个字段，返回 undefined（由调用方回退到顶层字段）。
+ */
+function findVisualAssetByTitle(narrative: NarrativeReport, titleRe: RegExp): VisualAsset | undefined {
+  for (const sec of narrative.sections) {
+    for (const item of sec.items) {
+      if (item.visualAsset && titleRe.test(item.visualAsset.title)) {
+        return item.visualAsset;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * 按统计视觉资产数量（新 schema：扫 sections[].items[].visualAsset.type）。
+ * 旧 schema 没有 type 字段，扫不到（由调用方回退到顶层字段）。
+ */
+function countVisualAssetsByType(narrative: NarrativeReport, type: 'table' | 'ascii' | 'matrix'): number {
+  let n = 0;
+  for (const sec of narrative.sections) {
+    for (const item of sec.items) {
+      if (item.visualAsset?.type === type) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * 简单文本相似度（Jaccard on tokens），不引外部库。
+ * 用于 D1 检查 topConclusions.problem 与 §0 item.title 是否高度重复。
+ */
+function textSimilarity(a: string, b: string): number {
+  const tokensA = new Set(a.split(/[\s,，。；;:：()（）/\\]+/).filter(t => t.length > 1));
+  const tokensB = new Set(b.split(/[\s,，。；;:：()（）/\\]+/).filter(t => t.length > 1));
+  const intersection = [...tokensA].filter(t => tokensB.has(t)).length;
+  const union = new Set([...tokensA, ...tokensB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * 旧 schema 兼容：从顶层字段读视觉资产行数。
+ * WT-036 前视觉资产在顶层 metaInfo/threadOverview/throttlingMatrix/redlineMatrix/asciiArt。
+ * 新 schema 这些字段不在 NarrativeReport 类型里，用 any 取。
+ */
+function getLegacyTopLevelField(narrative: NarrativeReport, field: string): unknown {
+  return (narrative as unknown as Record<string, unknown>)[field];
+}
+
+/**
+ * 兼容期统一取"ASCII 图数量"——先扫新 schema (item.visualAsset.type==='ascii')，
+ * 回退到旧 schema 顶层 asciiArt 数组 + topConclusions[].asciiArt。
+ */
+function countAsciiArtCompat(narrative: NarrativeReport): { count: number; source: 'new-schema' | 'legacy' | 'missing' } {
+  // 新 schema
+  const n = countVisualAssetsByType(narrative, 'ascii');
+  if (n > 0) return { count: n, source: 'new-schema' };
+  // 旧 schema：顶层 asciiArt 数组 + topConclusions 挂的 asciiArt
+  const legacy = getLegacyTopLevelField(narrative, 'asciiArt');
+  let count = 0;
+  if (Array.isArray(legacy)) count += legacy.length;
+  for (const tc of narrative.topConclusions ?? []) {
+    if (tc.asciiArt) count++;
+  }
+  return count > 0 ? { count, source: 'legacy' } : { count: 0, source: 'missing' };
+}
+
 // ─────────────────────── 1. 占位符填充检查 ───────────────────────
 // DR-45 §3.1：任何 {{XXX}} 占位符的填充函数必须返回非空且含关键内容。
 // 防 resolveReportTemplate 的 return '' 短路。
@@ -91,7 +164,14 @@ console.log('\n[1] 占位符填充检查（防 return "" 短路）');
     const tpl = fs.readFileSync(templatePath, 'utf-8');
     assert(tpl.length > 100, `${source}-multi-state.txt 内容非空 (>100 chars)`, { len: tpl.length });
     assert(tpl.includes('§0'), '模板含 §0 章节（结论先行）');
-    assert(tpl.includes('§5') || tpl.includes('§6'), '模板含 §5/§6 章节（callTree/判定）');
+    // WT-044: unity 多态模板只有 §0-§4（没有 perfetto 的降频 §4/GPU-bound §3 等），
+    // 不强制 §5/§6，但至少要有 §1（采集元信息）+ §3（主线程 callTree）
+    if (source === 'unity') {
+      assert(tpl.includes('§1'), 'unity 模板含 §1 章节（采集元信息）');
+      assert(tpl.includes('§3'), 'unity 模板含 §3 章节（主线程 callTree）');
+    } else {
+      assert(tpl.includes('§5') || tpl.includes('§6'), '模板含 §5/§6 章节（callTree/判定）');
+    }
 
     // 关键：检查 narrative-service.ts 的 resolveReportTemplate 是否真的会读这个文件
     // 而不是硬编码 return ''。读源码静态检查。
@@ -191,6 +271,105 @@ console.log('\n[1] 占位符填充检查（防 return "" 短路）');
   });
 }
 
+// ─────────────────────── 1c. prompt 文件硬编码扫描（WT-038 需求 G） ───────────────────────
+// dev-conventions.md §6.1：prompt 范例不许用业务名，用占位符。
+// 数据源无关骨架（narrative-prompt.txt）不许有数据源特定词。
+// 数据源特定模板可保留该数据源概念，但不许有业务名。
+// 这些断言是 assert（FAIL），不是 warn（warning）——prompt 里有业务名 = harness FAIL。
+
+console.log('\n[1c] prompt 文件硬编码扫描（WT-038 需求 G）');
+
+// G1. narrative-prompt.txt 不许有业务名
+const narrativePromptSrc = fs.readFileSync(path.join(__dirname, 'prompts/narrative-prompt.txt'), 'utf-8');
+const businessNames = [/行军线/, /ArmyLine/, /MapSignificance/, /BattleHead/, /LuaMgr/, /MapManager/, /OutSideView/];
+for (const re of businessNames) {
+  assert(!re.test(narrativePromptSrc), `narrative-prompt.txt 无业务名硬编码: ${re.source}`);
+}
+
+// G2. narrative-prompt.txt 不许有 perfetto 特定词（它是数据源无关骨架）
+const perfettoSpecificTerms = [/Choreographer/, /AudioTrack/, /AAudio/, /bigCoreReach/, /Gfx\.WaitForPresent/];
+for (const re of perfettoSpecificTerms) {
+  assert(!re.test(narrativePromptSrc), `narrative-prompt.txt 无 perfetto 特定词: ${re.source}`);
+}
+
+// G3. perfetto-multi-state.txt 不许有业务名（perfetto 概念可保留）
+const perfettoTemplateSrc = fs.readFileSync(path.join(__dirname, 'prompts/report-templates/perfetto-multi-state.txt'), 'utf-8');
+for (const re of businessNames) {
+  assert(!re.test(perfettoTemplateSrc), `perfetto-multi-state.txt 无业务名硬编码: ${re.source}`);
+}
+
+// G5. WT-044: unity-multi-state.txt 不许有 AOE 专属业务名（unity 概念可保留）
+const unityMultiTemplatePath = path.join(__dirname, 'prompts/report-templates/unity-multi-state.txt');
+if (fs.existsSync(unityMultiTemplatePath)) {
+  const unityMultiTemplateSrc = fs.readFileSync(unityMultiTemplatePath, 'utf-8');
+  for (const re of businessNames) {
+    assert(!re.test(unityMultiTemplateSrc), `unity-multi-state.txt 无业务名硬编码: ${re.source}`);
+  }
+}
+
+// G4. unity-explore-prompt.txt 不许有 AOE 专属业务名（unity 概念可保留）
+const unityPromptPath = path.join(__dirname, 'prompts/unity-explore-prompt.txt');
+if (fs.existsSync(unityPromptPath)) {
+  const unityPromptSrc = fs.readFileSync(unityPromptPath, 'utf-8');
+  for (const re of businessNames) {
+    assert(!re.test(unityPromptSrc), `unity-explore-prompt.txt 无业务名硬编码: ${re.source}`);
+  }
+}
+
+// ─────────────────────── 1d. render 层硬编码扫描（WT-037 需求 B） ───────────────────────
+// WT-036 修完后视觉资产从顶层字段移到 item.visualAsset，render-html.ts 不该再硬编码引用
+// perfetto 特有字段名（metaInfoMatched/threadOverviewMatched/throttlingMatrixMatched/redlineMatrixMatched）。
+// narrative-types.ts 顶层 NarrativeReport 也不该有 perfetto 特有字段。
+// 这些断言是 assert（FAIL），不是 warn——硬编码 = harness FAIL。
+
+console.log('\n[1d] render 层硬编码扫描（WT-037 需求 B：通用层无 perfetto 特有字段名）');
+
+// B1. render-html.ts 不许出现 perfetto 特有字段名（WT-036 后这些字段不在顶层，render 不该硬编码引用）
+const renderHtmlSrc = fs.readFileSync(path.join(__dirname, 'render-html.ts'), 'utf-8');
+const forbiddenFieldNames = [
+  /metaInfoMatched/,
+  /threadOverviewMatched/,
+  /throttlingMatrixMatched/,
+  /redlineMatrixMatched/,
+  /visualAssetKey\s*===\s*['"]metaInfo['"]/,
+  /visualAssetKey\s*===\s*['"]threadOverview['"]/,
+  /visualAssetKey\s*===\s*['"]throttlingMatrix['"]/,
+  /visualAssetKey\s*===\s*['"]redlineMatrix['"]/,
+];
+let forbiddenFound: string[] = [];
+for (const re of forbiddenFieldNames) {
+  if (re.test(renderHtmlSrc)) {
+    forbiddenFound.push(re.source);
+  }
+}
+assert(forbiddenFound.length === 0, 'render-html.ts 无硬编码字段名（WT-036 后通用层不许引用 perfetto 特有字段）', {
+  forbiddenFound,
+  hint: '这些字段已移到 item.visualAsset，render 应按 type 渲染，不该按字段名硬匹配',
+});
+
+// B2. narrative-types.ts 顶层 NarrativeReport 不许有 perfetto 特有字段
+//     WT-036 后这些字段已删，本断言防回退。
+const typesSrc = fs.readFileSync(path.join(__dirname, 'narrative-types.ts'), 'utf-8');
+const reportIfaceMatch = typesSrc.match(/interface NarrativeReport \{[\s\S]*?\}/);
+if (reportIfaceMatch) {
+  const reportIface = reportIfaceMatch[0];
+  const forbiddenTopLevel: string[] = [];
+  if (/metaInfo\?:/.test(reportIface)) forbiddenTopLevel.push('metaInfo');
+  if (/threadOverview\?:/.test(reportIface)) forbiddenTopLevel.push('threadOverview');
+  if (/throttlingMatrix\?:/.test(reportIface)) forbiddenTopLevel.push('throttlingMatrix');
+  if (/redlineMatrix\?:/.test(reportIface)) forbiddenTopLevel.push('redlineMatrix');
+  if (/asciiArt\?:/.test(reportIface)) forbiddenTopLevel.push('asciiArt');
+  assert(forbiddenTopLevel.length === 0, 'NarrativeReport 顶层无 perfetto 特有字段（WT-036 后视觉资产移到 item.visualAsset）', {
+    forbiddenTopLevel,
+  });
+} else {
+  console.log('  SKIP: NarrativeReport interface 没找到（可能重构了）');
+}
+
+// B3. harness.ts 自身不许硬编码 visualAssetKeys 数组扫顶层字段
+//     WT-035 警告 1 的 visualAssetKeys = ['metaInfo', ...] 是过渡方案，WT-036 后应删
+assert(!/visualAssetKeys\s*=\s*\[/.test(typesSrc), 'narrative-types.ts 无 visualAssetKeys 顶层字段数组（WT-036 后改为扫 item.visualAsset）');
+
 // ─────────────────────── 2. narrative.json 结构契约 ───────────────────────
 // DR-45 §3.2：narrative LLM 产出后，校验 sections 结构是否符合模板章节骨架。
 // 需 --dir 指向 run 输出目录。
@@ -288,39 +467,41 @@ if (dirArg) {
       const hasP0 = narrative.prioritySummary.some(p => p.priority === 'P0');
       assert(hasP0, 'prioritySummary 有 P0 项');
 
-      // ── WT-035: 4 类软警告（对照 v5.3 标杆，兜底验收） ──
-      // 这些 warning 不阻塞（不 fail），但验收时必须检查——暴露"narrative LLM 没按模板填"的问题。
+      // ── WT-035: 4 类软警告 → WT-037 升级 3 类为 assert（FAIL） ──
+      // WT-035 教训：warning 不阻塞，开发 agent 交了带 warning 的 v4 退化产物。
+      // WT-037 把其中 3 类升级为 assert（FAIL）：视觉资产全空 / 多线程覆盖不足 / topConclusions 无 callTree。
+      // 保留 warning 的只有 callTree 节点无红线标注（explore 层问题，不是 narrative 层）。
       // WT-036: 视觉资产从顶层字段移到 sections[].items[].visualAsset，扫描方式同步改。
+      // WT-037: 兼容期同时扫新 schema (item.visualAsset) 和旧 schema (顶层字段)，标杆 v1/v4 是旧 schema。
 
-      // WT-035 警告 1: 视觉资产全空（扫 sections[].items[].visualAsset，不是顶层字段）
+      // WT-035 警告 1 → WT-037 assert: 视觉资产全空（扫 item.visualAsset + 顶层字段）
       let visualAssetCount = 0;
       for (const sec of narrative.sections) {
         for (const item of sec.items) {
           if (item.visualAsset) visualAssetCount++;
         }
       }
-      if (visualAssetCount === 0) {
-        warn('所有 item.visualAsset 为空（narrative LLM 没按模板填视觉资产）', {
-          hint: 'narrative LLM 必须按 {{REPORT_TEMPLATE}} 注入的模板在 item 里填 visualAsset——可能模板没注入或 LLM 忽略了',
-        });
+      // 旧 schema 兼容：顶层字段有视觉资产也算
+      const legacyVisualAssetFields = ['metaInfo', 'threadOverview', 'throttlingMatrix', 'redlineMatrix', 'asciiArt'];
+      for (const field of legacyVisualAssetFields) {
+        const legacyField = getLegacyTopLevelField(narrative, field);
+        if (Array.isArray(legacyField) && legacyField.length > 0) visualAssetCount += legacyField.length;
       }
+      // topConclusions 挂的 asciiArt 也算（新旧 schema 都可能有）
+      for (const tc of narrative.topConclusions ?? []) {
+        if (tc.asciiArt) visualAssetCount++;
+      }
+      assert(visualAssetCount >= 1, '至少 1 个视觉资产（item.visualAsset 或顶层字段，不许全空）', {
+        visualAssetCount,
+        hint: 'narrative LLM 必须按 {{REPORT_TEMPLATE}} 注入的模板填视觉资产——可能模板没注入或 LLM 忽略了',
+      });
 
-      // WT-035 警告 2: 多线程覆盖不足（扫 title 含"多线程"的 visualAsset table 行数）
-      let threadOverviewRows = 0;
-      for (const sec of narrative.sections) {
-        for (const item of sec.items) {
-          if (item.visualAsset?.title && /多线程/.test(item.visualAsset.title) && item.visualAsset.table?.rows) {
-            threadOverviewRows += item.visualAsset.table.rows.length;
-          }
-        }
-      }
-      if (threadOverviewRows < 5) {
-        warn(`多线程宏观表覆盖 ${threadOverviewRows} 行（< 5，v5.3 标杆有 7 类线程）`, {
-          hint: 'explore 可能没查全线程 sched，或 narrative 没把 findings 里的线程全列进 visualAsset.table',
-        });
-      }
+      // WT-035 警告 2 → WT-037 A1 覆盖（多线程宏观表 ≥5 行 = FAIL）：见下方 A1 断言
 
-      // WT-035 警告 3: topConclusions 无 callTree（critical/high 行无 callTree/asciiArt）
+      // WT-035 警告 3 → WT-037 assert → WT-046 v5 降级为 WARN（DR-50: 挂载可选，不许预先规定挂载）
+      // 工单 WT-046 v5 需求 B 把 prompt 从"必须挂 callTree/asciiArt"改成"可选"（DR-50 合规——
+      // 预先规定挂载是内容约束/作文机病）。LLM 按 prompt 产出 0% 挂载是合规的，旧断言"≥50%"
+      // 是 DR-50 违规的过时断言。降级为 WARN：挂载低不阻塞，但可能暴露 §0 叙事展开不充分。
       const criticalHigh = (narrative.topConclusions ?? []).filter(
         c => c.severity === 'critical' || c.severity === 'high'
       );
@@ -328,13 +509,16 @@ if (dirArg) {
         const withCallTree = criticalHigh.filter(c => c.callTree || c.asciiArt);
         const ratio = withCallTree.length / criticalHigh.length;
         if (ratio < 0.5) {
-          warn(`critical/high topConclusion 挂 callTree/asciiArt 比率 ${(ratio * 100).toFixed(0)}% (< 50%)`, {
-            hint: 'v5.3 §0 每条核心结论都挂调用树/ASCII 图——narrative LLM 没给 critical/high 行挂 callTree.rootMarker 或 asciiArt',
+          warn('critical/high topConclusion 挂 callTree/asciiArt 比率 <50%（DR-50: 挂载可选，不阻塞）', {
+            ratio: `${(ratio * 100).toFixed(0)}%`,
+            withCallTree: withCallTree.length,
+            total: criticalHigh.length,
+            hint: 'WT-046 v5 后挂载可选（DR-50）——LLM 不硬挂是合规的。挂载低可能暴露 §0 叙事展开不充分，主 agent 人眼检查 §0 是否每条都有 ASCII 图/人话叙事',
           });
         }
       }
 
-      // WT-035 警告 4: callTree 节点无红线标注（读 report.html 看 tree-redline/tree-fold class）
+      // WT-035 警告 4: callTree 节点无红线标注（保留 warning——explore 层问题，不是 narrative 层）
       if (fs.existsSync(reportHtmlPath)) {
         const html = fs.readFileSync(reportHtmlPath, 'utf-8');
         const treeNodes = (html.match(/class="tree-bar"/g) || []).length;
@@ -346,6 +530,188 @@ if (dirArg) {
           });
         }
       }
+
+      // ── WT-037 需求 A: 内容厚度回归断言（对标 v1 标杆，FAIL 不是 warning） ──
+      // 防 narrative LLM 丢内容：v4 相比 v1 threadOverview 8→4 行、redlineMatrix 8→3 行、throttlingMatrix 5→4 行、asciiArt 4→3 个、metaInfo 12→10 行。
+      // 断言是 assert（FAIL），不是 warn——行数 < 标杆 = harness FAIL = 开发 agent 不能交差。
+      // 兼容期：扫新 schema (item.visualAsset) 回退到旧 schema 顶层字段。
+      console.log('\n[2a] 内容厚度回归断言（WT-037 需求 A：对标 v1 标杆，FAIL 不是 warning）');
+
+      // A1. 多线程宏观表 ≥5 行（v1 标杆 8 行，v4 退化到 4 行）
+      //     扫 title 含"多线程"的 visualAsset table.rows.length，回退到顶层 threadOverview 数组
+      const a1Asset = findVisualAssetByTitle(narrative, /多线程/);
+      const a1Legacy = getLegacyTopLevelField(narrative, 'threadOverview');
+      const a1Rows = a1Asset?.table?.rows?.length ?? (Array.isArray(a1Legacy) ? a1Legacy.length : 0);
+      assert(a1Rows >= 5, '内容厚度回归 - 多线程宏观表 ≥5 行（v1 标杆 8 行，含 Audio 线程池，不许合并）', {
+        actual: a1Rows,
+        benchmark: 8,
+        source: a1Asset ? 'new-schema' : (a1Legacy ? 'legacy' : 'missing'),
+      });
+
+      // A2. 红线触发清单 ≥5 行（v1 标杆 8 行细到子模块，v4 退化到 3 行只父级）
+      //     扫 title 含"红线"的 visualAsset table.rows.length，回退到顶层 redlineMatrix 数组
+      const a2Asset = findVisualAssetByTitle(narrative, /红线/);
+      const a2Legacy = getLegacyTopLevelField(narrative, 'redlineMatrix');
+      const a2Rows = a2Asset?.table?.rows?.length ?? (Array.isArray(a2Legacy) ? a2Legacy.length : 0);
+      assert(a2Rows >= 5, '内容厚度回归 - 红线触发清单 ≥5 行（细到子模块，不许只到父）', {
+        actual: a2Rows,
+        benchmark: 8,
+        source: a2Asset ? 'new-schema' : (a2Legacy ? 'legacy' : 'missing'),
+      });
+
+      // A3. 降频判定矩阵 ≥4 行（v1 标杆 5 行，v4 退化到 4 行）
+      //     扫 title 含"降频"的 visualAsset table.rows.length，回退到顶层 throttlingMatrix 数组
+      //     WT-044: unity 多态报告没有降频章节（unity 不暴露 CPU 频率，见 unity-multi-state.txt 模板），
+      //     source=unity 时跳过此断言（不误杀）。
+      if (source === 'unity') {
+        console.log('  SKIP: A3 降频矩阵断言对 unity 不适用（unity 没有降频章节，WT-044）');
+      } else {
+        const a3Asset = findVisualAssetByTitle(narrative, /降频/);
+        const a3Legacy = getLegacyTopLevelField(narrative, 'throttlingMatrix');
+        const a3Rows = a3Asset?.table?.rows?.length ?? (Array.isArray(a3Legacy) ? a3Legacy.length : 0);
+        assert(a3Rows >= 4, '内容厚度回归 - 降频判定矩阵 ≥4 行', {
+          actual: a3Rows,
+          benchmark: 5,
+          source: a3Asset ? 'new-schema' : (a3Legacy ? 'legacy' : 'missing'),
+        });
+      }
+
+      // A4. ASCII 图 ≥3 个（v1 标杆 4 个，v4 退化到 3 个）
+      //     扫 item.visualAsset.type==='ascii'，回退到顶层 asciiArt 数组 + topConclusions[].asciiArt
+      const a4Count = countAsciiArtCompat(narrative);
+      assert(a4Count.count >= 3, '内容厚度回归 - ASCII 图 ≥3 个', {
+        actual: a4Count.count,
+        benchmark: 4,
+        source: a4Count.source,
+      });
+
+      // A5. 采集元信息 ≥8 行（v1 标杆 12 行）
+      //     扫 title 含"采集元信息"的 visualAsset table.rows.length，回退到顶层 metaInfo 数组
+      const a5Asset = findVisualAssetByTitle(narrative, /采集元信息/);
+      const a5Legacy = getLegacyTopLevelField(narrative, 'metaInfo');
+      const a5Rows = a5Asset?.table?.rows?.length ?? (Array.isArray(a5Legacy) ? a5Legacy.length : 0);
+      assert(a5Rows >= 8, '内容厚度回归 - 采集元信息 ≥8 行', {
+        actual: a5Rows,
+        benchmark: 12,
+        source: a5Asset ? 'new-schema' : (a5Legacy ? 'legacy' : 'missing'),
+      });
+
+      // ── WT-037 需求 D: 核心结论与 §0 不重复检查 ──
+      // v4 退化点：§0 ①②③ 与 topConclusions 1-3 内容重复。
+      // §0 应是结论先行的叙事展开，不是 topConclusions 的复述——narrative LLM 没区分两层的语义角色就会重复。
+      // 检查 topConclusions 的 problem 文本与 §0 section items 的 title 文本相似度。
+      //
+      // 阈值校准说明：工单原文写 0.7，但用 v1/v4 标杆实跑校准后，0.7 会误杀 v1 标杆
+      // （v1 #1 sim=0.857，"throttle 态 GPU-bound：主线程 39% 时间在等 GPU" vs
+      //  "① GPU-bound：throttle 主线程 39% 时间在等 GPU（第一主因）"——共享领域关键词
+      //  GPU-bound/主线程/39%/等 GPU，但措辞不同，是合法的"结论先行复述要点"）。
+      // v4 真正的退化是 §0 ③ title 与 topConclusions #3 problem 完全相同（sim=1.000）。
+      // 阈值定 0.9：抓 sim=1.0 的完全重复，不误杀 v1 的 0.857 领域关键词重叠。
+      console.log('\n[2b] 核心结论与 §0 不重复检查（WT-037 需求 D：防 narrative LLM 复述 topConclusions）');
+
+      const section0 = narrative.sections.find(s => s.heading.includes('§0') || s.heading.includes('结论先行'));
+      if (section0) {
+        const section0Titles = section0.items.map(i => i.title);
+        const topProblems = narrative.topConclusions.map(c => c.problem);
+        let duplicateFound: { idx: number; problem: string; section0Title: string; sim: number } | null = null;
+        for (let i = 0; i < topProblems.length; i++) {
+          for (const title of section0Titles) {
+            const sim = textSimilarity(topProblems[i], title);
+            if (sim > 0.9) {
+              duplicateFound = { idx: i + 1, problem: topProblems[i], section0Title: title, sim };
+              break;
+            }
+          }
+          if (duplicateFound) break;
+        }
+        assert(!duplicateFound, '核心结论与 §0 不重复（topConclusions.problem 与 §0 item.title 相似度 ≤0.9）', {
+          ...(duplicateFound ?? {}),
+          hint: '§0 应是结论先行的叙事展开，不是 topConclusions 的复述——narrative LLM 没区分两层的语义角色',
+        });
+      } else {
+        console.log('  SKIP: 没找到 §0 / 结论先行 section');
+      }
+
+      // ── [2c] §0 vs §3 下钻 narrative 内容重复检查（DR-49 新增，2026-07-20） ──
+      // WT-046 v1/v2 两次打回都靠人眼发现 §0 ①②③ narrative 和 §3 下钻 ①②③ narrative
+      // 内容重复（"MapSignificanceMgr 涨 57.88 倍 + 0.069→3.994ms + GC alloc 0→14043" 在两处都出现），
+      // 机器断言全 PASS 但人眼一看就发现重复——因为机器根本没在查这件事。
+      //
+      // 检测思路：§0 应是父模块级摘要（"涨 8.87 倍 + 占 p50 33.3%"），§3 下钻才讲子节点细节
+      // （"MapSignificanceMgr 0.069→3.994ms + GC alloc 0→14043"）。子节点细节的特征是"具体数字"——
+      // foldChange（57.88）/ ms（0.069, 3.994）/ GC alloc（14043）等。
+      //
+      // 如果 §0 ① narrative 和 §3 下钻 ① narrative 共享 ≥2 个"数字特征串"（数字完全相同），
+      // 就是内容重复——§0 不该讲子节点的具体数字。
+      //
+      // 阈值校准：用 v2 失败案例（§0 ① "57.88 倍 + 0.069→3.994 + 14043" 和 §3 下钻 ① 共享 3 个数字）
+      // 和 v1 标杆（§0 是父模块摘要，§3 下钻是子节点细节，共享 0-1 个数字）实跑校准。
+      // 阈值定 ≥2：抓 v2 的 3 个数字重复，不误杀 v1 的 0-1 个数字巧合重叠。
+      console.log('\n[2c] §0 vs §3 下钻 narrative 内容重复检查（DR-49：防 §0 讲子节点细节，§3 下钻重复）');
+
+      const section0ForDr49 = narrative.sections.find(s => s.heading.includes('§0') || s.heading.includes('结论先行'));
+      const section3 = narrative.sections.find(s => s.heading.includes('§3'));
+      if (section0ForDr49 && section3) {
+        // §3 下钻 items：title 含"下钻"或以 ①②③④⑤⑥ 开头
+        const drilldownItems = section3.items.filter(it =>
+          /下钻/.test(it.title) || /^[①②③④⑤⑥⑦⑧⑨⑩]/.test(it.title)
+        );
+        // 提取"数字特征串"：foldChange（如 57.88, 8.87）/ ms 数字（如 0.069, 3.994）/ GC alloc 数字（如 14043）/ 百分比（如 33.3%, 59.1%）
+        // 用正则抓所有"数字.数字"或"数字→数字"或"数字→数字"模式，过滤掉太常见的（如 0, 1, 16.66 帧预算）
+        const extractNumericFeatures = (text: string): Set<string> => {
+          const features = new Set<string>();
+          // foldChange 模式：×N.N 或 X.NN 倍
+          const foldChangeMatches = text.match(/×\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*倍/g) || [];
+          for (const m of foldChangeMatches) features.add(m);
+          // ms 数字模式：N.NNms（含 0.069, 3.994 等）
+          const msMatches = text.match(/\d+(?:\.\d+)?\s*ms/g) || [];
+          for (const m of msMatches) features.add(m);
+          // GC alloc 数字：N→N 或 N → N（含 14043 等）
+          const gcMatches = text.match(/GC\s*alloc\s*\d+(?:\.\d+)?/gi) || [];
+          for (const m of gcMatches) features.add(m.toLowerCase());
+          // 箭头数字模式：N.NN→N.NN 或 N.NN → N.NN（含 0.069→3.994 等）
+          const arrowMatches = text.match(/\d+(?:\.\d+)?\s*[→→]\s*\d+(?:\.\d+)?/g) || [];
+          for (const m of arrowMatches) features.add(m.replace(/\s+/g, ''));
+          // 过滤太常见的数字（帧预算 16.66/33.33，0/1 这种）
+          for (const common of ['16.66ms', '33.33ms', '0ms', '1ms', '×0', '×1', '×2', '0倍', '1倍', '2倍']) {
+            features.delete(common);
+          }
+          return features;
+        };
+
+        let dr49Violation: { section0Idx: number; drilldownIdx: number; sharedFeatures: string[]; section0Title: string; drilldownTitle: string } | null = null;
+        for (let i = 0; i < section0ForDr49.items.length; i++) {
+          const s0Item = section0ForDr49.items[i];
+          const s0Text = `${s0Item.title} ${s0Item.narrative ?? ''} ${s0Item.visualAsset?.ascii?.content ?? ''}`;
+          const s0Features = extractNumericFeatures(s0Text);
+          if (s0Features.size === 0) continue; // §0 没数字特征，跳过（可能是纯文字结论）
+          for (let j = 0; j < drilldownItems.length; j++) {
+            const ddItem = drilldownItems[j];
+            const ddText = `${ddItem.title} ${ddItem.narrative ?? ''}`;
+            const ddFeatures = extractNumericFeatures(ddText);
+            const shared = [...s0Features].filter(f => ddFeatures.has(f));
+            // 阈值 ≥2：§0 和 §3 下钻共享 ≥2 个数字特征串 = 内容重复
+            if (shared.length >= 2) {
+              dr49Violation = {
+                section0Idx: i + 1,
+                drilldownIdx: j + 1,
+                sharedFeatures: shared,
+                section0Title: s0Item.title,
+                drilldownTitle: ddItem.title,
+              };
+              break;
+            }
+          }
+          if (dr49Violation) break;
+        }
+        assert(!dr49Violation, '§0 与 §3 下钻 narrative 内容不重复（共享数字特征串 <2）', {
+          ...(dr49Violation ?? {}),
+          hint: '§0 应是父模块级摘要（涨 X 倍 + 占 p50 Y%），§3 下钻才讲子节点细节（具体 ms/GC alloc 数字）。§0 讲子节点具体数字 = 和 §3 下钻内容重复——DR-49 教训：prompt 约束只禁形式不禁内容，LLM 换形式绕过',
+        });
+      } else {
+        console.log('  SKIP: 没找到 §0 或 §3 section');
+      }
+
 
       // ── 3. report.html 视觉资产检查 ──
       console.log('\n[3] report.html 视觉资产（DR-41 五条硬规则 + 模板要求）');
@@ -391,6 +757,41 @@ if (dirArg) {
         } else {
           assert(true, `report.html 大小合理 (${sizeKB.toFixed(1)} KB)`);
         }
+
+        // 3i. WT-045: 每棵 callTree 的 tree-row 数 ≤ 200（防巨长调用树，剪枝生效检查）
+        //   按 <div class="tree-section" 或 <div class="tc-tree-section" 分割成多棵 callTree，
+        //   每棵内数 class="tree-row" 的数量，任一棵 > 200 = FAIL。
+        //   阈值 200 是宽松阈值：perfetto 每棵约 30-50 节点，unity 剪枝后预期 50-100 节点。
+        //   抓"完全没剪枝"的退化（如 4695 行那种）。
+        const treeRowMatches = html.match(/class="tree-row[^"]*"/g) || [];
+        const totalTreeRows = treeRowMatches.length;
+        // 按 tree-section / tc-tree-section 分割（topConclusions 挂的 callTree 用 tc-tree-section）
+        // 简化实现：用 indexOf 顺序扫，统计每棵树内的 tree-row 数
+        const treeStartRegex = /<div class="(tree-section|tc-tree-section)[^"]*"/g;
+        const treeRowsPerTree: number[] = [];
+        let lastStartIdx = -1;
+        let m: RegExpExecArray | null;
+        while ((m = treeStartRegex.exec(html)) !== null) {
+          if (lastStartIdx >= 0) {
+            // 上一棵树的范围 = [lastStartIdx, m.index)，数其中的 tree-row 数
+            const segment = html.slice(lastStartIdx, m.index);
+            const cnt = (segment.match(/class="tree-row[^"]*"/g) || []).length;
+            treeRowsPerTree.push(cnt);
+          }
+          lastStartIdx = m.index;
+        }
+        if (lastStartIdx >= 0) {
+          // 最后一棵树到文件尾
+          const segment = html.slice(lastStartIdx);
+          const cnt = (segment.match(/class="tree-row[^"]*"/g) || []).length;
+          treeRowsPerTree.push(cnt);
+        }
+        const maxTreeRows = treeRowsPerTree.length > 0 ? Math.max(...treeRowsPerTree) : 0;
+        assert(
+          maxTreeRows <= 200,
+          `每棵 callTree 的 tree-row 数 ≤ 200（防巨长调用树，WT-045）`,
+          { maxTreeRows, threshold: 200, trees: treeRowsPerTree.length, totalTreeRows },
+        );
       }
     }
   }
