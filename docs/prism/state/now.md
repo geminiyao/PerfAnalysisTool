@@ -8,12 +8,28 @@
 
 ## 🚀 下一步具体动作（新会话直接执行）
 
-1. **派发 WT-046 v6 图文并茂 + §0 ③ 重复修复**（P0，工单已建待派发）：v5 验收 PASS 但 §0 ③ 重复记遗留 v6。v6 两个方向一起做：①图文并茂引导（§1 采集元信息加柱状图 + §2 多线程宏观加柱状图 + §3 下钻 narrative 加 ASCII 图穿插 + §0 8 条都配 ASCII 图，注意 DR-50 边界——只给纪律"每章节有 ASCII 图"不给内容"必须画什么类型"）+ ②§0 ③ 重复修复（**选方向 2**：改 §3 下钻讲更深的东西如 callTree 路径/源码定位/增量 GC 溢出，不禁 §0 讲数字——用户反馈"看上去也很好"说明 §0 ③ 讲数字有价值，禁了会让 §0 失去叙事价值，v3 禁过头教训）。工单：`docs/prism/process/worktickets/TODO-WT-046-v6-visual-interspersed-section0-drilldown-deoverlap.md`。派发脚本：`docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-046-v6-visual-interspersed-section0-drilldown-deoverlap.md`
-2. **派发 WT-048 DR-51 三层架构修复**（P1，工单已建待派发，可与 v6 并行无依赖）：工单 `docs/prism/process/worktickets/TODO-WT-048-dr51-three-layer-memory-injection.md`。7 个需求——A: prism-memory.ts MEMORY_CATEGORIES 加 constitution + methodology 两类 + B: explore-service MEMORY_INJECTION_CATEGORIES 加两类 + narrative-service.ts:514 修 WT-040 遗留 bug（formatMemoryForPrompt 没传 dataSource）+ C: 建 constitution/ 10 条（DR-41 五条 + DR-44 三段 + DR-50 三条浓缩）+ D: 建 methodology/ 8 条（DR-45 三条 + DR-48 两条 + DR-49 一条 + DR-42/43 两条浓缩）+ E: harness.ts 加 E1-E6 注入路径断言 + F: README 更新四类→七类 + G: index.json 更新。MEMORY_INJECTION_MAX_CHARS 从 7000 调到 12000。**条目要浓缩**（每条 1-2 句话 + 反例，200-400 字符/条，不能是 docs/prism/memory/ 全文复制会撑爆 prompt token）。派发脚本：`docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-048-dr51-three-layer-memory-injection.md`
+### 新会话开场指令（主 agent 进来后按这个顺序做）
+
+1. **读完本节**：当前状态 = v5 验收 PASS，v6 + WT-048 两张工单已建好待派发
+2. **立即派发两张工单**（可并行无依赖）：
+   ```powershell
+   # 先派 WT-048（改 prism-memory 系统，不动 prompt/模板，独立无依赖）
+   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-048-dr51-three-layer-memory-injection.md
+   # 再派 v6（改 prompt/模板 + 重跑 narrative）
+   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-046-v6-visual-interspersed-section0-drilldown-deoverlap.md
+   ```
+3. **等两个开发 agent 都报完成后，一起独立验收**（DR-36，不只信自报 PASS）：
+   - WT-048 验收：跑通用 harness + 工单特定断言 1-10 + 人眼看 constitution/methodology 条目内容
+   - v6 验收：跑通用 harness（期望 81/0/0，v5 FAIL C 修复）+ 工单特定断言 1-7 + 人眼看 §1/§2/§3/§0 图文并茂 + §0 ③ 重复修复
+4. **两个都验收 PASS 后**：更新 now.md + 工单台账（TODO→DONE）+ 提交 push
+5. **M5 善后完成**：进入 M4 三回路填料里程碑（见下方"M5 善后完成后后续必做需求"节）
+
+### 当前两张待派发工单详情
+
+1. **WT-046 v6 图文并茂 + §0 ③ 重复修复**（P0，工单已建待派发）：v5 验收 PASS 但 §0 ③ 重复记遗留 v6。v6 两个方向一起做：①图文并茂引导（§1 采集元信息加柱状图 + §2 多线程宏观加柱状图 + §3 下钻 narrative 加 ASCII 图穿插 + §0 8 条都配 ASCII 图，注意 DR-50 边界——只给纪律"每章节有 ASCII 图"不给内容"必须画什么类型"）+ ②§0 ③ 重复修复（**选方向 2**：改 §3 下钻讲更深的东西如 callTree 路径/源码定位/增量 GC 溢出，不禁 §0 讲数字——用户反馈"看上去也很好"说明 §0 ③ 讲数字有价值，禁了会让 §0 失去叙事价值，v3 禁过头教训）。工单：`docs/prism/process/worktickets/TODO-WT-046-v6-visual-interspersed-section0-drilldown-deoverlap.md`
+2. **WT-048 DR-51 三层架构修复**（P1，工单已建待派发，可与 v6 并行无依赖）：工单 `docs/prism/process/worktickets/TODO-WT-048-dr51-three-layer-memory-injection.md`。7 个需求——A: prism-memory.ts MEMORY_CATEGORIES 加 constitution + methodology 两类 + B: explore-service MEMORY_INJECTION_CATEGORIES 加两类 + narrative-service.ts:514 修 WT-040 遗留 bug（formatMemoryForPrompt 没传 dataSource）+ C: 建 constitution/ 10 条（DR-41 五条 + DR-44 三段 + DR-50 三条浓缩）+ D: 建 methodology/ 8 条（DR-45 三条 + DR-48 两条 + DR-49 一条 + DR-42/43 两条浓缩）+ E: harness.ts 加 E1-E6 注入路径断言 + F: README 更新四类→七类 + G: index.json 更新。MEMORY_INJECTION_MAX_CHARS 从 7000 调到 12000。**条目要浓缩**（每条 1-2 句话 + 反例，200-400 字符/条，不能是 docs/prism/memory/ 全文复制会撑爆 prompt token）
 3. **WT-037 遗留 bug 小修**（不阻塞）：harness.ts `findVisualAssetByTitle(/降频/)` 正则歧义匹配"三态降频形态" ascii 图而非"降频判定矩阵" matrix。修法：正则改 `/降频判定矩阵/` 或匹配后检查 type===matrix
 4. **perfetto 善后**：DR-42/43 已定稿✅，剩 WT-037 遗留 bug
-
-**派发顺序建议**：先派 WT-048（改 prism-memory 系统，不动 prompt/模板，独立无依赖）→ 再派 v6（改 prompt/模板 + 重跑 narrative）。两个并行派发，等两个都完成后一起验收。
 
 ---
 
