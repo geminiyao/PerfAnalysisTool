@@ -19,7 +19,10 @@ import { simpleperfRoutes } from './routes/simpleperf.js';
 import { mapleRoutes } from './routes/maple.js';
 import { mapleCompareRoutes } from './routes/maple-compare.js';
 import { runsRoutes } from './routes/runs.js';
+import { triadTrendsRoutes } from './routes/triad-trends.js';
 import { runIngestRoutes } from './routes/run-ingest.js';
+import { reportPreviewRoutes } from './routes/report-preview.js';
+import { reportViewerRoutes } from './routes/report-viewer.js';
 
 const config = getConfig();
 
@@ -61,7 +64,10 @@ async function start() {
     mapleRoutes,
     mapleCompareRoutes,
     runsRoutes,
+    triadTrendsRoutes,
     runIngestRoutes,
+    reportPreviewRoutes,
+    reportViewerRoutes,
   ];
   for (const routes of apiRouteGroups) {
     await app.register(routes, { prefix: '/api' });

@@ -1,118 +1,453 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, List, Tag, Button, Space, Empty } from 'antd';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  UploadOutlined,
-  PartitionOutlined,
-  SwapOutlined,
+  Alert,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from 'antd';
+import {
+  ReloadOutlined,
+  LineChartOutlined,
+  AreaChartOutlined,
+  BarsOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { listRuns, type RunListItem } from '../services/api';
-import dayjs from 'dayjs';
+import ReactECharts from 'echarts-for-react';
+import * as echarts from 'echarts';
+import { fetchTriadTrends, listRuns, type TriadTrendsData } from '@/services/api';
 
-const SOURCE_COLORS: Record<string, string> = {
-  unity_profiler: 'green',
-  simpleperf: 'blue',
-  perfetto: 'purple',
-};
+const { Text, Title } = Typography;
+
+/** 三图 dataZoom 联动用的 group 名 */
+const TRIAD_GROUP = 'triad-trends';
+// 注册联动 (幂等, echarts 内部去重)
+echarts.connect(TRIAD_GROUP);
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const [runs, setRuns] = useState<RunListItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<TriadTrendsData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string | undefined>(undefined);
+  const [device, setDevice] = useState<string | undefined>(undefined);
+  const [scene, setScene] = useState<string | undefined>(undefined);
+
+  // 筛选器选项: 从 runs 列表提取去重
+  const [projectOptions, setProjectOptions] = useState<{ label: string; value: string }[]>([]);
+  const [deviceOptions, setDeviceOptions] = useState<{ label: string; value: string }[]>([]);
+  const [sceneOptions, setSceneOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
-    listRuns(8)
-      .then(res => {
-        setRuns(res.items);
-        setTotal(res.total);
-      })
-      .finally(() => setLoading(false));
+    listRuns(200, 0).then(res => {
+      const projects = new Map<string, number>();
+      const devices = new Map<string, number>();
+      const scenes = new Map<string, number>();
+      for (const item of res.items) {
+        if (item.projectName) projects.set(item.projectName, (projects.get(item.projectName) ?? 0) + 1);
+        if (item.device) devices.set(item.device, (devices.get(item.device) ?? 0) + 1);
+        if (item.scene) scenes.set(item.scene, (scenes.get(item.scene) ?? 0) + 1);
+      }
+      setProjectOptions([...projects.keys()].map(v => ({ label: v, value: v })));
+      setDeviceOptions([...devices.keys()].map(v => ({ label: v, value: v })));
+      setSceneOptions([...scenes.keys()].map(v => ({ label: v, value: v })));
+    }).catch(() => { /* 静默 */ });
   }, []);
 
-  return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 16, fontWeight: 600 }}>
-          性能分析
-        </h1>
-        <Space wrap>
-          <Button type="primary" icon={<UploadOutlined />} onClick={() => navigate('/upload')}>采集上传</Button>
-          <Button icon={<PartitionOutlined />} onClick={() => navigate('/runs')}>Runs 列表</Button>
-          <Button icon={<SwapOutlined />} onClick={() => navigate('/compare')}>对比分析</Button>
-        </Space>
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchTriadTrends({ projectName, device, scene });
+      setData(res);
+    } catch (e: any) {
+      setError(e.message ?? '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectName, device, scene]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const versions = data?.versions ?? [];
+  const versionLabels = useMemo(() => versions.map(v => v.version), [versions]);
+
+  if (loading && !data) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0' }}>
+        <Spin size="large" tip="加载三源趋势数据..." />
       </div>
+    );
+  }
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="Run 总数" value={total} loading={loading} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="多源 Run" value={runs.filter(r => r.sources.length > 1).length} loading={loading} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card size="small" title="工作流" style={{ fontSize: 12 }}>
-            <TextBlock />
-          </Card>
-        </Col>
-      </Row>
+  if (error) {
+    return (
+      <Card>
+        <Alert
+          type="error"
+          showIcon
+          message="趋势数据加载失败"
+          description={error}
+          action={<Button onClick={load} icon={<ReloadOutlined />}>重试</Button>}
+        />
+      </Card>
+    );
+  }
 
-      <Card
-        size="small"
-        title="最近 Runs"
-        extra={<a onClick={() => navigate('/runs')} style={{ fontSize: 12 }}>查看全部</a>}
-      >
-        {runs.length === 0 && !loading ? (
-          <Empty description="暂无 Run — 上传采集或运行 ingest" />
-        ) : (
-          <List
-            loading={loading}
-            dataSource={runs}
-            renderItem={(row) => (
-              <List.Item
-                actions={[
-                  <a key="detail" onClick={() => navigate(`/runs/${row.id}`)}>单次分析</a>,
-                  <a key="compare" onClick={() => navigate(`/compare?base=${row.id}&current=`)}>选为基准</a>,
-                ]}
-              >
-                <List.Item.Meta
-                  title={
-                    <Space size={6} wrap>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{row.id}</span>
-                      {row.label && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{row.label}</span>}
-                      {row.sources.map(s => (
-                        <Tag key={s} color={SOURCE_COLORS[s] ?? 'default'} style={{ fontSize: 10 }}>{s}</Tag>
-                      ))}
-                    </Space>
-                  }
-                  description={
-                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      {[row.projectName, row.scene, row.device].filter(Boolean).join(' · ') || '—'}
-                      {' · '}{dayjs(row.createdAt).format('MM-DD HH:mm')}
-                    </span>
-                  }
-                />
-              </List.Item>
-            )}
-          />
+  const hasData = versions.length > 0;
+
+  return (
+    <div style={{ maxWidth: 1680, margin: '0 auto' }}>
+      {/* 顶部: 标题 + 筛选器 */}
+      <Card style={{ marginBottom: 14 }} bodyStyle={{ padding: '16px 20px' }}>
+        <Row justify="space-between" align="middle" gutter={[12, 12]}>
+          <Col>
+            <Space direction="vertical" size={2}>
+              <Title level={4} style={{ margin: 0 }}>
+                性能趋势总览
+              </Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                三源 (Unity / simpleperf / Perfetto) 按版本号聚合, 同版本多 Run 取中位数。横轴为版本号。
+              </Text>
+            </Space>
+          </Col>
+          <Col>
+            <Space wrap>
+              <Select
+                allowClear
+                showSearch
+                placeholder="项目"
+                style={{ width: 160 }}
+                value={projectName}
+                onChange={v => setProjectName(v ?? undefined)}
+                options={projectOptions}
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="设备"
+                style={{ width: 160 }}
+                value={device}
+                onChange={v => setDevice(v ?? undefined)}
+                options={deviceOptions}
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="场景"
+                style={{ width: 160 }}
+                value={scene}
+                onChange={v => setScene(v ?? undefined)}
+                options={sceneOptions}
+              />
+              <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>
+                刷新
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+        {hasData && (
+          <div style={{ marginTop: 10 }}>
+            <Space wrap>
+              <Tag color="blue">{versions.length} 个版本</Tag>
+              <Tag color="green">{versions.reduce((s, v) => s + v.runCount, 0)} 个 Run</Tag>
+              {data?.filters.projectName && <Tag color="purple">项目: {data.filters.projectName}</Tag>}
+            </Space>
+          </div>
         )}
       </Card>
+
+      {!hasData ? (
+        <Card>
+          <Empty description="暂无 ready 状态的 Run 数据, 请先采集并入库" />
+        </Card>
+      ) : (
+        <>
+          {/* 1. Unity — FPS + P95 趋势 */}
+          <ChartCard
+            icon={<LineChartOutlined />}
+            title="Unity Profiler · 帧率趋势"
+            desc="实线 = FPS (左轴), 虚线 = P95 帧时间 (右轴, ms)"
+          >
+            <ReactECharts
+              option={unityOption(versionLabels, data!)}
+              style={{ height: 320 }}
+              notMerge
+              group={TRIAD_GROUP}
+              opts={{ renderer: 'canvas' }}
+            />
+          </ChartCard>
+
+          {/* 2. simpleperf — so 占比堆叠面积 */}
+          <ChartCard
+            icon={<AreaChartOutlined />}
+            title="simpleperf · so CPU 占比趋势"
+            desc="各 so 库 CPU 采样占比 (%)。每条线一个 so, 斜率=涨跌方向。默认显示 Top 5, 点击图例可展开其余。"
+          >
+            <ReactECharts
+              option={simpleperfOption(versionLabels, data!)}
+              style={{ height: 320 }}
+              notMerge
+              group={TRIAD_GROUP}
+              opts={{ renderer: 'canvas' }}
+            />
+          </ChartCard>
+
+          {/* 3. Perfetto — 线程 running/sleeping 趋势 */}
+          <ChartCard
+            icon={<BarsOutlined />}
+            title="Perfetto · 关键线程 Running 率趋势"
+            desc="主线程 / 渲染线程 / 提交线程 的 Running 占比 (%)。Running 高 = CPU-bound"
+          >
+            <ReactECharts
+              option={perfettoOption(versionLabels, data!)}
+              style={{ height: 320 }}
+              notMerge
+              group={TRIAD_GROUP}
+              opts={{ renderer: 'canvas' }}
+            />
+          </ChartCard>
+
+          {/* 联动说明 */}
+          <Card size="small" style={{ marginTop: 8 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              提示: 三张图共用版本号横轴。拖拽任一图的缩放条, 可对照"FPS 下降的版本, simpleperf 哪个 so 涨了、Perfetto 哪个线程 Running 变高"。
+            </Text>
+          </Card>
+        </>
+      )}
     </div>
   );
 };
 
-function TextBlock() {
+function ChartCard({
+  icon,
+  title,
+  desc,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-      <div>① 上传 / ingest → <b>Runs</b></div>
-      <div>② 点 Run → <b>单次分析 + 报告</b></div>
-      <div>③ 选两 Run → <b>对比分析 + 差分火焰图</b></div>
-    </div>
+    <Card style={{ marginBottom: 14 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Space style={{ marginBottom: 8 }}>
+        <span style={{ color: 'var(--color-primary)' }}>{icon}</span>
+        <Text strong>{title}</Text>
+      </Space>
+      <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginBottom: 8 }}>{desc}</div>
+      {children}
+    </Card>
   );
+}
+
+// ============================================================
+// ECharts option 构造
+// ============================================================
+
+function chartBase() {
+  return {
+    backgroundColor: 'transparent',
+    textStyle: { color: '#8b949e' },
+    grid: { left: 52, right: 52, top: 40, bottom: 56 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#141619',
+      borderColor: '#2a2e33',
+      textStyle: { color: '#e6eaf0' },
+    },
+    dataZoom: [
+      { type: 'inside', filterMode: 'none' },
+      { type: 'slider', height: 18, bottom: 12, filterMode: 'none' },
+    ],
+  };
+}
+
+function unityOption(versionLabels: string[], data: TriadTrendsData) {
+  return {
+    ...chartBase(),
+    legend: { top: 0, textStyle: { color: '#8b949e' }, data: ['FPS', 'P95 帧时间'] },
+    xAxis: {
+      type: 'category',
+      data: versionLabels,
+      axisLabel: { rotate: versionLabels.length > 6 ? 30 : 0 },
+      axisLine: { lineStyle: { color: '#2a2e33' } },
+    },
+    yAxis: [
+      { type: 'value', name: 'FPS', min: 0, splitLine: { lineStyle: { color: '#1f2328' } } },
+      { type: 'value', name: 'P95 ms', splitLine: { show: false } },
+    ],
+    series: [
+      {
+        name: 'FPS',
+        type: 'line',
+        smooth: true,
+        symbolSize: 8,
+        connectNulls: true,
+        data: data.unity.fps,
+        lineStyle: { width: 3, color: '#52c41a' },
+        areaStyle: { color: 'rgba(82,196,26,.12)' },
+        itemStyle: { color: '#52c41a' },
+        markLine: {
+          symbol: 'none',
+          label: { color: '#8b949e' },
+          data: [{ yAxis: 60, name: '60fps' }, { yAxis: 30, name: '30fps' }],
+        },
+      },
+      {
+        name: 'P95 帧时间',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        symbolSize: 8,
+        connectNulls: true,
+        data: data.unity.p95Ms,
+        lineStyle: { width: 2, color: '#ff4d4f', type: 'dashed' },
+        itemStyle: { color: '#ff4d4f' },
+      },
+    ],
+  };
+}
+
+const SO_COLORS = [
+  '#ff4d4f', '#ff7a45', '#faad14', '#52c41a',
+  '#1677ff', '#722ed1', '#13c2c2', '#eb2f96', '#8b949e',
+];
+
+/** so 库名 → 中文友好名 (看趋势时不用猜缩写) */
+const SO_LABELS: Record<string, string> = {
+  kernel_kallsyms: '内核 (kernel)',
+  libunity: 'Unity 引擎',
+  libil2cpp: 'C# 业务 (il2cpp)',
+  libc: 'C 标准库',
+  libGLESv2_adreno: 'GPU 驱动',
+  libAkSoundEngine: 'Wwise 音频',
+  libxlua: 'Lua (xlua)',
+  lib_burst_generated: 'Burst 作业',
+  libm: '数学库 (libm)',
+  libart: 'ART 运行时',
+  linker64: '动态链接器',
+  libcutils: 'cutils',
+  其他: '其他',
+};
+
+function soLabel(name: string): string {
+  return SO_LABELS[name] ?? name;
+}
+
+function simpleperfOption(versionLabels: string[], data: TriadTrendsData) {
+  const soNames = data.simpleperf.soNames;
+  const labels = soNames.map(soLabel);
+  return {
+    ...chartBase(),
+    legend: {
+      top: 0,
+      type: 'scroll',
+      textStyle: { color: '#8b949e' },
+      data: labels,
+      // 默认只显示 Top 5, 其余可点击展开 (避免线太多)
+      selected: labels.reduce((acc, label, i) => {
+        acc[label] = i < 5;
+        return acc;
+      }, {} as Record<string, boolean>),
+    },
+    xAxis: {
+      type: 'category',
+      data: versionLabels,
+      axisLabel: { rotate: versionLabels.length > 6 ? 30 : 0 },
+      axisLine: { lineStyle: { color: '#2a2e33' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'CPU 占比 %',
+      max: 100,
+      splitLine: { lineStyle: { color: '#1f2328' } },
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#141619',
+      borderColor: '#2a2e33',
+      textStyle: { color: '#e6eaf0' },
+      formatter: (params: any[]) => {
+        const v = params[0]?.axisValue ?? '';
+        const lines = params
+          .filter((p: any) => p.value != null)
+          .sort((a: any, b: any) => b.value - a.value)
+          .map((p: any) => {
+            const origName = soNames[labels.indexOf(p.seriesName)] ?? p.seriesName;
+            return `${p.marker} ${p.seriesName}: <b>${p.value}%</b> <span style="color:#6e7681">(${origName})</span>`;
+          });
+        return `<b>${v}</b><br/>${lines.join('<br/>')}`;
+      },
+    },
+    series: soNames.map((soName, i) => ({
+      name: labels[i],
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      connectNulls: true,
+      data: data.simpleperf.soPct[soName] ?? [],
+      lineStyle: { width: 2.5, color: SO_COLORS[i % SO_COLORS.length] },
+      itemStyle: { color: SO_COLORS[i % SO_COLORS.length] },
+      emphasis: { focus: 'series' },
+    })),
+  };
+}
+
+const THREAD_COLORS: Record<string, string> = {
+  主线程: '#ff4d4f',
+  渲染线程: '#1677ff',
+  提交线程: '#722ed1',
+};
+
+function perfettoOption(versionLabels: string[], data: TriadTrendsData) {
+  const threadLabels = data.perfetto.threadLabels;
+  return {
+    ...chartBase(),
+    legend: {
+      top: 0,
+      textStyle: { color: '#8b949e' },
+      data: threadLabels.map(t => `${t} Running`),
+    },
+    xAxis: {
+      type: 'category',
+      data: versionLabels,
+      axisLabel: { rotate: versionLabels.length > 6 ? 30 : 0 },
+      axisLine: { lineStyle: { color: '#2a2e33' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Running %',
+      max: 100,
+      min: 0,
+      splitLine: { lineStyle: { color: '#1f2328' } },
+    },
+    series: threadLabels.map(label => ({
+      name: `${label} Running`,
+      type: 'line',
+      smooth: true,
+      symbolSize: 8,
+      connectNulls: true,
+      data: data.perfetto.running[label] ?? [],
+      lineStyle: { width: 3, color: THREAD_COLORS[label] ?? '#8b949e' },
+      itemStyle: { color: THREAD_COLORS[label] ?? '#8b949e' },
+      areaStyle: { color: (THREAD_COLORS[label] ?? '#8b949e') + '1a' },
+      markLine: {
+        symbol: 'none',
+        label: { color: '#8b949e' },
+        data: [{ yAxis: 80, name: 'CPU-bound 阈值' }],
+      },
+    })),
+  };
 }
 
 export default Dashboard;

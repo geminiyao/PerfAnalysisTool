@@ -2,6 +2,7 @@ import type {
   Session, Metrics, PaginatedResponse, HistoryQuery, CompareResult, DiffResult, TrendPoint, CliProvider,
   IngestJobEvent, IngestRunResponse, IngestJobStartResponse,
 } from '../../shared/types';
+import type { ReportBundle } from '../../shared/report-bundle';
 
 function apiBaseUrl(): string {
   if (typeof window !== 'undefined' && window.location.port === '5173') {
@@ -186,6 +187,28 @@ export async function compareRuns(baseRunId: string, currentRunId: string) {
 export function compareFlamegraphUrl(baseRunId: string, currentRunId: string): string {
   const params = new URLSearchParams({ baseRunId, currentRunId });
   return `${BASE_URL}/runs/compare/flamegraph?${params}`;
+}
+
+export interface ReportPreviewSample {
+  key: string;
+  label: string;
+  kind: 'unity' | 'simpleperf' | 'perfetto' | 'cross';
+  mode: 'single' | 'diff';
+  relativePath: string;
+  description: string;
+  available: boolean;
+}
+
+export interface ReportPreviewDetail extends ReportPreviewSample {
+  markdown: string;
+}
+
+export async function listReportPreviewSamples() {
+  return request<{ items: ReportPreviewSample[] }>('/report-preview/samples');
+}
+
+export async function getReportPreviewSample(key: string) {
+  return request<ReportPreviewDetail>(`/report-preview/samples/${encodeURIComponent(key)}`);
 }
 
 export async function generateRunAnalysis(
@@ -441,6 +464,42 @@ export function mergeRuns(
 }
 
 // ============================================================
+// 三源趋势 API (Dashboard)
+// ============================================================
+
+export interface TriadVersionPoint {
+  version: string;
+  runCount: number;
+  createdAt: number;
+}
+
+export interface TriadTrendsData {
+  versions: TriadVersionPoint[];
+  filters: { projectName: string | null; device: string | null; scene: string | null };
+  unity: { fps: (number | null)[]; p95Ms: (number | null)[] };
+  simpleperf: { soNames: string[]; soPct: Record<string, (number | null)[]> };
+  perfetto: {
+    threadLabels: string[];
+    running: Record<string, (number | null)[]>;
+    runnable: Record<string, (number | null)[]>;
+    sleeping: Record<string, (number | null)[]>;
+  };
+}
+
+export async function fetchTriadTrends(params?: {
+  projectName?: string;
+  device?: string;
+  scene?: string;
+}): Promise<TriadTrendsData> {
+  const qs = new URLSearchParams();
+  if (params?.projectName) qs.set('projectName', params.projectName);
+  if (params?.device) qs.set('device', params.device);
+  if (params?.scene) qs.set('scene', params.scene);
+  const query = qs.toString();
+  return request<TriadTrendsData>(`/runs/triad-trends${query ? `?${query}` : ''}`);
+}
+
+// ============================================================
 // 优化建议 API
 // ============================================================
 
@@ -545,4 +604,14 @@ export function requestOptimizeSuggest(
       fetch(`${BASE_URL}/optimize/cancel/${taskId}`, { method: 'POST' }).catch(() => {});
     }
   };
+}
+
+export async function fetchReportBundle(sampleKey: string): Promise<ReportBundle> {
+  return request<ReportBundle>(`/report-view/bundle/${encodeURIComponent(sampleKey)}`);
+}
+
+export async function fetchReportViewSamples(): Promise<{
+  items: Array<{ key: string; label: string; reportType: string; description: string; available: boolean }>;
+}> {
+  return request('/report-view/samples');
 }
