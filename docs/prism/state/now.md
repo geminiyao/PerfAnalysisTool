@@ -48,6 +48,8 @@
 
 1. **读完本节**：当前状态 = WT-049 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ 下一步派 WT-046 v7
 2. **派 WT-046 v7 工单**（§0 ② URP 重复修复 + DR-51 端到端冒烟验证 + 顺带看真实 timing）：
+   - 工单路径：`docs/prism/process/worktickets/TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`
+   - 派发命令：`docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`
    - v7 重跑 narrative 时 JSON 修复回路（WT-049）兜底，不再"6 次才成功 1 次"
    - v7 顺带验证 DR-51 端到端冒烟——narrative prompt 真的含 ## constitution + ## methodology 块
    - v7 顺带看真实 timing——确认 llm_call 是否占 80%+（WT-049 遗留）
@@ -373,6 +375,7 @@
 - ✅ `DONE-WT-048` DR-51 三层架构修复·宪法层+规程层注入运行时 LLM（主 agent 独立验收 DR-36：通用 harness 199/0/0 + perfetto 不退化 231/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-10 全 PASS。人眼检查 constitution 10 条 + methodology 8 条 + 每条 1-2 句话+反例+正例 + 全标 cross-source + 无业务名硬编码 + explore-service MEMORY_INJECTION_CATEGORIES 顺序宪法→规程→知识层 + narrative-service:514 传了 dataSource。开发 agent 偏离：E7/E8 多加 2 条断言强化验收 + 未跑端到端冒烟用 formatMemoryForPrompt 直接验证等价证明注入路径通。**遗留**：DR-51 验证只到 formatMemoryForPrompt 层，没跑端到端冒烟确认运行时 LLM 真的读到 constitution+methodology——推迟到 v7 一起做。产出 prism-memory/constitution/ × 10 + prism-memory/methodology/ × 8 + 6 个代码文件）
 - ⚠️ `REVIEW-WT-046-v6` 图文并茂 + §0 ③ 重复修复·部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）（主 agent 独立验收 DR-36：通用 harness 231/2/2 + perfetto 不退化 231/2/1。工单断言 1/2/4/6/7 PASS，断言 3/5 FAIL。**2 FAIL**：[2b] topConclusions #2 URP problem 与 §0 ② title sim=1.0（title 复述 problem）+ [2c] §0 ② URP 与 §3 下钻 ② URP 共享 5.96ms/13.08ms（§0 讲子节点 ms 数字 + frame 453 单帧数字）。**FAIL C 是真重复不是误报**：§0 ② URP narrative 讲了 URP.Render 90%/URP.MainRenderingTransparent 28%/每帧 6.56→12.52ms/ForwardRenderPass 单帧尖峰 13.08ms @ frame 453。**判定理由**：核心改动（图文并茂引导 + §3 下钻讲更深 + DR-50 合规）都对了；FAIL C 是 LLM 单条不稳定（v5 是 §0 ③ GC.Collect，v6 是 §0 ② URP，每次 FAIL 在不同条之间波动），不是 prompt 约束缺陷；继续重跑 v7 是 LLM 产出概率问题——开发 agent 重跑 6 次只成功 1 次，5 次非法 JSON，成本不可控。**记遗留 v7**：v7 不靠"重跑碰运气"，需 BK-7 方向 A（narrative JSON 修复回路）+ BK-4 金标集配合。产出 `2026-07-21_wt046_v6/report.html` 154.7KB）
 - ✅ `DONE-WT-049` BK-7 方向 A·narrative 耗时治理 + JSON 修复回路（主 agent 独立验收 DR-36：通用 harness 207/0/0 + perfetto 不退化 239/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-8 全 PASS。单元测试 34 PASS / 0 FAIL。人眼检查：attemptJsonRepair:606 + MAX_RETRIES=2:616 + 修复回路调 runLlmOnce（重跑 LLM 不是脚本修复——DR-44）+ 修复 prompt 含原 prompt+错误+raw 片段+"完整可解析 JSON" + extractErrorContext 提取 position/line:column 截取前 200+后 200 + prov.timing/prov.repairCount 写入 + 红队不跳过 + narrative-types.ts timing?/repairCount? 可选字段。开发 agent 偏离：[2d] 8 条断言（工单说 7 条，2d-5 拆 2 个）——合理更严格 + red-team fs.writeFileSync 移到环节 9——合理重构 + 未真跑 narrative 验证 timing（工单说可选）——合理。**Timing 判断**：开发 agent 贴的是 mock LLM timing（llm_call=1ms），不反映真实比例——工单设计局限。timing 机制工作正常。真跑 LLM 验证 timing 留 v7。**发现 1 个非阻塞问题（已处理）**：单元测试 red-team 调真实 appendMemory 污染 prism-memory/lessons/ 40+ 个 lesson-test-* 文件，已清理。产出：narrative-types.ts + narrative-service.ts + harness.ts + narrative-service.test.ts）
+- ⬜ `TODO-WT-046-v7` §0 ② URP 重复修复 + DR-51 端到端冒烟 + 真实 timing 验证（v6 FAIL C 平移到 §0 ② URP，v7 用 WT-049 JSON 修复回路兜底 + 更精准反例。3 任务：A §0 加"父模块=红线清单条目，子节点 ms 不许讲"反例 + B DR-51 端到端冒烟验证 prompt 含 constitution+methodology 块 + C 真实 timing 验证 llm_call 是否占 80%+。工单 `TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`。用户手动派发）
 
 ## 待用户拍板 / 进行中
 
