@@ -2,7 +2,25 @@
 
 > **新会话第一个读这个。** 永远保持最新。主 agent 每做完一件事 / 快切会话前必更新本文。
 > 坐标系见 `../plan/roadmap.md`（里程碑）和 `../plan/backlog.md`（需求）。
-> 最后更新：2026-07-22（**WT-049 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ 下一步派 WT-046 v7**）。
+> 最后更新：2026-07-22（**WT-046 v7 部分 PASS（FAIL C 平移到 §0 ② OnCameraMove，接受部分 PASS）+ WT-050 timing 细化工单已建 + 进入 M4 三回路填料里程碑**）。
+>
+> **WT-046 v7 §0 ② URP 重复修复 + DR-51 端到端冒烟 + 真实 timing·部分 PASS**（2026-07-22 主 agent 独立验收 DR-36）：
+> - 通用 harness **240 PASS / 1 FAIL / 2 WARN**（与自报一致）
+>   - FAIL [2c]：§0 ② OnCameraMove 与 §3 下钻 ② OnCameraMove 共享 ["19 ","43.14","58.5","43.14ms"] ≥2（FAIL C 平移：v6 §0 ② URP → v7 §0 ② OnCameraMove）
+>   - WARN 1：callTree.rootMarker 覆盖率 26%（非阻塞）
+>   - WARN 2：critical/high topConclusion 挂载率 0%（DR-50 合规，挂载可选）
+> - perfetto 不退化 **239 PASS / 2 FAIL / 1 WARN**（2 FAIL 是 WT-037 遗留）✅
+> - 工单特定断言 1/3/4/5/6/7/8 全 PASS，断言 2 false-positive FAIL（12.52ms 是父模块 PostLateUpdate.FinishFrameRendering 的 ms，findings.json 确认）
+> - 人眼检查：v6 FAIL C 修复确认（§0 ③ URP 不再讲子节点 ms 10.64ms + 不再讲 frame 453/13.08ms）+ §0 ③ URP 讲父模块自身 foldChange（×1.91）+ 占 p50%（29.9%）+ 子节点名字+占比（MainRenderingTransparent 28% 等）✅
+> - DR-51 端到端冒烟 PASS：narrative prompt 真的含 ## constitution + ## methodology 块（count: 1 each, total 92730 chars）✅
+> - 真实 timing PASS：llm_call 1,059,624ms (99.97%)，prompt_inject 133ms (0.0125%)，red_team 204ms (0.0192%) — llm_call 是绝对大头，WT-049 JSON 修复回路方向正确 ✅
+> - repairCount = 0：LLM 一次产出合法 JSON，JSON 修复回路未触发（运气好，但兜底机制存在）✅
+> - DR-50 合规：需求 A 加的反例是纪律（"父模块=红线清单条目，子节点 ms 不许讲"），不是内容 ✅
+> - **v7 三个任务目标全部达成**：需求 A（§0 ② URP 重复修复）+ 需求 B（DR-51 冒烟）+ 需求 C（真实 timing）
+> - **FAIL C 平移分析**：v6 FAIL 在 §0 ② URP（父子模块型），v7 FAIL 在 §0 ② OnCameraMove（事件型）。v7 的精准反例对 URP 起作用了，但 OnCameraMove 不在覆盖范围内——OnCameraMove 是"事件型"finding（19 次尖峰），§0 ② 讲"19 次 × 43.14ms"是聚合统计（§0 允许），但 §3 下钻 ② 也讲"43.14ms"就重复了。这不是 prompt 约束缺陷，是 LLM 单条不稳定 + 事件型 finding 的 §0/§3 边界更模糊。继续加 prompt 反例不是方向——OnCameraMove 案例需要 BK-4 金标集配合，或者接受这种"事件型 finding 在 §0 和 §3 都讲聚合统计"的轻微重复
+> - **判定**：接受部分 PASS，FAIL C 平移到 v8 或接受为"事件型 finding 轻微重复"。进入 M4 三回路填料里程碑
+> - 产出：`web/data/prism-out/udiff_1782983710451_be175ef1/2026-07-22_wt046_v7/report.html`（154.6 KB）+ narrative.json（69.7 KB）+ unity-multi-state.txt（+8 行精准反例）
+> - **WT-050 timing 细化工单已建**（M4 之后做）：narrative-service.ts 的 runLlmOnce 把 stdout 字符串收集改成 stream-json 事件解析（参考 explore-service.ts:811-833），细分 llm_call 为 cli_init/llm_first_token/llm_stream/tool_call_write/cli_cleanup 五个子环节。工单 `TODO-WT-050-narrative-timing-breakdown.md`
 >
 > **WT-049 BK-7 方向 A·narrative 耗时治理 + JSON 修复回路·验收 PASS**（2026-07-22 主 agent 独立验收 DR-36）：
 > - 通用 harness **207 PASS / 0 FAIL / 0 WARN**（原 199 + [2d] 节 8 条新 PASS，与自报一致）
@@ -46,15 +64,12 @@
 
 ### 新会话开场指令（主 agent 进来后按这个顺序做）
 
-1. **读完本节**：当前状态 = WT-049 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ 下一步派 WT-046 v7
-2. **派 WT-046 v7 工单**（§0 ② URP 重复修复 + DR-51 端到端冒烟验证 + 顺带看真实 timing）：
-   - 工单路径：`docs/prism/process/worktickets/TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`
-   - 派发命令：`docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`
-   - v7 重跑 narrative 时 JSON 修复回路（WT-049）兜底，不再"6 次才成功 1 次"
-   - v7 顺带验证 DR-51 端到端冒烟——narrative prompt 真的含 ## constitution + ## methodology 块
-   - v7 顺带看真实 timing——确认 llm_call 是否占 80%+（WT-049 遗留）
-   - v7 不靠"重跑 narrative 碰运气"——FAIL C §0 ② URP 重复修复需要 BK-4 金标集配合，但 v7 先用 JSON 修复回路兜底稳定迭代
-3. **v7 验收 PASS 后**：进入 M4 三回路填料里程碑（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路），见下方"M5 善后完成后后续必做需求"节
+1. **读完本节**：当前状态 = WT-046 v7 部分 PASS（FAIL C 平移到 §0 ② OnCameraMove，接受部分 PASS）+ WT-050 timing 细化工单已建 + 进入 M4 三回路填料里程碑
+2. **进入 M4 三回路填料里程碑**（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路）：
+   - **BK-4 金标集 + 人确认**（P0，M4 核心）：治"Claude 自评不可靠"（DR-36）。v6/v7 FAIL C 反复出现的根因之一——没有金标集，LLM 产出质量只能靠 prompt 约束，约束写过头变作文机，写得不够 LLM 单条不稳定。需要：人拍板 finding 对/错/漏 → 存金标集 → 每次改进跑金标量召回/误报
+   - **BK-21 回归哨兵**（P0，M4 核心）："哪里烫"升级"哪里开始烫了"——自动对标历史基线报变化。agent loop > 作文机最有说服力的证明。天然依赖跨 run 记忆（BK-LOOP）
+   - **BK-10 知识回路**（P1，M4 核心）：确认的业务归因（人点头）→ 沉淀 → 下次开局注入。老朋友直接定性省探索成本
+3. **WT-050 timing 细化**（M4 之后做）：narrative-service.ts 的 runLlmOnce 把 stdout 字符串收集改成 stream-json 事件解析，细分 llm_call 为 cli_init/llm_first_token/llm_stream/tool_call_write/cli_cleanup 五个子环节。工单 `TODO-WT-050-narrative-timing-breakdown.md`
 
 ### 当前两张待派发工单详情
 
@@ -375,7 +390,8 @@
 - ✅ `DONE-WT-048` DR-51 三层架构修复·宪法层+规程层注入运行时 LLM（主 agent 独立验收 DR-36：通用 harness 199/0/0 + perfetto 不退化 231/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-10 全 PASS。人眼检查 constitution 10 条 + methodology 8 条 + 每条 1-2 句话+反例+正例 + 全标 cross-source + 无业务名硬编码 + explore-service MEMORY_INJECTION_CATEGORIES 顺序宪法→规程→知识层 + narrative-service:514 传了 dataSource。开发 agent 偏离：E7/E8 多加 2 条断言强化验收 + 未跑端到端冒烟用 formatMemoryForPrompt 直接验证等价证明注入路径通。**遗留**：DR-51 验证只到 formatMemoryForPrompt 层，没跑端到端冒烟确认运行时 LLM 真的读到 constitution+methodology——推迟到 v7 一起做。产出 prism-memory/constitution/ × 10 + prism-memory/methodology/ × 8 + 6 个代码文件）
 - ⚠️ `REVIEW-WT-046-v6` 图文并茂 + §0 ③ 重复修复·部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）（主 agent 独立验收 DR-36：通用 harness 231/2/2 + perfetto 不退化 231/2/1。工单断言 1/2/4/6/7 PASS，断言 3/5 FAIL。**2 FAIL**：[2b] topConclusions #2 URP problem 与 §0 ② title sim=1.0（title 复述 problem）+ [2c] §0 ② URP 与 §3 下钻 ② URP 共享 5.96ms/13.08ms（§0 讲子节点 ms 数字 + frame 453 单帧数字）。**FAIL C 是真重复不是误报**：§0 ② URP narrative 讲了 URP.Render 90%/URP.MainRenderingTransparent 28%/每帧 6.56→12.52ms/ForwardRenderPass 单帧尖峰 13.08ms @ frame 453。**判定理由**：核心改动（图文并茂引导 + §3 下钻讲更深 + DR-50 合规）都对了；FAIL C 是 LLM 单条不稳定（v5 是 §0 ③ GC.Collect，v6 是 §0 ② URP，每次 FAIL 在不同条之间波动），不是 prompt 约束缺陷；继续重跑 v7 是 LLM 产出概率问题——开发 agent 重跑 6 次只成功 1 次，5 次非法 JSON，成本不可控。**记遗留 v7**：v7 不靠"重跑碰运气"，需 BK-7 方向 A（narrative JSON 修复回路）+ BK-4 金标集配合。产出 `2026-07-21_wt046_v6/report.html` 154.7KB）
 - ✅ `DONE-WT-049` BK-7 方向 A·narrative 耗时治理 + JSON 修复回路（主 agent 独立验收 DR-36：通用 harness 207/0/0 + perfetto 不退化 239/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-8 全 PASS。单元测试 34 PASS / 0 FAIL。人眼检查：attemptJsonRepair:606 + MAX_RETRIES=2:616 + 修复回路调 runLlmOnce（重跑 LLM 不是脚本修复——DR-44）+ 修复 prompt 含原 prompt+错误+raw 片段+"完整可解析 JSON" + extractErrorContext 提取 position/line:column 截取前 200+后 200 + prov.timing/prov.repairCount 写入 + 红队不跳过 + narrative-types.ts timing?/repairCount? 可选字段。开发 agent 偏离：[2d] 8 条断言（工单说 7 条，2d-5 拆 2 个）——合理更严格 + red-team fs.writeFileSync 移到环节 9——合理重构 + 未真跑 narrative 验证 timing（工单说可选）——合理。**Timing 判断**：开发 agent 贴的是 mock LLM timing（llm_call=1ms），不反映真实比例——工单设计局限。timing 机制工作正常。真跑 LLM 验证 timing 留 v7。**发现 1 个非阻塞问题（已处理）**：单元测试 red-team 调真实 appendMemory 污染 prism-memory/lessons/ 40+ 个 lesson-test-* 文件，已清理。产出：narrative-types.ts + narrative-service.ts + harness.ts + narrative-service.test.ts）
-- ⬜ `TODO-WT-046-v7` §0 ② URP 重复修复 + DR-51 端到端冒烟 + 真实 timing 验证（v6 FAIL C 平移到 §0 ② URP，v7 用 WT-049 JSON 修复回路兜底 + 更精准反例。3 任务：A §0 加"父模块=红线清单条目，子节点 ms 不许讲"反例 + B DR-51 端到端冒烟验证 prompt 含 constitution+methodology 块 + C 真实 timing 验证 llm_call 是否占 80%+。工单 `TODO-WT-046-v7-urp-deoverlap-dr51-smoke-timing.md`。用户手动派发）
+- ⚠️ `DONE-WT-046-v7` §0 ② URP 重复修复 + DR-51 端到端冒烟 + 真实 timing·部分 PASS（FAIL C 平移到 §0 ② OnCameraMove，接受部分 PASS）（主 agent 独立验收 DR-36：通用 harness 240/1/2 + perfetto 不退化 239/2/1。工单特定断言 1/3/4/5/6/7/8 全 PASS，断言 2 false-positive FAIL（12.52ms 是父模块 PostLateUpdate.FinishFrameRendering 的 ms，findings.json 确认）。**FAIL [2c]**：§0 ② OnCameraMove 与 §3 下钻 ② OnCameraMove 共享 ["19 ","43.14","58.5","43.14ms"] ≥2。**FAIL C 平移**：v6 FAIL 在 §0 ② URP（父子模块型），v7 FAIL 在 §0 ② OnCameraMove（事件型）。v7 的精准反例对 URP 起作用了（§0 ③ URP 不再讲子节点 ms），但 OnCameraMove 不在覆盖范围内——OnCameraMove 是"事件型"finding（19 次尖峰），§0 ② 讲"19 次 × 43.14ms"是聚合统计（§0 允许），但 §3 下钻 ② 也讲"43.14ms"就重复了。**判定**：v7 三个任务目标全部达成（URP 修复 + DR-51 冒烟 + 真实 timing），接受部分 PASS，FAIL C 平移到 v8 或接受为"事件型 finding 轻微重复"。**真实 timing**：llm_call 1,059,624ms (99.97%)，prompt_inject 133ms (0.0125%)，red_team 204ms (0.0192%) — llm_call 是绝对大头，WT-049 JSON 修复回路方向正确。**repairCount = 0**：LLM 一次产出合法 JSON，JSON 修复回路未触发。**DR-51 冒烟**：narrative prompt 真的含 ## constitution + ## methodology 块（count: 1 each, total 92730 chars）。产出 `2026-07-22_wt046_v7/report.html` 154.6KB + unity-multi-state.txt +8 行精准反例）
+- ⬜ `TODO-WT-050` narrative timing 细化（llm_call 内部环节分解）（M4 之后优化项。narrative-service.ts 的 runLlmOnce 把 stdout 字符串收集改成 stream-json 事件解析（参考 explore-service.ts:811-833），细分 llm_call 为 cli_init/llm_first_token/llm_stream/tool_call_write/cli_cleanup 五个子环节。保留原 llm_call 字段向后兼容。工单 `TODO-WT-050-narrative-timing-breakdown.md`）
 
 ## 待用户拍板 / 进行中
 

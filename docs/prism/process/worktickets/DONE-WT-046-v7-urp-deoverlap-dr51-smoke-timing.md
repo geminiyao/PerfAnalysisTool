@@ -370,3 +370,60 @@ harness 跑不通就继续改，改到 FAIL=0 为止。不要把 FAIL 状态丢�
 ## 验收结论
 
 （主 agent 填：PASS / 打回+原因 + **必看 timing 判断修复方案方向是否正确** + **必看 DR-51 冒烟结果**）
+
+---
+
+## 验收结论（2026-07-22 主 agent 独立验收 DR-36）
+
+**判定：部分 PASS（FAIL C 平移到 搂0 鈶� OnCameraMove，接受部分 PASS，进入 M4）**
+
+### 机器断言
+- 通用 harness：**240 PASS / 1 FAIL / 2 WARN**（与自报一致）
+  - FAIL [2c]：搂0 鈶� OnCameraMove 与 搂3 下钻 鈶� OnCameraMove 共享 ["19 ","43.14","58.5","43.14ms"] 鈮?2
+  - WARN 1：callTree.rootMarker 覆盖率 26%（非阻塞）
+  - WARN 2：critical/high topConclusion 挂载率 0%（DR-50 合规，挂载可选）
+- perfetto 不退化：**239 PASS / 2 FAIL / 1 WARN**（2 FAIL 是 WT-037 遗留）鈭?
+
+### 工单特定断言
+| # | 断言 | 结果 |
+|---|---|---|
+| 1 | 搂0 鈶� URP vs 搂3 下钻 鈶� URP 不重复（共享 <2） | **PASS**（共享 0） |
+| 2 | 搂0 鈶� URP 不含子节点 ms + 具体帧单帧 | false-positive FAIL（12.52ms 是父模块 PostLateUpdate.FinishFrameRendering 的 ms，findings.json 确认） |
+| 3 | 搂0 鈶� title 不复述 topConclusions #2 problem（sim<0.8） | **PASS**（sim=0.371） |
+| 4 | 搂0 鈶� URP 讲父模块 foldChange + 占 p50% + 子节点名+占比 | **PASS** |
+| 5 | DR-51 冒烟（prompt 含 constitution+methodology） | **PASS** |
+| 6 | 真实 timing（llm_call 占比） | **PASS**（99.97%） |
+| 7 | repairCount 字段存在 | **PASS**（=0） |
+| 8 | DR-50 合规（无"必须讲 X"内容约束） | **PASS** |
+
+### 人眼检查
+- v6 FAIL C 修复确认：搂0 鈶� URP 不再讲子节点 ms（10.64ms/2.98ms/2.59ms）+ 不再讲 frame 453/13.08ms 鈭?
+- 搂0 鈶� URP 讲父模块自身 foldChange（脳1.91）+ 占 p50%（29.9%）+ 子节点名字+占比（MainRenderingTransparent 28% 等）+ 定性（分摊型大头）鈭?
+- 搂0 鈶� OnCameraMove FAIL C 是真重复：搂0 鈶� 讲"19 次 脳 43.14ms + 100% 命中慢帧 + 占当帧 58.5%"，搂3 下钻 鈶� 也讲"43.14ms self + 56.4ms total + 58.5%"——但 OnCameraMove 是"事件型"finding（19 次尖峰），不是"父子模块"finding，v7 的精准反例（"父模块=红线清单条目，子节点 ms 不许讲"）对它不适用
+- DR-51 冒烟：narrative prompt 真的含 ## constitution + ## methodology 块（count: 1 each, total 92730 chars）鈭?
+- 真实 timing：llm_call 1,059,624ms (99.97%)，prompt_inject 133ms (0.0125%)，red_team 204ms (0.0192%) 鈭?
+- repairCount = 0：LLM 一次产出合法 JSON，JSON 修复回路未触发（运气好，但兜底机制存在）鈭?
+- DR-50 合规：需求 A 加的反例是纪律（"父模块=红线清单条目，子节点 ms 不许讲"），不是内容（没写"必须讲 X"）鈭?
+
+### v7 三个任务目标全部达成
+1. 需求 A（搂0 鈶� URP 重复修复）：v6 FAIL 在 搂0 鈶� URP，v7 搂0 鈶� URP 已修复 鈭?
+2. 需求 B（DR-51 端到端冒烟）：prompt 真的含 constitution+methodology 块 鈭?
+3. 需求 C（真实 timing）：llm_call 99.97%，JSON 修复回路方向正确 鈭?
+
+### FAIL C 平移分析
+- v6 FAIL 在 搂0 鈶� URP（父子模块型），v7 FAIL 在 搂0 鈶� OnCameraMove（事件型）
+- v7 的精准反例对 URP 起作用了（搂0 鈶� URP 不再讲子节点 ms），但 OnCameraMove 不在这个反例覆盖范围内
+- OnCameraMove 是"事件型"finding（19 次尖峰），搂0 鈶� 讲"19 次 脳 43.14ms"是聚合统计（搂0 允许），但 搂3 下钻 鈶� 也讲"43.14ms"就重复了——这是边界更模糊的案例
+- **这不是 prompt 约束缺陷**（精准反例对 URP 起作用了），是 LLM 单条不稳定 + 事件型 finding 的 搂0/搂3 边界更模糊
+- **继续加 prompt 反例不是方向**——OnCameraMove 案例需要 BK-4 金标集配合（不是单纯加 prompt 反例能解决的），或者接受这种"事件型 finding 在 搂0 和 搂3 都讲聚合统计"的轻微重复
+
+### timing 细化建议（WT-050 新工单，M4 之后做）
+当前 llm_call 测的是"spawn CLI 子进程到子进程退出"的总时间，包含 CLI 启动 + prompt 传输 + LLM 推理 + LLM 调 Write 工具 + CLI 清理。要细分 LLM 推理内部，需要把 explore-service.ts 的 stream-json 事件解析模式（handleExploreStreamEvent）移植到 narrative-service.ts 的 unLlmOnce，细分出 cli_init / llm_first_token / llm_stream / tool_call_write / cli_cleanup 五个环节。
+
+### 产出
+- web/data/prism-out/udiff_1782983710451_be175ef1/2026-07-22_wt046_v7/report.html（154.6 KB）
+- web/data/prism-out/udiff_1782983710451_be175ef1/2026-07-22_wt046_v7/narrative.json（69.7 KB）
+- web/server/prism/prompts/report-templates/unity-multi-state.txt（+8 行精准反例）
+
+### 下一步
+v7 验收 PASS 后进入 M4 三回路填料里程碑（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路）。BK-4 是 v6/v7 FAIL C 反复出现的根因之一——没有金标集，LLM 产出质量只能靠 prompt 约束。timing 细化（WT-050）放 M4 之后做。

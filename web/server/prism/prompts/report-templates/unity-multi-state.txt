@@ -90,6 +90,14 @@
 
 **边界判定**：§0 讲"子节点名字+占比"是 OK 的（让读者知道为什么贵），讲"子节点 ms/foldChange/GC alloc 数字"是违规的（和 §3 下钻重复）。
 
+★【§0 父模块 vs 子节点边界·父模块 = 红线清单条目】
+§0 的"父模块"= §3 红线清单条目（如 PostLateUpdate.FinishFrameRendering）。红线清单条目下的子节点 ms 数字不许讲——即便子节点是"渲染管线"这种看起来像父模块的节点。
+- ? 反例（v6 §0 ② URP 违规）：§0 ② narrative 写"每帧从 6.56ms 涨到 12.52ms（涨 1.91 倍），绝对增量 +5.96ms/帧"——这是 URP.RenderSingleCamera（子节点）的 ms 数字，不是父模块 PostLateUpdate.FinishFrameRendering 的 ms。§0 只许讲父模块自身的"涨 X 倍 + 占 p50 Y%"
+- ? 反例（v6 §0 ② URP 违规）：§0 ② narrative 写"ForwardRenderPass 单帧尖峰 13.08ms @ frame 453（spikeRatio 5.13）"——这是子节点的具体帧单帧数字，§0 不许讲具体帧单帧数字
+- ? 正例：§0 ② narrative 写"PostLateUpdate.FinishFrameRendering 涨 1.91 倍（临近红线），占当前 p50 29.9%，是稳态第二大成本——大头是子节点 URP.RenderSingleCamera（占父模块子树 90%），分摊型大头（10 个子 pass，maxChildRatio 0.28），统筹在父级"——讲父模块自身的 foldChange + 占 p50% + 子节点名字+占比+定性，不讲子节点 ms 数字
+
+**注意**："看起来像父模块的子节点"也是子节点——URP.RenderSingleCamera 是 URP 渲染管线的统筹节点，但它是 PostLateUpdate.FinishFrameRendering（红线清单条目）的子节点，它的 ms 数字不许在 §0 讲。判断方法：看 §3 红线清单表格里列的是哪个模块名，那个模块才是 §0 的"父模块"，它的 foldChange + 占 p50% 可以讲；它下面的所有节点都是"子节点"，ms/foldChange/GC alloc 数字都不许讲。
+
 ❌ 反例 1（v3 禁过头）：§0 ① 只写"<父模块> 涨 ×N 倍，每帧多花 Xms"——读者不知道为什么 <父模块> 贵，要看 §3 下钻才知道是 <大头子节点> 涨 ×N 倍。§0 失去叙事价值，变成"父模块名+涨幅"的干瘪摘要。
 ✅ 正例 1（v5 松绑）：§0 ① 写"<父模块> 涨 ×N 倍（X→Y ms/帧），大头是子节点 <大头子节点>（占 <父模块> 子树 X%，基线无当前新出现）——是 <业务模块> 的回归主因"——讲清父模块为什么贵（子节点名字+占比+定性），但不讲子节点 ms/foldChange/GC alloc 数字。
 
