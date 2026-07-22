@@ -89,6 +89,19 @@ export interface NarrativeProvenance {
   promptVersion: string;
   /** 产出方标记——必须是 'LLM'。脚本拼的 = 'script'，会被 render-html 拒绝渲染 */
   generatedBy: 'LLM' | 'script';
+  /**
+   * WT-049: 各环节耗时（ms）。
+   * 键：precheck/prompt_inject/cli_resolve/llm_call/artifact_check/json_parse/
+   *     provenance_check/red_team/file_io/total/json_repair_retry_1/json_repair_retry_2
+   * 先定位耗时环节，再看修复方案方向是否正确。
+   */
+  timing?: Record<string, number>;
+  /**
+   * WT-049: JSON 修复回路重试次数。
+   * 0 = 一次成功（LLM 一次产出合规 JSON）；1-2 = 修复过（LLM 第一次产出非法 JSON 被修复回路接住）。
+   * 验收时看修复回路是否真的接住了非法 JSON。
+   */
+  repairCount?: number;
 }
 
 /** 三维定性维度：热点主要属于哪一类（可多选） */

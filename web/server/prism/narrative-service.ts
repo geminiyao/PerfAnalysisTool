@@ -44,6 +44,28 @@ export interface RunPrismNarrativeOpts {
   cliProvider?: 'codebuddy' | 'claude';
   /** 超时毫秒（默认 10 分钟）。 */
   timeoutMs?: number;
+  /**
+   * WT-049: 可注入的 LLM runner（测试用）。不传则用真实 spawnCliProcess。
+   * runner 收到 promptText，负责写 narrative.json 到 outputDir，返回 {exitCode, stdoutTail, stderrTail}。
+   * 同步语义：runner 必须等 LLM 退出后再 resolve（等价于 child.on('close')）。
+   */
+  llmRunner?: (promptText: string, ctx: LlmRunnerCtx) => Promise<LlmRunnerResult>;
+}
+
+/** WT-049: llmRunner 调用上下文，给测试用 mock 检查修复 prompt 内容 */
+export interface LlmRunnerCtx {
+  cliCommand: string;
+  args: string[];
+  outputDir: string;
+  narrativePath: string;
+  timeoutMs: number;
+}
+
+/** WT-049: llmRunner 返回结果 */
+export interface LlmRunnerResult {
+  exitCode: number | null;
+  stdoutTail: string;
+  stderrTail: string;
 }
 
 export interface NarrativeRunResult {
@@ -468,9 +490,176 @@ function runNarrativeRedTeam(
 
 // ──────────────────────────────── 主入口 ────────────────────────────────
 
+/**
+ * WT-049: 从 JSON.parse 错误信息提取错误位置附近 raw 片段（前 200 + 后 200 字符）。
+ * JSON.parse 错误信息形如 "Unexpected token ... in JSON at position 1234" 或 "...line 10 column 5"。
+ * 提取 position / line:column，截取附近片段让 LLM 看到错误上下文。
+ */
+function extractErrorContext(raw: string, parseError: unknown): { errorInfo: string; rawSnippet: string } {
+  const err = parseError as { message?: string } | undefined;
+  const errMsg = err?.message ? String(err.message) : String(parseError ?? '');
+  let pos = -1;
+  // 形如 "at position 1234"
+  const posMatch = errMsg.match(/position\s+(\d+)/i);
+  if (posMatch) pos = parseInt(posMatch[1], 10);
+  // 形如 "at line 10 column 5"（fallback：按行号估算字符偏移）
+  if (pos < 0) {
+    const lcMatch = errMsg.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+    if (lcMatch) {
+      const line = parseInt(lcMatch[1], 10);
+      const col = parseInt(lcMatch[2], 10);
+      const lines = raw.split('\n');
+      let off = 0;
+      for (let i = 0; i < line - 1 && i < lines.length; i++) {
+        off += lines[i].length + 1;  // +1 for \n
+      }
+      pos = off + col - 1;
+    }
+  }
+  if (pos < 0 || pos > raw.length) pos = raw.length;
+  const start = Math.max(0, pos - 200);
+  const end = Math.min(raw.length, pos + 200);
+  const rawSnippet = raw.slice(start, end);
+  return { errorInfo: errMsg, rawSnippet };
+}
+
+/**
+ * WT-049: 构造 JSON 修复 prompt。
+ * 原则（DR-44）：修复回路是"重跑 LLM"，不是脚本修复 JSON。
+ * 脚本只负责把错误信息 + 错误位置附近 raw 片段反馈给 LLM，让 LLM 重新产出完整 JSON。
+ */
+function buildRepairPrompt(originalPrompt: string, errorInfo: string, rawSnippet: string): string {
+  return (
+    originalPrompt +
+    '\n\n' +
+    '────\n' +
+    '[JSON 修复指令] 上次产出的 narrative.json 解析失败，请修复并重新产出完整 narrative.json。\n' +
+    `错误信息：${errorInfo}\n` +
+    `错误位置附近（前 200 + 后 200 字符）：\n${rawSnippet}\n` +
+    '要求：\n' +
+    '- 必须产出完整、可解析的 JSON（不是部分 JSON）\n' +
+    '- 字符串值里的双引号必须转义为 \\"，换行必须转义为 \\n\n' +
+    '- 不要产出 markdown 代码块包裹，直接产出 JSON\n'
+  );
+}
+
+/**
+ * WT-049: 单次跑 LLM（真实 spawn 或注入的 runner）。
+ * 等 child close 后 resolve，返回 {exitCode, stdoutTail, stderrTail}。
+ * 不负责读/校验 narrative.json——那是上层的事。
+ */
+function runLlmOnce(
+  cliCommand: string,
+  args: string[],
+  promptText: string,
+  ctx: { cwd?: string; env?: NodeJS.ProcessEnv; windowsHide?: boolean; stdio?: 'pipe'; timeoutMs: number; outputDir: string; narrativePath: string },
+  injectedRunner?: RunPrismNarrativeOpts['llmRunner'],
+): Promise<LlmRunnerResult> {
+  if (injectedRunner) {
+    return injectedRunner(promptText, {
+      cliCommand,
+      args,
+      outputDir: ctx.outputDir,
+      narrativePath: ctx.narrativePath,
+      timeoutMs: ctx.timeoutMs,
+    });
+  }
+  return new Promise((resolve) => {
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+    const child = spawnCliProcess(cliCommand, args, {
+      cwd: ctx.cwd,
+      env: ctx.env ?? process.env,
+      windowsHide: ctx.windowsHide ?? true,
+      stdio: 'pipe',
+    });
+    try {
+      child.stdin?.write(promptText);
+      child.stdin?.end();
+    } catch (e: any) {
+      console.error(`[narrative] stdin write failed: ${e?.message || e}`);
+    }
+    const timeoutHandle = setTimeout(() => {
+      if (child.exitCode === null) child.kill('SIGTERM');
+      resolve({ exitCode: null, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+    }, ctx.timeoutMs);
+    child.stdout?.on('data', (data: Buffer) => { stdoutBuffer += data.toString(); });
+    child.stderr?.on('data', (data: Buffer) => { stderrBuffer += data.toString(); });
+    child.on('close', (exitCode: number | null) => {
+      clearTimeout(timeoutHandle);
+      resolve({ exitCode, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+    });
+    child.on('error', (err: Error) => {
+      clearTimeout(timeoutHandle);
+      resolve({ exitCode: -1, stdoutTail: stdoutBuffer.slice(-500), stderrTail: `spawn error: ${err.message}` });
+    });
+  });
+}
+
+/**
+ * WT-049: JSON 修复回路。最多重试 2 次（maxRetries=2，防无限循环）。
+ * 每次重试用"修复 prompt"重跑 LLM（不是脚本修复 JSON——DR-44）。
+ * 成功 → 返回 { narrative, repairCount }；失败 → 返回 { error }。
+ *
+ * timing 写入外部 timing 对象（json_repair_retry_1 / json_repair_retry_2）。
+ */
+async function attemptJsonRepair(
+  raw: string,
+  parseError: unknown,
+  originalPrompt: string,
+  cliCommand: string,
+  args: string[],
+  llmCtx: { cwd?: string; env?: NodeJS.ProcessEnv; windowsHide?: boolean; stdio?: 'pipe'; timeoutMs: number; outputDir: string; narrativePath: string },
+  timing: Record<string, number>,
+  injectedRunner?: RunPrismNarrativeOpts['llmRunner'],
+): Promise<{ narrative: NarrativeReport | null; repairCount: number; error?: string }> {
+  const MAX_RETRIES = 2;  // WT-049 硬约束：≤2 次重试，防无限循环
+  const { errorInfo, rawSnippet } = extractErrorContext(raw, parseError);
+  let lastError = errorInfo;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const t = Date.now();
+    const repairPrompt = buildRepairPrompt(originalPrompt, lastError, rawSnippet);
+    console.log(`[narrative] JSON repair attempt ${attempt}/${MAX_RETRIES}: re-running LLM with repair prompt...`);
+    const result = await runLlmOnce(cliCommand, args, repairPrompt, llmCtx, injectedRunner);
+    timing[`json_repair_retry_${attempt}`] = Date.now() - t;
+    console.log(`[narrative] timing json_repair_retry_${attempt}: ${timing[`json_repair_retry_${attempt}`]}ms`);
+
+    if (result.exitCode !== 0 && result.exitCode !== null) {
+      lastError = `CLI exited with code ${result.exitCode} (repair attempt ${attempt})`;
+      continue;
+    }
+    if (!fs.existsSync(llmCtx.narrativePath)) {
+      lastError = `narrative.json not written by LLM after repair attempt ${attempt}. stdout tail: ${result.stdoutTail}`;
+      continue;
+    }
+    let repairedRaw = '';
+    try {
+      repairedRaw = fs.readFileSync(llmCtx.narrativePath, 'utf-8');
+      const narrative = JSON.parse(repairedRaw) as NarrativeReport;
+      return { narrative, repairCount: attempt };
+    } catch (e: any) {
+      // 这次修复产出的 JSON 仍非法，更新错误信息再试
+      const ctx = extractErrorContext(repairedRaw, e);
+      lastError = `repair attempt ${attempt} still invalid: ${ctx.errorInfo}`;
+      console.warn(`[narrative] repair attempt ${attempt} still invalid JSON: ${ctx.errorInfo}`);
+    }
+  }
+  return { narrative: null, repairCount: MAX_RETRIES, error: `JSON repair failed after ${MAX_RETRIES} retries: ${lastError}` };
+}
+
 export async function runPrismNarrative(
   opts: RunPrismNarrativeOpts = {},
 ): Promise<NarrativeRunResult> {
+  // WT-049: timing log——先定位耗时环节，再看修复方案方向是否正确
+  const timing: Record<string, number> = {};
+  const mark = (name: string) => { timing[name] = Date.now(); };
+  const measure = (name: string, start: number) => {
+    const elapsed = Date.now() - start;
+    timing[name] = elapsed;
+    console.log(`[narrative] timing ${name}: ${elapsed}ms`);
+  };
+  mark('start');
+
   const source = opts.source ?? 'unity';
   const runId = opts.runId ?? (source === 'perfetto' ? 'bk26b-perfetto-triad' : 'unity-outside-stressmove');
   const config = getConfig();
@@ -485,7 +674,8 @@ export async function runPrismNarrative(
   const findingsPath = path.join(outputDir, 'findings.json');
   const verdictPath = path.join(outputDir, 'verdict.json');
 
-  // 前置检查：findings.json + verdict.json 必须存在
+  // 环节 1：前置检查
+  const t1 = Date.now();
   if (!fs.existsSync(findingsPath)) {
     return makeNarrativeError(runId, outputDir, narrativePath,
       `findings.json not found: ${findingsPath}. Run explore stage first (runPrismExplore).`);
@@ -494,8 +684,10 @@ export async function runPrismNarrative(
     return makeNarrativeError(runId, outputDir, narrativePath,
       `verdict.json not found: ${verdictPath}. Run explore stage first (runPrismExplore).`);
   }
+  measure('precheck', t1);
 
-  // 加载并替换 narrative-prompt.txt（数据源无关）
+  // 环节 2：prompt 注入
+  const t2 = Date.now();
   const promptTemplatePath = path.join(__dirname, 'prompts', 'narrative-prompt.txt');
   if (!fs.existsSync(promptTemplatePath)) {
     return makeNarrativeError(runId, outputDir, narrativePath,
@@ -513,8 +705,10 @@ export async function runPrismNarrative(
   // 沉淀历次 narrative 红队复扫的写作缺口教训，让本次写作吸收历史经验
   // DR-51 / WT-040: 补 dataSource 参数，避免 perfetto 报告注入 unity priors（WT-040 遗留 bug）
   promptText = promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt({ dataSource: source }));
+  measure('prompt_inject', t2);
 
-  // Resolve CLI
+  // 环节 3：CLI 解析
+  const t3 = Date.now();
   const provider = opts.cliProvider ?? 'codebuddy';
   const { command: cliCommand, resolved } = resolveCliExecutable(provider, config.cliPaths?.[provider]);
 
@@ -527,142 +721,143 @@ export async function runPrismNarrative(
     return makeNarrativeError(runId, outputDir, narrativePath, `Unknown CLI provider: ${provider}`);
   }
   const args = buildArgs(promptText);
+  measure('cli_resolve', t3);
 
   console.log(`[narrative] Spawning ${provider} CLI (${cliCommand})...`);
   console.log(`[narrative] source=${source}, runId=${runId}, outputDir=${outputDirPosix}`);
 
   const timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000;
 
-  return new Promise<NarrativeRunResult>((resolve) => {
-    let settled = false;
-    let stdoutBuffer = '';
+  // WT-049: llmRunner 上下文（真实 spawn 和注入 runner 共用）
+  const llmCtx = {
+    cwd: config.skillProjectPath,
+    env: process.env,
+    windowsHide: true,
+    stdio: 'pipe' as const,
+    timeoutMs,
+    outputDir,
+    narrativePath,
+  };
 
-    const child = spawnCliProcess(cliCommand, args, {
-      cwd: config.skillProjectPath,
-      env: process.env,
-      windowsHide: true,
-      stdio: 'pipe',
-    });
+  // 环节 4：LLM 调用（大头？）
+  const t4 = Date.now();
+  const llmResult = await runLlmOnce(cliCommand, args, promptText, llmCtx, opts.llmRunner);
+  measure('llm_call', t4);
 
-    // Pipe prompt via stdin（同 explore-service：避免 Windows .cmd 长参数截断）
-    try {
-      child.stdin?.write(promptText);
-      child.stdin?.end();
-    } catch (e: any) {
-      console.error(`[narrative] stdin write failed: ${e?.message || e}`);
+  // 环节 5：产物检查
+  const t5 = Date.now();
+  if (llmResult.exitCode !== 0 && llmResult.exitCode !== null) {
+    measure('artifact_check', t5);
+    measure('total', timing['start']);
+    return makeNarrativeError(runId, outputDir, narrativePath,
+      `CLI exited with code ${llmResult.exitCode}`);
+  }
+  if (!fs.existsSync(narrativePath)) {
+    measure('artifact_check', t5);
+    measure('total', timing['start']);
+    return makeNarrativeError(runId, outputDir, narrativePath,
+      `narrative.json not written by LLM. stdout tail: ${llmResult.stdoutTail}`);
+  }
+  measure('artifact_check', t5);
+
+  // 环节 6：JSON 解析（非法 JSON 在这里失败 → 触发修复回路）
+  const t6 = Date.now();
+  let narrative: NarrativeReport;
+  let repairCount = 0;
+  let raw = fs.readFileSync(narrativePath, 'utf-8');
+  try {
+    narrative = JSON.parse(raw) as NarrativeReport;
+  } catch (parseError: any) {
+    // WT-049: JSON 修复回路（重跑 LLM，不是脚本修复 JSON——DR-44）
+    console.warn(`[narrative] initial JSON.parse failed: ${parseError?.message || parseError}. Triggering repair loop (max 2 retries)...`);
+    const repair = await attemptJsonRepair(raw, parseError, promptText, cliCommand, args, llmCtx, timing, opts.llmRunner);
+    repairCount = repair.repairCount;
+    if (repair.narrative) {
+      narrative = repair.narrative;
+      console.log(`[narrative] JSON repair succeeded after ${repairCount} attempt(s).`);
+    } else {
+      measure('json_parse', t6);
+      measure('total', timing['start']);
+      return makeNarrativeError(runId, outputDir, narrativePath,
+        `Failed to parse/validate narrative.json after ${repairCount} repair attempt(s): ${repair.error}`);
     }
+  }
+  measure('json_parse', t6);
 
-    const doResolve = (result: NarrativeRunResult) => {
-      if (!settled) {
-        settled = true;
-        resolve(result);
-      }
-    };
+  // 环节 7：provenance 校验
+  const t7 = Date.now();
+  const prov: NarrativeProvenance | undefined = narrative.narrativeProvenance;
+  if (!prov || prov.generatedBy !== 'LLM') {
+    const actual = prov?.generatedBy ?? 'missing';
+    measure('provenance_check', t7);
+    measure('total', timing['start']);
+    return makeNarrativeError(runId, outputDir, narrativePath,
+      `narrativeProvenance.generatedBy !== 'LLM' (got: ${actual}). ` +
+      `Script-generated narrative.json rejected (DR-44 A2).`);
+  }
+  // WT-049: 写入 timing + repairCount 到 provenance（验收时看各环节耗时 + 修复次数）
+  prov.timing = timing;
+  prov.repairCount = repairCount;
+  measure('provenance_check', t7);
 
-    const timeoutHandle = setTimeout(() => {
-      if (child.exitCode === null) {
-        child.kill('SIGTERM');
-      }
-      doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-        `Narrative stage timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
+  console.log(`[narrative] OK: ${narrativePath}`);
+  console.log(`[narrative] overview: ${narrative.overview?.slice(0, 80) ?? '(empty)'}`);
+  console.log(`[narrative] topConclusions: ${narrative.topConclusions?.length ?? 0}`);
+  console.log(`[narrative] sections: ${narrative.sections?.length ?? 0}`);
+  console.log(`[narrative] repairCount: ${repairCount}`);
 
-    child.stdout?.on('data', (data: Buffer) => {
-      stdoutBuffer += data.toString();
-    });
-
-    child.stderr?.on('data', (data: Buffer) => {
-      console.error(`[narrative] stderr: ${data.toString()}`);
-    });
-
-    child.on('close', (exitCode: number | null) => {
-      clearTimeout(timeoutHandle);
-
-      if (exitCode !== 0 && exitCode !== null) {
-        return doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-          `CLI exited with code ${exitCode}`));
-      }
-
-      // 检查 narrative.json 是否产出
-      if (!fs.existsSync(narrativePath)) {
-        return doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-          `narrative.json not written by LLM. stdout tail: ${stdoutBuffer.slice(-500)}`));
-      }
-
-      // 读并校验 narrative.json
-      try {
-        const raw = fs.readFileSync(narrativePath, 'utf-8');
-        const narrative = JSON.parse(raw) as NarrativeReport;
-
-        // DR-44 A2: provenance 强制校验（同 render-html.ts）
-        const prov: NarrativeProvenance | undefined = narrative.narrativeProvenance;
-        if (!prov || prov.generatedBy !== 'LLM') {
-          const actual = prov?.generatedBy ?? 'missing';
-          return doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-            `narrativeProvenance.generatedBy !== 'LLM' (got: ${actual}). ` +
-            `Script-generated narrative.json rejected (DR-44 A2).`));
-        }
-
-        console.log(`[narrative] OK: ${narrativePath}`);
-        console.log(`[narrative] overview: ${narrative.overview?.slice(0, 80) ?? '(empty)'}`);
-        console.log(`[narrative] topConclusions: ${narrative.topConclusions?.length ?? 0}`);
-        console.log(`[narrative] sections: ${narrative.sections?.length ?? 0}`);
-
-        // WT-034: narrative 红队回路 + lessons 沉淀（软约束，不阻塞主产出）
-        // 对照 v5.3 标杆 4 维度（多线程覆盖/视觉资产/callTree/红线标注）复扫 narrative.json，
-        // 发现缺口 → 沉淀 lessons → 下次 narrative-prompt 注入让 LLM 吸收
-        try {
-          const redTeamResult = runNarrativeRedTeam(narrative, outputDir, runId);
-          if (redTeamResult.gaps.length > 0) {
-            console.log(`[narrative] red-team found ${redTeamResult.gaps.length} gaps, sedimenting lessons...`);
-            for (const gap of redTeamResult.gaps) {
-              const lessonId = `lesson-${runId}-${gap.type}-${Date.now()}`;
-              appendMemory('lessons', {
-                id: lessonId,
-                title: `${gap.type}: ${gap.benchmarkRef ?? 'v5.3 标杆'}`,
-                content: gap.lessonText,
-                source: `narrative-redteam/${runId}`,
-              });
-            }
-            console.log(`[narrative] sedimented ${redTeamResult.gaps.length} lessons to prism-memory/lessons/`);
-
-            // WT-036: 红线清单父子同列自动修复（LLM 反复违反归并规则，靠 prompt 引导不住）
-            // 检测到 redline-parent-child-dup gap 时，自动删除子节点行（保留父节点），
-            // 因为父节点的 hotspot 列已包含子节点信息。修复后重写 narrative.json。
-            if (redTeamResult.gaps.some(g => g.type === 'redline-parent-child-dup')) {
-              const fixed = fixRedlineParentChildDup(narrative, outputDir);
-              if (fixed > 0) {
-                console.log(`[narrative] auto-fixed ${fixed} redline parent-child duplicates (removed child rows)`);
-                fs.writeFileSync(narrativePath, JSON.stringify(narrative, null, 2), 'utf-8');
-              }
-            }
-          } else {
-            console.log('[narrative] red-team: no gaps found (narrative matches v5.3 benchmark)');
-          }
-        } catch (e: any) {
-          // 红队失败/超时不阻塞主产出（软约束）
-          console.warn(`[narrative] red-team loop failed (non-blocking): ${e?.message || e}`);
-        }
-
-        doResolve({
-          success: true,
-          runId,
-          outputDir,
-          narrativePath,
-          narrative,
+  // 环节 8：红队回路（软约束，不阻塞主产出）
+  const t8 = Date.now();
+  // WT-034: narrative 红队回路 + lessons 沉淀（软约束，不阻塞主产出）
+  // 对照 v5.3 标杆 4 维度（多线程覆盖/视觉资产/callTree/红线标注）复扫 narrative.json，
+  // 发现缺口 → 沉淀 lessons → 下次 narrative-prompt 注入让 LLM 吸收
+  try {
+    const redTeamResult = runNarrativeRedTeam(narrative, outputDir, runId);
+    if (redTeamResult.gaps.length > 0) {
+      console.log(`[narrative] red-team found ${redTeamResult.gaps.length} gaps, sedimenting lessons...`);
+      for (const gap of redTeamResult.gaps) {
+        const lessonId = `lesson-${runId}-${gap.type}-${Date.now()}`;
+        appendMemory('lessons', {
+          id: lessonId,
+          title: `${gap.type}: ${gap.benchmarkRef ?? 'v5.3 标杆'}`,
+          content: gap.lessonText,
+          source: `narrative-redteam/${runId}`,
         });
-      } catch (e: any) {
-        return doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-          `Failed to parse/validate narrative.json: ${e?.message || e}`));
       }
-    });
+      console.log(`[narrative] sedimented ${redTeamResult.gaps.length} lessons to prism-memory/lessons/`);
 
-    child.on('error', (err: Error) => {
-      clearTimeout(timeoutHandle);
-      doResolve(makeNarrativeError(runId, outputDir, narrativePath,
-        `CLI spawn error: ${err.message}`));
-    });
-  });
+      // WT-036: 红线清单父子同列自动修复（LLM 反复违反归并规则，靠 prompt 引导不住）
+      // 检测到 redline-parent-child-dup gap 时，自动删除子节点行（保留父节点），
+      // 因为父节点的 hotspot 列已包含子节点信息。修复后重写 narrative.json。
+      if (redTeamResult.gaps.some(g => g.type === 'redline-parent-child-dup')) {
+        const fixed = fixRedlineParentChildDup(narrative, outputDir);
+        if (fixed > 0) {
+          console.log(`[narrative] auto-fixed ${fixed} redline parent-child duplicates (removed child rows)`);
+        }
+      }
+    } else {
+      console.log('[narrative] red-team: no gaps found (narrative matches v5.3 benchmark)');
+    }
+  } catch (e: any) {
+    // 红队失败/超时不阻塞主产出（软约束）
+    console.warn(`[narrative] red-team loop failed (non-blocking): ${e?.message || e}`);
+  }
+  measure('red_team', t8);
+
+  // 环节 9：文件 IO（写 narrative.json，含 timing/repairCount 写入 provenance）
+  const t9 = Date.now();
+  fs.writeFileSync(narrativePath, JSON.stringify(narrative, null, 2), 'utf-8');
+  measure('file_io', t9);
+
+  measure('total', timing['start']);
+
+  return {
+    success: true,
+    runId,
+    outputDir,
+    narrativePath,
+    narrative,
+  };
 }
 
 // ──────────────────────────────── CLI 入口 ────────────────────────────────

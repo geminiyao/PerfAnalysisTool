@@ -1,8 +1,20 @@
-# 当前战线（NOW）— 此刻在哪、下一步干嘛
+﻿# 当前战线（NOW）— 此刻在哪、下一步干嘛
 
 > **新会话第一个读这个。** 永远保持最新。主 agent 每做完一件事 / 快切会话前必更新本文。
 > 坐标系见 `../plan/roadmap.md`（里程碑）和 `../plan/backlog.md`（需求）。
-> 最后更新：2026-07-21（**WT-048 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ BK-7 方向 A 工单已建待派发（narrative JSON 修复回路，v7 前置）**）。
+> 最后更新：2026-07-22（**WT-049 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ 下一步派 WT-046 v7**）。
+>
+> **WT-049 BK-7 方向 A·narrative 耗时治理 + JSON 修复回路·验收 PASS**（2026-07-22 主 agent 独立验收 DR-36）：
+> - 通用 harness **207 PASS / 0 FAIL / 0 WARN**（原 199 + [2d] 节 8 条新 PASS，与自报一致）
+> - perfetto 不退化 **239 PASS / 2 FAIL / 1 WARN**（2 FAIL 是 WT-037 遗留：红线清单 4<5 + 降频矩阵 0<4，与本工单无关）
+> - 工单特定断言 1-8 全 PASS（timing/measure/mark=40 / attemptJsonRepair=2 / MAX_RETRIES=2 / spawnCliProcess|runLlmOnce=6 / timing|repairCount=2 / repairCount=15 / prov.timing=1 / 单元测试 34 PASS）
+> - 单元测试 **34 PASS / 0 FAIL**（5 用例：正常路径 + 1 次修复 + 2 次失败 + 修复 prompt 内容 + timing 完整）
+> - 人眼检查：attemptJsonRepair 函数存在（narrative-service.ts:606）+ MAX_RETRIES=2（:616）+ 修复回路调 runLlmOnce（重跑 LLM 不是脚本修复——DR-44）+ 修复 prompt 含原 prompt+错误信息+raw 片段+"完整可解析 JSON"要求 + extractErrorContext 提取 position/line:column 截取前 200+后 200 字符 + prov.timing/prov.repairCount 写入（:799-800）+ 红队回路在修复成功后继续跑（不跳过）+ narrative-types.ts timing?/repairCount? 可选字段（:98,:104）
+> - 开发 agent 偏离：[2d] 节 8 条断言（工单说 7 条，2d-5 拆 2 个 assert）——合理偏离更严格 + red-team 内 fs.writeFileSync 移除统一到环节 9——合理重构 + 未真跑 narrative 验证 timing（工单说可选）——合理
+> - **Timing 判断**：开发 agent 贴的 timing 是 mock LLM 数据（llm_call=1ms），不反映真实比例——工单设计局限（单元测试用 mock LLM）。timing 机制本身工作正常（10 环节字段全有值，修复时 json_repair_retry_* 出现）。**真跑 LLM 验证 timing 留 v7**——v7 重跑 narrative 时顺带看 llm_call 是否占 80%+
+> - **发现 1 个非阻塞性问题（已处理）**：单元测试 red-team 回路调真实 appendMemory 污染 prism-memory/lessons/ 40+ 个 lesson-test-* 文件。已清理（真实 narrative 跑的 lessons 未受影响）。测试设计可改进点（留未来）：mock appendMemory 或让 red-team 测试模式跳过沉淀
+> - 产出：narrative-types.ts（timing?/repairCount? 字段）+ narrative-service.ts（9 环节 timing log + extractErrorContext/buildRepairPrompt/attemptJsonRepair/runLlmOnce + prov 写入）+ harness.ts（[2d] 节 8 条断言）+ narrative-service.test.ts（5 用例 34 断言）
+> - **遗留 v7**：真跑 LLM 验证 timing 比例 + v7 重跑 narrative 时 JSON 修复回路兜底不再"6 次才成功 1 次"
 >
 > **WT-048 DR-51 三层架构修复·验收 PASS**（2026-07-21 主 agent 独立验收 DR-36）：
 > - 通用 harness **199 PASS / 0 FAIL / 0 WARN**（[1e] 节 E1-E8 全 PASS，~150 条断言）
@@ -34,14 +46,13 @@
 
 ### 新会话开场指令（主 agent 进来后按这个顺序做）
 
-1. **读完本节**：当前状态 = WT-048 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ BK-7 方向 A 工单已建待派发
-2. **用户手动派发 BK-7 方向 A 工单**（narrative JSON 修复回路，v7 前置）：
-   ```powershell
-   docs/prism/process/scripts/dispatch-ticket-codebuddy.ps1 -Ticket TODO-WT-049-narrative-json-repair-loop.md
-   ```
-3. **BK-7 方向 A 完工后**：主 agent 独立验收（跑通用 harness + 工单特定断言 + 人眼看 JSON 修复回路真的接住了非法 JSON）
-4. **BK-7 方向 A 验收 PASS 后**：派 WT-046 v7 工单（§0 ② URP 重复修复 + DR-51 端到端冒烟验证），v7 重跑 narrative 时 JSON 修复回路兜底，不再"6 次才成功 1 次"
-5. **v7 验收 PASS 后**：进入 M4 三回路填料里程碑（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路），见下方"M5 善后完成后后续必做需求"节
+1. **读完本节**：当前状态 = WT-049 验收 PASS + WT-046 v6 部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）+ 下一步派 WT-046 v7
+2. **派 WT-046 v7 工单**（§0 ② URP 重复修复 + DR-51 端到端冒烟验证 + 顺带看真实 timing）：
+   - v7 重跑 narrative 时 JSON 修复回路（WT-049）兜底，不再"6 次才成功 1 次"
+   - v7 顺带验证 DR-51 端到端冒烟——narrative prompt 真的含 ## constitution + ## methodology 块
+   - v7 顺带看真实 timing——确认 llm_call 是否占 80%+（WT-049 遗留）
+   - v7 不靠"重跑 narrative 碰运气"——FAIL C §0 ② URP 重复修复需要 BK-4 金标集配合，但 v7 先用 JSON 修复回路兜底稳定迭代
+3. **v7 验收 PASS 后**：进入 M4 三回路填料里程碑（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路），见下方"M5 善后完成后后续必做需求"节
 
 ### 当前两张待派发工单详情
 
@@ -361,7 +372,7 @@
 - ✅ `DONE-WT-046-v5` topConclusions/§0 定位分离 + 删作文机病硬骨架（主 agent 独立验收 DR-36：unity 81/1/1 + perfetto 79/2/1 不退化。工单特定断言 1/2/4/5/6/7 全 PASS。人眼检查 topConclusions 纯表格 + §0 items=8 一一对应 + §0 无"三大演化结论"硬骨架 + §0 ① 讲清为什么贵 + §3 下钻 #8 完整。**FAIL C §0 ③ vs §3 下钻 ③ 重复**：§0 ③ 讲了 GC.Collect 子节点 foldChange/ms/GC alloc + frame 519 单帧数字违反 v5 约束，但核心改动都对 FAIL 是 LLM 单条不稳定——用户决定 PASS 但记遗留 v6 一起处理。产出 `2026-07-20_wt046_v5/report.html` 127KB）
 - ✅ `DONE-WT-048` DR-51 三层架构修复·宪法层+规程层注入运行时 LLM（主 agent 独立验收 DR-36：通用 harness 199/0/0 + perfetto 不退化 231/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-10 全 PASS。人眼检查 constitution 10 条 + methodology 8 条 + 每条 1-2 句话+反例+正例 + 全标 cross-source + 无业务名硬编码 + explore-service MEMORY_INJECTION_CATEGORIES 顺序宪法→规程→知识层 + narrative-service:514 传了 dataSource。开发 agent 偏离：E7/E8 多加 2 条断言强化验收 + 未跑端到端冒烟用 formatMemoryForPrompt 直接验证等价证明注入路径通。**遗留**：DR-51 验证只到 formatMemoryForPrompt 层，没跑端到端冒烟确认运行时 LLM 真的读到 constitution+methodology——推迟到 v7 一起做。产出 prism-memory/constitution/ × 10 + prism-memory/methodology/ × 8 + 6 个代码文件）
 - ⚠️ `REVIEW-WT-046-v6` 图文并茂 + §0 ③ 重复修复·部分 PASS（FAIL C 平移到 §0 ② URP，记遗留 v7）（主 agent 独立验收 DR-36：通用 harness 231/2/2 + perfetto 不退化 231/2/1。工单断言 1/2/4/6/7 PASS，断言 3/5 FAIL。**2 FAIL**：[2b] topConclusions #2 URP problem 与 §0 ② title sim=1.0（title 复述 problem）+ [2c] §0 ② URP 与 §3 下钻 ② URP 共享 5.96ms/13.08ms（§0 讲子节点 ms 数字 + frame 453 单帧数字）。**FAIL C 是真重复不是误报**：§0 ② URP narrative 讲了 URP.Render 90%/URP.MainRenderingTransparent 28%/每帧 6.56→12.52ms/ForwardRenderPass 单帧尖峰 13.08ms @ frame 453。**判定理由**：核心改动（图文并茂引导 + §3 下钻讲更深 + DR-50 合规）都对了；FAIL C 是 LLM 单条不稳定（v5 是 §0 ③ GC.Collect，v6 是 §0 ② URP，每次 FAIL 在不同条之间波动），不是 prompt 约束缺陷；继续重跑 v7 是 LLM 产出概率问题——开发 agent 重跑 6 次只成功 1 次，5 次非法 JSON，成本不可控。**记遗留 v7**：v7 不靠"重跑碰运气"，需 BK-7 方向 A（narrative JSON 修复回路）+ BK-4 金标集配合。产出 `2026-07-21_wt046_v6/report.html` 154.7KB）
-- ⬜ `TODO-WT-049` BK-7 方向 A·narrative JSON 修复回路（v7 前置，用户手动派发。narrative-service 加 JSON 修复回路——LLM 产出非法 JSON 时自动提取错误位置 + 反馈给 LLM 重试最多 2 次，不是"重跑整个 narrative"。解 v6 重跑 6 次只成功 1 次的痛。1-2 天工单）
+- ✅ `DONE-WT-049` BK-7 方向 A·narrative 耗时治理 + JSON 修复回路（主 agent 独立验收 DR-36：通用 harness 207/0/0 + perfetto 不退化 239/2/1（2 FAIL 是 WT-037 遗留）。工单特定断言 1-8 全 PASS。单元测试 34 PASS / 0 FAIL。人眼检查：attemptJsonRepair:606 + MAX_RETRIES=2:616 + 修复回路调 runLlmOnce（重跑 LLM 不是脚本修复——DR-44）+ 修复 prompt 含原 prompt+错误+raw 片段+"完整可解析 JSON" + extractErrorContext 提取 position/line:column 截取前 200+后 200 + prov.timing/prov.repairCount 写入 + 红队不跳过 + narrative-types.ts timing?/repairCount? 可选字段。开发 agent 偏离：[2d] 8 条断言（工单说 7 条，2d-5 拆 2 个）——合理更严格 + red-team fs.writeFileSync 移到环节 9——合理重构 + 未真跑 narrative 验证 timing（工单说可选）——合理。**Timing 判断**：开发 agent 贴的是 mock LLM timing（llm_call=1ms），不反映真实比例——工单设计局限。timing 机制工作正常。真跑 LLM 验证 timing 留 v7。**发现 1 个非阻塞问题（已处理）**：单元测试 red-team 调真实 appendMemory 污染 prism-memory/lessons/ 40+ 个 lesson-test-* 文件，已清理。产出：narrative-types.ts + narrative-service.ts + harness.ts + narrative-service.test.ts）
 
 ## 待用户拍板 / 进行中
 
