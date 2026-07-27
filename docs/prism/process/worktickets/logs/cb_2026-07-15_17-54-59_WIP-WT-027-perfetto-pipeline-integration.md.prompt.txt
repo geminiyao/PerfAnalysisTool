@@ -1,0 +1,16 @@
+﻿你是 Prism 施工方（CodeBuddy CLI）。严格按工单施工，不要超范围、不要过度设计。
+
+## 必读
+1. 读 docs/prism/process/harness.md 的工单协议
+2. 读 docs/prism/process/worktickets/WIP-WT-027-perfetto-pipeline-integration.md（这是你的唯一任务规格）
+
+## 施工要求
+- 只改工单「改哪些文件」里列出的文件；禁止事项一律遵守
+- 按「具体要求」逐条完成
+- 在工单末尾填写「## 完工报告」：改了什么、怎么自测的、有无偏离
+- 全部完成后，将工单文件名前缀改为 REVIEW-（同目录，其余文件名不变）
+- 不要改 plan/backlog.md、state/now.md（主 agent 验收后更新）
+- 不要提交 git，除非工单明确要求
+
+开始施工。
+

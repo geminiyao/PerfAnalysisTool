@@ -230,5 +230,647 @@
       "unity-outside-stressmove\\2026-07-09_06-58-16"
     ],
     "status": "open"
+  },
+  "permarker的gc分配字节和分配调用栈能回答哪个函数或luamarker在": {
+    "key": "permarker的gc分配字节和分配调用栈能回答哪个函数或luamarker在",
+    "title": "per-marker 的 GC 分配字节和分配调用栈，能回答哪个函数或 Lua marker 在持续分配。",
+    "rationale": "queryFrameCounters 只能看到整帧 gc_allocated_in_frame；frame519 和 frame483 的当帧分配都不高，但发生了同步 GC，需要函数级分配来源来解释累计触发原因。",
+    "suspectedAxis": "memory",
+    "recurrence": 3,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-11_14-55-28",
+      "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20"
+    ],
+    "status": "open"
+  },
+  "meshuimanageronlateupdate内cameradynamica": {
+    "key": "meshuimanageronlateupdate内cameradynamica",
+    "title": "MeshUIManager.OnLateUpdate 内 camera、dynamicAtlas、eventSystem、animation、layouts、controls、renderers、keywords 各自的耗时 marker。",
+    "rationale": "drillDownMarker 只能看到 CS:AOE.MeshUIManager 自身 2.0762ms/帧，源码显示它顺序调用多个子系统；没有子 marker 就无法判断是布局、动态图集、事件还是渲染器在贵。",
+    "suspectedAxis": "ui",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-11_14-55-28"
+    ],
+    "status": "open"
+  },
+  "yzentitymovelinentf每次消息的fullupdateline数量": {
+    "key": "yzentitymovelinentf每次消息的fullupdateline数量",
+    "title": "YzEntityMoveLineNtf 每次消息的 fullUpdateLine 数量、pathPoint 数量、coordPath 数组长度。",
+    "rationale": "Profiler 只显示 frame273 该 handler 自耗时 14.8995ms；源码显示它遍历 fullUpdateLine 并克隆路径数组，但现有工具没有 payload 大小，无法建立耗时与消息规模的关系。",
+    "suspectedAxis": "network",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-11_14-55-28"
+    ],
+    "status": "open"
+  },
+  "loadermanagertryunloadpending每帧处理的pendin": {
+    "key": "loadermanagertryunloadpending每帧处理的pendin",
+    "title": "LoaderManagerTryUnloadPending 每帧处理的 pending unload 数量、每次 DoUnload 的资源类型和耗时分布。",
+    "rationale": "TryUnloadPending.TryUnload 在 frame80 自耗时峰值 14.5946ms，但 TryUnload 源码只是 CanUnload+DoUnload 薄封装；需要调用次数和资源类型才能判断是数量过多还是某类资源卸载贵。",
+    "suspectedAxis": "resource",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-11_14-55-28"
+    ],
+    "status": "open"
+  },
+  "oncameramoveoutsideevtcamerazoom的监听者列表及每": {
+    "key": "oncameramoveoutsideevtcamerazoom的监听者列表及每",
+    "title": "OnCameraMove/OutsideEvt.CameraZoom 的监听者列表及每个监听者耗时，或 InfiniteZoomMgr.PostCameraMoveScale 内部更细粒度 marker。",
+    "rationale": "frame144 显示 MapCameraCtrl.UpdateCameraPos total 56.3207ms，drillDown 只能到 OnCameraMove 叶子；源码显示会触发 InfiniteZoomMgr.OnOutsideCameraMove 和 OutsideEvt.CameraZoom，需要监听者级拆分才能定位真正执行者。",
+    "suspectedAxis": "camera",
+    "recurrence": 1,
+    "firstSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "lastSeenRun": "unity-outside-stressmove\\2026-07-11_14-55-28",
+    "seenInRuns": [
+      "unity-outside-stressmove\\2026-07-11_14-55-28"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节数哪个函数在分配多少字节不是分配次数当前quer": {
+    "key": "permarker的gc分配字节数哪个函数在分配多少字节不是分配次数当前quer",
+    "title": "per-marker 的 GC 分配字节数（哪个函数在分配多少字节），不是分配次数。当前 queryGcAllocByModule 只给 count/perFrame（次数），没有字节大小，无法判断 URP.BeforeRendering 每帧 130 次分配到底分配了多少内存、是哪种对象。",
+    "rationale": "cur 态 GC 分配 208568 次（throttle 59518 次），URP.BeforeRendering 和 Inl_OpaquePass 是大头，但只有次数没有字节，无法评估堆压力严重度，也无法定位是 command buffer / render texture / 材质属性块中的哪一种。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-15_10-36-27"
+    ],
+    "status": "open"
+  },
+  "gccollect触发前若干帧的按marker按调用来源的分配明细判断是分配尖峰": {
+    "key": "gccollect触发前若干帧的按marker按调用来源的分配明细判断是分配尖峰",
+    "title": "GC.Collect 触发前若干帧的按 marker/按调用来源的分配明细，判断是分配尖峰触发还是定时 GC。cur 有 3 次 GC.Collect（avg 18ms），throttle 有 1 次（32.9ms），但无法看触发前几帧哪个 marker 在累积分配。",
+    "rationale": "GC.Collect 虽然占总窗口 <0.4% 不是主因，但 throttle 单次 32.9ms 是潜在卡顿源。要判断是'渲染管线持续分配累积触发'还是'Lua 业务层突发分配触发'，需要触发前的函数级分配明细。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-15_10-36-27"
+    ],
+    "status": "open"
+  },
+  "gpubusyfreqcountergpu占用率和频率用于从间接强信号档升级到c": {
+    "key": "gpubusyfreqcountergpu占用率和频率用于从间接强信号档升级到c",
+    "title": "GPU busy/freq counter（GPU 占用率和频率），用于从间接强信号档升级到 confirmed GPU 满载。当前只能用 wait slice 重叠法 + Render 线程变闲 + Choreographer 稳定做多信号同向，但给不出'GPU 100% 满载'硬结论。",
+    "rationale": "throttle 态单次 Gfx.WaitForPresent 17.8ms 已超 vsync，是强 GPU-bound 信号，但无 GPU counter 无法确认是 GPU 算力不足（shader 复杂/分辨率高）还是 GPU 也被热限流降频。这影响优化方向：前者优化渲染负载，后者解决散热。",
+    "suspectedAxis": "gpu",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-15_10-36-27"
+    ],
+    "status": "open"
+  },
+  "urprendercamerastack每帧渲染的相机数量和每个相机的耗时thr": {
+    "key": "urprendercamerastack每帧渲染的相机数量和每个相机的耗时thr",
+    "title": "URP.RenderCameraStack 每帧渲染的相机数量和每个相机的耗时。throttle 态 URP.RenderCameraStack count=854（427 帧，约 2 相机/帧），但无法拆分每个相机的渲染成本，也无法确认是否有不必要的额外相机。",
+    "rationale": "GPU-bound 优化需要知道是哪个相机的渲染最贵（主相机/UI 相机/特效相机等），当前只有 RenderCameraStack 聚合数据，无法定位到具体相机。",
+    "suspectedAxis": "gpu",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-15_10-36-27"
+    ],
+    "status": "open"
+  },
+  "outsideviewarmylinemgr每帧处理的行军线数量每条行军线的ve": {
+    "key": "outsideviewarmylinemgr每帧处理的行军线数量每条行军线的ve",
+    "title": "OutSideViewArmyLineMgr 每帧处理的行军线数量、每条行军线的 vertex 计算量。throttle 态 OutSideViewArmyLineMgr 1042ms（5.22%），子节点 CalculateVertexJob (Burst) 51240 次调用，但无法知道这是多少条行军线、每条多少 vertex。",
+    "rationale": "OutSideViewArmyLineMgr 在 throttle 涨 37%（761→1042ms），是业务侧唯一显著增长的模块。要判断是行军线数量过多（需裁剪视野外的）还是单条 vertex 计算贵（需优化算法），需要行军线数量和 vertex 规模数据。",
+    "suspectedAxis": "business",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-15_10-36-27",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-15_10-36-27"
+    ],
+    "status": "open"
+  },
+  "采集前后的cpugpu温度thermalbeforeaftertxt和scali": {
+    "key": "采集前后的cpugpu温度thermalbeforeaftertxt和scali",
+    "title": "采集前后的 CPU/GPU 温度（thermal_before/after.txt）和 scaling_max_freq，用于把降频判定从 likely 升到 confirmed",
+    "rationale": "queryCpuFreq 的 evidence 提示有 thermal/cpuinfo sidecar，但实际文件不存在；bigCoreReach 59.2% + per-CPU max 下降已构成 likely 降频，但缺温度 Δ≥5°C 或采后≥75°C 的第二信号，无法确认",
+    "suspectedAxis": "freq",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-16_wt031"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节数不是次数用于判断哪个模块分配的内存量最大": {
+    "key": "permarker的gc分配字节数不是次数用于判断哪个模块分配的内存量最大",
+    "title": "per-marker 的 GC 分配字节数（不是次数），用于判断哪个模块分配的内存量最大",
+    "rationale": "queryGcAllocByModule 只给分配次数（URP.BeforeRendering 130次/帧），不给字节数；次数多不等于字节多，需要字节数才能定位真正的内存压力源",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-16_wt031"
+    ],
+    "status": "open"
+  },
+  "urpafterrendering内部各passpostprocessingbl": {
+    "key": "urpafterrendering内部各passpostprocessingbl",
+    "title": "URP.AfterRendering 内部各 Pass（PostProcessing/Blit/FinalBlit 等）的耗时 marker，用于拆分 41% 的渲染等待集中在哪个 Pass",
+    "rationale": "throttle 态 URP.AfterRendering 占 41.36% 但是叶子节点（无子 marker），无法判断是后处理、Blit 还是 FinalBlit 在贵；需要 URP Pass 级 instrumentation",
+    "suspectedAxis": "render",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-16_wt031"
+    ],
+    "status": "open"
+  },
+  "outsideviewarmylinemgr内部子模块的耗时marker顶点计算": {
+    "key": "outsideviewarmylinemgr内部子模块的耗时marker顶点计算",
+    "title": "OutSideViewArmyLineMgr 内部子模块的耗时 marker（顶点计算/线段更新/渲染提交），用于拆分 5.19% 的行军线管理成本",
+    "rationale": "OutSideViewArmyLineMgr 是 cur→throttle 唯一涨幅显著的业务模块（×1.37），但是叶子节点无子 marker；callTree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)，但无法判断顶点计算占多少比例",
+    "suspectedAxis": "script",
+    "recurrence": 1,
+    "firstSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "lastSeenRun": "bk26b-perfetto-triad\\2026-07-16_wt031",
+    "seenInRuns": [
+      "bk26b-perfetto-triad\\2026-07-16_wt031"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节和分配调用栈哪个函数luamarker在分配不是": {
+    "key": "permarker的gc分配字节和分配调用栈哪个函数luamarker在分配不是",
+    "title": "per-marker 的 GC 分配字节和分配调用栈（哪个函数/Lua marker 在分配），不是整帧总量",
+    "rationale": "queryFrameCounters 只有整帧 gc_allocated_in_frame；frame 519 和 frame 483 的当帧分配都不高（8KB 级），但发生了同步 GC.Collect 70ms。多态 callTree 显示 Core.Update 的 GcAllocCount 从 4777 涨到 51365（10 倍），Core.LateUpdate 从 7907 涨到 93196（10 倍），但不知道是哪些子模块/函数在分配。要定位 GC 触发源和 10 倍分配增长的具体来源，需要到函数级/marker 级的分配明细。",
+    "suspectedAxis": "memory",
+    "recurrence": 2,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "yzentitymovelinentf等网络消息的payload大小实体数量消息": {
+    "key": "yzentitymovelinentf等网络消息的payload大小实体数量消息",
+    "title": "YzEntityMoveLineNtf 等网络消息的 payload 大小/实体数量（消息体里有多少个实体的移动线更新数据）",
+    "rationale": "YzEntityMoveLineNtf 在 frame 273 炸到 14.9ms，77 帧出现，spikeRatio 20。源码显示 for 循环遍历 msg.fullUpdateLine 调 FormatWorldPosition_MoveAttr，但无法获取 msg.fullUpdateLine 里有多少个实体。14.9ms 是否与消息体大小成正比？是服务端一次性推送大量实体，还是 FormatWorldPosition_MoveAttr 单次太贵？需要消息层 payload 内容才能判断。",
+    "suspectedAxis": "network",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00"
+    ],
+    "status": "open"
+  },
+  "tryunloadpendingtryunload单帧内的调用次数当帧同时卸载了": {
+    "key": "tryunloadpendingtryunload单帧内的调用次数当帧同时卸载了",
+    "title": "TryUnloadPending.TryUnload 单帧内的调用次数（当帧同时卸载了多少个资源对象）",
+    "rationale": "TryUnloadPending.TryUnload 在 frame 80 单帧 14.59ms，但源码显示 TryUnload 本身只有 4 行（CanUnload+DoUnload+state=Pooled）。queryMarkers/scanMetricOverFrames 只能给 marker 在某一帧的汇总 selfMs，无法得知 frame 80 这类突发帧里 TryUnload 被调用了多少次（即当帧同时卸载了多少个资源对象）。是 1 个大资源贵，还是 N 个小资源累加？需要调用次数才能判断。",
+    "suspectedAxis": "loading",
+    "recurrence": 2,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55"
+    ],
+    "status": "open"
+  },
+  "oncameramove内部buckets数组的运行时大小每个bucket有多少": {
+    "key": "oncameramove内部buckets数组的运行时大小每个bucket有多少",
+    "title": "OnCameraMove 内部 buckets 数组的运行时大小（每个 bucket 有多少个 entity）",
+    "rationale": "OnCameraMove 在 frame 144 单帧 53.4ms，源码显示双重 for 循环遍历 buckets[i] 所有 entity 调 RefreshDistancePriority。19 次相机移动每次平均 43ms，但不知道 buckets 规模有多大——是几百个 entity 还是几千个？这决定了优化方向（分帧 vs 空间划分 vs Job 并行）。需要运行时 buckets 大小数据才能判断。",
+    "suspectedAxis": "gameplay",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00"
+    ],
+    "status": "open"
+  },
+  "luamtgcexecutemtgc的触发原因和gc工作量是增量gc步进还是全量": {
+    "key": "luamtgcexecutemtgc的触发原因和gc工作量是增量gc步进还是全量",
+    "title": "LuaMtGc.ExecuteMtGc 的触发原因和 GC 工作量（是增量 GC 步进还是全量 GC，触发时 Lua 堆大小/对象数）",
+    "rationale": "LuaMtGc.ExecuteMtGc 在 frame 194 单帧 21.59ms，spikeRatio 59，600 帧常驻 mean 0.59ms。但无法获取每次 GC 是增量步进还是全量收集，触发时 Lua 堆有多大，哪些 Lua 对象在回收。frame 350-352 连续 3 帧尖峰说明有连续触发源，但看不到触发逻辑。需要 Lua runtime 内部 GC 状态数据才能判断优化方向。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_04-10-00"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节哪个函数luamarker在分配不是整帧总量": {
+    "key": "permarker的gc分配字节哪个函数luamarker在分配不是整帧总量",
+    "title": "per-marker 的 GC 分配字节（哪个函数/Lua marker在分配），不是整帧总量",
+    "rationale": "queryFrameCounters 只有整帧 gc_allocated_in_frame；frame519 的同步GC当帧仅分配8KB，但gc_reserved_memory从107.7MB降到105.0MB，说明是长期累积的小分配让堆膨胀。要定位是哪个Lua/C#函数在持续分配（CS:AOE.LuaMgr当前态GcAllocCount=28613/帧是基线1073的26.7倍），需要per-marker的GC分配字节和分配调用栈",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "yzentitymovelinentf消息的payload大小实体数量": {
+    "key": "yzentitymovelinentf消息的payload大小实体数量",
+    "title": "YzEntityMoveLineNtf消息的payload大小/实体数量",
+    "rationale": "YzEntityMoveLineNtf在frame273炸14.9ms，但工具只给marker耗时不给消息内容。要判断14.9ms是否与消息体大小（实体数量）成正比，需要网络层的payload大小instrumentation。multiState里多个*** pb.decode*** marker也新出现（25051/26501/11805等），frame273可能叠加了多个解码",
+    "suspectedAxis": "network",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "tryunloadpendingtryunload单帧内的调用次数资源卸载数量": {
+    "key": "tryunloadpendingtryunload单帧内的调用次数资源卸载数量",
+    "title": "TryUnloadPending.TryUnload单帧内的调用次数（资源卸载数量）",
+    "rationale": "TryUnloadPending.TryUnload在frame80炸14.6ms+145KB GC分配，但工具只给汇总selfMs。要判断是'当帧卸载了大量资源'还是'单个卸载贵'，需要单帧调用次数。getSourceForSymbol确认TryUnload方法体逻辑简单（4行代码），所以14.6ms更可能是调用次数多",
+    "suspectedAxis": "resource",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "oncameramove执行时battleheadqueuewaitshowen": {
+    "key": "oncameramove执行时battleheadqueuewaitshowen",
+    "title": "OnCameraMove执行时battleHeadQueue/waitShowEntityQueue的实体数量",
+    "rationale": "OnCameraMove源码是两层pairs循环遍历buckets，43ms的耗时由实体数量决定。要判断是'实体数量过多'还是'RefreshDistancePriority()单次贵'，需要执行时的队列长度。当前只能从源码看到循环结构，拿不到运行时实体数",
+    "suspectedAxis": "gameplay",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "lua端marker如oncameramovemapcameractrlmaps": {
+    "key": "lua端marker如oncameramovemapcameractrlmaps",
+    "title": "Lua 端 marker（如 OnCameraMove、MapCameraCtrl、MapSignificanceMgr）的 Lua 函数体源码定位",
+    "rationale": "getSourceForSymbol 对 MapCameraCtrl 返回 not-found（symbol not in codegraph nor map-source），无法看 Lua 实现就给不了具体优化建议。OnCameraMove 在 frame 144 炸 53ms self，但不知道它内部在 Lua 端执行了什么逻辑导致这么慢。",
+    "suspectedAxis": "code",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "ecs实体数量统计军队士兵动画实体的具体数量按帧或按systemgroup": {
+    "key": "ecs实体数量统计军队士兵动画实体的具体数量按帧或按systemgroup",
+    "title": "ECS 实体数量统计（军队/士兵/动画实体的具体数量），按帧或按 SystemGroup",
+    "rationale": "Job.Worker 退化 foldChange ×12.86，MoveChain_SoldierMoveSystem:SoldierMoveJob 从无到 5.154ms/帧，但不知道当前态场景有多少士兵实体在驱动这个 Job。需要实体数量才能判断是'实体量合理但 Job 慢'还是'实体量过多'。",
+    "suspectedAxis": "scale",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "drawcall数量和按pass材质分组的明细": {
+    "key": "drawcall数量和按pass材质分组的明细",
+    "title": "DrawCall 数量和按 pass/材质分组的明细",
+    "rationale": "queryFrameCounters 的 draw_calls 字段为 null（此版本采集不到），只有 batches。GPU bound 判定（finding 6）需要 DrawCall 数量来区分是'DrawCall 过多'还是'Shader 复杂/overdraw'。frame 184 的 batches=168 但不知道 DrawCall 多少。",
+    "suspectedAxis": "render",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "网络消息的payload大小实体数量如yzentitymovelinentf携带": {
+    "key": "网络消息的payload大小实体数量如yzentitymovelinentf携带",
+    "title": "网络消息的 payload 大小/实体数量（如 YzEntityMoveLineNtf 携带多少个实体的移动线数据）",
+    "rationale": "YzEntityMoveLineNtf peak 14.9ms @ frame 273，Lua 遍历 msg.fullUpdateLine 处理，但不知道当帧消息体携带了多少个实体。无法判断 14.9ms 是否与消息体大小成正比，还是 FormatWorldPosition_MoveAttr 单次处理就慢。",
+    "suspectedAxis": "network",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "meshuimanager个子系统cameradynamicatlasevent": {
+    "key": "meshuimanager个子系统cameradynamicatlasevent",
+    "title": "MeshUIManager 7 个子系统（camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers）各自耗时占比",
+    "rationale": "MeshUIManager 每帧 2.01ms（新出现大头），但 7 个子系统没有独立 Profiler marker，drillDownMarker 只能返回自身作为唯一叶子节点，无法拆解 2.01ms 内部具体分布。已在 capabilities 记录此限制。",
+    "suspectedAxis": "ui",
+    "recurrence": 1,
+    "firstSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "lastSeenRun": "udiff_1782983710451_be175ef1\\2026-07-20_wt046",
+    "seenInRuns": [
+      "udiff_1782983710451_be175ef1\\2026-07-20_wt046"
+    ],
+    "status": "open"
+  },
+  "oncameramove单次调用时遍历的entity总数refreshdista": {
+    "key": "oncameramove单次调用时遍历的entity总数refreshdista",
+    "title": "OnCameraMove 单次调用时遍历的 entity 总数 + RefreshDistancePriority 单次平均耗时",
+    "rationale": "OnCameraMove 源码显示双重循环遍历 battleHeadQueue.buckets 全量 entity 调 RefreshDistancePriority()，单次 43ms。需要知道是 entity 数量大（如 500 个 × 0.08ms）还是单次 RefreshDistancePriority 贵（如 50 个 × 0.86ms），才能定具体分桶数/降采样策略。现有工具只给 marker 总 selfMs，给不了单帧内调用次数和单次耗时分布。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "lastSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "seenInRuns": [
+      "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20"
+    ],
+    "status": "open"
+  },
+  "yzentitymovelinentf消息的payload大小携带实体数量": {
+    "key": "yzentitymovelinentf消息的payload大小携带实体数量",
+    "title": "YzEntityMoveLineNtf 消息的 payload 大小/携带实体数量",
+    "rationale": "YzEntityMoveLineNtf frame 273 炸到 14.9ms（常规 <1ms），需要知道该消息携带了多少实体的移动线更新数据，判断 14.9ms 是否与消息体大小成正比。现有 Profiler Timeline 只记录 marker 耗时，不含业务层消息 payload 内容，需网络层日志或消息层 instrumentation。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "lastSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "seenInRuns": [
+      "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20"
+    ],
+    "status": "open"
+  },
+  "tryunloadpendingtryunload单帧内的调用次数当帧卸载了多少": {
+    "key": "tryunloadpendingtryunload单帧内的调用次数当帧卸载了多少",
+    "title": "TryUnloadPending.TryUnload 单帧内的调用次数（当帧卸载了多少个资源对象）",
+    "rationale": "TryUnloadPending.TryUnload frame 80 单帧 14.59ms，但 capabilities 记录显示 TryUnload 方法体简单（4 行代码：CanUnload 判断 + DoUnload 执行），单次应该很便宜。需要知道 frame 80 调用了多少次（即当帧批量卸载了多少资源），才能确认是批量卸载导致而非单次贵。现有工具只给 marker 汇总 selfMs，给不了单帧调用次数。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "lastSeenRun": "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20",
+    "seenInRuns": [
+      "run_1781782881102_b35ee5a7\\2026-07-23_03-26-20"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节和分配调用栈哪个c函数或luamarker在持续": {
+    "key": "permarker的gc分配字节和分配调用栈哪个c函数或luamarker在持续",
+    "title": "per-marker 的 GC 分配字节和分配调用栈（哪个 C# 函数或 Lua marker 在持续分配），不是整帧总量",
+    "rationale": "F1/F2 显示 GameLauncher.Update/LateUpdate 的 GC alloc 计数涨 10.8/11.8 倍，F5 显示同步 GC 单帧 70ms，但 queryFrameCounters 只有整帧 gc_allocated_in_frame（均值 19KB），到不了函数级。要定位 10 倍 alloc 计数的具体分配源（是 Lua→C# 跨边界装箱？MapSignificanceMgr 的临时 List？MeshUIManager 的 mesh 数据？），才能给 F1/F2/F5 落地的对象池/缓存建议。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55"
+    ],
+    "status": "open"
+  },
+  "lua侧perfunction耗时下钻luamgrontickupdatesch": {
+    "key": "lua侧perfunction耗时下钻luamgrontickupdatesch",
+    "title": "Lua 侧 per-function 耗时下钻：LuaMgr.OnTick&UpdateSchedule 和 LuaMgr.OnLateUpdateSchedule 下层各 Lua 回调函数的 self/total 耗时",
+    "rationale": "F1 里 LuaMgr.OnTick 6.82ms/帧（MapSignificanceMgr 4ms 是唯一可见叶子，但 OnTick 下还有 34 个子节点 maxChildRatio 0.59 未完全展开）；F2/F3 里 LuaMgr.OnLateUpdateSchedule 稳态 3.44ms、相机移动帧爆到 57.31ms——但 C# profiler 采样不到 Lua 函数体内部，self 仅 0.11-0.28ms，work 全在 Lua 回调黑盒里。这是当前态头号成本块（Lua 侧合计 Update 6.82 + LateUpdate 3.44 = 10.26ms/帧，占主线程 23%）和相机尖峰（57ms）的根因，没有 Lua profiler 就只能停在调度器层，无法指到具体 Lua 函数。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55"
+    ],
+    "status": "open"
+  },
+  "oncameramove事件分发的精确源码实现相机移动事件向哪些系统lua回调派": {
+    "key": "oncameramove事件分发的精确源码实现相机移动事件向哪些系统lua回调派",
+    "title": "OnCameraMove 事件分发的精确源码实现（相机移动事件向哪些系统/Lua 回调派发）",
+    "rationale": "F3 的 OnCameraMove 是基线无、当前态新出现的 43ms 尖峰，frame 144 调用树证实负担落在 LuaMgr.OnLateUpdateSchedule（57.31ms），但 getSourceForSymbol 查 OnCameraMove 返回 ambiguous（5 个同名候选），InfiniteZoomMgr.PostCameraMoveScale/OnOutsideCameraMove 也未能精确匹配函数体。没有事件分发实现就无法给具体削峰建议（哪些回调可延迟/分帧），只能说『排查相机事件派发了哪些回调』。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-23_13-04-55"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节数哪个函数marker在分配多少字节而非整帧gc": {
+    "key": "permarker的gc分配字节数哪个函数marker在分配多少字节而非整帧gc",
+    "title": "per-marker 的 GC 分配字节数（哪个函数/marker 在分配多少字节），而非整帧 gc_allocated_in_frame 总量",
+    "rationale": "本次有5次同步GC（每次9ms）且 MapSignificanceMgr.ProcessTasks gcAllocCount=76959、PreLateUpdate gcAllocCount=214266、PlayerSendFrameComplete gcAllocCount=87000，但只能证明“持续分配与GC强相关”，无法直接证明是哪个函数的哪次分配触发了哪次GC。要给出'改哪个函数的分配能消掉GC'的精确建议，需要到函数级的分配字节。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38"
+    ],
+    "status": "open"
+  },
+  "gccollect出现的确切帧号以及这些帧的完整perframe调用树": {
+    "key": "gccollect出现的确切帧号以及这些帧的完整perframe调用树",
+    "title": "GC.Collect 出现的确切帧号，以及这些帧的完整 per-frame 调用树",
+    "rationale": "GC.Collect 标记只有 count=5、msSelfMean=8.964，没有 maxSelfFrameIndex，也不在 markerSpikes 里（spikeRatio 1.3 太低）。无法知道5次GC分别落在哪几帧、那些帧除了GC还在跑什么。要验证'GC帧是否同时也是高分配/加载帧'需要逐帧调用树。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38"
+    ],
+    "status": "open"
+  },
+  "逐帧渲染负载计数triangles面数batchessetpasscalls和g": {
+    "key": "逐帧渲染负载计数triangles面数batchessetpasscalls和g",
+    "title": "逐帧渲染负载计数（triangles 面数、batches、set_pass_calls）和 gc_allocated_in_frame",
+    "rationale": "渲染启动 FinishFrameRendering 6ms/帧是最大稳态成本，但无法确认这6ms是否与场景复杂度（面数/批次）正相关，还是固定开销。frame 199-228 的 IO 尖刺和 frame 552 的实例化尖刺也缺逐帧渲染负载佐证。逐帧 counter 能回答'渲染成本是随场景涨还是固定'。",
+    "suspectedAxis": "render",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_03-47-38"
+    ],
+    "status": "open"
+  },
+  "逐帧gc分配字节gcallocatedinframe三角形面数triangles": {
+    "key": "逐帧gc分配字节gcallocatedinframe三角形面数triangles",
+    "title": "逐帧 GC 分配字节(gc_allocated_in_frame)/三角形面数(triangles)/批次(batches)/内存等帧级计数器,本次采集全部为 0",
+    "rationale": "queryFrameCounters 返回所有计数器 mean/max/p95 全为 0——这些计数器在本次 Unity 采集里没有被记录。导致:(1)无法定位 GC.Collect 的分配源(哪个系统/函数分配触发);(2)无法判断慢帧是否与渲染负载(triangles/batches 飙高)相关;(3)无法评估内存增长趋势。这是本次分析最大的数据缺口。",
+    "suspectedAxis": "memory+render",
+    "recurrence": 2,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节数哪个函数luamarker在分配不是整帧总量": {
+    "key": "permarker的gc分配字节数哪个函数luamarker在分配不是整帧总量",
+    "title": "per-marker 的 GC 分配字节数(哪个函数/Lua marker 在分配),不是整帧总量",
+    "rationale": "本次有5次同步 GC.Collect(9-11ms/次),但因帧计数器全0且无 per-marker 分配数据,无法定位是哪个系统的分配累积触发了 GC。要定位 GC 根因需要函数级分配来源。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14"
+    ],
+    "status": "open"
+  },
+  "recyclegotask的源码实现回收逻辑批量触发条件是否有分帧": {
+    "key": "recyclegotask的源码实现回收逻辑批量触发条件是否有分帧",
+    "title": "RecycleGOTask 的源码实现(回收逻辑、批量触发条件、是否有分帧)",
+    "rationale": "RecycleGOTask 单帧19.5ms 是实体回收尖峰的主因,但 getSourceForSymbol 返回 not-found(不在 codegraph/map-source 中)。无法确认它是对象池回收还是直接 Destroy、是否可分帧、批量触发条件是什么。需要源码才能给可落地建议。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14"
+    ],
+    "status": "open"
+  },
+  "coroutinesdelayedcalls内部具体是哪些协程在跑各自耗时": {
+    "key": "coroutinesdelayedcalls内部具体是哪些协程在跑各自耗时",
+    "title": "CoroutinesDelayedCalls 内部具体是哪些协程在跑、各自耗时",
+    "rationale": "frame143(全程最差54ms)中 CoroutinesDelayedCalls 占11ms(20%),但这是 Unity 内置 marker,无法从 profiler 数据看出具体是哪些业务协程。可能是相机移动触发的加载/实体初始化协程,但需协程级拆分才能定位优化点。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14"
+    ],
+    "status": "open"
+  },
+  "三个同步加载markerresentityloadersyncassetload": {
+    "key": "三个同步加载markerresentityloadersyncassetload",
+    "title": "frame552 三个同步加载 marker([res]entityLoader_sync 20.88ms / assetLoader_sync 18.29ms / asset_sync 18.10ms)的嵌套关系——是串行叠加还是嵌套包含",
+    "rationale": "这三个同步加载 marker 总和约57ms但帧只46.83ms,说明有嵌套重叠,但 getThreadTimeline 的 mainThreadWaits 未给出嵌套层级。若三者嵌套(一个等另一个),优化点在最外层;若串行,三个都要优化。需调用树层级确认。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_07-48-14"
+    ],
+    "status": "open"
+  },
+  "permarker的gc分配字节和分配调用栈具体哪个函数luamarker在持续": {
+    "key": "permarker的gc分配字节和分配调用栈具体哪个函数luamarker在持续",
+    "title": "per-marker 的 GC 分配字节和分配调用栈——具体哪个函数/Lua marker 在持续分配，而不是整帧 GC 总量",
+    "rationale": "本次 GC.Collect 5 次同步段 7-11ms，但 queryFrameCounters 返回全 0（gc_allocated_in_frame 未记录），无法定位是哪个系统的分配累积触发了同步 GC。要区分\"相机移动产生的临时实体列表\"还是\"稳态小分配累积\"需要函数级分配来源。",
+    "suspectedAxis": "memory",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28"
+    ],
+    "status": "open"
+  },
+  "本次采集的帧计数器数据gcallocatedinframebatchestria": {
+    "key": "本次采集的帧计数器数据gcallocatedinframebatchestria",
+    "title": "本次采集的帧计数器数据（gc_allocated_in_frame / batches / triangles / set_pass_calls / total_used_memory 全部为 0 或 null）",
+    "rationale": "queryFrameCounters 对帧 [143, 257, 278, 283, 469, 552, 566, 576] 查询返回所有计数器字段为 0/null。这导致无法用渲染负载（batches/triangles）判断尖峰帧是否是渲染压力导致，也无法用 GC 分配归因 GC 触发源。需要确认是采集配置未开启计数器记录，还是工具读取出错。",
+    "suspectedAxis": "meta",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28"
+    ],
+    "status": "open"
+  },
+  "loadinglockpersistentmanager的调用链和在player": {
+    "key": "loadinglockpersistentmanager的调用链和在player",
+    "title": "Loading.LockPersistentManager 的调用链和在 PlayerLoop 中的位置（或确认它运行在 PlayerLoop 之外）",
+    "rationale": "scanMetricOverFrames 显示该 marker 主线程峰值 13.75ms at 帧 552，但帧 552 的 PlayerLoop call tree（maxDepth=10, minPct=0.5）中完全不可见。需要知道它是跨帧边界的加载锁、运行在加载场景切换的独立上下文，还是被 profiler 归到了非 PlayerLoop 上下文。 getSourceForSymbol 也未尝试（marker 名是 Unity 引擎内部加载管线名）。定位不到调用链就无法给精确优化建议。",
+    "suspectedAxis": "loading",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28"
+    ],
+    "status": "open"
+  },
+  "帧上mapsignificancemgrprocesstasks的落在个cons": {
+    "key": "帧上mapsignificancemgrprocesstasks的落在个cons",
+    "title": "帧 552 上 MapSignificanceMgr.ProcessTasks 的 22.69ms 落在 9 个 ConsumeTasks_* 中哪一个的归因数据",
+    "rationale": "帧 552 call tree 显示 ProcessTasks totalMs 22.69 但 self 0.025ms 且 children=[]——按源码应有 9 个 ConsumeTasks_* 子 sampler（ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/Destroy），每个平均应 2.5ms > minPct 0.23ms 阈值，却未出现。推测是 profiler attribution gap 或该帧任务走了未埋点路径。不知道 22.7ms 落在哪个子任务就无法针对性优化。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_09-22-28"
+    ],
+    "status": "open"
+  },
+  "submit线程semaphorewaitforsignal的等待归因区分等主线": {
+    "key": "submit线程semaphorewaitforsignal的等待归因区分等主线",
+    "title": "Submit 线程 Semaphore.WaitForSignal 的等待归因——区分‘等主线程交付渲染命令’还是‘等 GPU 完成’，例如同帧 Gfx.WaitForPresent 的占比或 Semaphore 的等待对象标识",
+    "rationale": "Submit 线程等待 14.09ms/帧，但本次 Gfx.WaitForPresent 未进任何 top 榜，无法直接判定是否 GPU-bound；submit-thread-wait 条目只能基于‘主线程等待极小’间接推断为主线程限制，confidence=medium。",
+    "suspectedAxis": "gpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20"
+    ],
+    "status": "open"
+  },
+  "上mapsignificancemgrprocesstasks内个consume": {
+    "key": "上mapsignificancemgrprocesstasks内个consume",
+    "title": "frame 552 上 MapSignificanceMgr.ProcessTasks 内 11 个 ConsumeTasks_* 中具体哪几个主导 22.69ms 尖刺（当前 calltree 在 depth 10 截断未展开 ProcessTasks 子节点）",
+    "rationale": "camera-loading-storm 条目已确认 ProcessTasks 22.69ms@552 并从源码确认 11 个子消费者无每帧上限，但未隔离出具体是 ForceSubEntity/EntityTask/SubEntity/MapEntityForDestroy 中哪几个在 552 帧最重，影响建议的优先级排序。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20"
+    ],
+    "status": "open"
+  },
+  "worldenvironmentmeshitemmgr类与recyclegota": {
+    "key": "worldenvironmentmeshitemmgr类与recyclegota",
+    "title": "WorldEnvironmentMeshItemMgr 类与 RecycleGOTask 方法的源码定位（getSourceForSymbol 返回 not-found，未在 codegraph/map-source 索引）",
+    "rationale": "camera-recycle-burst 条目是最差两帧（54ms/48ms）的根因，但源码未索引无法看回收逻辑实现，建议只能推断‘加分帧上限/对象池’，无法指着代码说‘这里没有节流’。",
+    "suspectedAxis": "cpu",
+    "recurrence": 1,
+    "firstSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "lastSeenRun": "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20",
+    "seenInRuns": [
+      "camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20"
+    ],
+    "status": "open"
   }
 }

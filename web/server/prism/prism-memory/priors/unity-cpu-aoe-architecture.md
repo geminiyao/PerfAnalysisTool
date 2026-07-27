@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.348Z
 source: unity-cpu
 title: "AOE3D 项目架构概述"
 tags: ["aoe","架构","xlua","画质档位"]
+dataSource: unity
 ---
 
 AOE3D 是一款 3D SLG 手游，使用 Unity 2019 + xLua 的双层架构：

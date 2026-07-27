@@ -148,7 +148,7 @@ item.visualAsset 填法（矩阵）：
 
 ★【每个红线条目都要下钻·不只 Top 1】
 红线触发清单里的每个模块都要有独立的下钻 item（给 callTree.rootMarker + narrative 讲内部拆分）。
-**不许只给 Top 1 下钻，其它红线条目只列在表里不下钻**——v4 退化教训：只有 OutSideViewArmyLineMgr 下钻，其它 5 个红线条目没下钻。
+**不许只给 Top 1 下钻，其它红线条目只列在表里不下钻**——v4 退化教训：只有 <大头子模块> 下钻，其它 5 个红线条目没下钻。
 每个下钻 item 要讲：
 - 该模块的 callTree 子树（子节点占比/热点）
 - 红线判定（占 p50 百分比 / foldChange 涨幅）
@@ -156,12 +156,20 @@ item.visualAsset 填法（矩阵）：
 - 优化方向（基于代码/数据推理，不许套话）
 
 ★【红线清单必须细到子模块·不许只到父级·统筹与拆出互斥】
-redlineMatrix 的 module 列要细到子模块（如 OutSideViewArmyLineMgr/LuaMgr），
+redlineMatrix 的 module 列要细到子模块（如 <大头子模块>/<模块A>），
 **不许只列父级 Core.Update 一行**——只到父级 = 丢内容（v4 退化教训）。
 但也不许父子都列（DR-41 规则 2 子树归并，递归应用）——详见 narrative-prompt 的"红线清单子树归并原则"。
 **统筹与拆出互斥**：对同一个父模块，要么统筹（列父模块 + hotspot 列子节点），要么拆出（列大头子节点 + 不列父模块）——不能同时列父模块和子节点。
 
-item.visualAsset 填法（红线表，递归归并正确）：
+判定依据（分布形态 + 语义独立性，递归应用每一层）：
+- **分布形态**：所有子节点占比都比较小且接近（无明显大头）→ 统筹在父模块
+- **分布形态**：有明确大头子节点（top-N 占绝大部分）→ 拆出大头
+- **语义独立性**：大头之间语义不同（不同业务模块）→ 每个大头独立拆出
+- **语义独立性**：大头之间语义相同（同模块不同阶段）→ 可统筹在父模块
+
+**语义独立性由 LLM 判**——机器只能检测 callTree 真实父子关系，大头是否不同业务模块由 LLM 在 narrative 阶段判断。占比接近但语义不同的，必须独立拆出（统筹会掩盖两个独立模块各自的特性）。
+
+item.visualAsset 填法（红线表，分布形态 + 语义独立性递归归并）：
 ```json
 {
   "title": "红线触发清单",
@@ -169,9 +177,10 @@ item.visualAsset 填法（红线表，递归归并正确）：
   "table": {
     "headers": ["模块", "单次 avg ms", "红线类型", "子函数热点"],
     "rows": [
-      ["CS:AOE.LuaMgr", "cur 3.80ms/帧", "占 p50 的 12.51%（远超 5% 红线）", "BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%（子节点统筹，不单独列）"],
-      ["OutSideViewArmyLineMgr", "cur 1.575ms/帧", "cur→throttle 涨 ×1.37", "CalculateVertexJob (Burst) count=57820（父 MapManager 不列，大头拆出）"],
-      ["URP.AfterRendering", "throttle 占 41.36%", "cur→throttle 涨 ×2.5", "URP.Submit 40.43% + URP.WaitForPresent 38.12%"],
+      ["<大头子节点A1>.OnUpdate", "cur 1.51ms/帧", "占 p50 的 4.92%", "<子节点>（父 <模块A> 不列，大头独立拆出：与 <大头子节点A2> 语义不同）"],
+      ["<大头子节点A2>.ProcessTasks", "cur 1.30ms/帧", "占 p50 的 3.99%", "<子节点>（父 <模块A> 不列，大头独立拆出：与 <大头子节点A1> 语义不同）"],
+      ["<大头子节点B1>", "cur 1.575ms/帧", "cur→throttle 涨 ×1.37", "<叶子节点> (Burst) count=57820（父 <模块B> 不列，大头拆出）"],
+      ["<渲染管线节点>", "throttle 占 41.36%", "cur→throttle 涨 ×2.5", "<子 Pass A> 40.43% + <子 Pass B> 38.12%（语义相同同属渲染管线，统筹在父）"],
       ["...其它子模块各一行（不许父子同时列）..."]
     ]
   }

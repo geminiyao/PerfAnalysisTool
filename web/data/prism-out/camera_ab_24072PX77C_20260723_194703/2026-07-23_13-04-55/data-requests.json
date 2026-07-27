@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈（哪个 C# 函数或 Lua marker 在持续分配），不是整帧总量",
+    "rationale": "F1/F2 显示 GameLauncher.Update/LateUpdate 的 GC alloc 计数涨 10.8/11.8 倍，F5 显示同步 GC 单帧 70ms，但 queryFrameCounters 只有整帧 gc_allocated_in_frame（均值 19KB），到不了函数级。要定位 10 倍 alloc 计数的具体分配源（是 Lua→C# 跨边界装箱？MapSignificanceMgr 的临时 List？MeshUIManager 的 mesh 数据？），才能给 F1/F2/F5 落地的对象池/缓存建议。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+  },
+  {
+    "id": "lua.per-function-profiler",
+    "want": "Lua 侧 per-function 耗时下钻：LuaMgr.OnTick&UpdateSchedule 和 LuaMgr.OnLateUpdateSchedule 下层各 Lua 回调函数的 self/total 耗时",
+    "rationale": "F1 里 LuaMgr.OnTick 6.82ms/帧（MapSignificanceMgr 4ms 是唯一可见叶子，但 OnTick 下还有 34 个子节点 maxChildRatio 0.59 未完全展开）；F2/F3 里 LuaMgr.OnLateUpdateSchedule 稳态 3.44ms、相机移动帧爆到 57.31ms——但 C# profiler 采样不到 Lua 函数体内部，self 仅 0.11-0.28ms，work 全在 Lua 回调黑盒里。这是当前态头号成本块（Lua 侧合计 Update 6.82 + LateUpdate 3.44 = 10.26ms/帧，占主线程 23%）和相机尖峰（57ms）的根因，没有 Lua profiler 就只能停在调度器层，无法指到具体 Lua 函数。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "aggregateSubtree（能看到 LuaMgr.OnTick&UpdateSchedule 下的 C# marker 如 MapSignificanceMgr，但 Lua 回调函数体不可见）、getFrameCallTree（同限）"
+  },
+  {
+    "id": "oncamamove.source-anchor",
+    "want": "OnCameraMove 事件分发的精确源码实现（相机移动事件向哪些系统/Lua 回调派发）",
+    "rationale": "F3 的 OnCameraMove 是基线无、当前态新出现的 43ms 尖峰，frame 144 调用树证实负担落在 LuaMgr.OnLateUpdateSchedule（57.31ms），但 getSourceForSymbol 查 OnCameraMove 返回 ambiguous（5 个同名候选），InfiniteZoomMgr.PostCameraMoveScale/OnOutsideCameraMove 也未能精确匹配函数体。没有事件分发实现就无法给具体削峰建议（哪些回调可延迟/分帧），只能说『排查相机事件派发了哪些回调』。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getSourceForSymbol（对 OnCameraMove 返回 ambiguous，无法唯一锚定）"
+  },
+  {
+    "id": "tryunload.per-frame-count",
+    "want": "TryUnloadPending.TryUnload 单帧内的调用次数（当帧同时卸载了多少个资源对象）",
+    "rationale": "F7 里 TryUnloadPending.TryUnload 在 frame80 单帧炸 14.59ms（spikeRatio 132，avgWhenPresent 仅 0.11），getSourceForSymbol 确认 TryUnload 方法体本身很简单（4 行：CanUnload 判断 + DoUnload 执行），但现有 marker 工具只能给该帧汇总 selfMs，无法得知当帧调用了多少次（即同时卸载了多少资源）。这个数字决定优化方向是『限速每帧卸载个数』还是『优化单个 DoUnload』。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "scanMetricOverFrames（只能给 selfMs 时序，给不了单帧调用次数）"
+  }
+]

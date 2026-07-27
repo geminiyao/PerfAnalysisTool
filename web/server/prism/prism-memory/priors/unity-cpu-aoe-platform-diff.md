@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:05.032Z
 source: unity-cpu
 title: "AOE 平台差异注意事项"
 tags: ["aoe","平台差异","ios","android","gpu-bound"]
+dataSource: unity
 ---
 
 - iOS 60fps triple-buffer 问题：一帧 GPU Bound 会导致后续每帧阻塞（30fps 正常）。

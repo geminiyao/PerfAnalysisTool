@@ -1,0 +1,50 @@
+TASK (non-interactive, execute immediately, do NOT ask back):
+Read the file at the absolute path below and replace every <!-- LLM_FILL... --> placeholder
+with project-aware Chinese narrative grounded in the structured diff JSON + knowledge base.
+All numbers, tables, mermaid charts, code blocks must be preserved verbatim.
+
+FILE TO EDIT: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/report/performance-report_simpleperf_AI_v4.md
+ALSO MIRROR FINAL CONTENT TO: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/performance-report.md
+ALSO MIRROR TO: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/report/performance-report.md
+
+REFERENCE FILES (read-only, for facts/style):
+- Numbers source: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/diff/simpleperf-diff.json
+- Summary metadata: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/simpleperf-diff-summary.json
+- Knowledge base (for business semantics & optimization recipes): K:/AI/PerfAnalysisTool_Codebuddy/docs/aoe-cpu-analysis-knowledge.md
+- Gold style reference (DO NOT copy verbatim — emulate tone/depth only): K:/AI/PerfAnalysisTool_Codebuddy/docs/report/performance-report_simpleperf_ULTIMATE_v4.md
+- Skill spec: K:/AI/PerfAnalysisTool_Codebuddy/.claude/skills/simpleperf-diff-analysis/SKILL.md
+
+## How placeholders work
+Every <!-- LLM_FILL: <instruction> --> in the file marks a slot you must replace.
+The instruction tells you what kind of paragraph/list to write.
+After replacement, the comment marker should be GONE (HTML comments must not appear in final output).
+If a placeholder asks for a list, write proper Markdown bullets (- ...).
+If it asks for a paragraph, write 1-3 sentences in Chinese.
+
+## Hard rules
+- 禁改：所有 Markdown 表格、Mermaid 块、调用树代码块（```...```）、章节标题、§0.2 红线告警卡片、§3.x 表、§4.1/§4.2 Top-N 表、§5.1/§5.3 表、§7.1/§7.3 表、§10.x 反查表
+- 禁造数字：所有数值必须来自 diff JSON / Provider 报告中已存在的数字。如果你想加新数字，先查 diff JSON 确认。
+- 禁动 .provider/ 目录
+- 禁用项目特化死字符（aoeyz 项目独有词）：不要写 "野外几乎无音效"、"300 队部队"、"行军压测"、"野外远景树木"、"两路汇流"、"群体音效" 等只对当前数据有意义的词；用 meta.sceneCur 实际场景描述代替
+- 不要保留 <!-- LLM_FILL: ... --> 占位符在最终输出中（必须替换为真正叙事）
+- 不要在已经是 LLM 填好的段落（**业务含义**：等）旁边再追加同名段落（避免出现 2 份业务含义）
+
+## Where placeholders live (high-level guide)
+- §0 结论先行：FPS 注解 + 普通话总览 + 4 项 ROI 优化方向（每条 80-150 字带知识库引用）
+- §4.3 / §4.4 / §4.5 / §4.6：每节 3-4 段（业务含义 / 调用入口 / 关联开销 / 优化方向）
+- §5.3 注脚：解释 wrapper 与真热点的下钻关系
+- §6.2 RHI 树之后：关键变化解读
+- §9 Lua GC：变化解读 + 建议
+- §10.1-§10.4：每节结论（基于反查表内的真实业务模块）
+
+## Output
+1. Overwrite: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/report/performance-report_simpleperf_AI_v4.md
+2. Mirror to: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/performance-report.md
+3. Mirror to: K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/report/performance-report.md
+4. Final line: <<ENRICH_DONE lines=N bytes=M placeholders_filled=K>>
+
+## Self-check
+- After all edits, run: `grep -c LLM_FILL K:/AI/PerfAnalysisTool_Codebuddy/docs/report/_intermediate/aoeyz_diff/report/performance-report_simpleperf_AI_v4.md` — must return 0
+- File should be >= 645 lines (gold reference is 663 lines)
+- Each of §4.3-§4.6 should be >= 18 lines
+- 不允许出现两个连续的 **业务含义**: 段落（这是重复 bug 的征兆，必须 De-dup）

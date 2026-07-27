@@ -1,0 +1,346 @@
+
+[1] Synthetic autocorrelation (period=30)
+  PASS: computeAutocorr returns non-null for periodic signal
+  PASS: bestLag === 30 ± 1  (got 30)
+  PASS: coefficient > 0.5 (got 0.9000)
+  PASS: computeAutocorr returns null for flat series
+  PASS: computeAutocorr returns null for series.length < 4
+
+[2] computeStatsPack correctness
+  PASS: frameCount === 100 (got 100)
+  PASS: max === 100 (got 100)
+  PASS: p50 === 51 (got 51)
+  PASS: p95 === 96 (got 96)
+  PASS: p99 === 100 (got 100)
+  PASS: mean ≈ 50.5 (got 50.5)
+  PASS: presentFrames === 100 (got 100)
+  PASS: presentFrames with zeros === 3 (got 3)
+  PASS: max === 30 (got 30)
+
+[3] queryMarkers
+  PASS: returns ≤ topN rows (got 10)
+  PASS: returns at least 1 row
+  PASS: sorted descending by sumSelfMs
+  PASS: all sumSelfMs >= 0
+  PASS: topN capped at 50 (got 50)
+  PASS: sortBy:totalMs → sorted descending by sumTotalMs
+  PASS: provenance.tool correct
+  PASS: provenance.runId correct
+
+[4] scanMetricOverFrames — Semaphore.WaitForSignal
+  PASS: frameCount === 600 (got 600)
+  PASS: max > 0 (got 750.209)
+  PASS: p95 >= p50
+  PASS: p99 >= p95
+  PASS: mean >= 0 (got 277.169)
+  PASS: burstFrames capped at 20 (got 20)
+  PASS: spikeRatio >= 0 (got 2.872)
+  PASS: autocorr valid (got {"bestLag":80,"coefficient":0.17151736607496634})
+  PASS: output < 2KB (got 581 bytes)
+
+[5] getFrameCallTree — max-ms_frame frame (519)
+  PASS: msFrame > 0 (got 113.56)
+  PASS: tree has at least 1 root node
+  PASS: hotPath non-empty
+  PASS: top-level totalMs sum (113.29) ≤ msFrame (113.56)
+  PASS: hotPath root has totalMs > 0
+  PASS: hotPath non-empty (depth constraint proof)
+  PASS: output < 6KB (got 5854 bytes)
+    [info] frame 519, msFrame=113.56, hotPath: PlayerLoop → PostLateUpdate.PlayerSend → PlayerEndOfFrame → CoroutinesDelayedCalls → AOE.dll!AOE::GameLauncher
+
+[6] getThreadTimeline — frame 519
+  PASS: threads non-empty (got 10)
+  PASS: msFrame > 0 (got 113.56)
+  PASS: mainThreadWaits non-empty (Semaphore.WaitForSignal expected)
+  PASS: mainThreadWaits contains a wait/semaphore/present marker
+  PASS: threads ≤ 10 cap (got 10)
+  PASS: each thread topMarkers ≤ 5
+  PASS: mainThreadWaits ≤ 15 cap (got 15)
+  PASS: output < 5KB (got 3782 bytes)
+    [info] wait markers: PresentationSystemGroup, Default World Unity.Entities.PresentationSystemGroup, WaitForJobGroupID, Semaphore.WaitForSignal, Default World AOE.DOTS.MoveChain_SyncMoveDataSystem, Default World Unity.Rendering.UpdatePresentationSystemGroup, PostLateUpdate.PresentAfterDraw, Graphics.PresentAndSync, Device.Present, CanvasRenderer.SyncTransform, Default World AOE.DOTS.SyncViewEntitySystem, CanvasRenderer.SyncTransformMatrix, Default World AOE.DOTS.SyncLogicEntitySystem, AsyncLoadTimeoutHandler.CollectAndHandleTimeout, Default World AOE.DOTS.MoveChain_SyncArmyResultSystem
+
+[7] correlateFrameSets — slowFrames ∩ markerSpike(top marker)
+    [info] using markerSpike on "CS:AOE.Outside.OutSideViewArmyLineMgr" minSelfMs=1.151
+  PASS: sizeA in [0,600] (got 29)
+  PASS: sizeB in [0,600] (got 600)
+  PASS: jaccard in [0,1] (got 0.0483)
+  PASS: intersection ≤ min(sizeA, sizeB)
+  PASS: sampleOverlapFrames ≤ 20 cap
+  PASS: pctAinB consistent
+  PASS: frameList sizeA === 5 (got 5)
+  PASS: frameList sizeB === 3 (got 3)
+  PASS: frameList intersection === 2 (got 2)
+  PASS: frameList jaccard === 2/6 (got 0.3333)
+  PASS: output < 2KB (got 497 bytes)
+
+[8] getSourceForSymbol — callStack disambiguation
+  PASS: PATH A symbol found without callStack
+  PASS: resolvedVia not callstack-disambiguated (got file-anchored)
+  PASS: GetRootPanel without callStack is ambiguous (got found=false, ambiguous=true)
+  PASS: GetRootPanel + valid callStack found
+  PASS: resolvedVia === callstack-disambiguated (got callstack-disambiguated)
+  PASS: note mentions disambiguation (got 用调用栈祖先 FindComplexPathToLastContainer 消歧，从 1688 个候选中定位)
+  PASS: ineffective callStack → found:false
+  PASS: ineffective callStack → ambiguous:true
+  PASS: note mentions failed disambiguation (got 名字歧义，map-source无此marker的精确文件，无法可靠定位；建议先跑 map-source.ts 补映射。提供了调用栈但仍无法唯一收敛)
+
+[9] getSourceForSymbol — frameContext auto callStack
+  [skip] no frame's parent_name chain disambiguates GetRootPanel in current data (checked 0; expected per DEFER-WT-003/BK-23 — not a regression)
+  PASS: invalid frameContext → found:false
+  PASS: invalid frameContext → ambiguous:true
+  PASS: ring guard stops at cycle (got length 2)
+  PASS: ring stack order B then C
+  PASS: depth capped at 20 (got 20)
+
+[10] getSourceForSymbol — marker alias table / confidence
+  PASS: OnCameraMove found via alias
+  PASS: OnCameraMove resolvedVia=alias (got alias)
+  PASS: OnCameraMove confidence=alias-exact (got alias-exact)
+  PASS: OnCameraMove file is OutsideArmyMgr.lua (got Assets/Scripts/.Lua/Outside/Army/OutsideArmyMgr.lua)
+  PASS: OnCameraMove has alias provenance
+  PASS: OnCameraMove must not be exact-codegraph
+  PASS: ProcessTask_MapEntityAdd found
+  PASS: ProcessTask_MapEntityAdd confidence=alias-exact (got alias-exact)
+  PASS: ProcessTask_MapEntityAdd file (got Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua)
+  PASS: ProcessTask_MapEntityAdd has confidenceReason
+  PASS: YzEntityMoveLineNtf found
+  PASS: YzEntityMoveLineNtf confidence=exact-codegraph (got exact-codegraph)
+  PASS: YzEntityMoveLineNtf via codegraph (got codegraph)
+  PASS: CS:AOE.MeshUIManager found
+  PASS: CS:AOE.MeshUIManager confidence=class-anchored (got class-anchored)
+  PASS: CS class must not be exact/alias-exact method attribution
+  PASS: LuaMgr.OnTick&UpdateSchedule found
+  PASS: LuaMgr.OnTick&UpdateSchedule low/suspicious (got low-confidence)
+  PASS: LuaMgr.OnTick&UpdateSchedule maps to Mgr.lua (got Assets/Scripts/.Lua/Mgr/Mgr.lua)
+  PASS: LuaMgr.OnTick&UpdateSchedule has explanatory confidenceReason
+  PASS: LuaMgr.OnLateUpdateSchedule found
+  PASS: LuaMgr.OnLateUpdateSchedule low/suspicious (got low-confidence)
+  PASS: CS:AOE.Outside.OutSideViewArmyLineMgr found
+  PASS: OutSideViewArmyLineMgr confidence=class-anchored (got class-anchored)
+  PASS: MUI_UpdateUIPos found via alias
+  PASS: MUI_UpdateUIPos confidence=map-source-interval (got map-source-interval)
+  PASS: MUI_UpdateUIPos must not be exact
+
+[11] WT-013 Perfetto JSON query tools
+  PASS: cur querySchedState available
+  PASS: cur sched includes UnityMain runningPct=77.82
+  PASS: sched provenance.source=perfetto
+  PASS: cur queryAtraceSlices available
+  PASS: cur atrace PlayerLoop count=484
+  PASS: cur FrameTimeline honestly unavailable
+  PASS: cur choreographer summary available
+  PASS: cur getPerfettoCallTree available
+  PASS: cur callTrees non-empty
+  PASS: cur callTree hotPath includes PlayerLoop
+  PASS: base getPerfettoCallTree available after WT-014 provider fallback
+  PASS: base callTrees non-empty after WT-014
+  PASS: base callTree hotPath includes PlayerLoop after WT-014
+  PASS: throttle cpu avgMhz=1324.6 (got 1324.6)
+  PASS: throttle bigCoreReachPct=59.2 (got 59.2)
+  PASS: throttle throttling suspected
+  PASS: correlateFrameSchedCpu granularity=window
+  PASS: correlateFrameSchedCpu reports throttling suspected signal
+
+[12] WT-019 Perfetto query content expansion
+  PASS: cur queryCallTreeSubtree available
+  PASS: cur Mgr pattern rows>=2 (got 22)
+  PASS: cur callTreeSubtree rows have parentChain paths
+  PASS: cur callTreeSubtree discovers Mgr-named nodes via pattern
+  PASS: cur callTreeSubtree totalNodes>=10 (got 58)
+  PASS: cur callTreeSubtree parentChain present on all rows
+  PASS: querySliceDeltas base→cur available
+  PASS: querySliceDeltas rows non-empty
+  PASS: querySliceDeltas sorted by foldChange desc
+  PASS: querySliceDeltas top foldChange >= 1
+  PASS: throttle queryOffCpuAttribution available
+  PASS: throttle waitSlices non-empty
+  PASS: throttle waitSlices match generic Wait/Present/Sleep/Block patterns
+  PASS: throttle coveragePct is number|null (got 691.53)
+  PASS: throttle sleepingPct present (got 38.99)
+  PASS: cur choreographer available
+  PASS: cur choreographer exposes p50Ms/fps
+  PASS: cur choreographer exposes slowFrameRate
+  PASS: playerLoopPercentiles.available is boolean
+  PASS: throttle perCpu length>=8 (got 8)
+  PASS: throttle clusterSummary small/mid/big counts 4/3/1
+  PASS: throttle big cluster avgReachPct present
+  PASS: cpu provenance.tool=queryCpuFreq
+
+[13] WT-022 PlayerLoop percentiles + GC.Alloc byModule + offCpu byState
+  PASS: cur profile core.frame has choreographer
+  PASS: cur profile core.frame has playerloop (requires triad rebuild)
+  PASS: cur profile gcAllocByChain.byChain non-empty (requires triad rebuild; got 27)
+  PASS: cur playerLoopPercentiles.available=true (requires triad rebuild)
+  PASS: cur playerLoop p50/p95/p99 present
+  PASS: cur playerLoop fps/count present
+  PASS: cur playerLoop p50 in 25-35ms (got 30.15)
+  PASS: cur queryGcAllocByModule available (requires triad rebuild)
+  PASS: cur gcAlloc rows>=3 (got 20)
+  PASS: cur gcAlloc top perFrame > 0
+  PASS: cur gcAlloc rows have count/totalMs
+  PASS: cur gcAlloc rows include parentChain
+  PASS: throttle queryGcAllocByModule pattern=Mgr finds rows (requires triad rebuild)
+  PASS: throttle gcAlloc pattern=Mgr filters by substring
+  PASS: throttle queryOffCpuAttribution available
+  PASS: throttle byState non-empty (requires triad rebuild; got 4)
+  PASS: throttle byState includes S/R/D-like states
+  PASS: throttle waitSlices retained
+  PASS: throttle/cur profile offCpuAttribution.byState present
+
+[14] WT-020 Perfetto explore reasoning layer
+WT-020 Perfetto explore MVP start → K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp
+--- role=base ---
+  evidence ev-001-base-querySchedState: base UnityMain runningPct=86.94 runnablePct=0.97 sleepingPct=12.04
+  evidence ev-002-base-queryAtraceSlices: base atrace topByTotalMs[0]=PlayerLoop totalMs=11368.46 avgMs=16.621; topN=5
+  evidence ev-003-base-queryFrameTimeline: base FrameTimeline available=false; choreographer available=true; playerLoop p50=16.69 fps=59.8 slowFrameRate=0
+  evidence ev-004-base-queryCpuFreq: base cpu avgMhz=1729.5 bigCoreReachPct=74.9 throttlingLevel=suspected suspected=true
+  evidence ev-005-base-getPerfettoCallTree: base callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true viaPlayerLoopAnchorFallback=true
+--- role=cur ---
+  evidence ev-006-cur-querySchedState: cur UnityMain runningPct=77.82 runnablePct=1.62 sleepingPct=20.4
+  evidence ev-007-cur-queryAtraceSlices: cur atrace topByTotalMs[0]=PlayerLoop totalMs=14608.74 avgMs=30.183; topN=6
+  evidence ev-008-cur-queryFrameTimeline: cur FrameTimeline available=false; choreographer available=true; playerLoop p50=30.15 fps=33.1 slowFrameRate=11.18
+  evidence ev-009-cur-queryCpuFreq: cur cpu avgMhz=1576.3 bigCoreReachPct=75.6 throttlingLevel=none suspected=false
+  evidence ev-010-cur-getPerfettoCallTree: cur callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true
+--- role=throttle ---
+  evidence ev-011-throttle-querySchedState: throttle UnityMain runningPct=56.99 runnablePct=2.83 sleepingPct=38.99
+  evidence ev-012-throttle-queryAtraceSlices: throttle atrace topByTotalMs[0]=PlayerLoop totalMs=19930.73 avgMs=46.567; topN=6
+  evidence ev-013-throttle-queryFrameTimeline: throttle FrameTimeline available=false; choreographer available=true; playerLoop p50=45.94 fps=21.4 slowFrameRate=98.83
+  evidence ev-014-throttle-queryCpuFreq: throttle cpu avgMhz=1324.6 bigCoreReachPct=59.2 throttlingLevel=suspected suspected=true
+  evidence ev-015-throttle-getPerfettoCallTree: throttle callTree available=true trees=1 hotRoot=UnityMain hasPlayerLoop=true
+--- correlate role=cur ---
+  evidence ev-016-cur-correlateFrameSchedCpu: cur correlate granularity=window signals=[UnityMain runningPct=77.82; UnityMain runnablePct=1.62; cpuFreqAvgMhz=1576.3; bigCoreReachPct=75.6]
+--- correlate role=throttle ---
+  evidence ev-017-throttle-correlateFrameSchedCpu: throttle correlate granularity=window signals=[UnityMain runningPct=56.99; UnityMain runnablePct=2.83; cpuFreqAvgMhz=1324.6; bigCoreReachPct=59.2; throttling suspected]
+  evidence ev-018-base-queryCallTreeSubtree: base callTreeSubtree available=true totalNodes=94 top=PlayerLoop totalMs=11458.86
+  evidence ev-019-cur-queryCallTreeSubtree: cur callTreeSubtree available=true totalNodes=97 top=PlayerLoop totalMs=14608.74
+  evidence ev-020-throttle-queryCallTreeSubtree: throttle callTreeSubtree available=true totalNodes=84 top=PlayerLoop totalMs=19930.73
+  evidence ev-021-delta-querySliceDeltas: base→cur sliceDeltas available=true rows=10 top=CS:AOE.Outside.OutSideViewArmyLineMgr foldChange=9999
+  evidence ev-022-delta-querySliceDeltas: cur→throttle sliceDeltas available=true rows=6 top=ParticleSystem.EndUpdateAll foldChange=9999
+  evidence ev-023-cur-queryGcAllocByModule: cur gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=130.54
+  evidence ev-024-throttle-queryGcAllocByModule: throttle gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=31
+  evidence ev-025-throttle-queryOffCpuAttribution: throttle offCpu totalOffCpuMs=8581 sleepingMs=7666.5 topState=S(89.34%) topWait=URP.WaitForPresent(7608.52ms) coveragePct=691.53
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp\ledger.json (evidence=25)
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp\findings.json (findings=29)
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp\verdict.json
+  finding f-01 [info] Android FrameTimeline unavailable across triad
+  finding f-02 [info] base callTree available via PlayerLoop anchor fallback
+  finding f-03 [warning] throttle vs cur sched/freq relative baseline (window)
+  finding f-04 [info] correlateFrameSchedCpu is window-granularity only
+  finding f-05 [info] base vs cur UnityMain sched relative baseline
+  finding f-06 [info] top 业务模块: PlayerLoop
+  finding f-07 [info] top 业务模块: PostLateUpdate.FinishFrameRendering
+  finding f-08 [info] top 业务模块: URP.Render
+  finding f-09 [info] top 业务模块: URP.RenderCameraStack
+  finding f-10 [info] top 业务模块: URP.RenderSingleCamera
+  finding f-11 [critical] 涨幅最大模块: CS:AOE.Outside.OutSideViewArmyLineMgr
+  finding f-12 [critical] 涨幅最大模块: MapSignificanceMgr.ProcessTasks
+  finding f-13 [critical] 涨幅最大模块: MapSignificanceMgr.EntityTask
+  finding f-14 [critical] 涨幅最大模块: CS:AOE.MeshUIManager
+  finding f-15 [critical] 涨幅最大模块: CS:AOE.Battle.BattleUIManager
+  finding f-16 [warning] thermal-only 隐性路径: ParticleSystem.EndUpdateAll
+  finding f-17 [info] thermal-only 隐性路径: Semaphore.WaitForSignal
+  finding f-18 [info] thermal-only 隐性路径: Gfx.WaitForPresentOnGfxThread
+  finding f-19 [info] thermal-only 隐性路径: URP.WaitForPresent
+  finding f-20 [info] thermal-only 隐性路径: URP.Submit
+  finding f-21 [warning] GC 压力最大模块: URP.BeforeRendering
+  finding f-22 [warning] GC 压力最大模块: Inl_OpaquePass
+  finding f-23 [warning] GC 压力最大模块: CS:AOE.MeshUIManager
+  finding f-24 [warning] GC 压力最大模块: TimeText.7
+  finding f-25 [warning] GC 压力最大模块: BattleHeadMgr.OnUpdate
+  finding f-26 [info] off-CPU byState 归因 (throttle)
+  finding f-27 [critical] GPU-bound 因果推理 (wait slice vs sleeping)
+  finding f-28 [info] PlayerLoop 分位数对比 (cur vs throttle)
+  finding f-29 [warning] 降频形态判定 (三态 clusterSummary)
+WT-020 Perfetto explore MVP done
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp\run.log
+  PASS: explore ledger non-empty (got 25)
+  PASS: explore findings >= 10 (got 29)
+  PASS: every finding evidenceIds link to ledger
+  PASS: findings with relativeBaseline >= 5 (got 24)
+  PASS: findings with causalChain >= 1 (got 1)
+  PASS: top 业务模块 findings >= 1 (got 5)
+  PASS: 涨幅最大模块 foldChange>2 >= 1 (got 5)
+  PASS: GC 压力最大模块 perFrame>0 >= 1 (got 5)
+  PASS: verdict.triadTrend present
+  PASS: verdict.topBusinessHotspot present
+  PASS: verdict.gpuBoundJudgment present
+  PASS: verdict.freqMorphologyJudgment present
+  PASS: verdict.boundaries non-empty
+  PASS: findings.json written
+  PASS: ledger.json written
+  PASS: verdict.json written
+  PASS: findings.json findings>=10
+  PASS: ledger.json evidence non-empty
+  PASS: verdict.json triadTrend
+
+[15] WT-021 Perfetto narrative layer
+WT-023 Perfetto report layer refactor (DR-41 五条硬规则) start
+explore dir: K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-explore-mvp
+triad dir: K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-triad
+out dir: K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-report-mvp
+loaded triad/base/perfetto-profile-summary.json (threads=4, callTrees=1)
+loaded triad/cur/perfetto-profile-summary.json (threads=4, callTrees=1)
+loaded triad/throttle/perfetto-profile-summary.json (threads=8, callTrees=1)
+loaded ledger evidence=25 findings=29
+built narrative: multiThreadMacro.threads=8, redlineMatrix.rows=3, gpuBoundMatrix.rows=5
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-report-mvp\narrative.json
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-report-mvp\report.html
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-report-mvp\audit.json
+wrote K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\bk26b-perfetto-report-mvp\run.log
+done
+  PASS: narrative.json written
+  PASS: report.html written
+  PASS: audit.json written
+  PASS: narrative.json overview string
+  PASS: audit.json ticket string
+  PASS: overview is Chinese
+  PASS: overview contains WT-020 Chinese keywords
+  PASS: topConclusions >= 3 (got 5)
+  PASS: each topConclusion contribution is Chinese
+  PASS: findings >= 10 (got 29)
+  PASS: each finding has claim
+  PASS: findings with kind >= 10 (got 29)
+  PASS: findings with relativeBaseline >= 5 (got 24)
+  PASS: findings with causalChain >= 1 (got 1)
+  PASS: roiOptimizations >= 3 (got 8)
+  PASS: each ROI has Chinese direction+rationale and findingIds
+  PASS: triadTrend present
+  PASS: topBusinessHotspot present
+  PASS: gpuBoundJudgment present
+  PASS: freqMorphologyJudgment present
+  PASS: report.html has Chinese + ROI section
+  PASS: report.html has kind-driven sections
+
+[16] WT-025 DR-41 五条硬规则自动检查
+  PASS: DR-41 规则1 审计剥离：HTML 无 "evidence id" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "evidenceIds" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "证据：" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "审计 / 证据入口" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "runId" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "ev-001" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "ev-0" 字样
+  PASS: DR-41 规则1 审计剥离：HTML 无 "provenance.tool" 字样
+  PASS: DR-41 规则1 审计剥离：无"审计"section 标题
+  PASS: DR-41 规则2 红线矩阵非空 (got 3)
+  PASS: DR-41 规则2 子树归并：mergedChildren 不与其它行 module 重复
+  PASS: DR-41 规则2 子树归并：至少 1 行有 mergedChildren (got 2)
+  PASS: DR-41 规则2 子树归并：mergedChildren 无自引用
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§0"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§1"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§2"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§3"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§4"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§5"
+  PASS: DR-41 规则3 结构层次：HTML <h2> 含 "§6"
+  PASS: DR-41 规则3 结构层次：无 §7 h2 标题（GPU-bound 合并进 §3）
+  PASS: DR-41 规则3 结构层次：§0→§1→§2→§3→§4→§5→§6 顺序正确
+  PASS: DR-41 规则4 图文穿插：§0 至少 3 个独立结论块 (got 3)
+  PASS: DR-41 规则4 图文穿插：每个结论块含 oneLiner+asciiChart+keyNumbers+seeAlso 四段
+  PASS: DR-41 规则4 图文穿插：HTML 含 ≥3 个 blockquote (got 3)
+  PASS: DR-41 规则4 图文穿插：HTML 含 ≥3 个 pre.ascii (got 13)
+  PASS: DR-41 规则5 人话先行：HTML 正文无字段名泄漏
+  PASS: DR-41 规则5 人话先行：每个结论块 oneLiner 含中文
+
+──────────────────────────────────────────────────
+Results: 227 PASS, 0 FAIL
+OVERALL: PASS

@@ -85,6 +85,9 @@ const { frameIndexOffset = 0, counters: fieldNames, frames } = countersData;
 
 // Open DB in write mode
 const db = new Database(dbPath, { readonly: false });
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('busy_timeout = 30000');
 
 // Create table if not exists
 db.exec(`

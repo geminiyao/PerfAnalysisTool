@@ -137,6 +137,24 @@ flowchart LR
 
 这一条催生了 F1（分析师非作文机）和 F2（自由发现），是所有其它设计的地基。
 
+### 补充：运行时怎么区分两个物种（5 维度实操对照）
+
+上面的对照表讲的是"设计上"的分野。但**运行时怎么判断一份报告是作文机产的还是分析师产的**？这需要落到管线 5 个维度的实际产出。2026-07-16 用户对比 v5.3 标杆与 Prism perfetto 报告时发现差距巨大，诊断时画了这张表，沉淀于此供后续开发对照：
+
+| 维度 | 作文机（v5） | Prism 三段管线（设计） | 当前实际运行 |
+|---|---|---|---|
+| **findings 怎么来** | 脚本查 DB + if-else 套模板 | explore LLM 调工具查 DB，自己推理写 conclusion/reasoning | ✅ 合规（findings.json 是 LLM 产出，34 工具调用，23 证据验证） |
+| **narrative 怎么来** | 脚本拼 humanizeFinding + 万能套话 | narrative LLM 读 findings/verdict，按 prompt 纪律推理写 sections | 🟡 退化（LLM 产出没错，但 prompt 拿到的是裸骨架，模板注入被 `return ''` 短路） |
+| **report 怎么来** | 脚本拼 HTML | render 纯代码渲染 narrative.json | ✅ 合规（render-html.ts 纯代码，provenance 校验通过） |
+| **判定逻辑在哪** | 脚本里 if-else（硬编码业务名/阈值） | explore prompt 里（LLM 推理，prompt 只给纪律不给业务词） | ✅ 合规（perfetto-explore-prompt.txt 是判定推理任务） |
+| **叙事模板在哪** | 代码里写死章节结构 | prompt 模板注入 + LLM 按模板组织 | ❌ 断链（模板文件存在但没注入） |
+
+**这张表的价值**：它把"作文机 vs 分析师"从抽象的物种分野，落到了**可逐项核验的 5 个维度**。任一维度退化 = 管线在那一处滑向作文机。验收报告类工单时，逐项核这 5 行，比"看报告像不像"靠谱得多。
+
+**关键澄清（防误判）**：当前 perfetto 报告的"框架差距大"**不是退化成作文机**——findings 是 LLM 产的，render 是纯代码，判定逻辑在 explore prompt，这三段都合规。问题出在 narrative 阶段拿到了**残缺的 prompt**（`{{REPORT_TEMPLATE}}` 占位符被 `return ''` 短路），LLM 按裸骨架的自由指令交了 5 个分群卡片，而不是模板要求的 §0-§7 八章。这是**合规的 LLM 推理产出**（generatedBy: "LLM"，provenance 校验通过），不是脚本拼的——只是质量不如手工打磨的 v5.3。修复方向是接上模板注入 + 扩 schema/render 配套视觉资产，**不是**把 v5.3 章节结构硬编码进 render-html（那才是真退化成作文机）。
+
+详见 DR-45（模板注入断链根因 + harness 设计）。
+
 ---
 
 ## 二、两层结构：单次管线 ⊥ 跨run回路（最容易混淆，务必分清）

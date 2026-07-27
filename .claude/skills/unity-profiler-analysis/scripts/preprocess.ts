@@ -198,8 +198,8 @@ export function loadConfig(scriptDir: string): Config {
 export function loadProfileData(inputPath: string, outputDir: string): ProfileData {
   const ext = path.extname(inputPath).toLowerCase()
 
-  if (ext === '.pdata') {
-    console.error(`[preprocess] Parsing .pdata file: ${inputPath}`)
+  if (ext === '.pdata' || ext === '.raw') {
+    console.error(`[preprocess] Parsing ${ext} file: ${inputPath}`)
     const data = parsePdataFile(inputPath)
 
     // Save parsed data as intermediate output (skip if too large)
@@ -225,7 +225,7 @@ export function loadProfileData(inputPath: string, outputDir: string): ProfileDa
     const raw = fs.readFileSync(inputPath, 'utf-8')
     return JSON.parse(raw) as ProfileData
   } else {
-    console.error(`[preprocess] Error: unsupported file extension "${ext}". Use .pdata or .json`)
+    console.error(`[preprocess] Error: unsupported file extension "${ext}". Use .pdata, .raw or .json`)
     process.exit(1)
   }
 }

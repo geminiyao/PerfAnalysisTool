@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三种报告嵌入方式对比</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 40px; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  .sub { color: #8b949e; font-size: 13px; margin-bottom: 24px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 1100px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: border-color 0.2s; }
+  .card:hover { border-color: #58a6ff; }
+  .card .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-bottom: 10px; font-weight: 600; }
+  .card .badge.a { background: #1f6feb30; color: #58a6ff; }
+  .card .badge.b { background: #f7816630; color: #f78166; }
+  .card .badge.c { background: #52c41a30; color: #52c41a; }
+  .card h2 { font-size: 15px; margin-bottom: 8px; }
+  .card p { font-size: 12px; color: #8b949e; line-height: 1.6; }
+  .card .pros { color: #52c41a; font-size: 11px; margin-top: 8px; }
+  .card .cons { color: #f44336; font-size: 11px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>三种报告嵌入方式对比</h1>
+  <div class="sub">点击下方卡片查看各方式效果 · 报告内容相同 (bk26b-perfetto-triad)</div>
+  <div class="cards">
+    <a class="card" href="demo_a_iframe.html" target="_blank">
+      <span class="badge a">方式 A</span>
+      <h2>iframe 嵌入</h2>
+      <p>RunDetail 的 Tab 里用 iframe 直接嵌入 Prism HTML，保留全部原始样式和交互。</p>
+      <div class="pros">✓ 零改造成本，报告原封不动</div>
+      <div class="cons">✗ iframe 边界感，滚动嵌套</div>
+    </a>
+    <a class="card" href="demo_b_summary.html" target="_blank">
+      <span class="badge b">方式 B</span>
+      <h2>摘要卡 + 全屏</h2>
+      <p>RunDetail 里显示评级+概览+Top3结论的摘要卡，点"全屏查看"新窗口打开完整报告。</p>
+      <div class="pros">✓ 阅读体验最佳，报告全屏展示</div>
+      <div class="cons">✗ 离开应用上下文，需切窗口</div>
+    </a>
+    <a class="card" href="demo_c_extracted.html" target="_blank">
+      <span class="badge c">方式 C (部分)</span>
+      <h2>提取重渲染 · 摘要版</h2>
+      <p>提取部分内容用应用主题重新渲染，展示风格效果。</p>
+      <div class="pros">✓ 原生体验，主题统一</div>
+      <div class="cons">✗ 违反管线契约，工作量大</div>
+    </a>
+    <a class="card" href="demo_c_full.html" target="_blank" style="grid-column:span 3">
+      <span class="badge c">方式 C (完整版) ★</span>
+      <h2>提取重渲染 · 完整报告 (§0-§7 + 优化优先级)</h2>
+      <p>把 Prism 完整报告的全部 8 个章节 + 优化优先级表用 C 风格重新渲染。包含调用树进度条、判定矩阵表格、推荐建议列表、状态分布条形图。</p>
+      <div class="pros">✓ 完整报告, 阅读感最强</div>
+      <div class="cons">✗ 需为每种报告类型写对应的渲染组件</div>
+    </a>
+  </div>
+</body>
+</html>

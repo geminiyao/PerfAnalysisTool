@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.315Z
 source: unity-cpu
 title: "Unity 线程模型及各线程常见瓶颈"
 tags: ["unity","线程模型","多线程"]
+dataSource: unity
 ---
 
 | 线程 | 作用 | 常见瓶颈 |

@@ -1,0 +1,34 @@
+{
+  "rating": "fail",
+  "headline": "相机A/B位移动压测下84%的帧掉出60fps预算(中位帧20.75ms,超标25%);主因是相机移动触发的一整条实体显著性/资源加载/对象回收处理链——稳态由MapSignificanceMgr每帧2.3ms持续吃掉,尖峰由同步资源加载(单帧40ms)和实体回收(单帧25ms)炸出。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 20.75,
+  "observedP95Ms": 34.70,
+  "observedP99Ms": 44.50,
+  "observedMaxMs": 54.14,
+  "observedMaxFrameIndex": 143,
+  "pctFramesOverBudget": 84.3,
+  "primaryDrivers": ["cam-move.significance", "cam-move.sync-loading", "cam-move.every-2-frames"],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {"markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs"},
+      "resultDigest": {"mean": 22.96, "p50": 20.75, "p95": 34.70, "p99": 44.50, "max": 54.09, "maxFrameIndex": 143, "autocorrLag": 2, "autocorrCoef": 0.648}
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 16.67}, "setB": {"kind": "slowFrames", "thresholdMs": 16.67}},
+      "resultDigest": {"sizeA": 506, "sizeB": 506, "pctFramesOverBudget": 84.3}
+    },
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {"markerName": "MapSignificanceMgr.ProcessTasks", "thread": "1:Main Thread", "metric": "totalMs"},
+      "resultDigest": {"mean": 2.33, "p50": 1.43, "p99": 11.61, "max": 22.69, "maxFrameIndex": 552, "autocorrLag": 2, "autocorrCoef": 0.50}
+    },
+    {
+      "tool": "getThreadTimeline",
+      "args": {"frameIndex": 552},
+      "resultDigest": {"frameMs": 46.83, "mainThreadWaits": {"res_entityLoader_sync": 20.88, "res_assetLoader_sync": 18.29, "res_asset_sync": 18.10}, "preloadManagerAssets": 27.57}
+    }
+  ]
+}

@@ -2,7 +2,7 @@
  * explore.cli.ts — CLI wrapper for runPrismExplore
  *
  * Usage (from repo root):
- *   npx tsx web/server/prism/explore.cli.ts [--run-id <id>] [--provider codebuddy|claude] [--out <dir>]
+ *   npx tsx web/server/prism/explore.cli.ts [--source unity|perfetto] [--run-id <id>] [--provider codebuddy|claude] [--out <dir>]
  *
  * Prints a concise summary to stdout:
  *   - Number of findings and dataRequests
@@ -13,6 +13,7 @@
  */
 
 import { runPrismExplore } from './explore-service.js';
+import * as path from 'node:path';
 
 // ─────────────────────────────────────────────
 // Parse CLI args
@@ -32,9 +33,10 @@ function hasFlag(flag: string): boolean {
 
 if (hasFlag('--help') || hasFlag('-h')) {
   console.log(
-    'Usage: npx tsx web/server/prism/explore.cli.ts [--run-id <id>] [--provider codebuddy|claude] [--out <dir>] [--timeout-ms <ms>]\n' +
+    'Usage: npx tsx web/server/prism/explore.cli.ts [--source unity|perfetto] [--run-id <id>] [--provider codebuddy|claude] [--out <dir>] [--timeout-ms <ms>]\n' +
     '\n' +
-    '  --run-id      Run ID to explore (default: unity-outside-stressmove)\n' +
+    '  --source      Data source: unity | perfetto (default: unity). Routes to different explore-prompt.\n' +
+    '  --run-id      Run ID to explore (default: by source — unity: unity-outside-stressmove, perfetto: bk26b-perfetto-triad)\n' +
     '  --provider    CLI provider: codebuddy | claude (default: codebuddy)\n' +
     '  --out         Output directory (default: web/data/prism-out/<runId>)\n' +
     '  --timeout-ms  Timeout in milliseconds (default: 1200000 = 20 min)\n',
@@ -42,9 +44,13 @@ if (hasFlag('--help') || hasFlag('-h')) {
   process.exit(0);
 }
 
+const sourceRaw = getFlag('--source');
+const source = (sourceRaw === 'unity' || sourceRaw === 'perfetto')
+  ? sourceRaw
+  : undefined;
 const runId = getFlag('--run-id');
 const providerRaw = getFlag('--provider');
-const outputDir = getFlag('--out');
+const outputDirRaw = getFlag('--out');
 const timeoutMsRaw = getFlag('--timeout-ms');
 
 const provider = (providerRaw === 'claude' || providerRaw === 'codebuddy')
@@ -52,6 +58,12 @@ const provider = (providerRaw === 'claude' || providerRaw === 'codebuddy')
   : undefined;
 
 const timeoutMs = timeoutMsRaw ? Number(timeoutMsRaw) : undefined;
+
+// WT-031 需求 C / WT-044：--out 相对于 cwd 解析（用户通常在 web/ 下跑，--out data/prism-out/... → web/data/prism-out/...）
+// 绝对路径原样用，相对路径相对于 cwd（不是 repoRoot，避免 explore-service 的 path.resolve(repoRoot) 误解析）
+const outputDir = outputDirRaw
+  ? (path.isAbsolute(outputDirRaw) ? outputDirRaw : path.resolve(process.cwd(), outputDirRaw))
+  : undefined;
 
 // ─────────────────────────────────────────────
 // Run
@@ -61,6 +73,7 @@ console.log('[explore.cli] Starting Prism Phase-A exploration...');
 
 try {
   const result = await runPrismExplore({
+    source,
     runId,
     outputDir,
     cliProvider: provider,

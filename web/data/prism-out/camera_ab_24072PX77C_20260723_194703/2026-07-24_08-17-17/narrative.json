@@ -1,0 +1,664 @@
+{
+  "runId": "camera_ab_24072PX77C_20260723_194703",
+  "overview": "相机A/B位交替压测下84%的帧掉出60fps预算(中位帧20.75ms,超标25%)。这不是单一元凶——是一组相机移动触发的处理链在作祟:MapSignificanceMgr每帧2.3ms的稳态黑洞打底,叠加同步资源加载(单帧40ms)、实体回收(单帧25ms)、5次同步GC(9-11ms)的尖峰反复捅刀;而合法的URP渲染(4.75ms)+ECS(3.15ms)基线又吃掉38%帧预算,留给游戏逻辑的余量极紧。相机每2帧切一次位置,带动显著性、无限缩放、加载tick、纹理上传、UI重建五个系统全部隔帧变重,整条响应链被A/B交替节拍绑架。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "MapSignificanceMgr常驻税:每帧2.3ms的全场最大稳态开销",
+      "kind": "稳态黑洞",
+      "contribution": "每帧2.33ms×600帧=1398ms累计self,全场最大常驻项;占帧预算11.2%,最坏一帧炸到22.69ms(超vsync 136%)",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "high"
+    },
+    {
+      "rank": 2,
+      "problem": "相机A/B交替节拍绑架整条响应链",
+      "kind": "结构性根因",
+      "contribution": "6个独立系统的隔帧自相关同向达0.40-0.648,帧时间高低交替;解释了显著性/缩放/加载tick/纹理上传/UI重建为何周期性变重",
+      "dimensions": [
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "medium"
+    },
+    {
+      "rank": 3,
+      "problem": "相机移入新建筑区域·同步资源加载卡死主帧40ms",
+      "kind": "高频尖峰",
+      "contribution": "frame552单帧46.8ms,其中40ms是三个同步资源加载marker叠加阻塞主线程;玩家会感受到明显卡顿",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 4,
+      "problem": "相机移出视野·地图管理器单帧回收25ms",
+      "kind": "低频尖峰",
+      "contribution": "frame469 MapManager单帧25.34ms(超vsync 151%),RecycleGOTask一次回收吃掉19.5ms;2帧突发但无周期性",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "medium"
+    },
+    {
+      "rank": 5,
+      "problem": "5次同步GC每次卡9-11ms·全部落在慢帧",
+      "kind": "低频尖峰",
+      "contribution": "5次GC 100%落在>30ms慢帧里(占慢帧5.5%),是加剧因子非主因;每次GC占帧30%接近红线",
+      "dimensions": [
+        "outlier",
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "medium"
+    },
+    {
+      "rank": 6,
+      "problem": "URP渲染+ECS基线合计吃掉38%帧预算",
+      "kind": "合法基线",
+      "contribution": "URP 4.75ms/帧(22.9%)+ECS 3.15ms/帧(15.2%)合计7.9ms/帧,是正常工作但压缩了逻辑侧余量",
+      "dimensions": [
+        "absoluteCost"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "info"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体帧时中位数20.75ms,超16.67ms的60fps预算25%(84.3%帧超标),整体不达标",
+      "MapSignificanceMgr是本次采集累计self最高的稳态项(1398ms),且最坏帧22.69ms超vsync 136%",
+      "相机移动是本次采集内离群最严重的尖峰源(frame552同步加载40ms、frame469实体回收25ms)",
+      "5次GC 100%落在慢帧,是加剧因子非主因(占91慢帧中的5帧)",
+      "相机A/B交替节拍驱动了6个系统的2帧周期性(隔帧自相关0.40-0.648同向)",
+      "URP渲染(4.75ms)+ECS(3.15ms)是合法基线,但合计占帧预算38%"
+    ],
+    "cannotJudge": [
+      "MapSignificanceMgr每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了该不该管",
+      "同步资源加载是否可改为异步——需看LoaderManager的加载触发逻辑实现",
+      "RecycleGOTask单帧19.5ms的具体回收逻辑——源码未能定位(不在codegraph中)",
+      "GC触发的分配源——gc_allocated_in_frame全0,无法定位是哪个系统长期累积触发",
+      "UnityGfxRenderS/Job.Worker等工作线程未在findings显式查询,线程级画像不完整",
+      "frame143协程11ms具体是哪些协程——CoroutinesDelayedCalls是Unity内置marker无法拆解"
+    ]
+  },
+  "ruledOut": [
+    {
+      "name": "Loading.PreloadManager线程",
+      "why": "正常异步加载管理器,仅frame552因主线程同步等待而活跃27.57ms,非常驻瓶颈"
+    },
+    {
+      "name": "WorldTileStreaming",
+      "why": "隔帧自相关仅0.15 lag3,不参与2帧周期,非相机A/B节拍驱动"
+    },
+    {
+      "name": "Canvas.AddRenderersToCanvas",
+      "why": "145帧出现但max仅1.53ms,UI重建非大头"
+    },
+    {
+      "name": "frame143 CoroutinesDelayedCalls",
+      "why": "单帧孤立尖峰11ms,非周期性,且是Unity内置marker无法定位具体协程"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "§0 结论先行:相机响应链的三层性能故事",
+      "intro": "三层故事:稳态黑洞(每帧都在的常驻税)+结构性节拍(相机每2帧切位绑架响应链)+尖峰三连击(同步加载/实体回收/GC)。按对整体帧率的贡献排序,稳态大头优先于低频尖峰。",
+      "items": [
+        {
+          "findingIds": [
+            "cam-move.significance"
+          ],
+          "title": "① 稳态黑洞:MapSignificanceMgr每帧2.3ms,全场最大常驻税",
+          "narrative": "显著性重算系统每帧雷打不动吃掉2.3毫秒,占整帧11.2%——这是全场累计self最高的稳态项。最坏一帧(frame552)炸到22.69ms,单这一项就超过了60fps整帧预算的1.36倍。源码确认根因:ProcessSignificanceTasks每帧顺序执行11个ConsumeTasks子队列,无任何单帧时间预算或分帧限流,所有队列每帧全部排空。相机移动灌满队列时,全部一帧排空就炸出尖峰。详见 §3 下钻 ①。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "2.36ms/帧占p50 11.2%,最大头ForceSubEntity 1.13ms占子树61%"
+          },
+          "sourceInsight": "MapSignificanceMgr.lua:1290-1372,ProcessSignificanceTasks每帧顺序跑11个ConsumeTasks_X(ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy),无时间预算/分帧限制",
+          "recommendations": [
+            "引入单帧时间预算(如2ms),超预算时剩余任务延到下一帧分帧排空",
+            "ForceSubEntity是最大头(占子树61%),优先检查ConsumeTasks_ForceSubEntity内是否对同一实体重复处理或可批处理",
+            "相机剧烈移动时限流显著性更新频率(每2帧或每3帧一次),而非每帧全量排空"
+          ],
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "MapSignificanceMgr稳态vs尖峰",
+            "ascii": {
+              "content": "MapSignificanceMgr 帧时分布 (600帧):\n  mean  2.33ms  ████████░░░░░░░░░░  占p50 11.2%\n  p50   1.43ms  █████░░░░░░░░░░░░░\n  p95   6.05ms  ████████████████░░  vsync 36%\n  p99  11.61ms  ████████████████████ vsync 70% 🟡\n  max  22.69ms  ████████████████████ vsync 136% 🔴\n  (600帧累计1398ms,全场self最高;隔帧自相关0.50)",
+              "caption": "均值健康但长尾爆表——尖峰/平峰比15.84倍,相机移动灌满队列时一帧排空就炸"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "② 结构性节拍:相机A/B交替绑架6个系统隔帧变重",
+          "narrative": "这次相机A/B位交替测试每2帧切一次位置,带动显著性、无限缩放、加载tick、纹理上传、UI重建五个系统全都隔帧跑重的——整条相机响应链被A/B交替节拍绑架,帧时间呈明显的'高低高低'交替(隔帧自相关0.648)。这是测试场景的相机节拍,非bug,但它暴露了相机响应链的累积成本结构:若相机移动频率降低,这些系统的总开销会显著下降。详见 §3 下钻 ②。",
+          "severity": "medium",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "相机A/B交替节拍·6系统隔帧自相关同向",
+            "ascii": {
+              "content": "隔帧自相关 (lag=2, 相机A/B切位节拍):\n  PlayerLoop        ████████████ 0.648  ← 帧时间高低交替最强\n  MapSignificance   ██████████   0.50\n  InfiniteZoom      █████████    0.46\n  LoaderTick        █████████    0.46\n  Canvas.AddRender  █████████    0.45\n  UploadTexture     ████████     0.40\n  ─────────────────────────────────\n  WorldTileStream   █            0.15 lag3 (不参与,排除项)",
+              "caption": "6系统同向证实相机每2帧移动一次,每次触发一整条处理链——非全局节拍,只有被A/B交替直接驱动的才是"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.sync-loading",
+            "cam-move.entity-teardown",
+            "gc.collect-sync"
+          ],
+          "title": "③ 尖峰三连击:同步加载40ms+实体回收25ms+GC 11ms×5",
+          "narrative": "相机移动触发的三类尖峰轮流捅刀:移入新建筑区域时同步资源加载阻塞主帧40ms(frame552),移出视野时实体批量回收25ms(frame469),5次同步GC每次9-11ms全落在慢帧里。三类尖峰合计命中8帧,占91个慢帧的8.8%——不是主因,但制造了玩家可感知的顿挫。详见 §3 下钻 ③。",
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "相机移动尖峰帧分布",
+            "ascii": {
+              "content": "尖峰帧 vs 16.67ms帧预算:\n  frame143  54ms ████████████████████████  协程11ms+LateUpdate28ms\n  frame469  48ms ███████████████████████   实体回收25ms(RecycleGOTask)\n  frame552  47ms ██████████████████████    同步加载40ms(entityLoader/asset)\n  frame576  GC   ███████████               GC 11ms(5次之一)\n  frame257  GC   ██████████                GC 9ms\n  ─────────────────────────────────\n  5次GC 100%落在慢帧,但仅占91慢帧的5.5%(加剧因子非主因)",
+              "caption": "三类尖峰轮流捅刀——同步加载最重(单帧40ms),GC最频(5次),实体回收居中(2帧25ms)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§1 采集元信息:整体不达标的基线画像",
+      "intro": "600帧采集,中位帧20.75ms超60fps预算25%,84.3%的帧掉出预算。帧时间分布呈长尾——p95已是预算的2倍,p99接近3倍,max帧54ms是预算的3.25倍。",
+      "items": [
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "采集元信息表",
+          "narrative": "本次采集来自相机A/B位交替压测场景,600帧全程记录。整体帧时中位数20.75ms,超16.67ms的60fps预算25%;84.3%的帧掉出预算,仅15.7%的帧达标。帧时间分布长尾严重:p95 34.70ms(预算2倍),p99 44.50ms(预算2.7倍),最差帧frame143达54.14ms(预算3.25倍)。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "采集元信息",
+            "table": {
+              "headers": [
+                "指标",
+                "值"
+              ],
+              "rows": [
+                [
+                  "帧数",
+                  "600"
+                ],
+                [
+                  "fps",
+                  "~44 (按均值22.96ms折算)"
+                ],
+                [
+                  "p50",
+                  "20.75 ms"
+                ],
+                [
+                  "p95",
+                  "34.70 ms"
+                ],
+                [
+                  "p99",
+                  "44.50 ms"
+                ],
+                [
+                  "max",
+                  "54.14 ms (frame143)"
+                ],
+                [
+                  "帧预算",
+                  "16.67 ms (60fps)"
+                ],
+                [
+                  "超预算帧占比",
+                  "84.3% 超16.67ms"
+                ],
+                [
+                  "PlayerLoop总耗时",
+                  "13776 ms (均值×帧数)"
+                ],
+                [
+                  "隔帧自相关",
+                  "0.648 (lag=2,相机A/B交替节拍)"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "帧时间分布vs帧预算",
+          "narrative": "帧时间分位数柱状图对照16.67ms帧预算,p50已超标25%,p95/p99/max依次恶化到预算的2-3.25倍。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "帧时间分位数vs16.67ms预算",
+            "ascii": {
+              "content": "帧时间分位数 vs 16.67ms预算:\n  p50  20.75ms ████████████░░░░  超 25%   (84.3%帧超标)\n  p95  34.70ms ████████████████████  超 108%\n  p99  44.50ms ████████████████████████  超 167% 🟡\n  max  54.14ms ████████████████████████████  超 225% 🔴\n  ─────────────────────────────────\n  预算线 16.67ms ████  (60fps目标)",
+              "caption": "长尾严重——p95已是预算2倍,最差帧超预算3.25倍;84.3%帧不达标"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§2 多线程宏观:主线程是绝对瓶颈,工作线程大多空闲或被阻塞",
+      "intro": "主线程每帧22.96ms是绝对瓶颈。Submit Thread仅1.08ms/帧(占主线程4.7%),主要做纹理上传且隔帧变重。Loading.PreloadManager非常驻,仅frame552因主线程同步等待而活跃27.57ms。UnityGfxRenderS/Job.Worker等线程未在本次findings显式查询,线程级画像不完整(见judgmentBoundary)。",
+      "items": [
+        {
+          "findingIds": [
+            "cam-move.sync-loading",
+            "cam-move.every-2-frames"
+          ],
+          "title": "多线程宏观表",
+          "narrative": "主线程承担全部业务/Lua/ECS/渲染调度,是绝对瓶颈。Submit Thread仅做纹理上传且隔帧变重(隔帧自相关0.40),与相机A/B节拍同向。Loading.PreloadManager正常空闲,仅frame552因主线程同步等待资源加载而被动活跃27.57ms——是主线程阻塞的受害者而非瓶颈源。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "多线程宏观",
+            "table": {
+              "headers": [
+                "线程",
+                "ms/帧",
+                "占主线程%",
+                "topMarker",
+                "定位"
+              ],
+              "rows": [
+                [
+                  "UnityMain",
+                  "22.96",
+                  "100%",
+                  "PlayerLoop/Core.LateUpdate/MapSignificanceMgr",
+                  "主线程,业务/Lua/ECS/渲染调度主入口,绝对瓶颈"
+                ],
+                [
+                  "Submit Thread",
+                  "1.08",
+                  "4.7%",
+                  "Async.UploadTexture",
+                  "GPU命令提交线程,纹理上传隔帧变重(与相机节拍同向)"
+                ],
+                [
+                  "Loading.PreloadManager",
+                  "~0 (峰值27.57)",
+                  "<1% (峰值120%)",
+                  "Application.Preload Assets",
+                  "异步加载管理器,仅frame552因主线程同步等待活跃,受害者非瓶颈"
+                ],
+                [
+                  "UnityGfxRenderS",
+                  "未查询",
+                  "—",
+                  "—",
+                  "本次findings未显式查询,线程级画像不完整(见judgmentBoundary)"
+                ],
+                [
+                  "Job.Worker",
+                  "未查询",
+                  "—",
+                  "—",
+                  "本次findings未显式查询,线程级画像不完整(见judgmentBoundary)"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "线程ms/帧柱状对比",
+          "narrative": "主线程柱长是Submit Thread的21倍,工作线程大多空闲或未覆盖。诚实声明:UnityGfxRenderS/Job.Worker未在本次findings显式查询,无法给出完整线程级画像。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "线程ms/帧对比",
+            "ascii": {
+              "content": "线程 ms/帧 对比:\n  UnityMain       22.96 ████████████████████████  100% (绝对瓶颈)\n  Submit Thread    1.08 █                          4.7%\n  PreloadManager  ~0(峰27.57) ▏  <1% 常驻 / 120% 峰值\n  UnityGfxRenderS  —    ░░░░░░░░░░░░░░░░░░░░░░  未查询\n  Job.Worker       —    ░░░░░░░░░░░░░░░░░░░░░░  未查询\n  ─────────────────────────────────\n  主线程是绝对瓶颈,工作线程大多空闲或被主线程同步等待阻塞",
+              "caption": "单源无法断言GPU满载——UnityGfxRenderS/Job.Worker未查询,主线程等待归因仅靠mainThreadWaits间接推断"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§3 主线程一帧时间去向:红线触发清单与Top模块下钻",
+      "intro": "主线程每帧22.96ms的去向:URP渲染4.75ms(22.9%)+ECS基线3.15ms(15.2%)+MapSignificanceMgr 2.33ms(11.2%)三项合计占49.3%,是帧预算的大头。前两项是合法基线(分摊型无单一大头),第三项是相机触发的可优化热点(有尖峰、有源码根因)。本节给出红线触发清单,并对每个红线模块独立下钻。",
+      "items": [
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "PlayerLoop帧分位数与慢帧形态",
+          "narrative": "PlayerLoop均值22.96ms,p50 20.75ms,p95 34.70ms,p99 44.50ms。p95-p50差距13.95ms,说明慢帧不是均匀变慢而是有尖峰突刺——是'匀慢基底+尖峰突刺'的混合形态。84.3%帧超16.67ms预算,其中91帧超30ms(15.2%)是严重慢帧。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "PlayerLoop帧分位数对比",
+            "table": {
+              "headers": [
+                "分位数",
+                "帧时ms",
+                "超帧预算%",
+                "形态判定"
+              ],
+              "rows": [
+                [
+                  "p50",
+                  "20.75",
+                  "+25%",
+                  "匀慢基底(84.3%帧超标)"
+                ],
+                [
+                  "p95",
+                  "34.70",
+                  "+108%",
+                  "尖峰突刺区"
+                ],
+                [
+                  "p99",
+                  "44.50",
+                  "+167%",
+                  "严重尖峰"
+                ],
+                [
+                  "max",
+                  "54.14",
+                  "+225%",
+                  "最差帧frame143"
+                ],
+                [
+                  "mean",
+                  "22.96",
+                  "+38%",
+                  "长尾拉高均值"
+                ],
+                [
+                  "fps折算",
+                  "~44 fps",
+                  "—",
+                  "距60fps目标差36%"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.significance",
+            "render.baseline-urp",
+            "ecs.baseline-systems"
+          ],
+          "title": "红线触发清单(按占p50%排序)",
+          "narrative": "三项红线模块合计占p50的49.3%:URP渲染(22.9%,分摊型合法基线)+ECS(15.2%,分摊型合法基线)+MapSignificanceMgr(11.2%,有尖峰的可优化热点)。前两项统筹在父模块(子节点占比接近无单一大头,且语义同属一个系统);MapSignificanceMgr也统筹在父(ForceSubEntity虽占61%但与EntityTask/OutsideSubEntityMgr同属显著性系统,语义相同)。",
+          "severity": "high",
+          "visualAsset": {
+            "type": "table",
+            "title": "红线触发清单",
+            "table": {
+              "headers": [
+                "模块",
+                "cur ms/帧",
+                "占 p50%",
+                "红线类型",
+                "子函数热点"
+              ],
+              "rows": [
+                [
+                  "URP.RenderSingleCamera",
+                  "4.75ms/帧",
+                  "22.9%",
+                  "渲染基线(分摊型)",
+                  "BeforeRendering 1.84 + MainRenderingTransparent 1.03(统筹,同属渲染管线语义)"
+                ],
+                [
+                  "UpdateFunction.Invoke (ECS)",
+                  "3.15ms/帧",
+                  "15.2%",
+                  "ECS基线(分摊型)",
+                  "SimulationGroup 1.57 + PresentationGroup 0.90(统筹,同属ECS系统组)"
+                ],
+                [
+                  "MapSignificanceMgr.ProcessTasks",
+                  "2.33ms/帧",
+                  "11.2%",
+                  "占p50≥5%红线+max超vsync 136%",
+                  "ForceSubEntity 1.13(61%) + EntityTask 0.55 + OutsideSubEntityMgr 0.54(统筹,同属显著性系统)"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.significance"
+          ],
+          "title": "下钻①·MapSignificanceMgr:11个队列每帧全排空的可优化热点",
+          "narrative": "显著性重算系统是唯一进入红线且可优化的模块(URP/ECS是合法基线)。子树2.36ms/帧,最大头ForceSubEntity 1.13ms占子树61%(其内SubEntity_FrameExcute 0.90ms),EntityTask 0.55ms与OutsideSubEntityMgr 0.54ms次之。源码确认根因:ProcessSignificanceTasks每帧顺序执行11个ConsumeTasks子队列(ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy),无任何单帧时间预算或分帧限流——所有队列每帧全部排空。相机移动灌满队列时,全部一帧排空就炸到22.69ms(超vsync 136%)。隔帧自相关0.50证实每2帧周期性变重(与相机A/B节拍同向)。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "子树2.36ms/帧占p50 11.2%;ForceSubEntity 1.13ms占子树61%是最大头,其内SubEntity_FrameExcute 0.90ms;EntityTask/OutsideSubEntityMgr各占23%"
+          },
+          "sourceInsight": "MapSignificanceMgr.lua:1290-1372,ProcessSignificanceTasks每帧顺序跑11个ConsumeTasks_X子步骤,无时间预算/分帧限制;相机移动灌满队列时全部一帧排空→22.69ms尖峰",
+          "recommendations": [
+            "引入单帧时间预算(如2ms),超预算时剩余任务延到下一帧分帧排空",
+            "ForceSubEntity是最大头(占子树61%),优先检查ConsumeTasks_ForceSubEntity内是否对同一实体重复处理或可批处理",
+            "相机剧烈移动时限流显著性更新频率(每2帧或每3帧一次),而非每帧全量排空"
+          ],
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "MapSignificanceMgr子树·11队列无预算",
+            "ascii": {
+              "content": "MapSignificanceMgr 2.36ms/帧 (占p50 11.2%) 🔴\n├─ ForceSubEntity 1.13ms (61%) ← 最大头\n│  └─ SubEntity_FrameExcute 0.90ms\n├─ EntityTask 0.55ms (23%)\n└─ OutsideSubEntityMgr 0.54ms (23%)\n─────────────────────────────────\n根因:11个ConsumeTasks队列每帧全排空,无时间预算\nmax 22.69ms(超vsync 136%) = 相机移动灌满队列一帧排空",
+              "caption": "子树统筹在父(三个子节点同属显著性系统语义相同);源码确认11队列无预算限制是尖峰根因"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.baseline-urp"
+          ],
+          "title": "下钻②·URP渲染基线:4.75ms/帧的分摊型合法成本",
+          "narrative": "URP渲染管线每帧4.75ms(占p50 22.9%)是最大的单项稳态子树,但是合法的渲染基线——10个子Pass分摊,无单一大头(maxChildRatio 0.388)。BeforeRendering 1.84ms(39%)是最大头,MainRenderingTransparent 1.03ms(22%)、RendererSetup 0.82ms(17%)、AfterRendering 0.71ms(15%)次之。4.75ms×600帧=2850ms总开销,但它占掉近三成帧预算限制了逻辑侧余量。优先级低于相机触发的可优化问题。",
+          "callTree": {
+            "rootMarker": "URP.RenderSingleCamera",
+            "note": "4.75ms/帧占p50 22.9%,10个子Pass分摊无单一大头(maxChildRatio 0.388),合法渲染基线"
+          },
+          "recommendations": [
+            "这是渲染基线成本非异常,优先级低于相机触发问题",
+            "若需优化可评估RendererSetup/RenderGraphSetup 0.82ms是否有可缓存的重复计算",
+            "BeforeRendering 1.84ms内部是否有可剔除的pass——需看URP配置/场景内容,本次数据不足"
+          ],
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "URP渲染子树·10Pass分摊",
+            "ascii": {
+              "content": "URP.RenderSingleCamera 4.75ms/帧 (占p50 22.9%) ℹ️\n├─ BeforeRendering          1.84ms (39%) ← 最大头\n├─ MainRenderingTransparent 1.03ms (22%)\n├─ RendererSetup            0.82ms (17%)\n├─ AfterRendering           0.71ms (15%)\n└─ 其它小项                 0.35ms (7%)\n─────────────────────────────────\n10个子Pass分摊(maxChildRatio 0.388),无单一大头\n合法渲染基线,但占帧预算22.9%压缩逻辑侧余量",
+              "caption": "分摊型统筹在父(10Pass同属渲染管线语义相同);合法基线但占近三成预算"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "ecs.baseline-systems"
+          ],
+          "title": "下钻③·ECS基线:3.15ms/帧的DOTS系统组更新",
+          "narrative": "DOTS ECS三个系统组每帧合计3.15ms(占p50 15.2%)是仅次于URP的第二大稳态子树,同样是合法基线。SimulationSystemGroup 1.57ms(50%)、PresentationSystemGroup 0.90ms(28%)、InitializationSystemGroup 0.57ms(18%)分摊在十几个子系统上无单一大头(最大BattleChain_SoldierNormalCombatSystem仅0.22ms/帧)。ECS已是Burst编译的并行系统,优化空间有限,建议优先处理相机触发的Lua侧问题。",
+          "callTree": {
+            "rootMarker": "UnityEngine.CoreModule.dll!::UpdateFunction.Invoke()",
+            "note": "3.15ms/帧占p50 15.2%,三个SystemGroup分摊,最大SimulationGroup 1.57ms(50%),合法ECS基线"
+          },
+          "recommendations": [
+            "这是ECS系统正常更新基线非异常,优先级低于相机触发问题",
+            "SimulationSystemGroup 1.57ms是最大头,可检查ArmyGroup/TransformSystemGroup内是否有可合并或降频的系统",
+            "PresentationSystemGroup在相机移动时可能因实体进出视野触发结构变更,可评估是否可批处理"
+          ],
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "ECS系统组子树·三组分摊",
+            "ascii": {
+              "content": "UpdateFunction.Invoke 3.15ms/帧 (占p50 15.2%) ℹ️\n├─ SimulationSystemGroup    1.57ms (50%) ← 最大头\n├─ PresentationSystemGroup  0.90ms (28%)\n├─ InitializationSystemGroup 0.57ms (18%)\n└─ LuaMtGc.PulseGCThread    0.04ms (1%)\n─────────────────────────────────\n十几个子系统分摊(最大0.22ms/帧),无单一大头\nECS已是Burst并行,优化空间有限",
+              "caption": "分摊型统筹在父(三组同属ECS系统组语义相同);合法基线,优先处理Lua侧问题"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.sync-loading",
+            "cam-move.entity-teardown",
+            "coroutine.spike-frame143"
+          ],
+          "title": "下钻④·慢帧形态:三类尖峰的帧级拆解",
+          "narrative": "91个慢帧(>30ms)中,三类相机触发尖峰命中8帧(frame143/469/552 + 5次GC帧),其余83帧是匀慢基底(p50 20.75ms基底+周期性变重)。frame552是同步资源加载驱动(主线程等待entityLoader_sync 20.88ms+assetLoader_sync 18.29ms+asset_sync 18.10ms,三个marker叠加约40ms),frame469是实体回收驱动(MapManager 25.08ms内RecycleGOTask 19.5ms),frame143是协程+LateUpdate驱动(CoroutinesDelayedCalls 11ms+Core.LateUpdate 26ms)。三类尖峰机制不同,优化方向各异。",
+          "severity": "medium",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "三类尖峰帧级拆解",
+            "ascii": {
+              "content": "慢帧(>30ms) 91帧构成:\n  匀慢基底 83帧 (91.2%) ─ p50 20.75ms+周期性变重\n  尖峰命中  8帧 ( 8.8%) ─ 三类相机触发:\n    frame552  47ms  同步加载40ms(entityLoader/asset叠加)\n    frame469  48ms  实体回收25ms(RecycleGOTask)\n    frame143  54ms  协程11ms+LateUpdate28ms\n    5次GC帧   9-11ms/次  100%落慢帧(加剧因子)\n─────────────────────────────────\n主因是匀慢基底(83帧),尖峰制造顿挫(8帧)",
+              "caption": "三类尖峰机制不同——加载是同步阻塞,回收是批量销毁,协程是Unity内置marker无法拆"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§4 ROI优化方向:按贡献×严重度排序",
+      "intro": "优化优先级按'对整体帧率的贡献×严重度'排序。稳态大头优先于低频尖峰(1398ms累计>40ms单帧)。P0是MapSignificanceMgr分帧限流(稳态省最多),P1是同步加载改异步和实体回收分帧(消除尖峰),P2是GC增量式和相机响应链错峰。",
+      "items": [
+        {
+          "findingIds": [
+            "cam-move.significance"
+          ],
+          "title": "P0·MapSignificanceMgr分帧限流:稳态省最多",
+          "narrative": "全场第一大self,每帧2.3ms×600帧=1398ms累计。源码已确认根因是11个ConsumeTasks队列每帧全排空无预算限制。引入单帧2ms预算+分帧排空,可消除22.69ms尖峰并降低稳态均值。这是ROI最高的单项优化。",
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "ROI散点图·贡献×严重度",
+            "ascii": {
+              "content": "优化方向 ROI (占p50% × 严重度):\n  MapSignificance 分帧:  11.2% × high    ████████████  P0\n  同步加载改异步:        40ms尖峰 × high  ███████████   P0\n  实体回收分帧:          25ms尖峰 × med   ████████      P1\n  GC 增量式:             11ms×5 × med    ██████        P2\n  相机响应链错峰:        结构性 × med     █████         P2\n  URP/ECS 基线:          38% × info      ███           — (合法基线非优化目标)\n─────────────────────────────────\n稳态大头优先于低频尖峰(1398ms累计>40ms单帧)",
+              "caption": "P0是稳态黑洞+单帧灾难,P1是低频尖峰,P2是加剧因子和结构性优化"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "cam-move.sync-loading"
+          ],
+          "title": "P1·同步资源加载改异步:消除40ms单帧灾难",
+          "narrative": "frame552同步资源加载阻塞主帧40ms,是相机移入新建筑区域触发的。建议:相机移动方向预测预加载(根据移动向量提前异步加载即将进入视野的建筑prefab);将同步加载接口改为异步(entityLoader_async/assetLoader_async),主线程不等待。需看LoaderManager的加载触发逻辑才能给更具体建议。",
+          "recommendations": [
+            "相机移动方向预测预加载——根据相机移动向量提前异步加载即将进入视野的建筑prefab",
+            "将同步加载接口改为异步(entityLoader_async/assetLoader_async),主线程不等待",
+            "检查Loading.LockPersistentManager在主线程达13.75ms是否必须同步——看是否可延后到加载线程"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "cam-move.entity-teardown"
+          ],
+          "title": "P1·实体回收分帧:消除25ms批量销毁尖峰",
+          "narrative": "frame469相机移出视野触发RecycleGOTask单帧19.5ms批量回收。RecycleGOTask源码未能定位(不在codegraph中),需要看其实现才能给具体建议。从数据看:建议将GameObject回收分帧(每帧最多回收N个),避免单帧批量销毁19.5ms;相机移动时实体进出视野是常态,回收应平滑化而非集中爆发。",
+          "recommendations": [
+            "将GameObject回收分帧(每帧最多回收N个),避免单帧批量销毁19.5ms",
+            "相机移动时实体进出视野是常态,回收应平滑化而非集中爆发",
+            "若RecycleGOTask是对象池回收,检查池满判断是否导致批量触发——需看RecycleGOTask实现"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": [
+            "gc.collect-sync"
+          ],
+          "title": "P2·GC改增量式:消除9-11ms同步停顿",
+          "narrative": "5次同步GC每次9-11ms,100%落在慢帧里是加剧因子。帧计数器(gc_allocated_in_frame)在本采集全为0,无法定位是哪个系统分配触发GC。建议:启用GC分配计数器并按marker拆分定位分配源;将同步GC改为增量式(Unity Incremental GC)避免单次9-11ms停顿;排查frames 257/278/283附近是否有相机移动触发的实体创建/销毁产生大量临时分配。",
+          "recommendations": [
+            "启用GC分配计数器并按marker拆分,定位分配源(当前gc_allocated_in_frame全0无法定位)",
+            "将同步GC改为增量式(Unity Incremental GC)避免单次9-11ms停顿",
+            "排查frames 257/278/283附近是否有相机移动触发的实体创建/销毁产生大量临时分配"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": [
+            "cam-move.every-2-frames"
+          ],
+          "title": "P2·相机响应链错峰:结构性优化",
+          "narrative": "相机A/B交替节拍绑架6个系统隔帧变重,是测试场景的相机节拍非bug,但暴露了相机响应链的累积成本。建议:评估相机移动限速/平滑,减少单位时间内相机移动触发的处理次数;各子系统(显著性/缩放/加载tick)错峰执行,避免同帧全部变重。此发现作为其它相机触发finding(structural root cause)的结构性根因解释。",
+          "recommendations": [
+            "评估相机移动限速/平滑,减少单位时间内相机移动触发的处理次数",
+            "各子系统(显著性/缩放/加载tick)错峰执行,避免同帧全部变重",
+            "此发现作为其它相机触发finding的结构性根因解释"
+          ],
+          "severity": "medium"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "MapSignificanceMgr引入单帧2ms预算+分帧排空(源码已确认11队列无限制)",
+      "benefit": "稳态省最多——全场第一大self 1398ms累计,消除22.69ms尖峰"
+    },
+    {
+      "priority": "P0",
+      "action": "同步资源加载改异步+相机方向预测预加载",
+      "benefit": "消除frame552类40ms单帧灾难"
+    },
+    {
+      "priority": "P1",
+      "action": "RecycleGOTask实体回收分帧(每帧最多回收N个)",
+      "benefit": "消除frame469类25ms批量销毁尖峰"
+    },
+    {
+      "priority": "P2",
+      "action": "GC改增量式+启用分配计数器定位分配源",
+      "benefit": "消除5次9-11ms同步停顿"
+    },
+    {
+      "priority": "P2",
+      "action": "相机响应链各子系统错峰执行",
+      "benefit": "结构性优化——降低隔帧变重的累积成本"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM",
+    "timing": {
+      "start": 1784881037552,
+      "precheck": 1,
+      "prompt_inject": 122,
+      "cli_resolve": 1,
+      "llm_call": 564676,
+      "artifact_check": 0,
+      "json_parse": 2,
+      "provenance_check": 0,
+      "red_team": 166
+    },
+    "repairCount": 0
+  }
+}

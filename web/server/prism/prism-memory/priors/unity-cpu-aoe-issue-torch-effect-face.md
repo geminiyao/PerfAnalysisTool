@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.620Z
 source: unity-cpu
 title: "AOE 已知问题：火把特效面数爆炸"
 tags: ["aoe","已知问题","特效","面数","dots"]
+dataSource: unity
 ---
 
 **触发场景**：大规模战斗。

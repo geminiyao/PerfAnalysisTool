@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈——具体哪个函数/Lua marker 在持续分配，而不是整帧 GC 总量",
+    "rationale": "本次 GC.Collect 5 次同步段 7-11ms，但 queryFrameCounters 返回全 0（gc_allocated_in_frame 未记录），无法定位是哪个系统的分配累积触发了同步 GC。要区分\"相机移动产生的临时实体列表\"还是\"稳态小分配累积\"需要函数级分配来源。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级；且本次采集该字段全 0）"
+  },
+  {
+    "id": "frame-counters-not-recorded",
+    "want": "本次采集的帧计数器数据（gc_allocated_in_frame / batches / triangles / set_pass_calls / total_used_memory 全部为 0 或 null）",
+    "rationale": "queryFrameCounters 对帧 [143, 257, 278, 283, 469, 552, 566, 576] 查询返回所有计数器字段为 0/null。这导致无法用渲染负载（batches/triangles）判断尖峰帧是否是渲染压力导致，也无法用 GC 分配归因 GC 触发源。需要确认是采集配置未开启计数器记录，还是工具读取出错。",
+    "suspectedAxis": "meta",
+    "closestExistingTool": "queryFrameCounters（返回全 0，数据缺失）"
+  },
+  {
+    "id": "loading-lock-call-site",
+    "want": "Loading.LockPersistentManager 的调用链和在 PlayerLoop 中的位置（或确认它运行在 PlayerLoop 之外）",
+    "rationale": "scanMetricOverFrames 显示该 marker 主线程峰值 13.75ms at 帧 552，但帧 552 的 PlayerLoop call tree（maxDepth=10, minPct=0.5）中完全不可见。需要知道它是跨帧边界的加载锁、运行在加载场景切换的独立上下文，还是被 profiler 归到了非 PlayerLoop 上下文。 getSourceForSymbol 也未尝试（marker 名是 Unity 引擎内部加载管线名）。定位不到调用链就无法给精确优化建议。",
+    "suspectedAxis": "loading",
+    "closestExistingTool": "getFrameCallTree（PlayerLoop 树中不可见）+ getSourceForSymbol（未尝试，marker 名是引擎内部名）"
+  },
+  {
+    "id": "mapsignificance-spike-attribution",
+    "want": "帧 552 上 MapSignificanceMgr.ProcessTasks 的 22.69ms 落在 9 个 ConsumeTasks_* 中哪一个的归因数据",
+    "rationale": "帧 552 call tree 显示 ProcessTasks totalMs 22.69 但 self 0.025ms 且 children=[]——按源码应有 9 个 ConsumeTasks_* 子 sampler（ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/Destroy），每个平均应 2.5ms > minPct 0.23ms 阈值，却未出现。推测是 profiler attribution gap 或该帧任务走了未埋点路径。不知道 22.7ms 落在哪个子任务就无法针对性优化。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "drillDownMarker（给的是稳态平均，看不到单帧 552 的子任务分布）+ getFrameCallTree（帧 552 子节点缺失）"
+  }
+]

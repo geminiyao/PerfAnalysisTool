@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>报告嵌入预览 · RunDetail 效果模拟</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+  /* 模拟 RunDetail 顶栏 */
+  .rundetail-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 24px; background: #161b22; border-bottom: 1px solid #30363d;
+  }
+  .rundetail-bar .back { color: #58a6ff; cursor: pointer; font-size: 13px; }
+  .rundetail-bar .title { font-size: 15px; font-weight: 600; }
+  .rundetail-bar .tags { display: flex; gap: 6px; margin-left: 8px; }
+  .rundetail-bar .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #21262d; border: 1px solid #30363d; }
+  .rundetail-bar .tag.unity { color: #52c41a; border-color: #52c41a40; }
+  .rundetail-bar .tag.perfetto { color: #a855f7; border-color: #a855f740; }
+  .rundetail-bar .actions { margin-left: auto; display: flex; gap: 8px; }
+  .rundetail-bar .btn { font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; }
+  .rundetail-bar .btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  /* Tabs */
+  .tabs { display: flex; gap: 0; padding: 0 24px; background: #161b22; border-bottom: 1px solid #30363d; }
+  .tab { padding: 8px 16px; font-size: 13px; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.active { color: #e6edf3; border-bottom-color: #f78166; }
+  /* 报告容器 */
+  .report-container { padding: 0; }
+  .report-container iframe { width: 100%; height: calc(100vh - 90px); border: none; }
+  /* 对照: 非 iframe 模式 (新窗口) */
+  .newtab-hint { padding: 20px 24px; color: #8b949e; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- 模拟 RunDetail 顶栏 -->
+<div class="rundetail-bar">
+  <span class="back">← 返回 Dashboard</span>
+  <span class="title">bk26b-perfetto-triad</span>
+  <div class="tags">
+    <span class="tag perfetto">Perfetto</span>
+  </div>
+  <div class="actions">
+    <button class="btn">全屏查看</button>
+    <button class="btn primary">重新分析</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab">概览</div>
+  <div class="tab active">AI 分析报告</div>
+  <div class="tab">原始数据</div>
+</div>
+
+<!-- 报告 iframe 嵌入 -->
+<div class="report-container">
+  <iframe src="bk26b_perfetto_triad.html"></iframe>
+</div>
+
+</body>
+</html>

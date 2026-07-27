@@ -1,0 +1,25 @@
+{
+  "rating": "fail",
+  "headline": "这次采集全程600帧全部超过16.67ms(60fps)预算，中位帧都要41.9ms(约合24fps)，最慢一帧飙到113.6ms；这不是偶尔掉帧，是从头到尾都在拖。系统性拖累主要来自两处每帧都在吃的常驻成本——地图行军线和UI布局模块合计每帧稳定多花4.4ms，叠加相机一移动就单帧多卡43~53ms(19次移动全部命中慢帧，无一例外)；此外还有一次孤立的同步GC炸出70ms把frame 519送上全场最慢，但这只是单次极端事件、不代表普遍问题。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.9,
+  "observedP99Ms": 95.45,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "camera.oncameramove.spike",
+    "steady.armylinemgr.selfcost",
+    "steady.meshuimanager.selfcost"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "runId": "unity-outside-stressmove", "markerName": "PlayerLoop", "metric": "totalMs" },
+      "resultDigest": { "mean": 44.53, "p50": 41.9, "p95": 59.31, "p99": 95.45, "max": 113.29, "maxFrameIndex": 519 }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "runId": "unity-outside-stressmove", "setA": { "kind": "slowFrames", "thresholdMs": 16.67 }, "setB": { "kind": "slowFrames", "thresholdMs": 16.67 } },
+      "resultDigest": { "sizeA": 600, "totalFrames": 600, "pctFramesOverBudget": 100 }
+    }
+  ]
+}

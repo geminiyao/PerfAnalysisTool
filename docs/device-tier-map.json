@@ -1,0 +1,19 @@
+{
+  "_comment": "机型分档映射 — ingest 时 meta.device 查表写入 Run.meta.deviceTier。首版可空，默认 unknown。",
+  "version": 1,
+  "defaultTier": "unknown",
+  "tiers": {
+    "high": {
+      "devices": [],
+      "patterns": []
+    },
+    "mid": {
+      "devices": [],
+      "patterns": []
+    },
+    "low": {
+      "devices": [],
+      "patterns": []
+    }
+  }
+}

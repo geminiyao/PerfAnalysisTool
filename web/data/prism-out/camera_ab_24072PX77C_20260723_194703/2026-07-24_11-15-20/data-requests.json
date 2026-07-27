@@ -1,0 +1,37 @@
+[
+  {
+    "id": "frame-counters-all-zero",
+    "want": "逐帧 GC 分配字节（gc_allocated_in_frame）、三角形面数（triangles）、batches、set_pass_calls、total_used_memory 等计数器——本次 queryFrameCounters 返回全部为 0，计数器未被捕获",
+    "rationale": "无法用 gc_allocated_in_frame 定位 GC.Collect（5 次，frame 257/278/283/566/576）触发前的分配来源；也无法用 triangles/batches 判断渲染负载是否与帧时相关。gc-collect-spike 条目只能从 marker 时序推断‘增量 GC 攒不住退化成同步’，缺分配源佐证。",
+    "suspectedAxis": "memory+render",
+    "closestExistingTool": "queryFrameCounters（本次返回全 0，疑似采集配置未开启 counter 捕获）"
+  },
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈，能回答‘哪个函数或 Lua marker 在持续分配’",
+    "rationale": "frame 576 的 GC.Collect 11.13ms 与 257-276 连续 20 帧增量 GC 加重，需要函数级分配来源来解释累计触发原因；queryFrameCounters 只有整帧 gc_allocated_in_frame（且本次全为 0），到不了函数级。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+  },
+  {
+    "id": "submit-wait-attribution",
+    "want": "Submit 线程 Semaphore.WaitForSignal 的等待归因——区分‘等主线程交付渲染命令’还是‘等 GPU 完成’，例如同帧 Gfx.WaitForPresent 的占比或 Semaphore 的等待对象标识",
+    "rationale": "Submit 线程等待 14.09ms/帧，但本次 Gfx.WaitForPresent 未进任何 top 榜，无法直接判定是否 GPU-bound；submit-thread-wait 条目只能基于‘主线程等待极小’间接推断为主线程限制，confidence=medium。",
+    "suspectedAxis": "gpu",
+    "closestExistingTool": "queryMarkers/thread=1:Submit Thread + scanMetricOverFrames Gfx.PresentFrame（间接推断，无直接归因）"
+  },
+  {
+    "id": "processTasks-subconsumer-isolation",
+    "want": "frame 552 上 MapSignificanceMgr.ProcessTasks 内 11 个 ConsumeTasks_* 中具体哪几个主导 22.69ms 尖刺（当前 calltree 在 depth 10 截断未展开 ProcessTasks 子节点）",
+    "rationale": "camera-loading-storm 条目已确认 ProcessTasks 22.69ms@552 并从源码确认 11 个子消费者无每帧上限，但未隔离出具体是 ForceSubEntity/EntityTask/SubEntity/MapEntityForDestroy 中哪几个在 552 帧最重，影响建议的优先级排序。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getFrameCallTree frame 552 maxDepth 12+（本次 maxDepth 10 在 ProcessTasks 处截断）"
+  },
+  {
+    "id": "worldenv-mesh-item-mgr-source",
+    "want": "WorldEnvironmentMeshItemMgr 类与 RecycleGOTask 方法的源码定位（getSourceForSymbol 返回 not-found，未在 codegraph/map-source 索引）",
+    "rationale": "camera-recycle-burst 条目是最差两帧（54ms/48ms）的根因，但源码未索引无法看回收逻辑实现，建议只能推断‘加分帧上限/对象池’，无法指着代码说‘这里没有节流’。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getSourceForSymbol symbol=WorldEnvironmentMeshItemMgr / RecycleGOTask（均 not-found）"
+  }
+]

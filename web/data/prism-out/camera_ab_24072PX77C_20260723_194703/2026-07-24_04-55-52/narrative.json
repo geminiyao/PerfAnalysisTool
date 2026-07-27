@@ -1,0 +1,752 @@
+{
+  "runId": "camera_ab_24072PX77C_20260723_194703",
+  "overview": "整体跑在约43fps、中位帧20.74ms比16.67ms预算超24%、82%帧超标;这不是单一元凶,而是一组长尾稳态开销(渲染启动6.0ms+Update逻辑4.6ms+LateUpdate 3.9ms+UI重建1.85ms合计约16.4ms/帧)每帧雷打不动把预算吃满,再被5次同步GC、开场RecycleGOTask集中清理、主线程同步资源加载三类尖峰放大尾延迟——非GPU瓶颈(Submit Thread 57.9%时间在Semaphore上干等主线程发命令)。",
+  "rating": "weak",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "主线程稳态长尾叠满帧预算,决定帧率天花板",
+      "kind": "稳态大头",
+      "contribution": "渲染6.0+Update 4.6+LateUpdate 3.9+UI 1.85≈16.4ms/帧×600帧=9840ms累计,82%帧超16.67ms预算的根因",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "critical"
+    },
+    {
+      "rank": 2,
+      "problem": "MapSignificanceMgr单模块双重打击:全场最大逻辑开销兼最大GC分配源",
+      "kind": "稳态大头",
+      "contribution": "每帧2.36ms×600=1415ms(占p50 11%)+76959次GC分配/600帧≈128次/帧,占LuaMgr分配95%、Update分配74%,与5次同步GC强相关",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "high"
+    },
+    {
+      "rank": 3,
+      "problem": "三类尖峰放大尾延迟:同步GC+开场清理+主线程同步资源加载",
+      "kind": "低频高冲击尖峰",
+      "contribution": "5次GC×8.96ms+开场2帧RecycleGOTask×19.5ms+~10帧entityLoader_sync×8-12ms,把p99推到44.52ms",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体中位帧20.74ms超16.67ms预算24%、82%帧超标——单源可定",
+      "Submit Thread 57.9%时间在Semaphore.WaitForSignal上等主线程发命令,Gfx.WaitForPresent缺席top25 marker榜——非GPU瓶颈",
+      "MapSignificanceMgr是本次采集内全场最大单一逻辑开销(占p50 11%)+最大GC分配源(占LuaMgr分配95%)",
+      "5次同步GC每次8.96ms占帧预算53.7%——这5帧必然严重超标",
+      "frame 5/6的RecycleGOTask单帧19.5ms=预算117%——开场集中清理尖刺确定"
+    ],
+    "cannotJudge": [
+      "MapSignificanceMgr每帧2.36ms在本游戏压测下算不算合理——需历史基线或业务知识,单源判不了",
+      "5次同步GC具体由哪个函数哪次分配触发——缺逐帧per-marker GC分配字节工具,只能强相关不能定因果",
+      "URP.Render 5.16ms/帧的剔除/渲染配置是否合理——需看URP.RenderSingleCamera渲染管线配置代码,本次未取该源码",
+      "RecycleGOTask/LoaderManagerTickLoadOnFrameEnd源码未在codegraph找到,无法给行级改法建议"
+    ]
+  },
+  "ruledOut": [
+    {
+      "name": "GPU瓶颈",
+      "why": "Gfx.WaitForPresent未出现在top25 marker榜,Submit Thread 57.9%时间在等主线程发命令而非等GPU完成"
+    },
+    {
+      "name": "引擎主动限速",
+      "why": "WaitForTargetFPS仅0.413ms/帧(1.8%),105/600帧触发限速睡眠——引擎基本未限速,是跑满了仍不达标"
+    },
+    {
+      "name": "Job.Worker并行开销",
+      "why": "Canvas.GeometryJob 1.085ms在Job.Worker上并行执行(2411次/591帧),不阻塞主线程,不算主线程账"
+    },
+    {
+      "name": "后台异步IO",
+      "why": "Loading.AsyncRead等后台异步IO是正常工作,问题是主线程侧的同步等待(entityLoader_sync),不要混淆"
+    },
+    {
+      "name": "OnApplicationPause单帧尖刺",
+      "why": "仅1帧2次调用3.28ms,是应用挂起/恢复的外部事件,非游戏逻辑可优化项"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "§0 结论先行:稳态长尾叠满预算,尖峰放大尾延迟",
+      "intro": "三条结论按对整体帧率的贡献排序:稳态长尾是天花板(每帧都吃),MapSignificanceMgr是稳态里的最大单模块兼GC主源(双重打击),尖峰群放大p99(低频但单帧大冲击)。",
+      "items": [
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "① 主线程稳态长尾叠满帧预算——决定帧率天花板",
+          "narrative": "中位帧20.74ms超16.67ms预算24%、82%帧超标,根因不是某一笔大开销,而是四块稳态税每帧雷打不动叠在一起:渲染启动6.0ms(PostLateUpdate.FinishFrameRendering,主要是URP.Render的剔除+渲染前准备)、Update逻辑4.6ms、LateUpdate 3.9ms、UI重建1.85ms——合计16.4ms已经吃掉预算的98%,剩下2.4ms给GC/IO/任何突发都不够。这意味着任何一个尖峰出现都必然超预算,帧率天花板被稳态账单锁死在~43fps。详见 §3 下钻 ①。",
+          "callTree": {
+            "rootMarker": "PlayerLoop",
+            "note": "四块稳态合计16.4ms占p50 79%——剩21%空间任何尖峰都超预算"
+          },
+          "severity": "critical",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "稳态开销叠满帧预算",
+            "ascii": {
+              "content": "稳态开销叠满帧预算 (p50=20.74ms / 预算16.67ms)\n──────────────────────────────────────────────────────────────\nPostLateUpdate.FinishFrameRendering  6.00ms  ████████████        29%\nUpdate.ScriptRunBehaviourUpdate      4.61ms  █████████            22%\nPreLateUpdate.LateUpdate             3.90ms  ████████             19%\nPostLateUpdate.PlayerUpdateCanvases  1.85ms  ████                  9%\n──────────────────────────────────────────────────────────────\n稳态合计                            16.40ms  ████████████████████ 79%  ← 每帧雷打不动\n剩余给尖峰的预算空间                  4.34ms  ████                21%  ← 任何突发都超预算",
+              "caption": "稳态16.4ms×600帧=9840ms累计,是82%帧超标的根因——剩21%空间撑不住任何尖峰"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "② MapSignificanceMgr单模块双重打击——最大逻辑开销兼最大GC分配源",
+          "narrative": "Update路径下CS:AOE.LuaMgr 3.40ms/帧,其中MapSignificanceMgr一个模块就吃2.36ms(占p50 11%),是全场最大单一逻辑开销。同时它每帧分配约128次(76959次/600帧)GC对象,占LuaMgr分配总量的95%、占Update分配总量的74%——是主线程GC压力的主源,与下面第③条的5次同步GC强相关(虽缺逐帧per-marker分配数据无法直接证明触发关系)。已看源码(MapSignificanceMgr.lua:1290-1372):ProcessSignificanceTasks每帧顺序清空11个任务队列,无分帧/预算机制,ForceSubEntity路径是最大头(1.13ms+触发SubEntity_FrameExcute 51614次/423帧),正是它驱动了同步资源加载连锁。详见 §3 下钻 ②。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "ProcessTasks 2.33ms统筹11队列,ForceSubEntity 1.13ms是大头(占子树48%)"
+          },
+          "sourceInsight": "MapSignificanceMgr.lua:1290-1372 ProcessSignificanceTasks函数体顺序调用11个ConsumeTasks_*队列(ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy),每帧全跑一遍无分帧/预算机制",
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "MapSignificanceMgr子树与GC分配",
+            "ascii": {
+              "content": "MapSignificanceMgr 子树 (2.36ms/帧 / 占 p50 11%)\n────────────────────────────────────────────────────────\nProcessTasks  2.33ms  ███████████   11%  ← 11队列每帧顺序清空\n  ├─ ForceSubEntity      1.13ms  █████     5%  ← 子树大头\n  │    └─ SubEntity_FrameExcute  0.90ms  ████  4% (51614次/423帧≈122次/帧)\n  └─ 其它 10 队列合计     1.20ms  ██████    6%\n────────────────────────────────────────────────────────\nGC 分配: 76959 次 / 600 帧 ≈ 128 次/帧\n  占 CS:AOE.LuaMgr 分配总量的 95%、Update 总量的 74%\n  ← 主线程 GC 压力主源,与 5 次同步 GC 强相关",
+              "caption": "MapSignificanceMgr双重打击:逻辑最大+GC主源,ForceSubEntity路径是连锁反应起点"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "gc.collect-sync-spikes",
+            "recyclego.cleanup-spike",
+            "sync-res.loading-bursts"
+          ],
+          "title": "③ 三类尖峰放大尾延迟——把p99推到44.52ms",
+          "narrative": "稳态已吃满预算,任何尖峰都让该帧严重超标。本次有三群尖峰:(1)5次同步GC每次8.96ms(占帧预算53.7%),5帧必然超;(2)开场frame 5/6的RecycleGOTask集中清理单帧19.5ms(占预算117%),开场一波把头几帧打爆;(3)主线程同步资源加载entityLoader_sync单次8-12ms(占预算48-72%),叠加frame 199-228区间File.Open/Read/ArchiveFileSystemOpen集中IO尖刺(max 11-12ms),把若干帧拖到48ms+;jank帧552(46.83ms)由帧末LoaderManagerTickLoadOnFrameEnd 5.3ms+Instantiate驱动。三者都关联到实体创建/资源加载链路,与②的MapSignificanceMgr是同一系统的不同表现。详见 §3 下钻 ③④⑤。",
+          "callTree": {
+            "rootMarker": "GC.Collect",
+            "note": "5次同步GC×8.96ms+开场RecycleGOTask×19.5ms+entityLoader_sync×8-12ms——三类尖峰都关联到实体创建/资源加载链路"
+          },
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "尖峰群对帧预算的冲击",
+            "ascii": {
+              "content": "尖峰群 (低频但单帧大冲击)\n──────────────────────────────────────────────────────────────\nGC.Collect         5 帧    8.96ms/次  ██████████████████   54% 预算/次\nRecycleGOTask      2 帧   19.50ms/次  ██████████████████████████ 117% 预算/次 (frame 5/6 开场)\nentityLoader_sync ~10 帧  8-12ms/次   █████████████████    48-72% 预算/次\nFile.IO 尖刺      30 帧  11-12ms/次   ██████████████████   集中 frame 199-228\n──────────────────────────────────────────────────────────────\n稳态 20.74ms + 一次尖峰 8-12ms ≈ 30-33ms  ← p95=34.75ms 形态\n稳态 20.74ms + 一次尖峰 19.5ms ≈ 40+ms   ← p99=44.52ms 形态",
+              "caption": "三类尖峰叠加稳态把p99推到44.52ms——稳态是天花板,尖峰是尾延迟"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§1 采集元信息:43fps/82%帧超标",
+      "intro": "本次采集600帧,实际fps 43.5,中位帧20.74ms比16.67ms预算超24%。q1=17.1ms已超预算,说明至少75%帧超标;p95/p99分别到34.75/44.52ms,尾延迟显著。WaitForTargetFPS仅在105帧(17.5%)出现,反推82.5%帧跑超预算——引擎基本未限速,是跑满了仍不达标。",
+      "items": [
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "采集元信息表",
+          "narrative": "本次采集时段内主线程PlayerLoop均值22.96ms/帧(600帧累计约13773ms),是帧时长的决定者。Submit Thread均值23.01ms/帧但其中13.32ms是在Semaphore上等主线程——渲染线程自身实际工作仅约9.7ms/帧,本可在预算内完成,是被主线程拖到23ms。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "采集元信息",
+            "table": {
+              "headers": [
+                "指标",
+                "值"
+              ],
+              "rows": [
+                [
+                  "帧数",
+                  "600"
+                ],
+                [
+                  "fps",
+                  "43.5"
+                ],
+                [
+                  "p50",
+                  "20.74 ms"
+                ],
+                [
+                  "p95",
+                  "34.75 ms"
+                ],
+                [
+                  "p99",
+                  "44.52 ms"
+                ],
+                [
+                  "max",
+                  "54.14 ms"
+                ],
+                [
+                  "min",
+                  "9.89 ms"
+                ],
+                [
+                  "帧预算",
+                  "16.67 ms (60fps)"
+                ],
+                [
+                  "超预算帧占比",
+                  "82% 超 16.67ms"
+                ],
+                [
+                  "PlayerLoop 总耗时",
+                  "约 13773 ms (22.96ms × 600)"
+                ],
+                [
+                  "jankCount / bigJankCount",
+                  "4 / 0"
+                ],
+                [
+                  "worstFrameIndex",
+                  "143"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "帧分位数对比预算",
+          "narrative": "p50已超预算24%,p99是预算的2.67倍——尾延迟显著。q1=17.1ms已超过16.67ms预算,意味着至少75%的帧超标;结合WaitForTargetFPS仅在17.5%帧出现反推,实际超标比例约82%。bigJankCount=0说明没有超过2倍预算的灾难帧,但jankCount=4说明有4帧显著卡顿。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "帧分位数 vs 预算",
+            "ascii": {
+              "content": "帧分位数 vs 预算\n──────────────────────────────────────────────────────────\n预算  ████████████████           16.67ms\np50   ████████████████████       20.74ms  (超 24%)\np95   █████████████████████████████████   34.75ms  (超 108%)\np99   ████████████████████████████████████████████   44.52ms  (超 167%)\nmax   ████████████████████████████████████████████████████  54.14ms",
+              "caption": "p50已超预算24%,p99是预算的2.67倍——尾延迟显著"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§2 多线程宏观:主线程关键路径,渲染线程干等",
+      "intro": "本次涉及4类线程:主线程是关键路径(每帧22.96ms跑满),Submit Thread(渲染命令提交)57.9%时间在Semaphore上干等主线程发命令,Job.Worker池并行做UI几何(不阻塞主线程),Loading.PreloadManager异步加载资源(与主线程争锁)。非GPU瓶颈——Submit Thread等的是主线程不是GPU。",
+      "items": [
+        {
+          "findingIds": [
+            "render.mainthread-bound",
+            "sync-res.loading-bursts",
+            "ui.canvas-steady"
+          ],
+          "title": "多线程宏观表",
+          "narrative": "主线程是关键路径,Submit Thread是被动的——它每帧23.01ms里有13.32ms在Semaphore.WaitForSignal上等主线程发渲染指令,自身实际工作仅9.7ms(ForwardRenderPass 3.1+Async.UploadTexture 2.3+RenderLoop.Draw 2.0+Gfx.PresentFrame 1.4+ECS.DrawCmd 1.1等)本可在预算内完成。Job.Worker池上Canvas.GeometryJob并行执行不阻塞主线程。Loading.PreloadManager线程的LockPersistentManager 3.879ms/10帧是与主线程争锁的开销。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "多线程宏观",
+            "table": {
+              "headers": [
+                "线程",
+                "Run%",
+                "Sleep%",
+                "Runnable%",
+                "关键特征",
+                "定位"
+              ],
+              "rows": [
+                [
+                  "Main Thread",
+                  "≈99.8%",
+                  "—",
+                  "—",
+                  "PlayerLoop 22.96ms/帧(渲染6+逻辑8.5+UI 1.85)",
+                  "关键路径,业务/Lua/UI/渲染启动主入口"
+                ],
+                [
+                  "Submit Thread",
+                  "≈42.1%",
+                  "≈57.9%(等主线程)",
+                  "—",
+                  "Gfx.WaitForGfxCommands→Semaphore.WaitForSignal 13.32ms/帧",
+                  "渲染命令提交层,57.9%时间干等主线程发命令"
+                ],
+                [
+                  "Job.Worker",
+                  "—",
+                  "—",
+                  "—",
+                  "Canvas.GeometryJob 1.085ms(2411次/591帧)并行",
+                  "Job线程池,UI几何并行,非主线程瓶颈"
+                ],
+                [
+                  "Loading.PreloadManager",
+                  "—",
+                  "—",
+                  "—",
+                  "LockPersistentManager 3.879ms/10帧+File.Open/Read异步",
+                  "异步资源加载线程,与主线程争锁"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "主线程 vs Submit Thread 时序关系",
+          "narrative": "关键观察:Submit Thread每帧总耗时23.01ms≈主线程PlayerLoop 22.96ms,但Submit Thread有57.9%时间在等。这说明帧时长由主线程决定——主线程不喂命令,Submit Thread就空转。Gfx.WaitForPresent(等GPU完成)未出现在top25 marker榜,排除GPU瓶颈。WaitForTargetFPS仅0.413ms/帧,排除主动限速。结论:这是CPU主线程瓶颈,具体是CPU脚本+渲染启动在主线程上的串行开销,不是GPU不够快。",
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "线程每帧时间分布对比",
+            "ascii": {
+              "content": "线程每帧时间分布\n──────────────────────────────────────────────────────────\nMain Thread     ████████████████████████  22.96ms (实际工作,关键路径)\nSubmit Thread   ████████████████████████  23.01ms 总\n                ░░░░░░░░░░░░░░░░░░░░░░░░  13.32ms 等主线程 (57.9%)\n                █████████                 9.69ms  实际工作 (本可在预算内)\nJob.Worker      █▏                        ~1.09ms (并行,非主线程阻塞)\nLoading.Preload ▏                         ~3.88ms/10帧 (争锁,非持续)\n──────────────────────────────────────────────────────────\n帧时长被主线程23ms卡死,Submit Thread等的是主线程不是GPU",
+              "caption": "主线程是关键路径,Submit Thread 57.9%时间在Semaphore上干等——非GPU瓶颈"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§3 主线程一帧时间去向:callTree+红线矩阵+下钻",
+      "intro": "主线程PlayerLoop 22.96ms的去向:渲染启动6.0ms(29%,URP.Render剔除+渲染前准备)+Update逻辑4.6ms(22%,MapSignificanceMgr是大头)+LateUpdate 3.9ms(19%,GameLauncher是大头)+UI重建1.85ms(9%)+其它。红线触发清单按占p50%排序,每个红线条目独立下钻。慢帧形态:稳态22ms+一次8-12ms尖峰≈30-33ms(p95),+一次19.5ms尖峰≈40+ms(p99)。",
+      "items": [
+        {
+          "findingIds": [
+            "render.mainthread-bound",
+            "logic.mapsignificance-steady",
+            "ui.canvas-steady"
+          ],
+          "title": "红线触发清单(按占p50%排序)",
+          "narrative": "红线判定用perFrameMs占p50%(20.74ms)百分比,≥5%为红线。归并规则:URP.Render统筹ForwardRenderPass+URP.BeforeRendering(同渲染管线语义相同);MapSignificanceMgr统筹ProcessTasks/ForceSubEntity(子树几乎全量);GameLauncher.LateUpdate/LateUpdateLuaMgr/MapCameraCtrl从PreLateUpdate拆出(不同业务模块语义独立)。PreLateUpdate.ScriptRunBehaviourLateUpdate父级不列(已拆出三个子节点)。Update.ScriptRunBehaviourUpdate/CS:AOE.LuaMgr父级不列(已拆出MapSignificanceMgr)。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "table",
+            "title": "红线触发清单",
+            "table": {
+              "headers": [
+                "模块",
+                "cur ms/帧",
+                "占 p50%",
+                "红线类型",
+                "子函数热点"
+              ],
+              "rows": [
+                [
+                  "URP.Render",
+                  "5.156ms/帧",
+                  "25%",
+                  "占 p50 ≥5% 红线",
+                  "ForwardRenderPass 15% + URP.BeforeRendering 9%(同渲染管线统筹,不单独列)"
+                ],
+                [
+                  "MapSignificanceMgr",
+                  "2.358ms/帧",
+                  "11%",
+                  "占 p50 ≥5% 红线",
+                  "ProcessTasks 11% + ForceSubEntity 5% + SubEntity_FrameExcute 51614次/423帧(子树几乎全量统筹)"
+                ],
+                [
+                  "GameLauncher.LateUpdate",
+                  "2.06ms/帧",
+                  "10%",
+                  "占 p50 ≥5% 红线",
+                  "父PreLateUpdate不列;大头拆出,源码未取"
+                ],
+                [
+                  "PostLateUpdate.PlayerUpdateCanvases",
+                  "1.845ms/帧",
+                  "9%",
+                  "占 p50 ≥5% 红线",
+                  "UIEvents.WillRenderCanvases每帧重建批次+Canvas.AddRenderersToCanvas 145帧突发"
+                ],
+                [
+                  "URP.BeforeRendering",
+                  "1.841ms/帧",
+                  "9%",
+                  "占 p50 ≥5% 红线",
+                  "CullScriptable+SceneCulling+PrepareSceneNodes(剔除/渲染前准备)"
+                ],
+                [
+                  "LateUpdateLuaMgr",
+                  "1.211ms/帧",
+                  "6%",
+                  "占 p50 ≥5% 红线",
+                  "Lua LateUpdate脚本调度层"
+                ],
+                [
+                  "MapCameraCtrl",
+                  "0.917ms/帧",
+                  "4%",
+                  "临近红线",
+                  "相机控制LateUpdate(本次相机测试相关),gcAllocCount=14377"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound",
+            "logic.mapsignificance-steady"
+          ],
+          "title": "主线程callTree缩进树+因果链",
+          "narrative": "PlayerLoop 22.96ms的关键路径:PostLateUpdate.FinishFrameRendering 6.0ms(渲染启动,大头URP.Render 5.16ms)→Update.ScriptRunBehaviourUpdate 4.6ms(大头CS:AOE.LuaMgr 3.4ms→MapSignificanceMgr 2.36ms)→PreLateUpdate.ScriptRunBehaviourLateUpdate 3.9ms(大头GameLauncher.LateUpdate 2.06ms)→PlayerUpdateCanvases 1.85ms(UI重建)。因果链:主线程渲染启动6ms驱动Submit Thread开始工作,但Submit Thread有13.32ms在等主线程把全部工作做完——主线程是瓶颈,Submit Thread是被动的。MapSignificanceMgr的ForceSubEntity路径驱动SubEntity_FrameExcute 51614次/423帧,进而触发同步资源加载entityLoader_sync——这是②和③的串联链条。",
+          "severity": "high",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "主线程一帧时间去向因果链",
+            "ascii": {
+              "content": "主线程 PlayerLoop 22.96ms (关键路径,占帧99.8%)\n─────────────────────────────────────────────────────────────\n├─ PostLateUpdate.FinishFrameRendering  6.00ms  29%  渲染启动\n│    └─ URP.Render                      5.16ms  25%  🔴\n│         ├─ ForwardRenderPass          3.13ms  15%  (渲染执行)\n│         └─ URP.BeforeRendering        1.84ms   9%  (剔除/渲染前准备)\n├─ Update.ScriptRunBehaviourUpdate      4.61ms  22%  🔴\n│    └─ CS:AOE.LuaMgr                   3.40ms  16%  (Lua调度层)\n│         └─ MapSignificanceMgr         2.36ms  11%  🔴 (最大逻辑+GC主源)\n│              └─ ProcessTasks.ForceSubEntity  1.13ms  5%\n│                   └─ SubEntity_FrameExcute 51614次/423帧\n│                        └─ entityLoader_sync 同步加载 8-12ms/次\n├─ PreLateUpdate.LateUpdate             3.90ms  19%\n│    ├─ GameLauncher.LateUpdate         2.06ms  10%  🔴\n│    ├─ LateUpdateLuaMgr                1.21ms   6%\n│    └─ MapCameraCtrl                   0.92ms   4%\n└─ PostLateUpdate.PlayerUpdateCanvases  1.85ms   9%  🔴 (UI重建)\n─────────────────────────────────────────────────────────────\n      ↓ 主线程发渲染指令\nSubmit Thread 收到命令才开始 ─→ 13.32ms 在 Semaphore 上干等 (57.9%)\n                            ─→ 实际工作 9.7ms (本可在预算内)",
+              "caption": "主线程是关键路径——渲染启动6ms+逻辑8.5ms+UI 1.85ms叠满,Submit Thread被动等"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "下钻 ① URP.Render——渲染执行大头25%",
+          "narrative": "URP.Render 5.16ms/帧(占p50 25%)是最大单块稳态成本,下含ForwardRenderPass 3.13ms(15%,渲染执行)+URP.BeforeRendering 1.84ms(9%,剔除/渲染前准备)。URP.BeforeRendering 1.84ms内含CullScriptable/SceneCulling/PrepareSceneNodes等剔除工作,以及ECS.DrawShadow.Write+RenderGraphSetup。同管线不同Pass语义相同,统筹在URP.Render。优化方向:看URP.RenderSingleCamera的渲染管线配置代码——CullScriptable出现两次(单相机栈6.5ms里有多个CullScriptable),确认是否重复剔除;RenderGraphSetup(0.8ms)是否能缓存渲染图结构避免每帧重建。本次未取该源码,需看URP.RenderSingleCamera实现才能给更具体建议。",
+          "callTree": {
+            "rootMarker": "URP.Render",
+            "note": "ForwardRenderPass 15% + URP.BeforeRendering 9%——同渲染管线统筹,父PostLateUpdate.FinishFrameRendering不列"
+          },
+          "severity": "high",
+          "recommendations": [
+            "排查CullScriptable重复剔除(单相机栈内多次出现)",
+            "评估RenderGraphSetup 0.8ms能否缓存渲染图结构避免每帧重建",
+            "任何能从主线程挪到Job/渲染线程的剔除工作都能直接缩短帧时长"
+          ]
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "下钻 ② MapSignificanceMgr——最大逻辑11%+GC主源",
+          "narrative": "MapSignificanceMgr 2.36ms/帧(占p50 11%)是Update路径下最大单一逻辑模块,下含ProcessTasks 2.33ms(11队列顺序清空)+ForceSubEntity 1.13ms(5%,大头)+SubEntity_FrameExcute 0.90ms(51614次/423帧≈122次/帧)。GC分配76959次/600帧≈128次/帧,占LuaMgr分配95%——是主线程GC压力主源,与5次同步GC强相关(缺逐帧per-marker分配数据无法直接证明触发关系)。已看源码(MapSignificanceMgr.lua:1290-1372):ProcessSignificanceTasks函数体顺序调用11个ConsumeTasks_*队列,每帧全跑一遍无分帧/预算机制。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "ProcessTasks 11%统筹11队列,ForceSubEntity 5%是大头,父CS:AOE.LuaMgr/Update.ScriptRunBehaviourUpdate不列"
+          },
+          "sourceInsight": "MapSignificanceMgr.lua:1290-1372 ProcessSignificanceTasks函数体顺序调用11个ConsumeTasks_*队列(ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy),每帧全跑一遍,无分帧/预算机制——ForceSubEntity路径是最大头(1.13ms+触发SubEntity_FrameExcute 51614次/423帧)",
+          "severity": "critical",
+          "recommendations": [
+            "给ForceSubEntity每帧处理数量设上限或按预算分帧(当前是当帧把11个队列全清空)",
+            "SubEntity_FrameExcute触发同步资源加载是连锁反应源头,把实体激活的加载部分异步化或预加载",
+            "重点查ForceSubEntity/SubEntity_FrameExcute内的临时对象(Lua表/C#对象)能否池化——128次/帧分配是GC压力主源"
+          ]
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "下钻 ③ GameLauncher.LateUpdate——LateUpdate大头10%",
+          "narrative": "GameLauncher.LateUpdate 2.06ms/帧(占p50 10%)是PreLateUpdate.ScriptRunBehaviourLateUpdate 3.9ms下的大头(约占父级53%),与LateUpdateLuaMgr 1.21ms(6%,Lua LateUpdate脚本调度)和MapCameraCtrl 0.92ms(4%,相机控制,本次相机测试相关)是不同业务模块,独立拆出。注:LateBehaviourUpdate msTotal=2338但GameLauncher.LateUpdate仅1236,约一半LateUpdate工作不在此分支(未命名子节点),需看源码定位剩下1.9ms去向。本次未取GameLauncher.LateUpdate源码,无法给行级建议。",
+          "callTree": {
+            "rootMarker": "GameLauncher.LateUpdate",
+            "note": "父PreLateUpdate 19%已拆出三个子节点(GameLauncher 10%+LateUpdateLuaMgr 6%+MapCameraCtrl 4%)"
+          },
+          "severity": "high",
+          "recommendations": [
+            "看GameLauncher.LateUpdate源码定位2.06ms内部构成",
+            "约一半LateUpdate工作不在GameLauncher分支(未命名子节点),需补查去向"
+          ]
+        },
+        {
+          "findingIds": [
+            "ui.canvas-steady"
+          ],
+          "title": "下钻 ④ PlayerUpdateCanvases——UI重建9%",
+          "narrative": "PostLateUpdate.PlayerUpdateCanvases 1.85ms/帧(占p50 9%,600帧全现)是UI每帧重建批次的开销,下接UIEvents.WillRenderCanvases→UGUI.Rendering.UpdateBatches。Canvas.AddRenderersToCanvas在145帧突发1.064ms(新增UI渲染器,提示有UI元素频繁增删)。Canvas.GeometryJob 1.085ms在Job.Worker上并行(不阻塞主线程,已排除)。gcAllocCount=2936/600帧≈5次/帧,中等压力。",
+          "callTree": {
+            "rootMarker": "PostLateUpdate.PlayerUpdateCanvases",
+            "note": "UIEvents.WillRenderCanvases每帧重建批次;Canvas.AddRenderersToCanvas 145帧突发(UI元素频繁增删)"
+          },
+          "severity": "medium",
+          "recommendations": [
+            "拆分Canvas(动态UI与静态UI分离,避免静态部分每帧跟着Rebuild)",
+            "减少Layout嵌套和WillRenderCanvases触发频率",
+            "Canvas.AddRenderersToCanvas 145帧突发提示UI元素频繁增删,排查是否能复用/池化"
+          ]
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "下钻 ⑤ URP.BeforeRendering——剔除/渲染前准备9%",
+          "narrative": "URP.BeforeRendering 1.841ms/帧(占p50 9%,self 0.865ms)是渲染前的剔除/准备工作,内含CullScriptable/SceneCulling/PrepareSceneNodes+ECS.DrawShadow.Write+RenderGraphSetup(0.8ms)。与URP.Render同管线但职责不同(剔除vs渲染执行),作为URP.Render的子节点在红线清单里统筹在URP.Render行(hotspot列已标)。这里独立下钻是为了讲清剔除工作占比——9%是非小数,有优化空间。",
+          "callTree": {
+            "rootMarker": "URP.BeforeRendering",
+            "note": "CullScriptable+SceneCulling+PrepareSceneNodes+ECS.DrawShadow.Write+RenderGraphSetup 0.8ms"
+          },
+          "severity": "medium",
+          "recommendations": [
+            "CullScriptable出现两次,确认是否重复剔除",
+            "RenderGraphSetup 0.8ms能否缓存渲染图结构避免每帧重建",
+            "剔除工作考虑移到Job线程(主线程是关键路径,任何挪出都能直接缩短帧时长)"
+          ]
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "下钻 ⑥ LateUpdateLuaMgr+MapCameraCtrl——Lua LateUpdate与相机控制",
+          "narrative": "LateUpdateLuaMgr 1.21ms/帧(6%)是Lua LateUpdate脚本调度层,与Update路径的CS:AOE.LuaMgr 3.40ms对应——Lua侧每帧在Update和LateUpdate两个阶段都有调度开销,合计4.61ms。MapCameraCtrl 0.92ms/帧(4%,临近红线)是相机控制LateUpdate,本次是相机压测场景故与测试用例直接相关,gcAllocCount=14377/600帧≈24次/帧。两者都未取源码,无法给行级建议。",
+          "callTree": {
+            "rootMarker": "LateUpdateLuaMgr",
+            "note": "Lua LateUpdate脚本调度;MapCameraCtrl 4%是相机控制(测试相关),父PreLateUpdate已拆出"
+          },
+          "severity": "medium",
+          "recommendations": [
+            "看LateUpdateLuaMgr源码定位1.21ms内部哪些Lua脚本最重",
+            "MapCameraCtrl 0.92ms在相机压测场景下算合理开销,但24次/帧GC分配可查是否能优化"
+          ]
+        },
+        {
+          "findingIds": [
+            "gc.collect-sync-spikes"
+          ],
+          "title": "下钻 ⑦ GC.Collect——5次同步GC每次占预算54%",
+          "narrative": "GC.Collect在5个帧上各触发1次,self-time均值8.964ms/中位8.535ms/最大11.128ms,spikeRatio仅1.3(5次都很接近,不是偶发巨尖刺而是5次稳定的大开销)。每次GC消耗8.96ms占帧预算53.7%——这5帧即使其余逻辑正常也必然超预算。病根是持续高频分配:MapSignificanceMgr 76959次/600帧+PreLateUpdate 214266次+PostLateUpdate.PlayerSendFrameComplete 87000次。5次GC与这些持续分配在时间线上强相关,但当前数据给不了per-marker的GC分配字节,无法直接定位是哪个函数哪次分配触发了哪次GC——因果降级为强相关,confidence标medium。",
+          "callTree": {
+            "rootMarker": "GC.Collect",
+            "note": "5次×8.96ms=每次占预算53.7%;spikeRatio 1.3(5次都很接近,非单点异常)"
+          },
+          "severity": "high",
+          "recommendations": [
+            "优先按②MapSignificanceMgr建议降低每帧分配(池化、缓存、减少临时Lua表)——治本",
+            "确认是否用了增量GC(Incremental GC),若否开启可把同步GC摊到多帧——治标",
+            "排查PlayerSendFrameComplete的87000次分配(帧末协程/加载回调)是否有可复用对象",
+            "要给精确的'哪个函数分配触发GC'建议,需per-marker GC分配字节工具(本次缺失)"
+          ]
+        },
+        {
+          "findingIds": [
+            "recyclego.cleanup-spike"
+          ],
+          "title": "下钻 ⑧ RecycleGOTask——开场集中清理尖刺19.5ms",
+          "narrative": "RecycleGOTask全程262次调用分布在7个帧(平均每帧37次),但分布极不均:中位0.96ms而最大19.506ms,spikeRatio 20.3。markerSpikes显示尖刺帧正是frame 5、6(开场),msSelfP95=19.506=预算117%。调用链上它在MapSignificanceMgr.EntityTask→ProcessTask_MapObjCleanUp→Lua:ArmyCleanUp→Transform.SetParent路径下,是对象回收时重父级/禁用LOD(TBU.LOD.OnDisable)的开销。开场一波集中回收把头几帧打爆,后续60帧偶发小清理(0.282ms/帧)。注:聚合调用树里的RecycleGOTask节点(5帧/56次)只是多个调用点之一,marker聚合的262次是全调用点合计。",
+          "callTree": {
+            "rootMarker": "RecycleGOTask",
+            "note": "frame 5/6单帧19.5ms=预算117%;路径MapSignificanceMgr.EntityTask→ProcessTask_MapObjCleanUp→Lua:ArmyCleanUp→Transform.SetParent"
+          },
+          "severity": "medium",
+          "recommendations": [
+            "把开场大批量对象回收分摊到多帧(每帧预算上限N个),避免一帧清完",
+            "Transform.SetParent在清理时被调用63ms/45帧,重父级开销评估是否能批量化或延后",
+            "RecycleGOTask源码未在codegraph找到(可能是C#侧或动态生成任务),需看其实现才能给分帧回收的具体改法"
+          ]
+        },
+        {
+          "findingIds": [
+            "sync-res.loading-bursts"
+          ],
+          "title": "下钻 ⑨ entityLoader_sync——主线程同步资源加载突发8-12ms",
+          "narrative": "主线程同步资源加载是多重突发:(1)多个[res]entityLoader_sync标记单次子树总耗时7.9-11.8ms(depth 13,各1-2帧),路径是MapSignificanceMgr.ForceSubEntity→SubEntity_FrameExcute→同步加载→Loading.LockPersistentManager(主线程等锁,单点13.69ms);(2)Loading.LockPersistentManager在Loading.PreloadManager线程msSelfMean 3.879ms(10帧),与主线程争锁;(3)frame 199-228区间File.Open/Read/ArchiveFileSystemOpen同时尖刺(max 11.6-12.1ms),是一段集中IO;(4)jank帧552(46.83ms)由帧末LoaderManagerTickLoadOnFrameEnd 5.3ms(18.4%)+Instantiate.Produce驱动。这些都关联到实体创建/资源加载链路,与②MapSignificanceMgr是同一系统的不同表现。注:Loading线程本身的后台异步IO是正常工作,问题是主线程侧的同步等待(entityLoader_sync),不要混淆。",
+          "callTree": {
+            "rootMarker": "[res]entityLoader_sync",
+            "note": "单次子树7.9-11.8ms=占预算48-72%;路径ForceSubEntity→SubEntity_FrameExcute→同步加载→LockPersistentManager(主线程等锁13.69ms)"
+          },
+          "severity": "medium",
+          "recommendations": [
+            "MapSignificanceMgr创建实体触发的entityLoader_sync应改为异步预加载(实体进入视野前提前加载,而非激活时同步等)",
+            "Loading.LockPersistentManager锁竞争(主线程等加载线程13.69ms)排查是否过粗的锁粒度",
+            "frame 199-228的集中IO建议分帧/限速",
+            "LoaderManagerTickLoadOnFrameEnd源码未找到,需看其实现确认帧末同步加载是否可改异步"
+          ]
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound",
+            "gc.collect-sync-spikes",
+            "recyclego.cleanup-spike",
+            "sync-res.loading-bursts"
+          ],
+          "title": "慢帧形态差异:匀慢+尖峰叠加",
+          "narrative": "本次慢帧形态是'稳态匀慢+尖峰叠加':稳态16.4ms+其它主线程工作≈20.74ms(p50),已经超预算;一次8-12ms尖峰(GC/IO/同步加载)叠加≈30-33ms(p95=34.75ms);一次19.5ms开场清理尖峰叠加≈40+ms(p99=44.52ms);最坏帧54.14ms由多种尖峰叠加造成。bigJankCount=0说明没有超过2倍预算的灾难帧,但jankCount=4说明有4帧显著卡顿(>2×中位帧)。worstFrameIndex=143。这种'稳态叠满+尖峰放大'的形态意味着优化策略要双管齐下:降稳态抬天花板+削尖峰缩尾延迟。",
+          "severity": "info",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "慢帧形态:匀慢+尖峰叠加",
+            "ascii": {
+              "content": "慢帧形态 (稳态16.4ms + 尖峰叠加)\n──────────────────────────────────────────────────────────\n预算      ████████████████           16.67ms\np50       ████████████████████       20.74ms  (稳态+其它主线程工作)\np95       █████████████████████████████████   34.75ms  (稳态+一次8-12ms尖峰)\np99       ████████████████████████████████████████████   44.52ms  (稳态+19.5ms开场清理)\nmax       ████████████████████████████████████████████████████  54.14ms  (多尖峰叠加)\n──────────────────────────────────────────────────────────\n优化策略: ① 降稳态抬天花板(渲染/逻辑/UI) → ② 削尖峰缩尾延迟(GC/清理/同步加载)",
+              "caption": "稳态叠满+尖峰放大——优化要双管齐下:降稳态抬天花板+削尖峰缩尾延迟"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "heading": "§4 ROI优化方向:按severity+贡献排序",
+      "intro": "ROI排序用'占p50百分比+severity'。P0是MapSignificanceMgr(最大逻辑+GC主源双重打击,治本可连锁降GC尖峰);P1是URP.Render渲染管线优化、GameLauncher.LateUpdate源码定位、同步资源加载改异步;P2是RecycleGOTask开场分帧、UI Canvas拆分。优化建议基于源码/数据推理,看不到源码的如实说明。",
+      "items": [
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady",
+            "gc.collect-sync-spikes",
+            "sync-res.loading-bursts"
+          ],
+          "title": "P0 优先治:MapSignificanceMgr——一招连锁降三处尖峰",
+          "narrative": "MapSignificanceMgr是P0不是因为单一数字最吓人,而是因为它同时是:最大逻辑开销(11%)+GC主源(128次/帧分配,驱动5次同步GC)+同步资源加载触发器(SubEntity_FrameExcute驱动entityLoader_sync)。治它一个能连锁降三处尖峰——这是ROI最高的点。已看源码:11队列每帧全跑无分帧机制,ForceSubEntity路径是连锁起点。",
+          "severity": "critical",
+          "recommendations": [
+            "ForceSubEntity每帧处理数量设上限或按预算分帧(当前是当帧清空11个队列)",
+            "SubEntity_FrameExcute触发的同步资源加载改异步预加载(实体进入视野前提前加载)",
+            "ForceSubEntity/SubEntity_FrameExcute内的临时对象(Lua表/C#对象)池化——128次/帧分配是GC压力主源"
+          ],
+          "visualAsset": {
+            "type": "ascii",
+            "title": "P0 ROI散点",
+            "ascii": {
+              "content": "ROI 散点 (占 p50% × 严重度)\n──────────────────────────────────────────────────────────\nMapSignificanceMgr      11%  ██████████              P0 (兼GC主源,治本连锁降3处尖峰)\nURP.Render              25%  ████████████████████████ P0 (渲染执行大头)\nGameLauncher.LateUpdate 10%  █████████               P1 (源码未取,需定位)\nURP.BeforeRendering      9%  ████████                P1 (剔除可分帧/移Job)\nPlayerUpdateCanvases     9%  ████████                P1 (UI Canvas拆分)\nGC.Collect 5次          单次54%预算  ██████████████  P1 (治本在MapSignificanceMgr分配)\nRecycleGOTask 开场2帧   单次117%预算 ██████████████  P2 (开场分帧清理)\nentityLoader_sync 突发  单次48-72%   ████████████    P2 (改异步预加载)",
+              "caption": "P0治MapSignificanceMgr一个连锁降三处尖峰——ROI最高"
+            }
+          }
+        },
+        {
+          "findingIds": [
+            "render.mainthread-bound"
+          ],
+          "title": "P0 同步治:URP.Render渲染管线——5.16ms大头需看配置代码",
+          "narrative": "URP.Render 5.16ms/帧(25%)是最大单块稳态成本,ForwardRenderPass 3.13ms+URP.BeforeRendering 1.84ms。优化空间在剔除(CullScriptable重复?RenderGraphSetup能否缓存?)和渲染执行本身。本次未取URP.RenderSingleCamera源码,需看渲染管线配置才能给行级建议。",
+          "severity": "high",
+          "recommendations": [
+            "看URP.RenderSingleCamera渲染管线配置代码",
+            "排查CullScriptable重复剔除(单相机栈内多次出现)",
+            "RenderGraphSetup 0.8ms评估能否缓存渲染图结构避免每帧重建",
+            "剔除工作考虑移到Job线程(主线程是关键路径)"
+          ]
+        },
+        {
+          "findingIds": [
+            "sync-res.loading-bursts"
+          ],
+          "title": "P1 同步资源加载改异步预加载",
+          "narrative": "entityLoader_sync单次8-12ms占预算48-72%,主线程同步等锁13.69ms——这是主线程大忌。路径是MapSignificanceMgr创建实体时触发,与P0是同一链路。改异步预加载(实体进入视野前提前加载)可消除主线程等待。",
+          "severity": "medium",
+          "recommendations": [
+            "MapSignificanceMgr创建实体触发的entityLoader_sync改异步预加载",
+            "Loading.LockPersistentManager锁粒度排查",
+            "frame 199-228的集中IO分帧/限速",
+            "LoaderManagerTickLoadOnFrameEnd源码未找到,需看其实现"
+          ]
+        },
+        {
+          "findingIds": [
+            "logic.mapsignificance-steady"
+          ],
+          "title": "P1 GameLauncher.LateUpdate源码定位2.06ms",
+          "narrative": "GameLauncher.LateUpdate 2.06ms/帧(10%)是LateUpdate大头,但本次未取源码。约一半LateUpdate工作不在GameLauncher分支(未命名子节点),需补查去向。",
+          "severity": "medium",
+          "recommendations": [
+            "看GameLauncher.LateUpdate源码定位2.06ms内部构成",
+            "补查另一半LateUpdate工作去向(未命名子节点1.9ms)"
+          ]
+        },
+        {
+          "findingIds": [
+            "ui.canvas-steady"
+          ],
+          "title": "P2 UI Canvas拆分动态静态",
+          "narrative": "PlayerUpdateCanvases 1.85ms/帧(9%)是UI每帧重建批次,Canvas.AddRenderersToCanvas 145帧突发提示UI元素频繁增删。Canvas.GeometryJob在Job.Worker并行不阻塞主线程。",
+          "severity": "medium",
+          "recommendations": [
+            "拆分Canvas(动态UI与静态UI分离,避免静态部分每帧跟着Rebuild)",
+            "Canvas.AddRenderersToCanvas 145帧突发排查UI元素是否能复用/池化"
+          ]
+        },
+        {
+          "findingIds": [
+            "recyclego.cleanup-spike"
+          ],
+          "title": "P2 RecycleGOTask开场分帧清理",
+          "narrative": "frame 5/6单帧19.5ms=预算117%——开场集中清理尖刺。把开场大批量对象回收分摊到多帧(每帧预算上限N个)即可避免。RecycleGOTask源码未在codegraph找到,需看实现才能给具体改法。",
+          "severity": "medium",
+          "recommendations": [
+            "开场大批量对象回收分摊到多帧(每帧预算上限N个)",
+            "Transform.SetParent重父级开销评估是否能批量化或延后",
+            "看RecycleGOTask实现确认分帧回收改法"
+          ]
+        },
+        {
+          "findingIds": [
+            "gc.collect-sync-spikes"
+          ],
+          "title": "P1 GC治本在MapSignificanceMgr+确认增量GC",
+          "narrative": "5次同步GC是症状不是病根,病根是持续高频分配(主要在MapSignificanceMgr 128次/帧+PreLateUpdate+PlayerSendFrameComplete)。治本靠P0的MapSignificanceMgr分配优化,治标可开增量GC把同步GC摊到多帧。",
+          "severity": "high",
+          "recommendations": [
+            "治本:按P0建议降低MapSignificanceMgr每帧分配",
+            "治标:确认是否用了增量GC(Incremental GC),若否开启可把同步GC摊到多帧",
+            "排查PlayerSendFrameComplete的87000次分配(帧末协程/加载回调)是否有可复用对象",
+            "要精确到'哪个函数分配触发GC'需per-marker GC分配字节工具(本次缺失)"
+          ]
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "MapSignificanceMgr.ProcessSignificanceTasks 11队列分帧+ForceSubEntity子实体激活异步化+临时对象池化",
+      "benefit": "稳态省2.36ms/帧(占p50 11%)+连锁降GC尖峰(128次/帧分配→降GC触发频率)+连锁降同步加载尖峰(SubEntity_FrameExcute异步化)"
+    },
+    {
+      "priority": "P0",
+      "action": "URP.Render渲染管线配置代码定位+排查CullScriptable重复剔除+RenderGraphSetup缓存",
+      "benefit": "稳态省最多可达2-3ms/帧(剔除优化+渲染图缓存),最大单块稳态成本"
+    },
+    {
+      "priority": "P1",
+      "action": "entityLoader_sync改异步预加载+LockPersistentManager锁粒度排查",
+      "benefit": "消除主线程同步等待13.69ms单点+8-12ms/次尖峰,frame 199-228 IO集中区缓解"
+    },
+    {
+      "priority": "P1",
+      "action": "GC治本(随P0)+确认增量GC开启+PlayerSendFrameComplete 87000次分配排查",
+      "benefit": "5次同步GC×8.96ms缓解,尾延迟改善"
+    },
+    {
+      "priority": "P1",
+      "action": "GameLauncher.LateUpdate源码定位2.06ms+补查另一半未命名LateUpdate工作",
+      "benefit": "稳态省1-2ms/帧,LateUpdate 19%大头"
+    },
+    {
+      "priority": "P2",
+      "action": "RecycleGOTask开场分帧清理(每帧上限N个)+Transform.SetParent批量化",
+      "benefit": "消除frame 5/6开场19.5ms尖刺(单帧117%预算)"
+    },
+    {
+      "priority": "P2",
+      "action": "UI Canvas拆分动态静态+Canvas.AddRenderersToCanvas 145帧突发排查",
+      "benefit": "稳态省0.5-1ms/帧(UI重建9%长尾)"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM",
+    "timing": {
+      "start": 1784868952164,
+      "precheck": 0,
+      "prompt_inject": 125,
+      "cli_resolve": 0,
+      "llm_call": 735182,
+      "artifact_check": 1,
+      "json_parse": 1,
+      "provenance_check": 0,
+      "red_team": 316
+    },
+    "repairCount": 0
+  }
+}

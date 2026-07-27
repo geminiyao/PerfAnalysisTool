@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.547Z
 source: unity-cpu
 title: "AOE 已知问题：BattleHeadMgr 低端机暴增"
 tags: ["aoe","已知问题","battleheadmgr","低端机","meshui"]
+dataSource: unity
 ---
 
 **触发场景**：战斗压测。

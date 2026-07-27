@@ -1,0 +1,72 @@
+{
+  "runId": "unity-outside-stressmove",
+  "rating": "fail",
+  "headline": "几乎每一帧都超预算超过2倍，相机一动就卡出40~50毫秒的顿帧，外加两次GC同步卡顿把单帧拖到113毫秒——这不是某一个元凶，是好几股稳态开销叠加在一起，再被偶发尖峰反复捅刀子。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.90,
+  "observedP95Ms": 59.31,
+  "observedP99Ms": 95.45,
+  "observedMaxMs": 113.29,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    {
+      "name": "OnCameraMove（相机移动触发的Lua侧尖峰）",
+      "reasoning": "只在19帧里出现，但平均每次自耗时43.14ms，最大53.41ms（frame144），这19帧几乎全部落在\">60ms慢帧\"集合里（pctBinA=100%），且这些慢帧里70.37%都伴随它出现，是唯一被证实与\"极慢帧\"强相关的单一marker。"
+    },
+    {
+      "name": "CS:AOE.Outside.OutSideViewArmyLineMgr（行军线管理，稳态最大头）",
+      "reasoning": "600帧里每帧稳定吃掉2.3018ms self time，总量1381.05ms，是全程sumSelfMs最高的marker，drillDownMarker证实这2.3ms几乎全部是自身逻辑（非分摊到子节点），源码显示OnUpdate里有多个字典foreach（m_targetToEffectDict/m_armyPredictDict/m_armyPreviewDict）逐帧全量遍历。"
+    },
+    {
+      "name": "URP.RenderGraphSetup + CS:AOE.MeshUIManager（渲染与UI稳态大头）",
+      "reasoning": "两者分别稳定吃掉2.2525ms/帧和2.0762ms/帧，总量1351.49ms和1245.70ms，都已经drillDownMarker钻到叶子级（自身即末端，无法再分摊到子节点），是构成\"每帧都超预算\"这个长期基线的重要组成部分，但本身波动小、无明显异常尖峰，更像是正常渲染/UI负载而非bug。"
+    },
+    {
+      "name": "GC.Collect同步阻塞（frame519/frame483两次全屏冻结）",
+      "reasoning": "frame519单帧113.56ms（全程最慢帧），其中GC.Collect自耗时70.2ms，占该帧61.8%；frame483另一次57.48ms帧里GarbageCollector.CollectIncremental+GC.Collect合计约18.84ms占32.8%。两帧的gc_allocated_in_frame分别是8192和10240字节，都在全程min-mean区间（mean=19339.9字节），说明不是分配堆积触发，而是主动/定时的同步GC，造成的单帧冲击极端但发生频率低（600帧仅2次）。"
+    }
+  ],
+  "secondaryDrivers": [
+    "Semaphore.WaitForSignal（主线程1.74ms/帧、总量1042ms，但这是Job System的正常空闲等待，不是有效工作耗时，不应被误读为热点）",
+    "YzEntityMoveLineNtf（网络消息尖峰，77帧收到，frame273单帧14.9ms占该帧33.46%）",
+    "LuaMtGc.ExecuteMtGc（Lua多线程GC，5帧突发，frame194炸到21.59ms）",
+    "TryUnloadPending.TryUnload（资源卸载，spikeRatio高达1394，frame80炸到14.59ms，但均值仅0.11ms/帧）"
+  ],
+  "ruledOut": [
+    "渲染几何负载：triangles(mean 1.39M/max 2.0M)、batches(mean 175.5/max 248)波动幅度不算剧烈，不是慢的主因。",
+    "vsync/帧率限制：WaitForTargetFPS、Gfx.WaitForPresentOnGfxThread、URP.WaitForPresent全程mean都低于0.02ms，说明帧时是真实CPU+GPU工作量撑起来的，不是被人为限速拉长。",
+    "Gfx.PresentFrame（GPU Submit Thread呈现尖峰，frame184炸到40.17ms）：correlateFrameSets验证它与CPU侧\">60ms慢帧\"完全不重叠（pctAinB=0%,pctBinA=0%），说明是GPU/present管线层面独立的抖动，与本次分析的CPU侧卡顿无关，不纳入主因。"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "runId": "unity-outside-stressmove", "markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs" },
+      "resultDigest": "mean=44.53ms p50=41.90ms p95=59.31ms p99=95.45ms max=113.29ms@frame519，600帧全部纳入统计"
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "runId": "unity-outside-stressmove", "setA": { "kind": "slowFrames", "thresholdMs": 16.67 }, "setB": { "kind": "slowFrames", "thresholdMs": 16.67 } },
+      "resultDigest": "sizeA=600/600帧超过16.67ms预算，即pctFramesOverBudget=100%"
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "runId": "unity-outside-stressmove", "setA": { "kind": "slowFrames", "thresholdMs": 60 }, "setB": { "kind": "markerSpike", "markerName": "OnCameraMove", "minSelfMs": 10 } },
+      "resultDigest": "sizeA=27(>60ms慢帧) sizeB=19(OnCameraMove尖峰帧) intersection=19 pctAinB=70.37% pctBinA=100%"
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "runId": "unity-outside-stressmove", "frameIndex": 519, "thread": "1:Main Thread", "minMs": 1 },
+      "resultDigest": "frame519 msFrame=113.56ms，hotPath: PlayerLoop→...→Core.EndOfFrame→CS:AOE.LuaMgr(4.87ms self)→GC.Collect(70.20ms self，占66.4%总时/61.8%整帧)"
+    },
+    {
+      "tool": "queryFrameCounters",
+      "args": { "runId": "unity-outside-stressmove", "frames": [483, 484, 517, 518, 519, 520] },
+      "resultDigest": "frame519 gc_allocated_in_frame=8192字节，frame483=10240字节，均落在全程min~mean区间(mean=19339.9)，非分配堆积触发GC"
+    },
+    {
+      "tool": "queryMarkers",
+      "args": { "runId": "unity-outside-stressmove", "thread": "1:Main Thread", "nameLike": "MapManager", "limit": 10 },
+      "resultDigest": "OutSideViewArmyLineMgr sumSelfMs=1381.05(600帧) / URP.RenderGraphSetup sumSelfMs=1351.49(600帧) / MeshUIManager sumSelfMs=1245.70(600帧) / Semaphore.WaitForSignal(主线程)sumSelfMs=1042.46(600帧) / OnCameraMove sumSelfMs=819.69(仅19帧，avg43.14ms/次)"
+    }
+  ]
+}

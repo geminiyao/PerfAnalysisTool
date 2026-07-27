@@ -1,0 +1,655 @@
+{
+  "version": 1,
+  "schemaRef": "docs/frame-analysis-data-contract.md",
+  "deviceTiers": {
+    "high": {
+      "description": "高端机 — 大核频率高、内存带宽充裕；绝对 ms 阈值可略放宽，占帧比阈值为主",
+      "match": {
+        "devicePatterns": []
+      },
+      "frameBudgetMs": 16.67
+    },
+    "mid": {
+      "description": "中端机",
+      "match": {
+        "devicePatterns": []
+      },
+      "frameBudgetMs": 16.67
+    },
+    "low": {
+      "description": "低端机 — 更依赖占帧比与 spike，绝对 ms 从严",
+      "match": {
+        "devicePatterns": []
+      },
+      "frameBudgetMs": 16.67
+    },
+    "unknown": {
+      "description": "未识别机型 — 仅应用与档位无关的规则（pct-of-budget、spike、context）",
+      "frameBudgetMs": 16.67
+    }
+  },
+  "presets": {
+    "stress-battle": {
+      "matchScenePatterns": [
+        "StressTest*",
+        "*Battle*",
+        "*压测*"
+      ],
+      "defaultContext": {
+        "load": "high"
+      },
+      "enabledRuleRefs": [
+        "pct-of-budget",
+        "spike-vs-median",
+        "hard-cap"
+      ]
+    },
+    "map-pan": {
+      "matchScenePatterns": [
+        "*Drag*",
+        "*Pan*",
+        "*视野*",
+        "*滑动*"
+      ],
+      "defaultContext": {},
+      "enabledRuleRefs": [
+        "pct-of-budget",
+        "spike-vs-median",
+        "context-gated",
+        "hard-cap"
+      ]
+    },
+    "default": {
+      "matchScenePatterns": [
+        "*"
+      ],
+      "enabledRuleRefs": [
+        "pct-of-budget",
+        "spike-vs-median",
+        "hard-cap"
+      ]
+    }
+  },
+  "contextClassifiers": {
+    "camera-dragging": {
+      "description": "正在拖动/缩放视野 — MapCameraCtrl 高负载在此 context 下正常",
+      "anyPresent": {
+        "unityMarkers": [
+          "MapCameraCtrl.OnCameraGestureMove"
+        ],
+        "perfettoSlicePatterns": [
+          "OnCameraGestureMove",
+          "MapCameraCtrl.OnCameraGestureMove"
+        ]
+      },
+      "fingerprint": {
+        "weightedPresent": [
+          {
+            "pattern": "OnCameraGestureMove",
+            "weight": 3
+          },
+          {
+            "pattern": "MapSignificanceMgr",
+            "weight": 1
+          },
+          {
+            "pattern": "infiniteZoomMgr",
+            "weight": 1
+          }
+        ],
+        "minScore": 3
+      }
+    },
+    "camera-idle": {
+      "description": "未检测到拖动手势 — MapCameraCtrl 应低负载",
+      "not": "camera-dragging"
+    },
+    "battle-network-active": {
+      "description": "网络消息驱动负载（压测常见）",
+      "anyPresent": {
+        "unityMarkers": [
+          "TServer.RecvMessages",
+          "TServer.HandleMessages",
+          "TServer.DecodeMessages"
+        ],
+        "perfettoSlicePatterns": [
+          "TServer"
+        ]
+      }
+    }
+  },
+  "ruleTemplates": {
+    "pct-of-budget": {
+      "description": "模块耗时占帧预算比例（跨压力等级最稳）",
+      "expr": "seriesMs / frameBudgetMs > {maxPct}",
+      "params": {
+        "maxPct": 0.12
+      }
+    },
+    "pct-of-frame": {
+      "description": "模块耗时占当帧 PlayerLoop 总耗时比例",
+      "expr": "seriesMs / frameMs > {maxPct}",
+      "params": {
+        "maxPct": 0.15
+      }
+    },
+    "spike-vs-median": {
+      "description": "相对本 Run 该模块常态的尖刺",
+      "expr": "seriesMs > {k} * seriesMedian && seriesMs > {floorMs}",
+      "params": {
+        "k": 2.5,
+        "floorMs": 0.5
+      }
+    },
+    "low-load-strict": {
+      "description": "低负载帧上的绝对上限（例：空场景 MapCameraCtrl）",
+      "when": "frameMs < frameP50 * {frameBelowP50Ratio}",
+      "expr": "seriesMs > {maxMs}",
+      "params": {
+        "frameBelowP50Ratio": 0.85,
+        "maxMs": 2.0
+      }
+    },
+    "high-load-relaxed": {
+      "description": "高负载帧上放宽绝对上限（例：压测 MapSignificanceMgr）",
+      "when": "frameMs >= frameP95 * {frameAboveP95Ratio}",
+      "expr": "seriesMs > {maxMs}",
+      "params": {
+        "frameAboveP95Ratio": 0.9,
+        "maxMs": 3.5
+      }
+    },
+    "context-gated": {
+      "description": "仅在指定 context 下评估（占位，由 watchTarget.rules 引用 when context）"
+    },
+    "hard-cap": {
+      "description": "安全网 — 任意 context 超过即 critical",
+      "expr": "seriesMs > {maxMs}",
+      "params": {
+        "maxMs": 10.0
+      }
+    },
+    "ecs-dispatch-cap": {
+      "description": "ECS 主线程 SystemGroup 仅应分发 job，不应 >1ms 或出现 Complete 等待",
+      "when": "always",
+      "expr": "seriesMs > {maxMs}",
+      "params": {
+        "maxMs": 1.0
+      }
+    }
+  },
+  "watchTargets": [
+    {
+      "id": "TServer",
+      "knowledgeRef": "§2 网络消息收发",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "TServer.RecvMessages",
+            "TServer.DecodeMessages",
+            "TServer.HandleMessages"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "TServer"
+          ]
+        }
+      },
+      "playerLoopPhase": [
+        "Update"
+      ],
+      "callPath": [
+        "PlayerLoop",
+        "Update.ScriptRunBehaviourUpdate",
+        "BehaviourUpdate",
+        "GameLauncher.Update",
+        "Core.Update",
+        "CS:AOE.TServerManager"
+      ],
+      "contextWhen": [
+        "battle-network-active"
+      ],
+      "rules": [
+        {
+          "ref": "pct-of-budget",
+          "params": {
+            "maxPct": 0.1
+          }
+        },
+        {
+          "ref": "spike-vs-median"
+        },
+        {
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 8.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "MapSignificanceMgr",
+      "knowledgeRef": "§3 重要度管理器",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "MapSignificanceMgr"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "MapSignificanceMgr"
+          ]
+        }
+      },
+      "playerLoopPhase": [
+        "Update"
+      ],
+      "callPath": [
+        "PlayerLoop",
+        "Update.ScriptRunBehaviourUpdate",
+        "BehaviourUpdate",
+        "GameLauncher.Update",
+        "Core.Update",
+        "CS:AOE.LuaMgr"
+      ],
+      "notes": "知识库：预留最多 3ms/帧；任务多时易顶格 — 用 high-load-relaxed + pct-of-budget，不用单一 3ms",
+      "rules": [
+        {
+          "ref": "pct-of-budget",
+          "params": {
+            "maxPct": 0.12
+          }
+        },
+        {
+          "ref": "high-load-relaxed",
+          "params": {
+            "maxMs": 3.5
+          }
+        },
+        {
+          "ref": "spike-vs-median",
+          "params": {
+            "k": 2.0,
+            "floorMs": 0.3
+          }
+        },
+        {
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 6.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "BattleHeadMgr",
+      "knowledgeRef": "§3 头像管理器",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "BattleHeadMgr"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "BattleHeadMgr"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-budget"
+        },
+        {
+          "ref": "spike-vs-median"
+        }
+      ]
+    },
+    {
+      "id": "OutSideViewArmyLineMgr",
+      "knowledgeRef": "§4 行军线",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "OutSideViewArmyLineMgr"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "OutSideViewArmyLineMgr"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-budget"
+        },
+        {
+          "ref": "spike-vs-median"
+        }
+      ]
+    },
+    {
+      "id": "MapCameraCtrl",
+      "knowledgeRef": "§5 视野 / 拖动",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "MapCameraCtrl.OnLateUpdate",
+            "MapCameraCtrl.UpdateCameraPos",
+            "MapCameraCtrl.OnCameraGestureMove"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "MapCameraCtrl"
+          ]
+        }
+      },
+      "playerLoopPhase": [
+        "LateUpdate"
+      ],
+      "callPath": [
+        "PlayerLoop",
+        "Update.ScriptRunBehaviourLateUpdate",
+        "LateBehaviourUpdate",
+        "GameLauncher.LateUpdate",
+        "Core.LateUpdate",
+        "CS:AOE.LuaMgr"
+      ],
+      "rules": [
+        {
+          "when": "context.camera == idle",
+          "ref": "low-load-strict",
+          "params": {
+            "maxMs": 2.0
+          }
+        },
+        {
+          "when": "context.camera == idle",
+          "ref": "spike-vs-median"
+        },
+        {
+          "when": "context.camera == dragging",
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 15.0
+          }
+        },
+        {
+          "ref": "pct-of-frame",
+          "params": {
+            "maxPct": 0.25
+          }
+        }
+      ]
+    },
+    {
+      "id": "MeshUIManager",
+      "knowledgeRef": "§5 MeshUI",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "MeshUIManager"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "MeshUIManager"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-budget"
+        },
+        {
+          "ref": "spike-vs-median"
+        }
+      ]
+    },
+    {
+      "id": "PlayerUpdateCanvases",
+      "knowledgeRef": "§7 UGUI — 应已 MeshUI 化，不应大",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "PlayerUpdateCanvases"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "PlayerUpdateCanvases"
+          ]
+        }
+      },
+      "playerLoopPhase": [
+        "PostLateUpdate"
+      ],
+      "rules": [
+        {
+          "ref": "pct-of-budget",
+          "params": {
+            "maxPct": 0.05
+          }
+        },
+        {
+          "when": "always",
+          "ref": "low-load-strict",
+          "params": {
+            "maxMs": 1.0,
+            "frameBelowP50Ratio": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "LegacyAnimationUpdate",
+      "knowledgeRef": "§6 动画数量",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "PreLateUpdate.LegacyAnimationUpdate",
+            "LeagcyAnimationUpdate"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-budget",
+          "params": {
+            "maxPct": 0.08
+          }
+        }
+      ]
+    },
+    {
+      "id": "ParticleSystemUpdate",
+      "knowledgeRef": "§6 粒子",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "ParticleSystemBeginUpdateAll",
+            "ParticleSystemEndUpdateAll"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-budget",
+          "params": {
+            "maxPct": 0.08
+          }
+        }
+      ]
+    },
+    {
+      "id": "ECS_InitializationSystemGroup",
+      "knowledgeRef": "§8 ECS Initialization — 主线程仅分发",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "InitializationSystemGroup"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "ecs-dispatch-cap"
+        },
+        {
+          "matchChildPattern": "Complete",
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 0.5
+          },
+          "message": "主线程不应等待 job Complete"
+        }
+      ]
+    },
+    {
+      "id": "ECS_SimulationSystemGroup",
+      "knowledgeRef": "§8 ECS Simulation",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "SimulationSystemGroup"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "ecs-dispatch-cap"
+        }
+      ]
+    },
+    {
+      "id": "ECS_PresentationSystemGroup",
+      "knowledgeRef": "§8 ECS Presentation",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "PresentationSystemGroup"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "ecs-dispatch-cap"
+        }
+      ]
+    },
+    {
+      "id": "URP_WaitForPresent",
+      "knowledgeRef": "§9 渲染等 GPU",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "WaitForPresent",
+            "Gfx.WaitForPresent",
+            "WaitForPresentOnGfxThread"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "pct-of-frame",
+          "params": {
+            "maxPct": 0.2
+          }
+        },
+        {
+          "ref": "spike-vs-median"
+        }
+      ]
+    },
+    {
+      "id": "ResManager_Load",
+      "knowledgeRef": "§10 资源加载",
+      "match": {
+        "unity": {
+          "type": "marker",
+          "patterns": [
+            "ResManager",
+            "LoaderManagerdOnFrameEnd"
+          ]
+        },
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "ResManager",
+            "LoaderManager"
+          ]
+        }
+      },
+      "playerLoopPhase": [
+        "PostLateUpdate"
+      ],
+      "rules": [
+        {
+          "ref": "spike-vs-median",
+          "params": {
+            "k": 3.0
+          }
+        },
+        {
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 8.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "LuaMultiThreadGC",
+      "knowledgeRef": "§11 Lua GC",
+      "match": {
+        "perfetto": {
+          "type": "slice",
+          "patterns": [
+            "LuaMultiThreadGC",
+            "LuaMtGc.WaitGCThread"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 3.0
+          },
+          "severity": "warn"
+        },
+        {
+          "ref": "hard-cap",
+          "params": {
+            "maxMs": 10.0
+          },
+          "severity": "critical"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,238 @@
+web/server/prism/prompts/narrative-prompt.txt | 211 +++++++++++++++++++++++++-
+ 1 file changed, 208 insertions(+), 3 deletions(-)
+
+--- Changes ---
+
+web/server/prism/prompts/narrative-prompt.txt
+  @@ -7,6 +7,106 @@
+  +═══════════════════════════════════════════════════════════════
+  +【报告章节模板 · {{REPORT_TEMPLATE}} 注入】
+  +═══════════════════════════════════════════════════════════════
+  +
+  +本 prompt 是数据源无关骨架，报告章节结构通过 `{{REPORT_TEMPLATE}}` 占位符注入。
+  +启动时框架按 `ReportPipeline.reportTemplatePath` + `detectStateMode()` 选模板填入：
+  +
+  +- perfetto 多态 → perfetto-multi-state.txt（§0-§7，对照 v5.3 标杆）
+  +- perfetto 单态 → perfetto-single-state.txt（§0/§1/§2/§3/§5/§6，对照 DR-42）
+  +- simpleperf / unity 各自有对应模板
+  +
+  +**注入的模板只定义章节骨架 + 写作纪律，不是填空模板**。你按模板的章节结构组织 sections，
+  +但每个 section 的内容（intro/items/narrative）由你根据 findings 推理写，不是抄模板。
+  +
+  +★【sections 必须建全模板要求的所有章节·不许漏章】
+  +模板（{{REPORT_TEMPLATE}} 注入）定义的章节骨架，你的 sections 数组必须建全，每个 section 的 heading 以模板要求的章节标识开头（如 perfetto 模板的 §0-§7）。
+  +漏建任何一章 = 报告结构残缺。
+  +即使某章内容不多，也要建 section（intro 一句话 + 1 个 item 即可），不要跳过。
+  +
+  +★【item.visualAsset 填视觉资产·按模板要求填】
+  +模板的 §1/§2/§4/§5 等章节要求填视觉资产（表格/矩阵/ASCII 图）时，在该 section 的 item 里填 `visualAsset` 字段。
+  +visualAsset 是通用的（不硬编码 perfetto 特有概念），三种类型：
+  +- type="table"：表格（headers + rows），如 §1 采集元信息、§2 多线程宏观、§5 红线触发清单
+  +- type="matrix"：矩阵（带 levelColumn 按 confirmed/likely/suspected 上色），如 §4 降频判定矩阵
+  +- type="ascii"：ASCII 图（content + caption），如 §3 状态分布图/因果链图
+  +
+  +item.visualAsset 结构：
+  +```json
+  +{
+  +  "findingIds": ["..."],
+  +  "title": "...",
+  +  "narrative": "...",
+  +  "visualAsset": {
+  +    "type": "table",
+  +    "title": "采集元信息",
+  +    "table": { "headers": ["指标","值"], "rows": [["帧数","683"],["fps","59.8→33.1→21.4"]] }
+  +  },
+  +  "severity": "info"
+  +}
+  +```
+  +type="matrix" 时多一个 levelColumn 字段（指向 headers 里某一列，该列值是 confirmed/likely/suspected）。
+  +type="ascii" 时用 ascii 字段（不用 table）：`"ascii": {"content": "...", "caption": "..."}`。
+  +
+  +render 会把 visualAsset 渲染在 item 的 narrative 下方、callTree 上方。
+  +模板要求填视觉资产的章节，item 必须填 visualAsset——不填 = 报告缺表格/矩阵/图。
+  +
+  +═══════════════════════════════════════════════════════════════
+  +【历史教训 · lessons 回路（自动注入）】
+  +═══════════════════════════════════════════════════════════════
+  +
+  +{{MEMORY_INJECTION}}
+  +
+  +以下是历次 narrative 红队复扫沉淀的 lessons（对照 v5.3 标杆的写作缺口 + 修法）。
+  +本次写作必须吸收这些教训——如果 lesson 说"多线程覆盖不足"，本次 threadOverview 必须覆盖全线程；
+  +如果 lesson 说"callTree 没挂"，本次 critical/high topConclusion 必须给 callTree.rootMarker。
+  +（lessons 为空 = 首次跑或无历史沉淀，按模板正常写即可。）
+  +
+  +═══════════════════════════════════════════════════════════════
+  +【v5.3 few-shot 示例 · 学写法不抄内容】
+  +═══════════════════════════════════════════════════════════════
+  +
+  +以下 3 段范例从 v5.3 标杆报告提取，示范渲染选择/叙事选择/优化方向写法。
+  +**学的是写法，不是抄内容**——范例里的业务名/数字都是占位符，你写的时候用本次真实数据替换。
+  +
+  +**范例 1：四段式块（§0 结论先行，DR-41 规则 4）**
+  +```
+  +> 🔴 ① 主线程瓶颈形态：从 base 的"几乎全程在算"到 throttle 的"半睡型"——核心增量是等 GPU。
+  +>
+  +> [ASCII 柱状图：三态 Run/Sleep 对比，用 buildTriadAsciiBar 产出]
+  +>   base       ███████████████████████████████ ░░░    Run 86.94% / Sleep 12.04%
+  +>   cur        ██████████████████████████ ░░░░░░     Run 77.82% / Sleep 20.40%
+  +>   throttle   ███████████████████ ░░░░░░░░░░       Run 56.99% / Sleep 38.99%
+  +>
+  +> 关键数字：Gfx.WaitForPresent 占整 trace base 5.4% → cur 19.3% → throttle 38.1%
+  +> （Sleep 增量几乎 100% 是等 GPU）。详见 §3。
+  +```
+  +学法：引用块 + 加粗一句话 + ASCII 图 + 关键数字解读 + 详见 §X。四段缺一不可。
+  +
+  +**范例 2：callTree ├─/└─ 缩进 + 涨幅% + 标注（§5 主线程一帧时间去向）**
+  +```
+  +Core.Update  base 1.73 / cur 7.32 / throttle 8.05 ms/帧 (📈 ×4.2 → ×4.7)
+  +├─ CS:AOE.LuaMgr  base 1.00 / cur 3.80 / throttle 3.47 ms/帧 (📈 ×3.8)
+  +│  └─ LuaMgr.OnTick&UpdateSchedule  base 0.95 / cur 3.74 / throttle 3.41
+  +│     ├─ BattleHeadMgr  base ~0 / cur 1.51 / throttle 1.10 ms/帧 🔴 cur 单次 1.50ms 触红线
+  +│     └─ MapSignificanceMgr  base 0.32 / cur 1.30 / throttle 1.07 ms/帧 🟡 临近红线
+  +└─ CS:AOE.Outside.MapManager  base 0.44 / cur 2.90 / throttle 3.99 ms/帧 (📈 ×6.6 → ×9.1)
+  +```
+  +学法：├─/└─ 缩进 + [base/cur/throttle ms/帧] + 📈 涨幅倍数 + 🔴/🟡/🟢 严重程度标注。
+  +callTree 用 renderCallTreeTriad 产出，severityOf 回调由你根据 findings 判定。
+  +
+  +**范例 3：GC 归因换算（§5 Top 模块下钻，"子树 N 次 → N 次/帧"）**
+  +```
+  +GC.Alloc 业务归因（perfetto 独家，gcAllocByModule）：
+  +  base:       BattleHeadMgr 子树 0 次/帧（callTree 无该模块痕迹）
+  +  cur:        BattleHeadMgr 子树 5341 次 → 11.0 次/帧（头号 GC 源）
+  +  throttle:   BattleHeadMgr 子树 2396 次 → 5.6 次/帧
+  +```
+  +学法：子树总次数 → 除以帧数 → 次/帧。用 gcAllocToPerFrame 换算。
+  +关键：不是写"5341 次"这种 raw 数字，是写"11.0 次/帧"这种带分母的解读。
+  +
+  @@ -54,6 +154,16 @@
+  +   ★【多线程宏观章节必须覆盖 findings 里所有识别线程】
+  +   threadOverview 字段必须包含 findings 里出现过的所有线程类型（不只 UnityMain）。
+  +   每个 threadOverview 行的 runPct/sleepPct/runnablePct 从 findings 的 querySchedState evidence 取。
+  +
+  +   规则：
+  +   - findings 里 querySchedState 查过的每个线程类型，threadOverview 都要有一行
+  +   - 没有 sched 数据的线程不许编——如果 explore 没查某线程，threadOverview 里就不列（但要在 judgmentBoundary.cannotJudge 声明"X 线程未覆盖"）
+  +   - Audio/Sleep ≥99% 的线程也要列进 threadOverview，note 标"非瓶颈，Sleep ≥99%"
+  +   - 每个线程的 note 给一句话定位（如"主线程，业务/Lua/ECS 调度主入口"/"Render 命令录制层，等主线程发命令"/"RHI 直调 driver，三态 run% 单调下降"）
+  +
+   5. **跨发现串联**：发现之间的关系要讲出来。例："主线程的present等待(0.95ms/帧)在等Submit线程的Gfx.PresentFrame(8.82ms/帧)——
+      说明渲染/GPU压力本身就大，不全是CPU脚本的锅。"这种串联是模板套不出来的，是你的价值。
+   
+  @@ -80,6 +190,18 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在
+  +
+  +  ★【critical/high 的 topConclusion 必须挂 callTree 或 asciiArt】
+  +  rank 1-3 的 topConclusion（severity=critical 或 high）必须给 callTree.rootMarker 或 asciiArt。
+  +
+  +  - callTree.rootMarker 指向 findings 里查过的调用树根节点（如 "Core.Update" / "CS:AOE.Outside.MapManager" / "URP.Submit"）。
+  +    render 会重查这棵树画彩色 flame-bar，挂在核心结论表对应行下方。
+  +  - asciiArt 给文本柱状图/对比图（如三态 Run/Sleep 对比、foldChange 涨幅柱状图）。
+  +    render 原样渲染在 <pre> 块里，挂在核心结论表对应行下方。
+  +
+  +  medium/low 的可选，不强制。但 critical/high 不挂 = 结论干说无配图，对照 v5.3 §0 差距大。
+  +  示例：{"rank":1,"problem":"...","callTree":{"rootMarker":"Core.Update","note":"base 1.73 → cur 7.32 ms/帧，涨×4.2"}}
+  +        {"rank":2,"problem":"...","asciiArt":{"title":"三态 Run/Sleep 对比","content":"base ████████░░ Run 86% / Sleep 12%\ncur ██████░░░░ Run 77% / Sleep 20%","caption":"Sleep 增量几乎 100% 是等 GPU"}}
+     "judgmentBoundary": {
+       "canJudge": ["整体帧时中位数X ms,超/未超16.6ms预算", "相机移动是本次采集内离群最严重的尖峰源", "行军线是本次采集累计self最高的稳态项"],
+       "cannotJudge": ["行军线每帧2.3ms在本游戏压测下算不算正常——需历史基线或业务知识,单源判不了"]
+  @@ -97,15 +219,76 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在
+  -          "severity":"high"
+  +          "severity":"high",
+  +          "visualAsset": {
+  +            "type": "table",
+  +            "title": "行军线子模块三态对照",
+  +            "table": { "headers": ["子模块","cur ms/帧","占 p50%","涨幅"], "rows": [["OutSideViewArmyLineMgr","1.575","5.19%","×1.37"]] }
+  +          }
+           }
+         ]
+       }
+     ],
+     "prioritySummary":[
+       {"priority":"P0", "action":"行军线OnUpdate改脏标记+缓存relation", "benefit":"稳态省最多,全场第一大self"}
+  -  ]
+  -}
+  +  ],
+  +
+  +  ★【视觉资产填在 item.visualAsset 里·不填顶层字段】
+  +  模板的 §1 元信息表 → 填进对应 section item 的 visualAsset (type="table", title="采集元信息")
+  +  模板的 §2 多线程宏观表 → 填进对应 section item 的 visualAsset (type="table", title="多线程宏观")
+  +  模板的 §4 降频判定矩阵 → 填进对应 section item 的 visualAsset (type="matrix", title="降频判定矩阵", levelColumn="判定档")
+  +  模板的 §5 红线触发清单 → 填进对应 section item 的 visualAsset (type="table", title="红线触发清单")
+  +  模板的 §0/§3/§4 ASCII 图 → 填进对应 section item 的 visualAsset (type="ascii")
+  +
+  +  这些 visualAsset 是 render 层画视觉资产的来源——item 不填 visualAsset，report.html 就没有元信息表/多线程宏观表/降频矩阵/红线矩阵/ASCII 图。
+  +  sections 里的 intro/items/narrative 是叙事正文，item.visualAsset 是结构化表格/图——两者都要填，不冲突。
+  +
+  +  ★【不丢内容·视觉资产行数要够】
+  +  - 多线程宏观表必须覆盖 findings 里所有识别线程，Audio 线程池 5 个子线程各占一行（不许合并成一行）
+  +  - 红线触发清单必须细到子模块（不许只列父级 Core.Update 一行）
+  +  - 降频判定矩阵至少 4 行（bigCoreReach/中核 max-freq/R+ 被抢占/温度信号）
+  +  - ASCII 图至少 3 个（§0 三态对比/§3 因果链/§4 降频形态）
+  +  v4 退化教训：threadOverview 8→4、redlineMatrix 8→3、asciiArt 4→3 = 丢内容，不许重犯。
+  +
+  +  ★【红线清单子树归并原则·父子不同时列·递归应用·统筹与拆出互斥】
+  +  红线触发清单 visualAsset.table 的 module 列不许父子节点同时出现——违反 = 同一开销被计算两次。
+  +  归并规则（DR-41 规则 2 子树归并）**递归应用每一层**：
+  +  - 如果父模块下的子节点都比较平均（没有绝对大头）→ **统筹在父模块**，hotspot 列列前 2 个子节点，**子节点不许单独列**
+  +  - 如果父模块下有明显大头子节点 → **拆分出大头子节点**，不列父模块
+  +  - **递归**：拆分出来的大头子节点，如果它下面还有明显大头子节点，继续拆分；如果它下面子节点比较平均，就统筹在它
+  +
+  +  ★【统筹与拆出互斥·不许混用】
+  +  对同一个父模块，要么统筹（列父模块 + hotspot 列子节点），要么拆出（列大头子节点 + 不列父模块）——**不能同时列父模块和子节点**。
+  +  ❌ 反例（v4 退化重犯，混用）：列了 LuaMgr（hotspot="BattleHeadMgr + MapSignificanceMgr"）+ 又列 BattleHeadMgr.OnUpdate + 又列 MapSignificanceMgr.ProcessTasks → LuaMgr 的开销被算了两次（一次在 LuaMgr 行，一次在子节点行）
+  +  ✅ 正例（统筹）：只列 LuaMgr（hotspot="BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%"），子节点不单独列
+  +  ✅ 正例（拆出）：只列 BattleHeadMgr.OnUpdate + MapSignificanceMgr.ProcessTasks，LuaMgr 不列（因为子节点要单独拆出）
+  +
+  +  ★【红线清单归并 ≠ 下钻独立·两个维度别混】
+  +  - **红线清单**（visualAsset.table）：遵守归并规则，父子不同时列。LuaMgr 下子节点比较平均 → 统筹在 LuaMgr，子节点不单独列。
+  +  - **下钻 items**（§5 的 items，不是红线清单）：每个值得下钻的模块都可以独立下钻，**不受红线清单归并约束**。
+  +  - 即：红线清单可以只列 LuaMgr（统筹），但 §5 仍然可以独立下钻 BattleHeadMgr/MapSignificanceMgr（下钻 item 给 callTree.rootMarker）。
+  +  - ❌ 错误理解："下钻要独立 = 红线清单也要独立列子节点"——红线清单归并和下钻独立是两个维度，别混。
+  +
+  +  callTree 真实父子关系（从 Core.Update 下钻）：
+  +  ```
+  +  Core.Update
+  +  ├─ CS:AOE.LuaMgr                    ← 12.51%（大头，拆出，不列 Core.Update）
+  +  │  ├─ BattleHeadMgr.OnUpdate        ← 4.92%（LuaMgr 下的子节点）
+  +  │  └─ MapSignificanceMgr.ProcessTasks ← 3.99%（LuaMgr 下的子节点）
+  +  └─ CS:AOE.Outside.MapManager        ← 9.54%（大头，拆出，不列 Core.Update）
+  +     ├─ OutSideViewArmyLineMgr        ← 5.19%（MapManager 下的大头，拆出，不列 MapManager）
+  +     └─ BattleUIManager               ← 2.38%（MapManager 下的子节点）
+  +  ```
+  +
+  +  正确归并（递归拆大头，统筹与拆出互斥）：
+  +  - CS:AOE.LuaMgr 12.51%（hotspot="BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%"）← LuaMgr 下子节点比较平均，**统筹在 LuaMgr**，BattleHeadMgr/MapSignificanceMgr **不许单独列在红线清单**
+  +  - OutSideViewArmyLineMgr 5.19%（hotspot="CalculateVertexJob"）← MapManager 下的大头，**拆出**，MapManager 不列
+  +  - BattleUIManager 2.38% ← MapManager 下的子节点，MapManager 已被 OutSideViewArmyLineMgr 拆出替代，BattleUIManager 可独立列（它的父 MapManager 不在清单里）
+  +  - **不许同时列** LuaMgr 和 BattleHeadMgr（父子关系）
+  +  - **不许同时列** LuaMgr 和 MapSignificanceMgr（父子关系）
+  +  - **不许同时列** MapManager 和 OutSideViewArmyLineMgr（父子关系）
+  +
+  +  但"不列父模块"不等于"只列父模块"——必须细到子模块，不许只列 Core.Update 一行（v4 退化教训）。
+   
+   要求：
+   - topConclusions 严格按"对整体贡献"排序，别把只出现2帧的GC排第一；每条必须带 dimensions + judgability。
+  @@ -114,3 +297,25 @@ pctAinB/maxChildRatio 这类技术统计口径。这些是审计信息，留在
+  +
+  +═══════════════════════════════════════════════════════════════
+  +【产出溯源 · narrativeProvenance（DR-44 A2，必填）】
+  +═══════════════════════════════════════════════════════════════
+  +
+  +narrative.json 必须包含 `narrativeProvenance` 字段，标记这份 narrative 是谁产出的。
+  +渲染器（render-html）会校验 `generatedBy === "LLM"`——脚本拼的 narrative.json 会被拒绝渲染。
+  +
+  +在 narrative.json 顶层加：
+  +```json
+  +"narrativeProvenance": {
+  +  "stage": "narrative-llm",
+  +  "promptVersion": "narrative-prompt.txt@v1",
+  +  "generatedBy": "LLM"
+  +}
+  +```
+  +
+  +- `stage` 固定 `"narrative-llm"`（标记产出阶段）
+  +- `promptVersion` 固定 `"narrative-prompt.txt@v1"`（标记 prompt 版本）
+  +- `generatedBy` 固定 `"LLM"`（你是 LLM，不是脚本；脚本拼的会被拦截）
+  +
+  +漏写或写错 = 渲染器拒绝渲染这份 narrative.json。
+  +208 -3

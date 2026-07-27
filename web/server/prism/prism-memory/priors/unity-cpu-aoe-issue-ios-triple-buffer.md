@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.453Z
 source: unity-cpu
 title: "AOE 已知问题：iOS triple-buffer 死锁"
 tags: ["aoe","已知问题","ios","gpu-bound"]
+dataSource: unity
 ---
 
 **触发场景**：60fps + 静止 10s 后。

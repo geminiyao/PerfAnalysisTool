@@ -1,0 +1,56 @@
+{
+  "rating": "fail",
+  "headline": "相对 60fps 目标整体不合格：p50 41.9ms（22.4fps）超预算 2.5 倍，100% 帧超预算，头号主因是相机移动触发的 OnCameraMove 单帧尖峰（19 次每次平均 43ms），叠加同步 GC 和 GPU 呈现等待，无单一修复点能达标，需多线治理。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.92,
+  "observedP99Ms": 95.51,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": ["oncameramove.spike", "core.update.regression", "gc.collect.spike"],
+  "verdictEvidence": [
+    {
+      "tool": "queryFrameSummaryMultiState",
+      "args": {},
+      "resultDigest": {
+        "base": {"count":599,"actualFps":60,"mean":16.66,"median":16.66,"p90":16.8,"p95":16.85,"p99":16.98,"p999":22.91,"jankCount":0,"bigJankCount":0},
+        "cur": {"count":600,"actualFps":22.4,"mean":44.59,"median":41.92,"p90":50.45,"p95":59.36,"p99":95.51,"p999":113.56,"jankCount":10,"bigJankCount":0,"worstFrameIndex":519},
+        "deltas": {"mean_delta":27.93,"mean_deltaPct":167.65,"median_delta":25.26,"median_deltaPct":151.62,"p99_delta":78.53,"p99_deltaPct":462.49,"actualFps_delta":-37.6,"actualFps_deltaPct":-62.67}
+      }
+    },
+    {
+      "tool": "queryMarkersMultiState",
+      "args": {"minFoldChange":1.5,"minAbsoluteDelta":0.05,"topN":20,"sortBy":"foldChange"},
+      "resultDigest": {"topRegression":"OnCameraMove baseMsSelfMean=null curMsSelfMean=43.141 foldChange=9999 absoluteDelta=43.141 curPercentOfFrame=95.4 curCount=19 presence=appeared"}
+    },
+    {
+      "tool": "queryAggCallTreeMultiState",
+      "args": {"thread":"1:Main Thread","rootMarker":"PlayerLoop","maxDepth":4,"topChildren":8,"minMsPerFrame":0.5},
+      "resultDigest": {
+        "PlayerLoop_baseMsPerFrameTotal":16.64,"curMsPerFrameTotal":44.531,"foldChange":2.676,"delta":27.891,
+        "Core.Update_foldChange":10.548,"delta":11.658,
+        "Core.LateUpdate_foldChange":8.352,"delta":6.036,
+        "FinishFrameRendering_foldChange":1.908,"delta":5.958,
+        "Update.ScriptRunBehaviourUpdate_foldChange":8.868,"delta":12.385,
+        "PreLateUpdate.ScriptRunBehaviourLateUpdate_foldChange":6.89,"delta":7.021
+      }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {"setA":{"kind":"slowFrames","thresholdMs":33},"setB":{"kind":"markerSpike","markerName":"OnCameraMove","minSelfMs":10}},
+      "resultDigest": {"sizeA":600,"sizeB":19,"intersection":19,"pctBinA":100,"jaccard":0.0317,"note":"19次相机移动尖峰100%落在慢帧集合，强因果"}
+    },
+    {
+      "tool": "queryUnityMarkers",
+      "args": {"role":"cur","topN":20,"sortBy":"selfMs"},
+      "resultDigest": {
+        "top_selfMs": [
+          {"name":"OnCameraMove","msSelfMean":43.141,"percentOfFrame":95.4,"count":19},
+          {"name":"GC.Collect","msSelfMean":30.822,"percentOfFrame":71.5,"count":3},
+          {"name":"Gfx.PresentFrame","msSelfMean":8.8,"percentOfFrame":19.7,"count":599},
+          {"name":"ForwardRenderPass","msSelfMean":5.91,"percentOfFrame":13.3,"count":7422},
+          {"name":"Canvas.GeometryJob","msSelfMean":5.276,"percentOfFrame":11.8,"count":1869},
+          {"name":"MoveChain_SoldierMoveSystem:SoldierMoveJob (Burst)","msSelfMean":5.154,"percentOfFrame":11.6,"count":2998}
+        ]
+      }
+    }
+  ]
+}

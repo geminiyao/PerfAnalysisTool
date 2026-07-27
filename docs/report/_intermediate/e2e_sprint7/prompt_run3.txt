@@ -1,0 +1,29 @@
+TASK (non-interactive, execute immediately, do NOT ask back):
+
+I will give you a perfetto N-份对比 skeleton markdown at the path below. The skeleton already contains all numerical content (tables, ASCII bars, callTree signatures) rendered by Python. Your ONLY job is to replace every `<!-- LLM_FILL: <instruction> -->` placeholder with the narrative paragraph the instruction asks for, then write the result back to K:\AI\PerfAnalysisTool_Codebuddy\docs\report\_intermediate\e2e_sprint7\run3.md.
+
+## Input
+- Skeleton: K:\AI\PerfAnalysisTool_Codebuddy\docs\report\_intermediate\skeleton_test\triad_v3.md
+- Output:   K:\AI\PerfAnalysisTool_Codebuddy\docs\report\_intermediate\e2e_sprint7\run3.md
+- Reference 金标准 (style only, do not copy verbatim): K:\AI\PerfAnalysisTool_Codebuddy\docs\report\performance-report_perfetto_ULTIMATE_v5.3.md
+- Single-source summaries (for cross-check, optional read):   - base: web/data/results/triad_1782702063785_d3f73683/base/perfetto-profile-summary.json
+  - cur: web/data/results/triad_1782702063785_d3f73683/cur/perfetto-profile-summary.json
+  - throttle: web/data/results/triad_1782702063785_d3f73683/throttle/perfetto-profile-summary.json
+
+## Hard rules
+- DO NOT modify any markdown table at all (preserve every character including spaces, header, alignment).
+- DO NOT modify any ASCII block (the ones inside ``` ``` fences).
+- DO NOT modify the callTree indented tree (the ``` ``` block in §6.2).
+- DO NOT add any new numbers that are not already present in the skeleton (table cells / ASCII / signatures).
+- DO NOT keep `<!-- LLM_FILL: ... -->` markers in the final output — replace ALL of them.
+- DO NOT add any new section, heading, or paragraph beyond what the placeholder instructions ask.
+- DO NOT use Agent / sub-tasks / conversation summary — generate the report inline only.
+- Output Chinese, plain narrative, no emoji unless the instruction explicitly says so.
+
+## Self-check (你必须完成)
+1. After all edits, grep -c "LLM_FILL" K:\AI\PerfAnalysisTool_Codebuddy\docs\report\_intermediate\e2e_sprint7\run3.md — must return 0.
+2. Every markdown table in the skeleton MUST appear verbatim in the output.
+3. Every ASCII block in the skeleton MUST appear verbatim in the output.
+4. The §6.2 callTree indented tree MUST appear verbatim in the output.
+5. Any number you write in the narrative MUST appear elsewhere in the skeleton (i.e. you reference, never invent).
+6. Output line count should be close to or higher than skeleton line count.

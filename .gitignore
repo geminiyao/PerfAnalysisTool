@@ -35,3 +35,6 @@ unity/*.data
 # 其他临时文件
 .cost-monitor-state.json
 todo/
+
+# esbuild 预编译产物（由 explore-service.ts 自动构建）
+web/server/prism/tools.cli.bundle.js

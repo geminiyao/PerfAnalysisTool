@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gc.per-frame-allocation",
+    "want": "逐帧 gc_allocated_in_frame 真实值（本次全为 0，数据缺失）+ per-marker / per-function 的 GC 分配字节数与调用栈",
+    "rationale": "GC.Collect 5 次同步停顿（9-11ms）无法判定是分配触发还是定时/主动 GC：queryFrameCounters 返回所有帧 gc_allocated_in_frame=0（数据缺失，非分配为 0）。要定位是哪段代码累计分配触发同步 GC，需到函数级分配来源。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，且本次为 0；到不了函数级）"
+  },
+  {
+    "id": "worldenvironmeshitemmgr.internal-breakdown",
+    "want": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr 内部子操作的细粒度 Profiler 插桩（网格创建/材质替换/碰撞重建/LOD 计算等分别多少 ms）",
+    "rationale": "最差帧 143/469 的 24ms 全在这个 marker 内部，但 drillDownMarker 显示无 instrumented 子节点（leaves=[自身]），24ms 是未插桩黑盒。优化者需要知道 24ms 摊在哪些子操作上才能动手。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "drillDownMarker（钻到该 marker 即到极限，无子节点）"
+  },
+  {
+    "id": "lua.per-callback-profiling",
+    "want": "Lua 回调级 profiler / per-callback 耗时（LuaMgr.OnTick&UpdateSchedule 内部各 Lua 回调/消息处理的逐帧 ms）",
+    "rationale": "LuaMgr.OnTick&UpdateSchedule 在 frame 552 等 6 帧 totalMs 飙到 8-25ms，但 self 仅 0.1ms、子调用未插桩（callTree children 空），无法定位是哪个 Lua 回调在集中执行。需 Lua 级 instrumentation。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getFrameCallTree / drillDownMarker（到 LuaMgr.OnTick&UpdateSchedule 即止，C# 侧看不到 Lua 内部）"
+  },
+  {
+    "id": "camera.per-frame-state",
+    "want": "逐帧相机状态/移动距离/A-B 标签（每帧相机位置、是否移动、A/B 态标识）",
+    "rationale": "2 帧周期性（PlayerLoop/WaitForTargetFPS/URP/LuaMgr 四个 marker autocorr lag-2 0.55-0.71 交叉验证）推测与相机 AB 测试每帧交替状态有关，但无 per-frame 相机状态数据无法确证触发源。需该数据才能定位 heavy/light 交替根源。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "scanMetricOverFrames（给出 autocorr 统计但无 per-frame 相机状态）"
+  }
+]

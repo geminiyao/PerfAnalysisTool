@@ -20,7 +20,7 @@ import { loadMemory } from './prism-memory.js';
 import type { DataRequest } from './types.js';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PROMPT_TEMPLATE_PATH = path.join(MODULE_DIR, 'prompts', 'explore-prompt.txt');
+const PROMPT_TEMPLATE_PATH = path.join(MODULE_DIR, 'prompts', 'unity-explore-prompt.txt');
 
 let passCount = 0;
 let failCount = 0;
@@ -103,7 +103,7 @@ console.log('\n[3] empty memory root returns empty injection block');
 
 // ─────────────────────────── 4. F2 免责说明在位 ─────────────────────
 
-console.log('\n[4] explore-prompt.txt contains F2 disclaimer');
+console.log('\n[4] unity-explore-prompt.txt contains F2 disclaimer');
 {
   const template = fs.readFileSync(PROMPT_TEMPLATE_PATH, 'utf-8');
   assert(

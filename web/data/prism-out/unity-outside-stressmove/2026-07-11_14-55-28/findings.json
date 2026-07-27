@@ -1,0 +1,338 @@
+[
+  {
+    "id": "baseline.main.overbudget",
+    "title": "全程基线超预算",
+    "conclusion": "这次采集不是偶尔卡一下，而是每一帧都跑不进 60fps 预算：中位帧已经 41.90ms，连 30fps 线也全程没守住。主要问题是脚本更新、地图/行军线、MeshUI 和 URP 渲染管线一起把基线垫高。",
+    "severity": "critical",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs"},
+        "resultDigest": {"frameCount": 600, "presentFrames": 600, "mean": 44.53066216786703, "p50": 41.89875030517578, "p95": 59.309844970703125, "p99": 95.44776153564453, "max": 113.28797149658203, "maxFrameIndex": 519}
+      },
+      {
+        "tool": "correlateFrameSets",
+        "args": {"setA": {"kind": "slowFrames", "thresholdMs": 16.67}, "setB": {"kind": "slowFrames", "thresholdMs": 16.67}},
+        "resultDigest": {"sizeA": 600, "sizeB": 600, "intersection": 600, "pctAinB": 100, "pctBinA": 100}
+      },
+      {
+        "tool": "correlateFrameSets",
+        "args": {"setA": {"kind": "slowFrames", "thresholdMs": 33.33}, "setB": {"kind": "slowFrames", "thresholdMs": 33.33}},
+        "resultDigest": {"sizeA": 600, "sizeB": 600, "intersection": 600, "pctAinB": 100, "pctBinA": 100}
+      },
+      {
+        "tool": "aggregateSubtree",
+        "args": {"thread": "1:Main Thread", "topN": 10, "fanoutThreshold": 0.6, "minTotalMsPerFrame": 2},
+        "resultDigest": {"Core.Update.subtreeMsPerFrame": 12.879, "URP.RenderSingleCamera.subtreeMsPerFrame": 10.64, "Core.LateUpdate.subtreeMsPerFrame": 6.857, "LuaMgr.OnTick&UpdateSchedule.subtreeMsPerFrame": 6.755, "CS:AOE.Outside.MapManager.subtreeMsPerFrame": 6.139}
+      }
+    ],
+    "reasoning": "60fps 预算是 16.67ms，但 PlayerLoop 的 p50 为 41.89875030517578ms、p99 为 95.44776153564453ms；correlateFrameSets 显示 600/600 帧超过 16.67ms，且 600/600 帧也超过 33.33ms。aggregateSubtree 进一步说明它不是单点等待造成的，而是 Core.Update 12.879ms/帧、URP.RenderSingleCamera 10.64ms/帧、Core.LateUpdate 6.857ms/帧、Lua 调度和地图管理共同构成稳定高基线。",
+    "recommendation": "优先按稳定基线拆账，而不是先追单个最大尖峰：先压 LuaMgr/MapSignificanceMgr、MapManager/OutSideViewArmyLineMgr/MUI_UpdateUIPos、MeshUIManager 和 URP.RenderSingleCamera。已经对这些主因做了 drillDown；URP.RenderGraphSetup 源码无法通过 getSourceForSymbol 锚定，建议先用渲染特性/相机栈/RenderGraph pass 开关做 A/B 验证，避免直接猜是 GPU 或 drawcall。",
+    "selfCritique": "已按广度扫描得到候选，再对进入主因的 Core/Lua/MapManager/URP/MeshUI 做 drillDown。严重度按 600/600 帧超 16.67ms 和 600/600 帧超 33.33ms 判为 critical，不用单个尖峰放大结论。",
+    "symbols": ["PlayerLoop", "Core.Update", "URP.RenderSingleCamera", "CS:AOE.LuaMgr", "CS:AOE.Outside.MapManager", "CS:AOE.MeshUIManager"],
+    "tags": ["baseline", "over-budget", "spread-cost"]
+  },
+  {
+    "id": "camera.move.spike",
+    "title": "相机移动巨型尖峰",
+    "conclusion": "相机移动是最明显的交互型卡顿源：OnCameraMove 只出现 19 帧，但每次出现平均自耗时 43.14ms，最重一帧把整帧推到 96.47ms。玩家拖动或缩放地图时会直接感到顿一下。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "queryMarkers",
+        "args": {"thread": "1:Main Thread", "sortBy": "selfMs", "topN": 20},
+        "resultDigest": {"markerName": "OnCameraMove", "sumSelfMs": 819.6865473735088, "presentInFrames": 19, "avgSelfMsPerPresentFrame": 43.14139723018467, "maxSelfMs": 53.4142649062851, "maxSelfFrameIndex": 144}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "OnCameraMove", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 19, "p99": 49.87273307880969, "max": 53.4142649062851, "maxFrameIndex": 144, "burstFramesTotal": 18}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 144, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 1},
+        "resultDigest": {"msFrame": 96.4729995727539, "MapCameraCtrl.UpdateCameraPos.totalMs": 56.320674896240234, "MapCameraCtrl.UpdateCameraPos.pctOfFrame": 58.37972815779062, "Core.LateUpdate.totalMs": 61.468231201171875}
+      },
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "MapCameraCtrl.UpdateCameraPos", "thread": "1:Main Thread", "maxDepth": 8, "minMsPerFrame": 0.3, "topPerLevel": 8},
+        "resultDigest": {"rootTotalMsPerFrame": 2.665, "infiniteZoomMgr_OnOutsideCameraMove.totalMsPerFrame": 1.9972, "InfiniteZoomMgr.PostCameraMoveScale.totalMsPerFrame": 1.7459, "OnCameraMove.selfMsPerFrame": 1.3661, "OnCameraMove.presentFrames": 19}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "MapCameraCtrl.UpdateCameraPos", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Scripts/.Lua/Outside/Map/Visual/MapCameraCtrl.lua", "startLine": 623, "endLine": 666, "calls": ["self:OnCameraPosChanged()", "mgr.infiniteZoomMgr:OnOutsideCameraMove(self.cameraCtrl.CameraSize)", "mgr.evt:Post(OutsideEvt.CameraZoom, self.cameraCtrl.CameraSize)"]}
+      }
+    ],
+    "reasoning": "OnCameraMove 的总量并不覆盖所有慢帧，但它是强交互尖峰：presentInFrames 只有 19，却累计 self 819.6865473735088ms；frame144 的 hot path 显示卡顿落在 LateUpdate→LuaMgr→MapCameraCtrl.UpdateCameraPos，UpdateCameraPos total 56.320674896240234ms，占该帧 58.37972815779062%。drillDown 到 MapCameraCtrl.UpdateCameraPos 后，OnCameraMove 是可见叶子，说明当前 marker 粒度已经到数据极限。",
+    "recommendation": "源码显示 UpdateCameraPos 已有 hasCameraMoved、CheckCameraMoveInterval 和 zoomMoveDirty 逻辑，但 zoomMoveDirty 时仍会调用 infiniteZoomMgr:OnOutsideCameraMove 并广播 OutsideEvt.CameraZoom。不要简单再包一层粗暴降频；应先把 OnCameraMove 下的监听者或 InfiniteZoomMgr.PostCameraMoveScale 子任务补采样拆开，然后把只受缩放层级变化影响的工作从每次 camera move 中拆出来，只在层级/可见性真正变化时执行。",
+    "selfCritique": "反例审查显示 19 个 OnCameraMove 尖峰全部在慢帧内，但慢帧有 600 帧，因此它不是全局基线主因；严重度从 critical 下调为 high。深度审查已 drillDown 到 MapCameraCtrl.UpdateCameraPos 和 OnCameraMove 叶子，源码也验证了触发路径。",
+    "symbols": ["OnCameraMove", "MapCameraCtrl.UpdateCameraPos", "InfiniteZoomMgr.PostCameraMoveScale", "infiniteZoomMgr_OnOutsideCameraMove"],
+    "tags": ["spike", "camera", "tail-latency", "lua"]
+  },
+  {
+    "id": "gc.sync.collect",
+    "title": "同步GC炸帧",
+    "conclusion": "采集中出现了同步 GC 的硬卡：最差一帧 GC.Collect 单独吃掉 70.20ms，占整帧 61.82%。这不是当帧突然大量分配触发的，更像累计到阈值或主动触发的回收。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "GC.Collect", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 3, "max": 70.20452880859375, "maxFrameIndex": 519, "burstFrames": [483, 519], "burstFramesTotal": 2}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 519, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 1},
+        "resultDigest": {"msFrame": 113.55999755859375, "Core.EndOfFrame.totalMs": 75.40619659423828, "CS:AOE.LuaMgr.totalMs": 75.3047866821289, "GC.Collect.selfMs": 70.20452880859375, "GC.Collect.pctOfFrame": 61.82153074842239}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 483, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 5},
+        "resultDigest": {"msFrame": 57.47800064086914, "GarbageCollector.CollectIncremental.totalMs": 18.84390640258789, "GarbageCollector.CollectIncremental.selfMs": 3.50994873046875, "GC.Collect.selfMs": 15.33395767211914, "GC.Collect.pctOfFrame": 26.677959395156986}
+      },
+      {
+        "tool": "queryFrameCounters",
+        "args": {"frames": [480, 481, 482, 483, 484, 518, 519, 520, 144, 273, 80, 22]},
+        "resultDigest": {"frame483.gc_allocated_in_frame": 10240, "frame519.gc_allocated_in_frame": 8192, "frame519.total_used_memory": 716310528, "frame519.gc_reserved_memory": 105066496}
+      },
+      {
+        "tool": "queryFrameCounters",
+        "args": {},
+        "resultDigest": {"gc_allocated_in_frame.mean": 19339.9, "gc_allocated_in_frame.p95": 74752, "gc_allocated_in_frame.max": 265216, "gc_allocated_in_frame.maxFrame": 256}
+      }
+    ],
+    "reasoning": "GC.Collect 只出现 3 帧，但 frame519 单次 self 70.20452880859375ms，直接解释最差帧的主体；frame483 也有 GC.Collect 15.33395767211914ms。queryFrameCounters 显示 frame519 当帧 gc_allocated_in_frame 为 8192 bytes、frame483 为 10240 bytes，低于全程 p95 74752 bytes，因此不能把结论写成“当帧分配尖峰导致 GC”。",
+    "recommendation": "先查 EndOfFrame/LuaMgr 是否存在主动 GC 或 Lua/C# 桥接触发的回收策略；再补 per-marker 分配归因，定位长期累积分配源。现有数据只能证明同步 GC 是卡顿直接原因，不能证明具体哪个业务函数在分配。",
+    "selfCritique": "证据审查补了 frame483/frame519 的调用树和计数器，没有用全程分配峰值 frame256 去解释 GC 帧。严重度按单帧实际贡献为 high，但因只确认少数帧出现，没有排到稳定基线之前。",
+    "symbols": ["GC.Collect", "GarbageCollector.CollectIncremental", "CS:AOE.LuaMgr", "Core.EndOfFrame"],
+    "tags": ["gc", "spike", "tail-latency", "memory"]
+  },
+  {
+    "id": "network.move-line.ntf",
+    "title": "移动线消息尖峰",
+    "conclusion": "网络消息 YzEntityMoveLineNtf 偶发把主线程打穿：最重一帧消息处理自耗时 14.90ms，整条 TServerManager 路径吃掉 22.31ms。它像是一次批量移动线更新，没有分帧消化。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanPeakMarkers",
+        "args": {"thread": "1:Main Thread", "topN": 25, "minSpikeRatio": 3, "excludeWaits": true},
+        "resultDigest": {"markerName": "YzEntityMoveLineNtf", "peakFrameSelf": 14.8995, "peakFrame": 273, "avgWhenPresent": 1.9714, "presentFrames": 77, "spikeRatio": 7.56}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "YzEntityMoveLineNtf", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 77, "p95": 1.0474969747592695, "p99": 9.61094006820349, "max": 14.899459481821395, "maxFrameIndex": 273, "burstFramesTotal": 9, "autocorr.bestLag": 5, "autocorr.coefficient": 0.3199797675643897}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 273, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 2},
+        "resultDigest": {"msFrame": 66.66999816894531, "CS:AOE.TServerManager.totalMs": 22.30843734741211, "TServer.HandleMessages.totalMs": 16.967761993408203, "YzEntityMoveLineNtf.selfMs": 13.256014491518727, "YzEntityMoveLineNtf.totalMs": 14.156198501586914, "YzEntityMoveLineNtf.pctOfFrame": 21.233236673734947}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "YzEntityMoveLineNtf", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Scripts/.Lua/Outside/Map/Util/NetMsgPostProcesser.lua", "startLine": 122, "endLine": 133, "calls": ["pairs(msg.fullUpdateLine)", "WorldCoordFormatUtil.FormatWorldPosition_MoveAttr(lineAtt)"]}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "WorldCoordFormatUtil.FormatWorldPosition_MoveAttr", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Scripts/.Lua/Outside/Map/Util/WorldCoordFormatUtil.lua", "startLine": 156, "endLine": 194, "calls": ["FormatWorldPositionArray", "TblUtil.Clone(coordPath.xArray)", "TblUtil.Clone(coordPath.yArray)", "pairs_safe(portalPathPoint)"]}
+      }
+    ],
+    "reasoning": "scanPeakMarkers 把 YzEntityMoveLineNtf 排在非等待尖峰第一位；frame273 调用树确认它在 TServer.HandleMessages 下，单帧 total 14.156198501586914ms，占帧 21.233236673734947%。源码显示 handler 对 msg.fullUpdateLine 全量 pairs 遍历，并对 pathPoint 调 FormatWorldPosition_MoveAttr；后者会 FormatWorldPositionArray，并 Clone xArray/yArray。",
+    "recommendation": "把 YzEntityMoveLineNtf 从“收到即全量处理”改成可限额的队列处理，至少对 fullUpdateLine 按条数或路径点数分帧；同时审查 TblUtil.Clone(coordPath.xArray/yArray) 是否必须复制，若只是格式化后读用，应减少数组克隆或复用缓冲。需要补消息 payload 大小，才能给出每帧处理上限。",
+    "selfCritique": "深度审查已从 TServerManager 钻到具体消息 handler 和坐标格式化函数；严重度按 frame273 的 21.233236673734947% 帧贡献定为 high。统计审查注意到它只有 77 个 presentFrames，因此没有把它写成全局基线主因。",
+    "symbols": ["YzEntityMoveLineNtf", "TServer.HandleMessages", "WorldCoordFormatUtil.FormatWorldPosition_MoveAttr"],
+    "tags": ["network", "spike", "lua", "message"]
+  },
+  {
+    "id": "lua.mapsignificance.entitytask",
+    "title": "重要性任务常驻重",
+    "conclusion": "MapSignificanceMgr 是 Lua 更新里的稳定大头：平均每帧 3.99ms，p95 到 6.18ms，最坏一帧 22.49ms。它主要花在实体 add/refresh/cleanup 任务上，不是一个空壳父节点。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "CS:AOE.LuaMgr", "thread": "1:Main Thread", "maxDepth": 6, "minMsPerFrame": 0.3, "topPerLevel": 6},
+        "resultDigest": {"rootTotalMsPerFrame": 10.6905, "LuaMgr.OnTick&UpdateSchedule.totalMsPerFrame": 6.7549, "MapSignificanceMgr.totalMsPerFrame": 3.9938, "MapSignificanceMgr.EntityTask.totalMsPerFrame": 3.5737, "MapSignificanceMgr.ProcessTask_MapEntityAdd.totalMsPerFrame": 1.5462, "MapSignificanceMgr.ProcessTask_MapObjRefresh.totalMsPerFrame": 1.1977, "MapSignificanceMgr.ProcessTask_MapObjCleanUp.totalMsPerFrame": 0.4696}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "MapSignificanceMgr", "thread": "1:Main Thread", "metric": "totalMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 3.993798855319619, "p50": 3.6862499713897705, "p95": 6.18468713760376, "p99": 9.0131254196167, "max": 22.48979377746582, "maxFrameIndex": 321, "burstFramesTotal": 9}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 321, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 5},
+        "resultDigest": {"msFrame": 59.402000427246094, "Core.Update.totalMs": 29.19791603088379, "CS:AOE.LuaMgr.totalMs": 25.413280487060547, "MapSignificanceMgr.totalMs": 22.48979377746582, "MapSignificanceMgr.ProcessTasks.totalMs": 22.225521087646484, "MapSignificanceMgr.ProcessTasks.pctOfFrame": 37.41544211944121}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "MapSignificanceMgr.ProcessTasks", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "resolvedVia": "map-source", "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua", "startLine": 1206, "endLine": 1248, "observedLogic": ["ReadyForProcessTask", "isDynamicMode", "_commonTaskLinkedList:Length()", "_localResTaskLinkedList:Length()", "headUITaskCount > 10", "localResTaskCount > 10"]}
+      }
+    ],
+    "reasoning": "LuaMgr drillDown 证明 MapSignificanceMgr 不是父级包装：EntityTask 平均 3.5737ms/帧，其中 MapEntityAdd 1.5462ms/帧、MapObjRefresh 1.1977ms/帧、MapObjCleanUp 0.4696ms/帧。frame321 反例检查显示它确实能单帧放大到 22.48979377746582ms，占帧 37.41544211944121%。",
+    "recommendation": "优先检查 MapEntityAdd 和 MapObjRefresh 的任务预算与合并策略。源码附近已经有动态模式和队列长度阈值判断，应验证 PrepareTaskDuraion、headUITaskCount/localResTaskCount 阈值是否在压测下允许单帧过量消化；优化方向应是控制每帧任务预算、合并同实体重复刷新，而不是只减少 Profiler marker。",
+    "selfCritique": "按深度要求从 LuaMgr 钻到 MapSignificanceMgr.EntityTask 的叶子级任务；严重度按 600 帧常驻均值 3.993798855319619ms 和 frame321 的 22.48979377746582ms 双重贡献判 high。源码是 interval-marker 附近代码，因此建议限定在任务预算/队列策略，不臆测具体业务循环。",
+    "symbols": ["CS:AOE.LuaMgr", "MapSignificanceMgr", "MapSignificanceMgr.EntityTask", "MapSignificanceMgr.ProcessTasks", "MapSignificanceMgr.ProcessTask_MapEntityAdd", "MapSignificanceMgr.ProcessTask_MapObjRefresh"],
+    "tags": ["lua", "spread-cost", "baseline", "spike"]
+  },
+  {
+    "id": "urp.rendergraph.baseline",
+    "title": "URP主线程过重",
+    "conclusion": "URP.RenderSingleCamera 每帧平均 10.64ms，单它就吃掉了 60fps 预算的大半。成本分散在 RenderGraphSetup、透明主渲染、AfterRendering 和 BeforeRendering，不是一个单独 pass 能解释完。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "URP.RenderSingleCamera", "thread": "1:Main Thread", "metric": "totalMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 10.639776072303453, "p50": 9.609062194824219, "p95": 16.739896923303604, "p99": 23.405103862285614, "max": 29.7683325111866, "maxFrameIndex": 22, "autocorr.bestLag": 7, "autocorr.coefficient": 0.34777247601545885}
+      },
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "URP.RenderSingleCamera", "thread": "1:Main Thread", "maxDepth": 6, "minMsPerFrame": 0.3, "topPerLevel": 6},
+        "resultDigest": {"rootTotalMsPerFrame": 10.6398, "URP.MainRenderingTransparent.totalMsPerFrame": 2.9763, "URP.AfterRendering.totalMsPerFrame": 2.5925, "URP.RendererSetup.totalMsPerFrame": 2.3372, "URP.BeforeRendering.totalMsPerFrame": 1.8495, "URP.RenderGraphSetup.selfMsPerFrame": 2.2525, "Semaphore.WaitForSignal.selfMsPerFrame": 0.9314}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "URP.RenderGraphSetup", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 2.2524781036314865, "p50": 2.202290950343013, "p95": 2.6079700738191605, "p99": 3.5790100507438183, "max": 3.8767189513891935, "maxFrameIndex": 538}
+      },
+      {
+        "tool": "queryFrameCounters",
+        "args": {},
+        "resultDigest": {"batches.mean": 175.5, "batches.p95": 212, "batches.max": 248, "set_pass_calls.mean": 145.6, "set_pass_calls.p95": 172, "triangles.mean": 1387902.3, "triangles.p95": 1846272, "triangles.max": 1995776}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "URP.RenderGraphSetup", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": false, "resolvedVia": "none", "reason": "symbol not in codegraph nor map-source"}
+      }
+    ],
+    "reasoning": "URP.RenderSingleCamera 的 p50 为 9.609062194824219ms、p95 为 16.739896923303604ms，说明它本身经常接近或超过整帧预算。drillDown 显示最大子项为 MainRenderingTransparent 2.9763ms/帧、AfterRendering 2.5925ms/帧、RendererSetup 2.3372ms/帧、BeforeRendering 1.8495ms/帧，RenderGraphSetup self 2.2525ms/帧是稳定成本。queryFrameCounters 提供渲染负载背景，但不能单独证明全部 URP CPU 成本来自 batches 或 triangles。",
+    "recommendation": "先从可开关的渲染特性、透明队列、相机栈和 RenderGraph setup 做 A/B；每次改动用 URP.RenderSingleCamera、URP.RenderGraphSetup、URP.MainRenderingTransparent 复测。getSourceForSymbol 无法锚定 URP.RenderGraphSetup 源码，因此这里不对具体代码做函数级建议。",
+    "selfCritique": "深度审查已 drillDown 到 URP 子 pass 和叶子 marker；统计审查没有把 frame22 的最坏值当成常态，而以 p50/p95 和每帧 presentFrames=600 判定稳定高成本。源码缺失已在建议中明说。",
+    "symbols": ["URP.RenderSingleCamera", "URP.RenderGraphSetup", "URP.MainRenderingTransparent", "URP.AfterRendering", "URP.BeforeRendering"],
+    "tags": ["rendering", "urp", "baseline", "spread-cost"]
+  },
+  {
+    "id": "map.armyline.meshui.baseline",
+    "title": "行军线和MeshUI常驻",
+    "conclusion": "地图侧还有两个常驻成本：行军线管理自耗时平均 2.30ms/帧，MeshUIManager 平均 2.08ms/帧。它们单看不像尖峰，但每帧都在吃预算。",
+    "severity": "medium",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "CS:AOE.Outside.OutSideViewArmyLineMgr", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 2.3017559100628326, "p50": 2.2848949382896535, "p95": 2.7598380171402823, "p99": 3.3441709124017507, "max": 6.2798394713317975, "maxFrameIndex": 223}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "CS:AOE.MeshUIManager", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 2.0761745852510165, "p50": 2.003697948734043, "p95": 3.3304119945969433, "p99": 3.989734356495319, "max": 4.7772339167422615, "maxFrameIndex": 324, "autocorr.coefficient": 0.5910986851730865}
+      },
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "CS:AOE.Outside.MapManager", "thread": "1:Main Thread", "maxDepth": 6, "minMsPerFrame": 0.3, "topPerLevel": 6},
+        "resultDigest": {"rootTotalMsPerFrame": 6.1394, "CS:AOE.Outside.OutSideViewArmyLineMgr.totalMsPerFrame": 2.8385, "CS:AOE.Outside.OutSideViewArmyLineMgr.selfMsPerFrame": 2.3018, "MUI_UpdateUIPos.selfMsPerFrame": 1.1448, "OutsideLineCtrl:CalculateVertexJob (Burst).selfMsPerFrame": 0.5323, "CS:AOE.Outside.WorldEnvironmentMeshItemMgr.selfMsPerFrame": 0.313}
+      },
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "CS:AOE.MeshUIManager", "thread": "1:Main Thread", "maxDepth": 6, "minMsPerFrame": 0.3, "topPerLevel": 6},
+        "resultDigest": {"rootTotalMsPerFrame": 2.0858, "rootSelfMsPerFrame": 2.0762, "leaves": ["CS:AOE.MeshUIManager"]}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "CS:AOE.MeshUIManager", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Scripts/CS/MeshUI/MeshUIManager.cs", "observedOnLateUpdateCalls": ["camera.OnLateUpdate", "dynamicAtlas.OnUpdate", "eventSystem.OnLateUpdate", "animation.OnUpdate", "layouts.OnUpdate", "controls.OnLateUpdate", "renderers.OnUpdate", "keywords.OnLateUpdate"]}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "CS:AOE.Outside.OutSideViewArmyLineMgr", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs", "observedFields": ["m_pendingCreateQueue", "m_pendingDeleteQueue", "m_pendingEntityIds", "m_chaserTickIndex", "m_chaserIDList"]}
+      }
+    ],
+    "reasoning": "OutSideViewArmyLineMgr 和 MeshUIManager 都 presentInFrames=600，属于稳定预算占用。MapManager drillDown 显示行军线 total 2.8385ms/帧，其中 own self 2.3018ms/帧，另有 CalculateVertexJob 0.5323ms/帧；BattleUIUpdate 下的 MUI_UpdateUIPos 也有 1.1448ms/帧。MeshUIManager drillDown 无法继续拆分，所有 2.0762ms/帧都落在自身 marker。",
+    "recommendation": "行军线方向：源码已有 pendingCreateQueue/pendingDeleteQueue 和 pendingEntityIds，建议验证压测下这些队列是否真的限制每帧创建/删除量，并把每帧固定自耗时拆到更细 marker。MeshUI 方向：源码 OnLateUpdate 连续跑 camera、dynamicAtlas、eventSystem、animation、layouts、controls、renderers、keywords；应打开或补充这些子系统采样，否则只能知道 MeshUI 贵，无法知道是布局、动态图集还是渲染器在贵。",
+    "selfCritique": "深度审查已对 MapManager 和 MeshUIManager 下钻；MeshUI 到叶子仍是自身，是现有采样粒度限制，已转成 DataRequest 而不是臆测内部子系统。严重度按常驻 2ms 级成本定 medium。",
+    "symbols": ["CS:AOE.Outside.OutSideViewArmyLineMgr", "OutsideLineCtrl:CalculateVertexJob (Burst)", "CS:AOE.MeshUIManager", "MUI_UpdateUIPos"],
+    "tags": ["baseline", "map", "meshui", "spread-cost"]
+  },
+  {
+    "id": "resource.unload.spike",
+    "title": "资源卸载单帧尖峰",
+    "conclusion": "资源卸载平时很轻，但 frame80 突然把 LoaderManagerTryUnloadPending 拉到 21.34ms，其中 TryUnloadPending.TryUnload 自耗时峰值 14.59ms。这类尖峰会造成偶发顿挫。",
+    "severity": "medium",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "scanPeakMarkers",
+        "args": {"thread": "1:Main Thread", "topN": 25, "minSpikeRatio": 3, "excludeWaits": true},
+        "resultDigest": {"markerName": "TryUnloadPending.TryUnload", "peakFrameSelf": 14.5946, "peakFrame": 80, "avgWhenPresent": 0.11, "presentFrames": 600, "spikeRatio": 132.63}
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "TryUnloadPending.TryUnload", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 0.11004281853408125, "p50": 0.010468999855220318, "p95": 0.3064100008632522, "p99": 2.7235389237466734, "max": 14.59459703558241, "maxFrameIndex": 80, "burstFramesTotal": 6}
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {"frameIndex": 80, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 5},
+        "resultDigest": {"msFrame": 70.08699798583984, "Core.PostEndOfFrame.totalMs": 21.523956298828125, "CS:AOE.ResManager.totalMs": 21.44614601135254, "LoaderManagerOnFrameEnd.totalMs": 21.4126033782959, "LoaderManagerTryUnloadPending.totalMs": 21.341665267944336, "LoaderManagerTryUnloadPending.pctOfFrame": 30.450248806855928}
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {"symbol": "TryUnloadPending.TryUnload", "maxLines": 120, "includeCalls": true},
+        "resultDigest": {"found": true, "file": "Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs", "startLine": 668, "endLine": 677, "calls": ["CanUnload()", "DoUnload()"]}
+      }
+    ],
+    "reasoning": "TryUnloadPending.TryUnload 的 p50 只有 0.010468999855220318ms，说明它不是稳定成本；但 frame80 的 LoaderManagerTryUnloadPending total 21.341665267944336ms，占帧 30.450248806855928%，并且 scanPeakMarkers 给出 spikeRatio 132.63。源码显示 TryUnload 本体只做 CanUnload 和 DoUnload，因此峰值更可能来自当帧处理了较多待卸载对象或 DoUnload 内部成本。",
+    "recommendation": "给 LoaderManagerTryUnloadPending 增加每帧卸载数量或耗时预算，超过预算延后；同时补记录单帧 TryUnload 调用次数和 DoUnload 类型分布。当前源码只能确认 TryUnload 是薄封装，不能从现有数据判断具体卸了多少资源。",
+    "selfCritique": "严重度审查后没有因为 14.59459703558241ms 峰值把它排到高优先级：它 p95 只有 0.3064100008632522ms、burstFramesTotal 为 6，更像偶发尖峰。深度审查到源码后发现 TryUnload 本身很薄，因此没有编造内部根因。",
+    "symbols": ["TryUnloadPending.TryUnload", "LoaderManagerTryUnloadPending", "CS:AOE.ResManager"],
+    "tags": ["resource", "spike", "loading", "end-of-frame"]
+  },
+  {
+    "id": "present.wait.occasional",
+    "title": "偶发Present等待",
+    "conclusion": "主线程有一类等待型卡顿：frame22 在 Present/Gfx 等待上卡了约 20ms。它不是最差帧主因，但会叠加到本来已经超预算的渲染基线上。",
+    "severity": "medium",
+    "confidence": "medium",
+    "evidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {"markerName": "Semaphore.WaitForSignal", "thread": "1:Main Thread", "metric": "selfMs"},
+        "resultDigest": {"presentFrames": 600, "mean": 1.737434577519307, "p50": 0.7713020014198264, "p95": 7.501302303629927, "p99": 13.650938378443243, "max": 20.679894776258152, "maxFrameIndex": 22, "burstFramesTotal": 17, "autocorr.bestLag": 2, "autocorr.coefficient": 0.34796885024182495}
+      },
+      {
+        "tool": "getThreadTimeline",
+        "args": {"frameIndex": 22},
+        "resultDigest": {"msFrame": 59.358001708984375, "mainThreadWaits.Semaphore.WaitForSignal.totalMs": 20.679894776258152, "mainThreadWaits.URP.WaitForPresent.totalMs": 19.842394357227022, "mainThreadWaits.Gfx.WaitForPresentOnGfxThread.totalMs": 19.835363388061523, "RenderThread.topLevelMs": 57.77469039754942}
+      },
+      {
+        "tool": "drillDownMarker",
+        "args": {"rootMarker": "URP.RenderSingleCamera", "thread": "1:Main Thread", "maxDepth": 6, "minMsPerFrame": 0.3, "topPerLevel": 6},
+        "resultDigest": {"URP.WaitForPresent.totalMsPerFrame": 0.9528, "Gfx.WaitForPresentOnGfxThread.totalMsPerFrame": 0.9463, "Semaphore.WaitForSignal.selfMsPerFrame": 0.9314}
+      },
+      {
+        "tool": "queryFrameCounters",
+        "args": {"frames": [22]},
+        "resultDigest": {"frame22.batches": 199, "frame22.set_pass_calls": 157, "frame22.triangles": 1856512, "frame22.vertices": 2370560, "frame22.gc_allocated_in_frame": 7168}
+      }
+    ],
+    "reasoning": "主线程 Semaphore.WaitForSignal p95 为 7.501302303629927ms，frame22 达到 20.679894776258152ms；getThreadTimeline 把同帧等待定位到 URP.WaitForPresent 19.842394357227022ms 和 Gfx.WaitForPresentOnGfxThread 19.835363388061523ms。frame22 的 gc_allocated_in_frame 只有 7168 bytes，因此这条等待不是由当帧 GC 分配尖峰解释。",
+    "recommendation": "把它作为渲染链路的次级问题验证：在降低 URP.RenderSingleCamera、透明 pass 和 RenderGraphSetup 后复查 frame22 类等待是否下降。当前证据只能说明主线程在等 Present/Gfx，不能单独证明 GPU、Render Thread 或垂直同步哪一个是根因。",
+    "selfCritique": "反例审查发现 frame519 最差帧 mainThreadWaits 只有 0.38791700841102283ms 的 Semaphore.WaitForSignal，因此等待不是全局最差帧主因；严重度定为 medium，作为 URP 基线的叠加风险处理。",
+    "symbols": ["Semaphore.WaitForSignal", "URP.WaitForPresent", "Gfx.WaitForPresentOnGfxThread"],
+    "tags": ["thread-wait", "gpu-present", "rendering", "spike"]
+  }
+]

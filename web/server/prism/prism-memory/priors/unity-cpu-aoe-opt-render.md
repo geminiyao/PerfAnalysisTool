@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.850Z
 source: unity-cpu
 title: "AOE 渲染优化经验（GPU Bound）"
 tags: ["aoe","渲染优化","gpu-bound","面数裁剪"]
+dataSource: unity
 ---
 
 - 移动端渲染分辨率从 2K 降至 900P，大幅减轻 GPU 负载。

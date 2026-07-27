@@ -1,8 +1,8 @@
-# collect.yaml — 采集配置 Schema（C1）
+# collect.yaml — 采集配置 Schema（C1 + C2）
 
 > **这是 Collector 采集配置 YAML 的格式定义。** 换项目/换场景改 YAML 不改代码。
 > 坐标系：[路线图](roadmap.md) · [需求总表](backlog.md) · [设计哲学](../philosophy.md)
-> 状态：**C1 已实现**（CL-4/5/6）
+> 状态：**C1 已实现**（CL-4/5/6）· **C2 已实现**（CL-7/8/9/10：Driver 热插拔 + Primitive + runs 写入）
 
 ---
 
@@ -150,13 +150,43 @@ meta:
 | `default.label` | string | 否 | 未匹配别名时的默认标签（默认 `collect`） |
 | `default.scene` | string | 否 | 未匹配别名时的默认场景名 |
 
-### action — 动作默认值
+### action — 动作默认值 + Primitive 组合（C2 扩展）
 
 | 字段 | 类型 | 必填 | 默认 | 说明 |
 |------|------|------|------|------|
 | `defaultDuration` | int | 否 | 60 | 未指定时长时的默认采样秒数 |
+| `steps` | list[Step] | 否 | — | **C2 新增**。Primitive 组合步骤，声明后进入可组合模式 |
 
 > `profileName` 不在 YAML 中写死，运行时自动生成为 `{label}_{run_index:03d}`。
+
+**C2 Primitive steps 格式**（`action.steps`）：
+
+```yaml
+action:
+  defaultDuration: 60       # 仍作为 fallback
+  steps:                    # C2: 声明后进入可组合模式
+    - primitive: enter_scene
+      params:
+        scene: WildField
+        coord: [120, 45]    # 屏幕坐标，用于 ADB 降级
+    - primitive: camera_sweep
+      params:
+        duration: 30        # 秒
+        pattern: back_forth # back_forth | circular
+    - primitive: wait_duration
+      params:
+        duration: 30        # 秒
+```
+
+**首批 Primitive（CL-8）**：
+
+| Primitive | params | 说明 |
+|-----------|--------|------|
+| `enter_scene` | `scene: string, coord: [x, y]` | 进入场景。Lua intent 优先，ADB input tap 降级 |
+| `camera_sweep` | `duration: int, pattern: back_forth\|circular` | 相机移动。Lua intent 优先，ADB input swipe 降级 |
+| `wait_duration` | `duration: int` | 等待指定秒数 |
+
+**降级策略**：游戏侧 Lua 不支持时自动降级为 ADB input（tap/swipe），精度差但不阻塞。
 
 ### output — 输出配置
 
@@ -250,12 +280,30 @@ python scripts/auto_collector/collect.py "压力测试 30s" --project new_projec
 
 ---
 
-## C2 预留
+## C2 已实现：Driver 热插拔 + Primitive 组合
 
-C1 的 `action` 段目前只有 `defaultDuration`。C2 会扩展为 Primitive 组合：
+C2 把 `collect.py` 的硬编码采集流程拆成可组合的 Driver + Primitive：
+
+### Driver 热插拔（CL-7）
+
+`tools:` 声明的工具映射到 Driver，按序启停：
+
+| YAML 工具名 | Driver | 说明 |
+|-------------|--------|------|
+| `simpleperf` | `SimpleperfDriver` | app_profiler.py 启停 + perf.data 输出 |
+| `perfetto` | `PerfettoDriver` | record_android_trace.py 启停 + .pftrace 输出 |
+| `unity-profiler` | `UnityProfilerDriver` | CombinedProfile intent 触发 + logcat 信号检测 + .pdata 拉取 |
+
+> `unity-profiler` 隐含加入（除非显式排除），保证游戏侧采样窗口始终触发。
+
+Driver 接口：`start(ctx) → stop(ctx) → pull(ctx)`，返回文件路径列表。
+注册表机制：新 Driver 只需 `@register_driver("name")` 装饰 + 实现接口。
+
+### Primitive 组合（CL-8）
+
+YAML 声明 `action.steps` → Orchestrator 按序执行 Primitive：
 
 ```yaml
-# C2 预留格式（C1 不实现）
 action:
   steps:
     - primitive: enter_scene
@@ -266,7 +314,22 @@ action:
       params: { duration: 30s }
 ```
 
-C1 不实现上述格式，仅保留 `defaultDuration` 标量。
+Primitive 接口：`execute(params, ctx) → {ok, method, detail}`。
+降级策略：Lua intent 优先 → ADB input 降级。
+
+### runs/runMetrics 写入（CL-9）
+
+Orchestrator 收尾自动写入 `web/data/db.sqlite`：
+- `runs` 表：run_id / label / status / device / scene / project / version / duration / frame_count / mono_ns / 文件路径（raw_json）
+- `run_metrics` 表：采集时已知指标（duration_sec / frame_count / duration_actual_sec）
+
+复用 `web/server/db/schema.ts` 的 Run/runMetrics 模型，直接用 Python sqlite3 写入（WAL 模式，与 web server 并发安全）。
+
+### 向后兼容
+
+- 无 `action.steps` 时走 legacy 流程（trigger + wait），行为与 C1 完全一致
+- `collect.py "VG对比 60s"` 仍能跑通
+- 旧版 `config.json` 仍向后兼容
 
 ---
 

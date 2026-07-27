@@ -4,6 +4,7 @@ category: capabilities
 createdAt: 2026-07-11T07:22:30.472Z
 source: stressmove-run1
 title: "GC.Collect（frame519/frame483）触发前的对象分配来源追踪"
+dataSource: unity
 ---
 
 Topic: GC.Collect（frame519/frame483）触发前的对象分配来源追踪

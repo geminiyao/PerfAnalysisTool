@@ -1,0 +1,251 @@
+{
+  "total": {
+    "start": 1784894198621,
+    "end": 1784896951749
+  },
+  "explore": {
+    "start": 1784894198630,
+    "toolCalls": [
+      {
+        "seq": 1,
+        "name": "Bash",
+        "toolNames": "queryUnityMarkers",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js queryUnityMarkers '{\"topN\":25,\"sortBy\":\"selfMs\"}'",
+        "ts": 1784894252088,
+        "resultTs": 1784894265036,
+        "toolMs": 12948,
+        "resultLen": 10028
+      },
+      {
+        "seq": 2,
+        "name": "Bash",
+        "toolNames": "scanPeakMarkers",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js scanPeakMarkers '{\"topN\":25,\"minSpikeRatio\":3,\"excludeWaits\":true}'",
+        "ts": 1784894252090,
+        "resultTs": 1784894265039,
+        "toolMs": 12949,
+        "resultLen": 6276
+      },
+      {
+        "seq": 3,
+        "name": "Bash",
+        "toolNames": "scanMetricOverFrames+aggregateSubtree+queryMarkers",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"scanMetricOverFrames\",\"args\":{\"markerName\":\"PlayerLoop\"",
+        "ts": 1784894336125,
+        "resultTs": 1784894371141,
+        "toolMs": 35016,
+        "resultLen": 20153
+      },
+      {
+        "seq": 4,
+        "name": "Bash",
+        "toolNames": "getFrameCallTree+getThreadTimeline…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getFrameCallTree\",\"args\":{\"frameIndex\":143,\"thread\":\"1:",
+        "ts": 1784894485827,
+        "resultTs": 1784894496181,
+        "toolMs": 10354,
+        "resultLen": 27675
+      },
+      {
+        "seq": 5,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"CS:AOE.Outside.W",
+        "ts": 1784894587254,
+        "resultTs": 1784894597132,
+        "toolMs": 9878,
+        "resultLen": 28736
+      },
+      {
+        "seq": 6,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"RecycleGOTask\",\"",
+        "ts": 1784894728795,
+        "resultTs": 1784894739777,
+        "toolMs": 10982,
+        "resultLen": 30607
+      },
+      {
+        "seq": 7,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"CS:AOE.Outside.M",
+        "ts": 1784894925824,
+        "resultTs": 1784894936228,
+        "toolMs": 10404,
+        "resultLen": 7505
+      },
+      {
+        "seq": 8,
+        "name": "Bash",
+        "toolNames": "scanMetricOverFrames+drillDownMarker",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"scanMetricOverFrames\",\"args\":{\"markerName\":\"LuaMgr.OnTi",
+        "ts": 1784895088771,
+        "resultTs": 1784895096776,
+        "toolMs": 8005,
+        "resultLen": 11055
+      },
+      {
+        "seq": 9,
+        "name": "Bash",
+        "toolNames": "getSourceForSymbol",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js getSourceForSymbol '{\"symbol\":\"MapSignificanceMgr.ForceSubEntity\",\"maxLi",
+        "ts": 1784895272653,
+        "resultTs": 1784895274567,
+        "toolMs": 1914,
+        "resultLen": 804
+      },
+      {
+        "seq": 10,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "ls -la \"K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/2026-07-24_11-56-38/\" 2",
+        "ts": 1784895633925,
+        "resultTs": 1784895635629,
+        "toolMs": 1704,
+        "resultLen": 249
+      },
+      {
+        "seq": 11,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "ls -la \"K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/2026-07-24_11-56-38/\"",
+        "ts": 1784895646458,
+        "resultTs": 1784895647067,
+        "toolMs": 609,
+        "resultLen": 347
+      },
+      {
+        "seq": 12,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784895691032,
+        "resultTs": 1784895691066,
+        "toolMs": 34,
+        "resultLen": 165
+      },
+      {
+        "seq": 13,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784895906801,
+        "resultTs": 1784895906995,
+        "toolMs": 194,
+        "resultLen": 166
+      },
+      {
+        "seq": 14,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784895937130,
+        "resultTs": 1784895937167,
+        "toolMs": 37,
+        "resultLen": 171
+      },
+      {
+        "seq": 15,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const d='K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/202",
+        "ts": 1784895951264,
+        "resultTs": 1784895952719,
+        "toolMs": 1455,
+        "resultLen": 642
+      },
+      {
+        "seq": 16,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const s=require('fs').readFileSync('K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_240",
+        "ts": 1784895971980,
+        "resultTs": 1784895972863,
+        "toolMs": 883,
+        "resultLen": 439
+      },
+      {
+        "seq": 17,
+        "name": "Grep",
+        "toolNames": "Grep",
+        "cmd": "\\\"一帧重|明显的\\\"",
+        "ts": 1784895994324,
+        "resultTs": 1784895994485,
+        "toolMs": 161,
+        "resultLen": 273
+      },
+      {
+        "seq": 18,
+        "name": "Edit",
+        "toolNames": "Edit",
+        "cmd": "",
+        "ts": 1784896006921,
+        "resultTs": 1784896006936,
+        "toolMs": 15,
+        "resultLen": 148
+      },
+      {
+        "seq": 19,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const d='K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/202",
+        "ts": 1784896019587,
+        "resultTs": 1784896020331,
+        "toolMs": 744,
+        "resultLen": 683
+      },
+      {
+        "seq": 20,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const s=require('fs').readFileSync('K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_240",
+        "ts": 1784896048197,
+        "resultTs": 1784896048886,
+        "toolMs": 689,
+        "resultLen": 444
+      },
+      {
+        "seq": 21,
+        "name": "Edit",
+        "toolNames": "Edit",
+        "cmd": "",
+        "ts": 1784896070589,
+        "resultTs": 1784896070626,
+        "toolMs": 37,
+        "resultLen": 148
+      },
+      {
+        "seq": 22,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const d='K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/202",
+        "ts": 1784896081547,
+        "resultTs": 1784896082488,
+        "toolMs": 941,
+        "resultLen": 872
+      }
+    ],
+    "end": 1784896080291
+  },
+  "narrative": {
+    "start": 1784896080294,
+    "end": 1784896879131,
+    "subStages": {
+      "start": 1784896080295,
+      "precheck": 0,
+      "prompt_inject": 110,
+      "cli_resolve": 1,
+      "llm_call": 798249,
+      "artifact_check": 0,
+      "json_parse": 2,
+      "provenance_check": 0,
+      "red_team": 442
+    }
+  },
+  "render": {
+    "start": 1784896879134,
+    "end": 1784896951745
+  }
+}

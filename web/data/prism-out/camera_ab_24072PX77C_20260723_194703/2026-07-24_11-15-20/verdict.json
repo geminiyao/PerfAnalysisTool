@@ -1,0 +1,58 @@
+{
+  "rating": "fail",
+  "headline": "对照 60fps（16.67ms）预算整体不合格：84.3% 的帧超标，p50 已 20.75ms 超预算 24%。主因是稳态成本长尾累加（URP 渲染 + Lua 逻辑 + LateUpdate + ECS + Canvas 分散占满一帧），叠加相机移动触发的环境物回收/实体加载尖刺（最差帧 54ms）。全程未观察到单一 >30% 的主导元凶，是典型的‘多系统各占一点、合力超标’的长尾型不达标。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 20.75,
+  "observedP95Ms": 34.70,
+  "observedP99Ms": 44.50,
+  "observedMaxMs": 54.14,
+  "observedMaxFrameIndex": 143,
+  "pctFramesOverBudget": 84.3,
+  "primaryDrivers": [
+    "steady-spread-cost",
+    "camera-recycle-burst",
+    "camera-loading-storm"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs" },
+      "resultDigest": {
+        "frameCount": 600,
+        "mean": 22.96,
+        "p50": 20.75,
+        "p95": 34.70,
+        "p99": 44.50,
+        "max": 54.09,
+        "maxFrameIndex": 143,
+        "autocorr": { "bestLag": 2, "coefficient": 0.648 }
+      }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "setA": { "kind": "slowFrames", "thresholdMs": 16.67 }, "setB": { "kind": "slowFrames", "thresholdMs": 33 } },
+      "resultDigest": { "sizeA": 506, "sizeB": 52, "pctOverBudget": "506/600 = 84.3%", "pctOver2xBudget": "52/600 = 8.7%" }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "frameIndex": 400, "thread": "1:Main Thread", "maxDepth": 6, "minPct": 1.5 },
+      "resultDigest": {
+        "msFrame": 23.01,
+        "note": "近 p50 的典型帧，成本分散：FinishFrameRendering/URP 6.51ms(28%) + ScriptRunBehaviourUpdate/LuaMgr 4.97ms(22%) + PreLateUpdate 3.89ms(17%) + PlayerUpdateCanvases 1.87ms(8%) + ECS 三组 2.89ms(13%)，无单一 >30% 主因"
+      }
+    },
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "markerName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr", "thread": "1:Main Thread", "metric": "totalMs" },
+      "resultDigest": { "mean": 0.196, "p50": 0.111, "max": 24.80, "maxFrameIndex": 469, "spikeRatio": 224.1, "burstFrames": [143, 469] }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "frameIndex": 552, "thread": "1:Main Thread", "maxDepth": 10, "minPct": 0.5 },
+      "resultDigest": {
+        "msFrame": 46.83,
+        "hotPath": "Update > GameLauncher.Update > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule(25.42ms) > MapSignificanceMgr(22.72ms) > MapSignificanceMgr.ProcessTasks(22.69ms, 48.5%)"
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.737Z
 source: unity-cpu
 title: "AOE 已知问题：高度图 Hash 采样热点"
 tags: ["aoe","已知问题","高度图","采样","cpu"]
+dataSource: unity
 ---
 
 **触发场景**：大地图移动。

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.665Z
 source: unity-cpu
 title: "AOE 已知问题：华为 GPU 驱动 bug"
 tags: ["aoe","已知问题","华为","gpu","驱动"]
+dataSource: unity
 ---
 
 **触发场景**：MateXs2。

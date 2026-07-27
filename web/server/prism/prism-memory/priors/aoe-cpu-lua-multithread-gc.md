@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:29:27.766Z
 source: aoe-cpu
 title: "Lua 多线程 GC 时间片及其压力判断"
 tags: ["Lua","GC","多线程","LuaMultiThreadGC"]
+dataSource: unity
 ---
 
 Lua 多线程 GC 的主线程时间片：

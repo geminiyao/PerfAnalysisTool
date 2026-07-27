@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:29:27.711Z
 source: aoe-cpu
 title: "Gfx.WaitForPresentOnGfxThread 出现说明渲染负载很高"
 tags: ["渲染","GPU","Gfx.WaitForPresentOnGfxThread"]
+dataSource: unity
 ---
 
 在 URP 渲染栈下，若出现时间片：

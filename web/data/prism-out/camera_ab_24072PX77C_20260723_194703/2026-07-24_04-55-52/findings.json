@@ -1,0 +1,886 @@
+[
+  {
+    "id": "render.mainthread-bound",
+    "title": "主线程是关键路径，渲染线程一半时间在干等",
+    "conclusion": "主线程每帧跑满23ms把帧卡死，渲染提交线程有57.9%的时间（13.3ms/帧）在信号量上干等主线程发指令——不是GPU不够快，是主线程喂不动。主线程光“启动渲染”这一步就占6ms/帧（26%），是全场最大的单块稳态成本。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Submit Thread)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[0] roots"
+        },
+        "resultDigest": {
+          "submitThreadMsPerFrameTotal": 23.01,
+          "rootGfxWaitForGfxCommandsFromMainThread": {
+            "msPerFrameTotal": 13.322,
+            "threadPct": 57.9,
+            "presentOnFrameCount": 598,
+            "presentRate": 99.8
+          },
+          "childSemaphoreWaitForSignal": {
+            "msPerFrameSelf": 13.321,
+            "threadPct": 57.9
+          },
+          "callTreeAnnotations": [
+            {
+              "nodeName": "Gfx.WaitForGfxCommandsFromMainThread",
+              "redlineFlag": "占 Submit Thread 57.9%（主线程瓶颈的直接证据）",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "Semaphore.WaitForSignal",
+              "redlineFlag": "13.321ms/帧纯等待主线程",
+              "foldChange": null,
+              "severityTag": "high"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Main Thread PlayerLoop)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[Main Thread] roots[PlayerLoop]"
+        },
+        "resultDigest": {
+          "playerLoopMsPerFrameTotal": 22.955,
+          "playerLoopThreadPct": 99.8,
+          "postLateUpdateFinishFrameRendering": {
+            "msPerFrameTotal": 6.007,
+            "threadPct": 26.1,
+            "presentOnFrameCount": 599
+          },
+          "childURP_Render": {
+            "msPerFrameTotal": 5.156,
+            "threadPct": 22.4
+          },
+          "childURP_BeforeRendering": {
+            "msPerFrameTotal": 1.841,
+            "threadPct": 8,
+            "msPerFrameSelf": 0.865
+          },
+          "callTreeAnnotations": [
+            {
+              "nodeName": "PlayerLoop",
+              "redlineFlag": "占主线程99.8%，22.955ms/帧超预算37.7%",
+              "foldChange": null,
+              "severityTag": "critical"
+            },
+            {
+              "nodeName": "PostLateUpdate.FinishFrameRendering",
+              "redlineFlag": "占主线程26.1%（最大单块稳态成本）",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "URP.Render",
+              "redlineFlag": "占主线程22.4%",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "URP.BeforeRendering",
+              "redlineFlag": "占主线程8%（剔除等）",
+              "foldChange": null,
+              "severityTag": "medium"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 25,
+          "sortBy": "selfMs"
+        },
+        "resultDigest": {
+          "note": "Gfx.WaitForPresent 未出现在 top25（非GPU瓶颈）；ForwardRenderPass msSelfMean=3.125 占帧13.6% presentOnFrameCount=599；Gfx.PresentFrame msSelfMean=1.428 presentOnFrameCount=599；WaitForTargetFPS msSelfMean=0.413 占帧1.8%（引擎基本未限速）"
+        }
+      }
+    ],
+    "reasoning": "帧均值22.99ms≈主线程PlayerLoop 22.955ms，说明帧时长由主线程决定。Submit Thread msPerFrameTotal=23.01 但其中 Gfx.WaitForGfxCommandsFromMainThread→Semaphore.WaitForSignal 占13.321ms（57.9%），即渲染提交线程自身实际工作仅约9.7ms/帧（ForwardRenderPass 3.1 + Async.UploadTexture 2.3 + RenderLoop.Draw 2.0 + Gfx.PresentFrame 1.4 + ECS.DrawCmd 1.1 等），本可在预算内完成，是被主线程拖到23ms。主线程侧 PostLateUpdate.FinishFrameRendering 6.007ms（26.1%）是最大单块稳态成本，其中 URP.Render 5.156ms（22.4%）→ URP.RenderSingleCamera 4.751ms → URP.BeforeRendering 1.841ms（剔除/渲染前准备）。Gfx.WaitForPresent 不在 top 榜、WaitForTargetFPS 仅0.413ms/帧，排除GPU瓶颈和主动限速两种可能。",
+    "recommendation": "渲染启动这6ms是URP管线在主线程上的剔除+渲染前准备（URP.BeforeRendering 1.84ms 内 CullScriptable/SceneCulling/PrepareSceneNodes + ECS.DrawShadow.Write + RenderGraphSetup）。优化方向：1) 看 URP.RendererSetup/RenderGraphSetup（0.8ms）是否能缓存渲染图结构、避免每帧重建；2) CullScriptable 出现两次（单相机栈6.5ms里有多个CullScriptable），确认是否重复剔除；3) 主线程是关键路径，任何能从主线程挪到Job/渲染线程的剔除工作都能直接缩短帧时长。需要看 URP.RenderSingleCamera 的渲染管线配置代码才能给更具体的建议（当前未取该源码）。",
+    "selfCritique": "通过5刀审查：深度——已钻到 URP.Render→RenderSingleCamera→BeforeRendering 叶子层（CullScriptable/SceneCulling/PrepareSceneNodes）；严重度——6ms×600帧=3604ms 总耗、影响全部帧，是最大稳态成本，定 high 合理；统计——未用被稀释的占比下结论；证据——13.3ms等待与6ms渲染启动均来自真实聚合调用树读取；反例——主动验证了非GPU瓶颈（WaitForPresent缺席）和非限速（WaitForTargetFPS仅0.4ms），排除两个对立假设。",
+    "symbols": [
+      "PlayerLoop",
+      "PostLateUpdate.FinishFrameRendering",
+      "URP.Render",
+      "URP.BeforeRendering",
+      "Gfx.WaitForGfxCommandsFromMainThread",
+      "Semaphore.WaitForSignal"
+    ],
+    "tags": [
+      "thread-wait",
+      "render",
+      "steady-cost",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "PlayerLoop",
+        "redlineFlag": "占主线程99.8%，22.955ms/帧超预算37.7%",
+        "foldChange": null,
+        "severityTag": "critical"
+      },
+      {
+        "nodeName": "PostLateUpdate.FinishFrameRendering",
+        "redlineFlag": "占主线程26.1%（最大单块稳态成本）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "URP.Render",
+        "redlineFlag": "占主线程22.4%",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "URP.BeforeRendering",
+        "redlineFlag": "占主线程8%（剔除/渲染前准备）",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Gfx.WaitForGfxCommandsFromMainThread",
+        "redlineFlag": "Submit Thread 57.9%时间在此干等主线程",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "Semaphore.WaitForSignal",
+        "redlineFlag": "13.321ms/帧纯等待（主线程瓶颈直接证据）",
+        "foldChange": null,
+        "severityTag": "high"
+      }
+    ]
+  },
+  {
+    "id": "logic.mapsignificance-steady",
+    "title": "MapSignificanceMgr 每帧2.36ms是最大逻辑开销兼GC分配源",
+    "conclusion": "游戏逻辑每帧常驻8.5ms（Update 4.6ms + LateUpdate 3.9ms），其中地图显著性管理器 MapSignificanceMgr 一个模块就吃2.36ms/帧（主线程的10.3%），是全场最大单一逻辑开销，同时它是最大的GC分配源（7.7万次分配/600帧），跟下面那条同步GC直接相关。",
+    "severity": "high",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Main Thread Update)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[Main Thread] Update.ScriptRunBehaviourUpdate subtree"
+        },
+        "resultDigest": {
+          "updateScriptRunBehaviourUpdate": {
+            "msPerFrameTotal": 4.61,
+            "threadPct": 20.1,
+            "gcAllocCount": 104436
+          },
+          "csAoeLuaMgr": {
+            "msPerFrameTotal": 3.402,
+            "threadPct": 14.8,
+            "gcAllocCount": 80945
+          },
+          "mapSignificanceMgr": {
+            "msPerFrameTotal": 2.358,
+            "threadPct": 10.3,
+            "gcAllocCount": 76959,
+            "presentOnFrameCount": 600
+          },
+          "mapSignificanceMgrProcessTasks": {
+            "msPerFrameTotal": 2.327,
+            "threadPct": 10.1,
+            "gcAllocCount": 76959
+          },
+          "forceSubEntity": {
+            "msPerFrameTotal": 1.125,
+            "threadPct": 4.9,
+            "gcAllocCount": 35114
+          },
+          "subEntityFrameExcute": {
+            "msPerFrameTotal": 0.901,
+            "count": 51614,
+            "presentOnFrameCount": 423,
+            "presentRate": 70.5,
+            "gcAllocCount": 35114
+          },
+          "entityTask": {
+            "msPerFrameTotal": 0.551,
+            "threadPct": 2.4,
+            "gcAllocCount": 14022
+          },
+          "callTreeAnnotations": [
+            {
+              "nodeName": "Update.ScriptRunBehaviourUpdate",
+              "redlineFlag": "占主线程20.1%（稳态）",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "CS:AOE.LuaMgr",
+              "redlineFlag": "占主线程14.8%（Lua脚本调度层）",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "MapSignificanceMgr",
+              "redlineFlag": "占主线程10.3% + gcAllocCount 76959（最大单一逻辑+最大分配源）",
+              "foldChange": null,
+              "severityTag": "critical"
+            },
+            {
+              "nodeName": "MapSignificanceMgr.ForceSubEntity",
+              "redlineFlag": "占主线程4.9%，触发 SubEntity_FrameExcute 51614 次",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "SubEntity_FrameExcute",
+              "redlineFlag": "51614次调用/423帧，每帧约122次，驱动同步资源加载",
+              "foldChange": null,
+              "severityTag": "high"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Main Thread LateUpdate)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[Main Thread] PreLateUpdate.ScriptRunBehaviourLateUpdate subtree"
+        },
+        "resultDigest": {
+          "preLateUpdateScriptRunBehaviourLateUpdate": {
+            "msPerFrameTotal": 3.898,
+            "threadPct": 17,
+            "gcAllocCount": 214266
+          },
+          "gameLauncherLateUpdate": {
+            "msPerFrameTotal": 2.06,
+            "threadPct": 9
+          },
+          "lateUpdateLuaMgr": {
+            "msPerFrameTotal": 1.211,
+            "threadPct": 5.3
+          },
+          "mapCameraCtrl": {
+            "msPerFrameTotal": 0.917,
+            "threadPct": 4,
+            "gcAllocCount": 14377
+          },
+          "note": "LateBehaviourUpdate msTotal=2338 但 GameLauncher.LateUpdate 仅1236，约一半LateUpdate工作不在此分支（未命名子节点）"
+        }
+      },
+      {
+        "tool": "getSourceForSymbol",
+        "args": {
+          "symbol": "MapSignificanceMgr.ProcessTasks",
+          "maxLines": 80,
+          "includeCalls": true
+        },
+        "resultDigest": {
+          "found": true,
+          "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+          "startLine": 1290,
+          "endLine": 1372,
+          "signature": "MapSignificanceMgr.ProcessSignificanceTasks",
+          "note": "函数体顺序调用11个 ConsumeTasks_* 队列：ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy，每帧全跑一遍"
+        }
+      }
+    ],
+    "reasoning": "Update.ScriptRunBehaviourUpdate 4.61ms/帧（20.1%）全部帧出现，其下 Core.Update→CS:AOE.LuaMgr 3.402ms（14.8%）→MapSignificanceMgr 2.358ms（10.3%）。MapSignificanceMgr 是最大单一逻辑模块，gcAllocCount=76959（占 LuaMgr 80945 的95%、占 Update 总104436 的74%），是主线程GC分配的主要来源。其 ProcessTasks 2.327ms 顺序处理11类任务队列，ForceSubEntity 1.125ms（4.9%）最大，内部 SubEntity_FrameExcute 在423帧里被调用51614次（平均每帧122次），正是它驱动了同步资源加载（见 sync-res-loading-bursts 发现）。LateUpdate 3.898ms（17%）同样每帧常驻，其中 MapCameraCtrl 0.917ms（4%，相机测试相关）。Update+LateUpdate 合计8.5ms/帧×600帧=5106ms，是中位帧超预算的核心贡献者。",
+    "recommendation": "已看 MapSignificanceMgr.ProcessSignificanceTasks 源码（MapSignificanceMgr.lua:1290-1372）：每帧顺序处理11个任务队列，无分帧/预算机制。优化方向：1) ForceSubEntity 路径是最大头（1.125ms+51614次子实体执行），应给每帧处理数量设上限或按预算分帧（当前是当帧把队列清空）；2) SubEntity_FrameExcute 触发同步资源加载是连锁反应源头，考虑把实体激活的加载部分异步化或预加载；3) gcAllocCount 7.7万/600帧≈128次/帧的分配是GC压力主源，重点查 ForceSubEntity/SubEntity_FrameExcute 内的临时对象（Lua表/C#对象）能否池化。具体哪行分配最重需要 per-marker GC 分配数据（见 data-requests）。",
+    "selfCritique": "通过5刀审查：深度——已钻到 ForceSubEntity→SubEntity_FrameExcute（51614次）和 EntityTask→ProcessTask_MapObjCleanUp 叶子，并取了源码确认是11队列顺序处理；严重度——2.36ms×600=1415ms 总耗、影响全部帧、且是GC主源，定 high 合理（不是只看单帧数字）；统计——未用占比稀释；证据——3.402/2.358/76959/51614 均来自真实聚合调用树读取+getSourceForSymbol；反例——GC触发与MapSignificanceMgr分配的因果只能强相关不能直接证明（缺逐帧per-marker分配），已如实记入 data-requests 不硬下因果结论。",
+    "symbols": [
+      "Update.ScriptRunBehaviourUpdate",
+      "CS:AOE.LuaMgr",
+      "MapSignificanceMgr",
+      "MapSignificanceMgr.ProcessTasks",
+      "MapSignificanceMgr.ForceSubEntity",
+      "SubEntity_FrameExcute",
+      "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+      "MapCameraCtrl"
+    ],
+    "tags": [
+      "script-heavy",
+      "steady-cost",
+      "gc",
+      "lua",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "Update.ScriptRunBehaviourUpdate",
+        "redlineFlag": "占主线程20.1%（稳态）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "CS:AOE.LuaMgr",
+        "redlineFlag": "占主线程14.8%（Lua脚本调度层）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "MapSignificanceMgr",
+        "redlineFlag": "占主线程10.3% + gcAllocCount 76959（最大单一逻辑+最大分配源）",
+        "foldChange": null,
+        "severityTag": "critical"
+      },
+      {
+        "nodeName": "MapSignificanceMgr.ProcessTasks",
+        "redlineFlag": "11队列顺序处理无分帧（源码lua:1290-1372）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "MapSignificanceMgr.ForceSubEntity",
+        "redlineFlag": "占主线程4.9%，触发 SubEntity_FrameExcute 51614 次",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "SubEntity_FrameExcute",
+        "redlineFlag": "51614次/423帧，驱动同步资源加载",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+        "redlineFlag": "占主线程17%（3.898ms稳态）",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "MapCameraCtrl",
+        "redlineFlag": "占主线程4%（相机测试相关）",
+        "foldChange": null,
+        "severityTag": "medium"
+      }
+    ]
+  },
+  {
+    "id": "gc.collect-sync-spikes",
+    "title": "5次同步GC每次9ms吃掉半个帧预算",
+    "conclusion": "全程出现5次同步GC.Collect，每次稳定在9ms左右——单次就占掉帧预算16.67ms的54%，这5帧必然严重超标。分配大户是 MapSignificanceMgr（见上条），两边强相关但无法直接证明触发关系。",
+    "severity": "high",
+    "confidence": "medium",
+    "evidence": [
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 25,
+          "sortBy": "selfMs"
+        },
+        "resultDigest": {
+          "name": "GC.Collect",
+          "msSelfMean": 8.964,
+          "msSelfMedian": 8.535,
+          "msSelfMax": 11.128,
+          "percentOfFrame": 30.2,
+          "count": 5,
+          "presentOnFrameCount": 5,
+          "callsPerFrame": 1,
+          "thread": "1:Main Thread",
+          "spikeRatio": 1.3,
+          "budgetPctPerEvent": 53.7,
+          "note": "8.964/16.67=53.7% 帧预算/次；spikeRatio 1.3 说明5次耗时接近，非单点异常"
+        }
+      }
+    ],
+    "reasoning": "GC.Collect 在5个帧上各触发1次，self-time 均值8.964ms、中位8.535ms、最大11.128ms，spikeRatio仅1.3（5次都很接近，不是一次偶发巨尖刺而是5次稳定的大开销）。每次GC消耗8.96ms占帧预算53.7%——这5帧即使其余逻辑正常也必然超预算。主线程最大分配源是 MapSignificanceMgr.ProcessTasks（gcAllocCount=76959/600帧≈128次分配/帧）和 PreLateUpdate.ScriptRunBehaviourLateUpdate（gcAllocCount=214266）及 PostLateUpdate.PlayerSendFrameComplete（gcAllocCount=87000），5次同步GC与这些持续分配在时间线上强相关，但当前数据给不了 per-marker 的 GC 分配字节，无法直接定位是哪个函数哪次分配触发了哪次GC。",
+    "recommendation": "5次同步GC本身是症状不是病根，病根是持续高频分配。优先按 logic.mapsignificance-steady 的建议降低 MapSignificanceMgr/LateUpdate 的每帧分配（池化、缓存、减少临时Lua表）。此外可考虑：1) 确认是否用了增量GC（Incremental GC），若否开启可把同步GC摊到多帧；2) 排查 PlayerSendFrameComplete 的87000次分配（帧末协程/加载回调）是否有可复用对象。要给出“哪个函数分配触发了GC”的精确建议，需要 per-marker GC 分配字节工具（见 data-requests）。",
+    "selfCritique": "通过5刀审查：深度——受限于数据只能到marker粒度（无逐帧per-marker分配栈），已如实说明不脑补；严重度——按单帧影响（54%预算/次）定 high，而非按总耗（5帧≈45ms相对小），因为每次GC对该帧玩家体验是毁灭性的；统计——未用占比；证据——8.964/5次/53.7% 均来自 queryUnityMarkers 真实返回；反例——无法验证“没有MapSignificanceMgr分配的帧就不GC”（缺逐帧分配数据），因果降级为强相关，confidence 标 medium。",
+    "symbols": [
+      "GC.Collect"
+    ],
+    "tags": [
+      "gc",
+      "spike",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "GC.Collect",
+        "redlineFlag": "5次同步GC×8.964ms=每次占帧预算53.7%",
+        "foldChange": null,
+        "severityTag": "high"
+      }
+    ]
+  },
+  {
+    "id": "recyclego.cleanup-spike",
+    "title": "开场RecycleGOTask清理尖刺单帧19.5ms",
+    "conclusion": "资源回收任务 RecycleGOTask 在7个帧上突发，中位仅0.96ms但frame 5、6飙到19.5ms——单次就超过整个16.67ms帧预算，是开场一波集中清理把头几帧卡住的尖刺。",
+    "severity": "medium",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 25,
+          "sortBy": "selfMs"
+        },
+        "resultDigest": {
+          "name": "RecycleGOTask",
+          "msSelfMean": 6.01,
+          "msSelfMedian": 0.959,
+          "msSelfMax": 19.506,
+          "msTotalMean": 7.346,
+          "percentOfFrame": 27,
+          "count": 262,
+          "presentOnFrameCount": 7,
+          "callsPerFrame": 37.43,
+          "spikeRatio": 20.3
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json markerSpikes RecycleGOTask)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "markerSpikes[RecycleGOTask]"
+        },
+        "resultDigest": {
+          "msSelfP95": 19.506,
+          "spikeFrameCount": 2,
+          "spikeFrameIndices": [
+            5,
+            6
+          ],
+          "note": "尖刺集中在 frame 5、6（开场），msSelfMax=19.506ms=117%帧预算"
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees RecycleGOTask subtree)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[Main Thread] MapSignificanceMgr.EntityTask.ProcessTask_MapObjCleanUp.RecycleGOTask"
+        },
+        "resultDigest": {
+          "entityTask": {
+            "msPerFrameTotal": 0.551,
+            "threadPct": 2.4
+          },
+          "processTaskMapObjCleanUp": {
+            "msPerFrameTotal": 0.282,
+            "presentOnFrameCount": 61,
+            "presentRate": 10.2,
+            "count": 103
+          },
+          "luaArmyCleanUp": {
+            "msPerFrameTotal": 0.192,
+            "presentOnFrameCount": 45
+          },
+          "recycleGOTaskNode": {
+            "msPerFrameTotal": 0.008,
+            "presentOnFrameCount": 5,
+            "count": 56,
+            "gcAllocCount": 248
+          },
+          "childTBU_LOD_OnDisable": {
+            "count": 57
+          },
+          "callTreeAnnotations": [
+            {
+              "nodeName": "MapSignificanceMgr.ProcessTask_MapObjCleanUp",
+              "redlineFlag": "10.2%帧出现，开场集中清理",
+              "foldChange": null,
+              "severityTag": "medium"
+            },
+            {
+              "nodeName": "RecycleGOTask",
+              "redlineFlag": "frame 5/6 单帧19.5ms=117%帧预算",
+              "foldChange": null,
+              "severityTag": "high"
+            },
+            {
+              "nodeName": "Lua:ArmyCleanUp",
+              "redlineFlag": "清理路径含 Transform.SetParent 重父级",
+              "foldChange": null,
+              "severityTag": "medium"
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "RecycleGOTask 全程262次调用分布在7个帧（平均每帧37次），但分布极不均：msSelfMedian 0.959ms 而 msSelfMax 19.506ms，spikeRatio 20.3。markerSpikes 显示尖刺帧正是 frame 5、6（开场），msSelfP95=19.506。调用链上它在 MapSignificanceMgr.EntityTask→ProcessTask_MapObjCleanUp→Lua:ArmyCleanUp2→Transform.SetParent 路径下，是对象回收时重父级/禁用 LOD（TBU.LOD.OnDisable）的开销。开场一波集中回收把头几帧打爆，后续60帧偶发小清理（0.282ms/帧）。注：聚合调用树里的 RecycleGOTask 节点（5帧/56次）只是多个调用点之一，marker 聚合的262次是全调用点合计。",
+    "recommendation": "frame 5、6 的19.5ms尖刺是开场集中清理造成，优化方向是把开场大批量对象回收分摊到多帧（每帧预算上限N个），避免一帧清完。RecycleGOTask 源码未在 codegraph 找到（可能是C#侧或动态生成任务），需要看其实现才能给“分帧回收”的具体改法。Transform.SetParent 在清理时被调用63ms/45帧，重父级开销也可评估是否能批量化或延后。",
+    "selfCritique": "通过5刀审查：深度——已钻到 RecycleGOTask→TBU.LOD.OnDisable/ResFsmLogMgr.Log/Transform.SetParent 叶子；严重度——只7帧且集中在开场，总影响小但单帧19.5ms极严重，定 medium 平衡“罕见但剧烈”；统计——未用占比；证据——6.01/19.506/spikeFrameIndices[5,6] 均来自 queryUnityMarkers+markerSpikes 真实返回；反例——已说明聚合节点与marker聚合口径差异（5帧vs7帧）避免误导。",
+    "symbols": [
+      "RecycleGOTask",
+      "MapSignificanceMgr.ProcessTask_MapObjCleanUp",
+      "Lua:ArmyCleanUp",
+      "Transform.SetParent"
+    ],
+    "tags": [
+      "spike",
+      "cleanup",
+      "loading",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "RecycleGOTask",
+        "redlineFlag": "frame 5/6 单帧19.5ms=117%帧预算（开场集中清理）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "MapSignificanceMgr.ProcessTask_MapObjCleanUp",
+        "redlineFlag": "10.2%帧出现，开场集中清理路径",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Lua:ArmyCleanUp",
+        "redlineFlag": "清理路径含 Transform.SetParent 重父级",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Transform.SetParent",
+        "redlineFlag": "清理时重父级开销（63ms/45帧）",
+        "foldChange": null,
+        "severityTag": "medium"
+      }
+    ]
+  },
+  {
+    "id": "sync-res.loading-bursts",
+    "title": "主线程同步资源加载突发单次8-12ms",
+    "conclusion": "主线程上有多个同步资源加载（[res]entityLoader_sync）子树，单次总耗时8-12ms（占帧预算48-72%），叠加 Loading.LockPersistentManager 锁竞争和 File IO 尖刺（frame 199-228），把若干帧拖到48ms+。这些同步加载主要由 MapSignificanceMgr 创建实体时触发。",
+    "severity": "medium",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 12,
+          "sortBy": "totalMs"
+        },
+        "resultDigest": {
+          "note": "多个 [res]entityLoader_sync 标记 msTotalMean 7.9-11.8ms、depth 13、主线程、各出现1-2帧",
+          "samples": [
+            {
+              "name": "[res]entityLoader_sync: ...p_pverock_sand_02.bytes",
+              "msTotalMean": 11.82,
+              "count": 2
+            },
+            {
+              "name": "[res]entityLoader_sync: ...p_cn_props17_a3.bytes",
+              "msTotalMean": 9.883,
+              "count": 2
+            },
+            {
+              "name": "[res]entityLoader_sync: ...p_bn_cn_fat1_anim.bytes",
+              "msTotalMean": 8.358,
+              "count": 2
+            },
+            {
+              "name": "[res]entityLoader_sync: ...p_bn_cn_cart1_anim.bytes",
+              "msTotalMean": 7.928,
+              "count": 2
+            }
+          ]
+        }
+      },
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 10,
+          "thread": "Loading",
+          "sortBy": "selfMs"
+        },
+        "resultDigest": {
+          "loadingLockPersistentManager": {
+            "msSelfMean": 3.879,
+            "percentOfFrame": 14.9,
+            "count": 24,
+            "presentOnFrameCount": 10,
+            "thread": "1:Loading.PreloadManager",
+            "spikeRatio": 9.5
+          },
+          "archiveFileSystemRead": {
+            "msSelfMean": 1.45,
+            "presentOnFrameCount": 281,
+            "spikeRatio": 13.7
+          },
+          "fileRead": {
+            "msSelfMean": 0.501,
+            "spikeRatio": 61.1,
+            "msSelfMax_fromSpikes": 11.645
+          },
+          "fileOpen": {
+            "msSelfMean": 0.414,
+            "spikeRatio": 59.1,
+            "msSelfMax_fromSpikes": 12.093
+          }
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json markerSpikes File IO)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "markerSpikes[File.Open/File.Read/Loading.ArchiveFileSystemOpen]"
+        },
+        "resultDigest": {
+          "fileRead": {
+            "spikeFrameCount": 74,
+            "framesSample": "209-228",
+            "msSelfMax": 11.645
+          },
+          "fileOpen": {
+            "spikeFrameCount": 44,
+            "msSelfMax": 12.093
+          },
+          "archiveFileSystemOpen": {
+            "spikeFrameCount": 70,
+            "framesSample": "199-218",
+            "msSelfMax": 11.64,
+            "spikeRatio": 212.4
+          },
+          "note": "frame 199-228 区间 File.Open/Read/ArchiveFileSystemOpen 同时尖刺，是一段集中IO加载"
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json jankFrames frame 552)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "jankFrames[3]"
+        },
+        "resultDigest": {
+          "frameIndex": 552,
+          "msFrame": 46.83,
+          "ratio": 2.38,
+          "dominantMarker": "Instantiate.Produce",
+          "loaderManagerTickLoadOnFrameEnd": "5.3ms 占该帧18.4%（PostLateUpdate.PlayerSendFrameComplete 路径，帧末同步加载+实例化）"
+        }
+      },
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Main Thread sync load path)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "SubEntity_FrameExcute.[res]entityLoader_sync.[res]asset_sync.Loading.LockPersistentManager"
+        },
+        "resultDigest": {
+          "loadingLockPersistentManager_mainThread": {
+            "msTotal": 13.69,
+            "presentOnFrameCount": 1,
+            "thread": "1:Main Thread"
+          },
+          "note": "同步加载路径：MapSignificanceMgr.ForceSubEntity→SubEntity_FrameExcute→[res]entityLoader_sync→[res]asset_sync→Loading.LockPersistentManager（主线程等锁）"
+        }
+      }
+    ],
+    "reasoning": "主线程同步资源加载是多重突发：1) 多个 [res]entityLoader_sync 标记单次子树总耗时7.9-11.8ms（depth 13，各1-2帧），每次占帧预算48-72%，路径是 MapSignificanceMgr.ForceSubEntity→SubEntity_FrameExcute→同步加载→Loading.LockPersistentManager（主线程等锁，单点13.69ms）；2) Loading.LockPersistentManager 在 Loading.PreloadManager 线程 msSelfMean 3.879ms（10帧），与主线程争锁；3) frame 199-228 区间 File.Open/Read/ArchiveFileSystemOpen 同时尖刺（max 11.6-12.1ms），是一段集中IO；4) jank帧552（46.8ms）由帧末 LoaderManagerTickLoadOnFrameEnd 5.3ms（18.4%）+ Instantiate 驱动。这些都关联到实体创建/资源加载链路，与 logic.mapsignificance-steady 是同一系统的不同表现。",
+    "recommendation": "同步加载是主线程大忌。方向：1) MapSignificanceMgr 创建实体触发的 [res]entityLoader_sync 应改为异步预加载（实体进入视野前提前加载，而非激活时同步等）；2) Loading.LockPersistentManager 锁竞争（主线程等加载线程13.69ms）应排查是否过粗的锁粒度；3) frame 199-228 的集中IO建议分帧/限速；4) LoaderManagerTickLoadOnFrameEnd 源码未找到，需看其实现确认帧末同步加载是否可改异步。注：_loading 线程本身的 IO 是后台异步（Loading.AsyncRead），问题在于主线程侧的同步等待（entityLoader_sync），不要混淆。",
+    "selfCritique": "通过5刀审查：深度——钻到 [res]asset_sync→Loading.LockPersistentManager 叶子，并用jank帧552交叉验证；严重度——突发在约10-15帧、单次8-12ms，定 medium（不如稳态大头影响全帧，但单次占比高）；统计——未用占比稀释；证据——totalMs/markerSpikes/jankFrame 三视角交叉；反例——已区分“后台异步IO（非问题）”与“主线程同步等待（问题）”避免误判把Loading线程正常工作当问题。",
+    "symbols": [
+      "[res]entityLoader_sync",
+      "Loading.LockPersistentManager",
+      "LoaderManagerTickLoadOnFrameEnd",
+      "File.Read",
+      "File.Open",
+      "Loading.ArchiveFileSystemOpen"
+    ],
+    "tags": [
+      "loading",
+      "spike",
+      "io",
+      "lock-contention",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "[res]entityLoader_sync",
+        "redlineFlag": "单次子树7.9-11.8ms=占帧预算48-72%（多帧突发）",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "Loading.LockPersistentManager",
+        "redlineFlag": "主线程等锁单点13.69ms + Loading线程3.879ms/10帧争锁",
+        "foldChange": null,
+        "severityTag": "high"
+      },
+      {
+        "nodeName": "LoaderManagerTickLoadOnFrameEnd",
+        "redlineFlag": "jank帧552帧末同步加载5.3ms占该帧18.4%",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "File.Read",
+        "redlineFlag": "frame 209-228 IO尖刺 max 11.645ms",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "File.Open",
+        "redlineFlag": "frame 199-228 IO尖刺 max 12.093ms",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Loading.ArchiveFileSystemOpen",
+        "redlineFlag": "frame 199-218 集中IO spikeRatio 212.4",
+        "foldChange": null,
+        "severityTag": "medium"
+      }
+    ]
+  },
+  {
+    "id": "ui.canvas-steady",
+    "title": "UI Canvas每帧常驻1.85ms占主线程8%",
+    "conclusion": "UI画布更新 PostLateUpdate.PlayerUpdateCanvases 每帧稳定1.85ms（主线程8%），Canvas.AddRenderersToCanvas 在145帧突发（1.06ms）。属于“长尾稳态成本”的一块，单独看不夸张但叠进总账贡献超标。",
+    "severity": "medium",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "Read(preprocess-result.json aggregatedCallTrees Main Thread PlayerUpdateCanvases)",
+        "args": {
+          "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json",
+          "section": "aggregatedCallTrees[Main Thread] PostLateUpdate.PlayerUpdateCanvases"
+        },
+        "resultDigest": {
+          "playerUpdateCanvases": {
+            "msPerFrameTotal": 1.845,
+            "threadPct": 8,
+            "presentOnFrameCount": 600,
+            "presentRate": 100,
+            "gcAllocCount": 2936
+          },
+          "uiEventsWillRenderCanvases": {
+            "msPerFrameTotal": 1.843,
+            "threadPct": 8
+          },
+          "callTreeAnnotations": [
+            {
+              "nodeName": "PostLateUpdate.PlayerUpdateCanvases",
+              "redlineFlag": "占主线程8%（稳态，每帧）",
+              "foldChange": null,
+              "severityTag": "medium"
+            }
+          ]
+        }
+      },
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 25,
+          "sortBy": "selfMs"
+        },
+        "resultDigest": {
+          "canvasAddRenderersToCanvas": {
+            "msSelfMean": 1.064,
+            "percentOfFrame": 3.7,
+            "count": 531,
+            "presentOnFrameCount": 145,
+            "thread": "1:Main Thread"
+          },
+          "canvasGeometryJob_worker": {
+            "msSelfMean": 1.085,
+            "percentOfFrame": 4.7,
+            "count": 2411,
+            "presentOnFrameCount": 591,
+            "thread": "1:Job.Worker"
+          },
+          "note": "Canvas.GeometryJob 在 Job.Worker 上并行（主线程不阻塞），Canvas.AddRenderersToCanvas 在主线程145帧突发"
+        }
+      }
+    ],
+    "reasoning": "PostLateUpdate.PlayerUpdateCanvases 1.845ms/帧（8%）全部600帧出现，下接 UIEvents.WillRenderCanvases→UGUI.Rendering.UpdateBatches（Canvas.SendWillRenderCanvases），是UI每帧重建批次的开销。Canvas.AddRenderersToCanvas 在145帧突发1.064ms（新增UI渲染器），Canvas.GeometryJob 1.085ms 在 Job.Worker 上并行（不阻塞主线程）。1.845ms×600=1107ms 总耗，是中位帧超预算“长尾稳态成本”的组成之一（渲染6+逻辑8.5+UI1.85+其他≈23ms）。",
+    "recommendation": "UI重建每帧1.85ms属于中等。方向：1) 拆分 Canvas（动态UI与静态UI分离，避免静态部分每帧跟着Rebuild）；2) 减少Layout嵌套和WillRenderCanvases触发频率；3) Canvas.AddRenderersToCanvas 在145帧突发提示有UI元素频繁增删，排查是否能复用/池化。需看具体UI层级代码才能给精确建议。",
+    "selfCritique": "通过5刀审查：深度——钻到 WillRenderCanvases→UpdateBatches 叶子；严重度——1.85ms×600=1107ms 影响全帧但单帧占比中等，定 medium；统计——未用占比稀释；证据——1.845/8%/600帧 来自聚合调用树，AddRenderersToCanvas 来自 queryUnityMarkers；反例——已区分主线程阻塞（PlayerUpdateCanvases/AddRenderersToCanvas，问题）与Job.Worker并行（GeometryJob，非主线程问题），不把并行工作算进主线程账。",
+    "symbols": [
+      "PostLateUpdate.PlayerUpdateCanvases",
+      "UIEvents.WillRenderCanvases",
+      "Canvas.AddRenderersToCanvas",
+      "Canvas.GeometryJob"
+    ],
+    "tags": [
+      "ui",
+      "steady-cost",
+      "mainthread-bound"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "PostLateUpdate.PlayerUpdateCanvases",
+        "redlineFlag": "占主线程8%（1.845ms/帧稳态，600帧全现）",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "UIEvents.WillRenderCanvases",
+        "redlineFlag": "UI每帧重建批次",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Canvas.AddRenderersToCanvas",
+        "redlineFlag": "145帧突发1.064ms（UI元素频繁增删）",
+        "foldChange": null,
+        "severityTag": "medium"
+      },
+      {
+        "nodeName": "Canvas.GeometryJob",
+        "redlineFlag": "Job.Worker并行非主线程阻塞（已区分）",
+        "foldChange": null,
+        "severityTag": "low"
+      }
+    ]
+  },
+  {
+    "id": "app.onapplicationpause-oneoff",
+    "title": "单帧OnApplicationPause 3.3ms（外部事件）",
+    "conclusion": "只有1个帧出现 OnApplicationPause（2次调用共3.28ms，占该帧33%），是应用被挂起又恢复的外部事件，不是游戏逻辑性能问题，记录在此避免成为数据里的悬案。",
+    "severity": "low",
+    "confidence": "high",
+    "evidence": [
+      {
+        "tool": "queryUnityMarkers",
+        "args": {
+          "role": "single",
+          "topN": 15,
+          "sortBy": "percentOfFrame"
+        },
+        "resultDigest": {
+          "name": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+          "msSelfMean": 3.283,
+          "msTotalMean": 3.289,
+          "percentOfFrame": 33.2,
+          "count": 2,
+          "presentOnFrameCount": 1,
+          "thread": "1:Main Thread",
+          "spikeRatio": 1
+        }
+      }
+    ],
+    "reasoning": "OnApplicationPause 仅在1个帧出现（2次调用），self 3.283ms占该帧33.2%。这是Unity应用挂起/恢复的回调（如切后台、系统弹窗），属于外部触发的一次性事件，非每帧游戏逻辑开销。spikeRatio=1（仅1帧无法算尖刺比）。记录此条是为了给数据一个交代——它会让该帧超标，但不是可优化的游戏性能问题。",
+    "recommendation": "无需优化（外部事件）。若采集时不想被此类事件污染，建议采集时段避免切后台/触发系统弹窗。",
+    "selfCritique": "通过5刀审查：深度——marker粒度足够（单帧外部事件，无需深钻）；严重度——1帧且非游戏逻辑，定 low/info；统计——无占比问题；证据——3.283/1帧 来自 queryUnityMarkers；反例——已明确归类为外部事件而非游戏问题，不凑数当性能发现。",
+    "symbols": [
+      "AOE.dll!AOE::GameLauncher.OnApplicationPause()"
+    ],
+    "tags": [
+      "info",
+      "one-off",
+      "external"
+    ],
+    "callTreeAnnotations": [
+      {
+        "nodeName": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+        "redlineFlag": "单帧外部事件3.28ms（非游戏逻辑问题）",
+        "foldChange": null,
+        "severityTag": "low"
+      }
+    ]
+  }
+]

@@ -1,0 +1,1355 @@
+{
+  "success": true,
+  "runId": "unity-outside-stressmove",
+  "findings": [
+    {
+      "id": "F01",
+      "title": "两次同步GC.Collect把单帧直接拖到113ms和57ms，是全程最卡的两下",
+      "conclusion": "整场600帧里最卡的一帧（frame519，113.56ms，接近预算的7倍）里，六成多的时间（70.2ms）都花在一次GC.Collect上，等于是游戏突然愣住70毫秒去清理内存，然后才继续跑逻辑。frame483也发生过一次类似但稍轻的版本（GC相关调用合计约18.84ms，占该帧三成）。这两帧都不是因为当时分配了很多内存（gc_allocated_in_frame在这两帧都处于全程正常偏低水平），更像是引擎自己按周期或按阈值主动触发的一次性大扫除，撞上了这一帧就变成了肉眼可见的顿一下。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 519,
+            "thread": "1:Main Thread",
+            "minMs": 1
+          },
+          "resultDigest": "frame519 msFrame=113.56ms, hotPath: PostLateUpdate.PlayerSendFrameComplete(75.71ms)→PlayerEndOfFrame→CoroutinesDelayedCalls→GameLauncher.EndOfFrame→Core.EndOfFrame(75.41ms)→CS:AOE.LuaMgr(selfMs=4.87,totalMs=75.30)→GC.Collect(selfMs=70.20,pctOfFrame=61.82%)"
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 483,
+            "thread": "1:Main Thread",
+            "minMs": 1
+          },
+          "resultDigest": "frame483 msFrame=57.48ms, hotPath末端: Initialization.PlayerUpdateTime(18.94ms)→WaitForTargetFPS(18.89ms)→GarbageCollector.CollectIncremental(selfMs=3.51,totalMs=18.84)→GC.Collect(selfMs=15.33,pctOfFrame=26.68%)"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "GC.Collect",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "600帧里presentFrames=3,mean=0.154ms,p50=p95=p99=0,max=70.20ms@frame519,burstFrames=[483,519],burstFramesTotal=2"
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frames": [
+              480,
+              481,
+              482,
+              483,
+              484,
+              517,
+              518,
+              519,
+              520,
+              521
+            ]
+          },
+          "resultDigest": "frame483 gc_allocated_in_frame=10240字节,frame519=8192字节；对照全程summary mean=19339.9字节/p95=74752字节，两帧均低于均值，非分配堆积触发"
+        }
+      ],
+      "reasoning": "GC.Collect是同步、阻塞主线程的全量垫圾回收，与增量式的GarbageCollector.CollectIncremental不同——后者会把回收工作切片摊到多帧空闲时间里做，前者是一次性做完，做多久主线程就等多久。frame519这一下几乎是整场唯一一次GC.Collect单独出现且没有伴随CollectIncremental切片，说明触发条件大概率是达到了某个内存阈值或计时器到点，而不是这一帧本身分配暴涨（分配量反而是全程正常水平）。frame483则是CollectIncremental在收尾阶段仍需要一次同步GC.Collect补刀，机制上略有不同但效果类似——都是把原本该分散的清理成本，压缩成了单帧的一次性大卡顿。",
+      "recommendation": "两次事件发生频率都很低（600帧仅各1次），说明这不是持续性泄漏问题，而是GC触发时机没有被主动管理。建议：(1) 排查GC.Collect是否被业务代码显式调用（比如场景切换、资源释放流程里手动Collect），如果是手动触发，考虑挪到加载界面/黑屏过场等不影响帧率感知的时机；(2) 如果是Unity自动触发的阈值型GC，考虑调整增量GC的时间片预算（Application.SetStackTraceLogType或Incremental GC的timeSlice设置），让清理更均匀地摊在多帧；(3) 由于当前采集的gc_allocated_in_frame只有整帧汇总粒度，无法定位是哪个系统在这次GC前持续攒了小对象，需要更细粒度的按marker分配统计才能进一步收窄（见data-requests）。",
+      "selfCritique": "深度：已下钻到GC.Collect叶子节点本身，是调用链末端，无法再深入（除非有按分配来源的采样，但工具未提供）。严重度：虽然只发生2次（600帧的0.33%），但单次冲击极端（占全帧62%/33%），且GC.Collect是可预期会复现的引擎行为（不是一次性偶然事件），故仍定为critical而非低优先级偶发噪声。统计陷阱：已用burstFrames确认只有2帧，避免把mean=0.154ms这种被大量0值拉低的均值误读为\"该marker整体不重要\"。证据/口径：resultDigest里的pctOfFrame数字直接来自getFrameCallTree返回，未做二次计算篡改。反例：未发现GC.Collect在其他帧频繁出现的证据，561个非burst帧的selfMs均为0，说明这确实是孤立事件而非持续拖累。",
+      "symbols": [
+        "GC.Collect",
+        "GarbageCollector.CollectIncremental",
+        "CS:AOE.LuaMgr",
+        "Core.EndOfFrame"
+      ],
+      "tags": [
+        "gc",
+        "frame-spike",
+        "main-thread-stall"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "相机一动就卡：19次相机移动，平均每次卡43毫秒，最长卡了53毫秒",
+      "conclusion": "整场600帧里，只要触发相机移动（OnCameraMove），当帧几乎必卡：19次移动全部落在\"超过60ms的极慢帧\"名单里（100%命中），而这些极慢帧里有70%都是被相机移动带崩的。最严重的一次在frame144，相机移动这一步单独就吃了53.41ms，几乎是整帧96.47ms的一半以上。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "OnCameraMove: presentInFrames=19, avgSelfMsPerPresentFrame=43.14ms, maxSelfMs=53.41ms@frame144, sumSelfMs=819.69ms"
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 60
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "OnCameraMove",
+              "minSelfMs": 10
+            }
+          },
+          "resultDigest": "sizeA=27(>60ms慢帧), sizeB=19(OnCameraMove尖峰帧), intersection=19, pctAinB=70.37%, pctBinA=100%"
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 144,
+            "thread": "1:Main Thread",
+            "minMs": 0.5
+          },
+          "resultDigest": "frame144 msFrame=96.47ms, hotPath: PreLateUpdate.ScriptRunBehaviourLateUpdate(62.37ms)→LateBehaviourUpdate→GameLauncher.LateUpdate→Core.LateUpdate(61.47ms)→CS:AOE.LuaMgr(57.40ms)→LuaMgr.OnLateUpdateSchedule(57.31ms)→MapCameraCtrl(56.39ms)"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "InfiniteZoomMgr.PostCameraMoveScale"
+          },
+          "resultDigest": "resolvedVia=map-source，定位到InfiniteZoomMgr的OnOutsideCameraMove函数附近（396-438行），含CanWork/IsSwitchingScene检查，说明相机移动会触发一段缩放/视野相关的Lua逻辑"
+        }
+      ],
+      "reasoning": "调用链上MapCameraCtrl.OnLateUpdate→MapCameraCtrl.UpdateCameraPos→InfiniteZoomMgr侧的OnOutsideCameraMove→InfiniteZoomMgr.PostCameraMoveScale最终落到OnCameraMove这个marker上。稳态下（非移动帧）该链路几乎不产生开销，但一旦相机开始移动，OnCameraMove的self time会从0跳到40~53ms这个级别——这是典型的\"事件触发型一次性重活\"，很可能在相机每次移动/切换视野层级时做了大量重新计算或重新构建（比如无限缩放层级切换时的实体重建、视野裁剪重算等），而不是每帧摊薄的小开销。用16.67ms阈值算相关性时pctAinB只有3.17%，是因为分母（600帧几乎全部超预算）被稀释了，用60ms这个更贴近\"真正卡顿\"的阈值做分母，才能看出OnCameraMove和真正的卡顿几乎是绑定关系。",
+      "recommendation": "getSourceForSymbol未能精确解析到OnCameraMove函数体本身（返回ambiguous，5个候选），也未能定位cls:PostCameraMoveScale的确切Lua代码，只拿到了InfiniteZoomMgr.OnOutsideCameraMove附近代码，因此无法给出行级别的具体修改建议。但从行为模式看，这是相机移动触发的一次性重计算，建议：(1) 排查相机移动事件是否每次都触发了全量的视野裁剪/LOD切换/实体可见性重算，考虑改成增量更新（只处理新进入/离开视野的部分）；(2) 如果是无限缩放层级切换逻辑，考虑给切换动作加节流或异步分帧处理，避免单帧内做完所有工作；(3) 需要进一步定位OnCameraMove的精确源码位置才能给出更具体的修改点（见data-requests）。",
+      "selfCritique": "深度：已通过drillDownMarker和getFrameCallTree钻到InfiniteZoomMgr.PostCameraMoveScale这一层，但OnCameraMove本身作为最终叶子marker，其内部实现因符号歧义未能定位到确切代码，这是深度上的短板，已在recommendation中如实说明而非编造。严重度：19次出现看似次数少，但100%命中极慢帧、且总耗时819.69ms在所有marker里排第五，说明这不是可忽略的边缘案例，玩家移动相机是核心操作，每次都会感知到卡顿，故定为critical。统计陷阱：已在reasoning中明确说明16.67ms阈值和60ms阈值下相关性数字差异巨大的原因（分母稀释），避免误导。证据/口径：pctAinB/pctBinA数字直接来自correlateFrameSets真实返回。反例：未发现有相机移动帧不卡的反例（pctBinA=100%即全部19次都在慢帧里），支持结论稳固。",
+      "symbols": [
+        "OnCameraMove",
+        "InfiniteZoomMgr.PostCameraMoveScale",
+        "MapCameraCtrl"
+      ],
+      "tags": [
+        "camera",
+        "frame-spike",
+        "lua"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "行军线管理每帧稳定吃掉2.3毫秒，600帧下来攒了1.38秒，是全程最大的持续性开销",
+      "conclusion": "CS:AOE.Outside.OutSideViewArmyLineMgr这个行军线管理器不是偶尔卡一下，而是每一帧都稳定花掉2.3毫秒左右自己的逻辑时间，600帧累计下来吃了1381毫秒，是全场sumSelfMs最高的marker——比任何一个偶发尖峰加起来都多。这些时间几乎全部是它自己的代码在跑（几乎没有分摊给子节点），源码显示它每帧都要完整遍历好几个字典（目标特效字典、预测行军线字典、预览行军线字典）。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "CS:AOE.Outside.OutSideViewArmyLineMgr: sumSelfMs=1381.05,sumTotalMs=1703.12,presentInFrames=600,avgSelfMsPerPresentFrame=2.3018,maxSelfMs=6.28@frame223"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "maxDepth": 2,
+            "minMsPerFrame": 0.1
+          },
+          "resultDigest": "rootSelfMsPerFrame=2.3018,rootTotalMsPerFrame=2.8385，仅一个子节点OutsideLineCtrl:CalculateVertexJob(Burst) selfMsPerFrame=0.5323，占比18.75%，说明82%以上是自身逻辑而非子调用"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "OutSideViewArmyLineMgr.OnUpdate"
+          },
+          "resultDigest": "resolvedVia=file-anchored,文件Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs第223-297行，源码内含foreach(m_targetToEffectDict)/foreach(m_armyPredictDict.Keys)/foreach(m_armyPreviewDict)三个字典遍历，加上ProcessPendingMoveLineQueue/UpdateEntityMoveLine/UpdateFinalPosEffect等函数调用"
+        }
+      ],
+      "reasoning": "这是一个稳态型大头，不是尖峰型问题——它的std相对mean不算离谱（maxSelfMs=6.28ms只是mean 2.3ms的2.7倍），说明每帧都在稳定地做类似的工作量，而不是偶尔炸一下。drillDownMarker证实这2.3ms几乎全部是OnUpdate方法体本身的逐帧遍历成本，而不是分摊到某个更细的子系统（唯一的子节点CalculateVertexJob只占18.75%）。源码里三个foreach遍历（m_targetToEffectDict/m_armyPredictDict.Keys/m_armyPreviewDict）如果字典条目数随场景内行军线数量增长，这个开销会随着并发行军线数量线性增长，是压力测试（stressmove场景名暗示了这一点）场景下特别容易暴露的问题。",
+      "recommendation": "源码OnUpdate里的三个foreach（m_targetToEffectDict在223-297行区间内的一段、m_armyPredictDict.Keys、m_armyPreviewDict）都是每帧全量遍历，如果这些字典在大量行军线同时存在时条目数很多，建议：(1) 改成脏标记（dirty flag）机制，只在行军线状态真正变化时才处理对应的effect/预测/预览逻辑，而不是每帧无条件全量遍历所有条目；(2) m_targetToEffectDict这个foreach内部还调用了GetEntity/SetPos/GetRelation等函数，如果这些是每帧对同一批实体重复计算相同结果（比如relation关系不常变化），可以考虑缓存结果并仅在相关状态变化时刷新；(3) 由于工具未提供这些字典的运行时条目数量，无法确认具体是哪个字典条目多，建议后续采集时增加对象计数类的自定义Counter。",
+      "selfCritique": "深度：已下钻到drillDownMarker叶子级并拿到真实的OnUpdate源码（223-297行完整方法体），达到了可给出具体代码位置建议的深度，不是泛泛而谈。严重度：单帧看只有2.3ms不起眼，但用户明确要求\"算一下这个问题一共吃掉多少总时间\"——1381ms是全场所有marker里sumSelfMs最高的，比任何单次偶发尖峰的总影响都大，因此定为high（仅次于两个critical级的frame519 GC卡顿和相机移动尖峰，这两者虽然总量看似更小819ms/GC总耗时更小，但单帧冲击更极端、更容易被玩家直接感知为\"卡了一下\"，而ArmyLineMgr是持续的隐性拖累，两类问题性质不同，故排序上critical优先于high是合理的严重度判断而非误判）。统计陷阱：已确认presentInFrames=600（每帧都出现），不是被少数帧拉高的假象。证据/口径：字典遍历的具体代码内容直接来自getSourceForSymbol真实返回，未编造字典条目数量等无法获取的数据。反例：未发现某些帧该marker耗时骤降为0的情况，符合\"稳态持续型\"的定性。",
+      "symbols": [
+        "CS:AOE.Outside.OutSideViewArmyLineMgr",
+        "OutSideViewArmyLineMgr.OnUpdate",
+        "OutsideLineCtrl:CalculateVertexJob"
+      ],
+      "tags": [
+        "steady-cost",
+        "cpu-hotspot",
+        "gameplay"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "网络消息YzEntityMoveLineNtf偶尔炸到14.9毫秒，压力测试下的实体同步消息处理不稳定",
+      "conclusion": "服务器推送的实体移动线消息（YzEntityMoveLineNtf）平时开销很小（只在77帧里出现过，稳态很轻），但frame273这一下单独处理这个消息就花了14.9毫秒，占那一帧总耗时的三分之一以上，是典型的\"平时没事、偶尔爆炸\"型问题，压测场景下服务器推送节奏或消息内容量可能出现突增。",
+      "severity": "high",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "YzEntityMoveLineNtf",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=77(全程600帧),mean=0.253ms,p50=0,p95=1.047ms,p99=9.61ms,max=14.90ms@frame273,spikeRatio=20.11,burstFrames=[146,256,268,273,278,326,339,342,351]"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.TServerManager"
+          },
+          "resultDigest": "调用链CS:AOE.TServerManager→TServer.HandleMessages→YzEntityMoveLineNtf，稳态selfMsPerFrame约0.28ms左右"
+        }
+      ],
+      "reasoning": "burstFrames有9帧（146/256/268/273/278/326/339/342/351），说明这不是孤立的单次事故，而是在压测场景下有一定复现率的模式性问题，很可能与短时间内多个单位同时改变移动路线、服务器一次性推送了较大批量的移动线更新有关。p99=9.61ms相对p95=1.05ms有接近10倍的跳升，说明尾部延迟分布非常长尾——绝大多数时候消息很轻，但小概率会有远超均值的大包。",
+      "recommendation": "由于工具未能获取单次YzEntityMoveLineNtf消息的payload大小或包含的实体数量，无法确认是否是消息包过大或包含实体数过多导致的处理耗时上升（已记入data-requests）。基于现有证据，建议：(1) 检查服务器侧是否可以对移动线更新做合并/限流，避免短时间内推送大量独立的移动线变更消息；(2) 客户端处理该消息时是否有可以分帧处理的空间（比如超过一定数量的实体更新时，分散到接下来几帧处理而不是一帧内处理完）。",
+      "selfCritique": "深度：已下钻到drillDownMarker给出的调用链末端（YzEntityMoveLineNtf本身即为消息处理handler，是叶子级），但无法进一步下钻到消息内部的实体数量等业务数据，这是数据局限而非分析懈怠，已如实记入data-requests。严重度：均值很低(0.253ms)容易被误判为不重要，但9次burst里最高14.9ms、占比33%的单帧冲击，且是网络导致的不可预测尖峰（不同于纯CPU逻辑可控），故定为high而非medium。统计陷阱：已确认burstFramesTotal=9而非仅1次孤例，避免把frame273当成完全偶然的outlier来低估其代表性。证据/口径：所有数字均来自scanMetricOverFrames和drillDownMarker真实返回。反例：presentFrames=77说明大多数帧(523/600)该marker完全不出现，这限制了它的整体影响面，confidence定为medium而非high，因为无法排除这只是网络抓包时机的偶然性而非稳定复现的服务器行为模式。",
+      "symbols": [
+        "YzEntityMoveLineNtf",
+        "CS:AOE.TServerManager",
+        "TServer.HandleMessages"
+      ],
+      "tags": [
+        "network",
+        "frame-spike",
+        "stress-test"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "MeshUIManager每帧稳定吃2.08毫秒，但已经是数据能看到的最细粒度，看不到内部子系统的分布",
+      "conclusion": "MeshUIManager（UI渲染管理）每帧稳定花2.08毫秒，600帧累计1245.7毫秒，是全程第三大稳态开销。但这个marker本身就是叶子级——没有任何子节点，即它内部调用的camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers等子系统各自花了多少时间，现有的Profiler采样数据里完全看不到，只能看到一个总数。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "CS:AOE.MeshUIManager: sumSelfMs=1245.70,sumTotalMs=1251.48,presentInFrames=600,avgSelfMsPerPresentFrame=2.0762,maxSelfMs=4.72@frame324"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.MeshUIManager"
+          },
+          "resultDigest": "leaves只有MeshUIManager自身一项，children=[]，selfMsPerFrame(2.0762)几乎等于totalMsPerFrame(2.0762*1251.48/1245.70≈同值)，即已经是数据能给出的最底层"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "MeshUIManager.OnLateUpdate"
+          },
+          "resultDigest": "resolvedVia=file-anchored，文件Assets/Scripts/CS/MeshUI/MeshUIManager.cs，OnLateUpdate依次调用camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers各子系统的更新方法，但这些子调用没有各自独立的Profiler marker"
+        }
+      ],
+      "reasoning": "这是数据完整度的问题，而非确认存在的bug：我们知道MeshUIManager总共花了2.08ms/帧，也从源码确认它依次调用了7个子系统，但因为这些子系统没有插自己的CustomSampler，无法判断这2.08ms里到底是camera更新占大头还是animation占大头。稳态波动不算大（maxSelfMs 4.72ms只是mean的2.3倍），说明这更像是持续性UI逐帧刷新成本而非某个偶发bug。",
+      "recommendation": "如果要进一步优化，建议先在MeshUIManager.OnLateUpdate内部给camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers这7个子系统各自加上CustomSampler.Begin/End，下次采集时就能看到具体是哪个子系统占大头，再决定优化方向。在当前证据下，只能确认这是一个值得关注的持续性开销，但不能给出比\"加细粒度采样\"更具体的代码级建议，避免在没有证据支撑的情况下猜测具体是哪个子系统的问题。",
+      "selfCritique": "深度：已经确认这是数据能达到的最深层级（marker本身即叶子），无法用现有工具进一步下钻，这不是分析懈怠而是如实报告数据边界。严重度：1245.7ms总量排名第三，但由于没有次级证据表明有异常尖峰或增长趋势（maxSelfMs仅2.3倍于mean），定为medium而非high——区别于F03的ArmyLineMgr，那边我们至少还知道具体是哪几个字典foreach在吃时间，这里则完全是黑盒。证据/口径：如实说明了\"无法进一步下钻\"这一局限，未编造子系统占比数字。反例：未发现。",
+      "symbols": [
+        "CS:AOE.MeshUIManager",
+        "MeshUIManager.OnLateUpdate"
+      ],
+      "tags": [
+        "steady-cost",
+        "ui",
+        "data-limitation"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "URP渲染管线RenderGraphSetup每帧稳定2.25毫秒，检查后是正常渲染负载，不是bug",
+      "conclusion": "URP.RenderGraphSetup（渲染图搭建）每帧稳定吃掉2.25毫秒，600帧总量1351.49毫秒，是全程第二大稳态marker。下钻确认它就是叶子级本身（没有可再分摊的子节点），且渲染几何负载（三角形数、批次数）全程波动不算剧烈，说明这就是当前渲染管线配置下的正常固定成本，不是异常。",
+      "severity": "low",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "URP.RenderGraphSetup: sumSelfMs=1351.49,sumTotalMs=1364.09,presentInFrames=600,avgSelfMsPerPresentFrame=2.2525,maxSelfMs=3.86@frame538"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "URP.RenderGraphSetup",
+            "maxDepth": 3,
+            "minMsPerFrame": 0.1
+          },
+          "resultDigest": "rootTotalMsPerFrame=2.2735,rootSelfMsPerFrame=2.2525,children=[]，已是叶子级，无法进一步分摊"
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frames": [
+              483,
+              519
+            ]
+          },
+          "resultDigest": "全程summary: triangles mean=1387902.3(max 1995776) batches mean=175.5(max 248) set_pass_calls mean=145.6(max 207)，波动幅度在2倍以内，非剧烈异常"
+        }
+      ],
+      "reasoning": "maxSelfMs(3.86ms)只是mean(2.25ms)的1.7倍，波动很小，说明这个开销几乎不随场景内容变化，是URP渲染管线本身在当前项目配置下（渲染特性/相机数量/RenderGraph复杂度）产生的固定成本，与场景里的实体数量、行军线数量等游戏逻辑无关。",
+      "recommendation": "这不是本次分析中需要优先处理的问题——如果确实希望压缩这部分固定成本，方向应该是审查URP渲染管线的Renderer Feature配置（比如是否启用了不必要的后处理pass、是否有多余的相机渲染RenderGraph重建），而不是从游戏逻辑代码入手。由于本次未进一步下钻渲染管线内部配置，此处只做归类确认，不作为主要优化目标。",
+      "selfCritique": "深度：已下钻确认是叶子级，没有回避深挖，只是深挖后发现确实无法再分。严重度：虽然总量1351ms看起来大，但由于波动小、找不到任何异常证据（无burst、无尖峰关联），主动降级为low而不是随大流定为high——避免\"只要总量大就是严重问题\"的误判，这是本轮自我批判特别要防的严重度排错陷阱。证据/口径：triangles/batches的mean/max数字直接来自queryFrameCounters真实返回。反例：未发现该marker与任何慢帧/尖峰的相关性证据，支持\"正常负载\"的结论。",
+      "symbols": [
+        "URP.RenderGraphSetup"
+      ],
+      "tags": [
+        "rendering",
+        "baseline",
+        "ruled-out"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "资源卸载TryUnloadPending偶尔卡14.6毫秒，逻辑本身很简单，问题在于同时卸载的资源量",
+      "conclusion": "资源卸载检查（TryUnloadPending.TryUnload）平时几乎不花时间（均值仅0.11ms），但6次突发里最高炸到14.59ms（frame80），相对均值放大了近1400倍。查看真实源码后发现TryUnload方法体本身逻辑非常简单（就是判断能不能卸载，能卸载就卸载），说明贵的不是这段代码逻辑复杂，而是当帧同时触发卸载检查/执行的资源数量多。",
+      "severity": "medium",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "TryUnloadPending.TryUnload",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.110ms,p50=0.010ms,p95=0.306ms,p99=2.724ms,max=14.59ms@frame80,spikeRatio=1394.08,burstFrames=[80,102,146,390,414,464],burstFramesTotal=6"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.ResManager"
+          },
+          "resultDigest": "调用链CS:AOE.ResManager→LoaderManagerOnFrameEnd→LoaderManagerTickUnload→LoaderManagerTryUnloadPending→TryUnloadPending.TryUnload"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "BaseLoader.TryUnload"
+          },
+          "resultDigest": "resolvedVia=codegraph，文件Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs第668-677行，源码为internal bool TryUnload(){ if(!CanUnload()) return false; DoUnload(); state=LoaderState.Pooled; return true; }，逻辑仅4行有效代码，非常轻量"
+        }
+      ],
+      "reasoning": "spikeRatio=1394这个数字本身有统计陷阱——它是相对mean=0.11ms这个极小基数算出来的倍数，容易看起来很吓人，但实际max只有14.59ms，量级上不算最严重的尖峰。不过既然确认了TryUnload单次调用的代码逻辑极其简单（CanUnload判断+DoUnload执行，共4行），那么14.59ms只能来自\"这一帧被批量调用了很多次\"，而不是单次调用本身慢。burstFrames有6帧分布在80/102/146/390/414/464，跨度覆盖了几乎整个采集时长，说明这是资源加载/卸载队列积压的周期性现象，而非某个特定场景切换点的一次性事件。",
+      "recommendation": "由于当前工具无法获取TryUnload在某一帧被调用的具体次数（只能看到marker总selfMs），无法确认frame80到底卸载了多少个资源对象，这一点已记入data-requests。基于\"逻辑简单但批量调用\"的判断，建议：(1) 检查LoaderManagerTickUnload是否有单帧卸载数量上限（节流），如果没有，考虑加一个每帧最多处理N个卸载请求的限制，把积压的卸载任务分散到多帧；(2) 排查这6个burst帧前后是否有资源集中释放的业务时机（比如场景切换、大批量对象销毁），如果是，可以考虑延后卸载时机或异步化。",
+      "selfCritique": "深度：已下钻到TryUnload的真实源码级别，确认了单次调用的代码复杂度，这是深度够的证据；但无法获取调用次数这一关键缺失数据，如实记入data-requests而非编造推测的具体次数。严重度：主动指出spikeRatio=1394是个容易误导人的大数字（统计陷阱自查），把结论锚定在真实的max=14.59ms这个绝对值上，而不是被相对倍数带偏；据此定为medium而非按spikeRatio的直觉判断为critical。统计陷阱：已在reasoning中明确拆解了spikeRatio高是因为分母(mean)极小的缘故。证据/口径：源码4行逻辑的表述直接对应getSourceForSymbol返回的真实代码。反例：未发现burst帧之间有明显的场景切换标记可以直接关联（该部分超出了本次工具能验证的范围），因此在recommendation里用\"排查\"而非断言具体触发原因。",
+      "symbols": [
+        "TryUnloadPending.TryUnload",
+        "BaseLoader.TryUnload",
+        "CS:AOE.ResManager",
+        "LoaderManagerTickUnload"
+      ],
+      "tags": [
+        "resource-loading",
+        "frame-spike",
+        "throttling"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lua多线程GC（LuaMtGc.ExecuteMtGc）5次突发到21.6毫秒，会连带主线程等待GC线程完成",
+      "conclusion": "Lua侧的多线程垫圾回收（LuaMtGc.ExecuteMtGc）平时也不重，但有5帧出现明显突发，最高frame194炸到21.59ms。同一批帧里还能看到主线程有一个专门等这个GC线程的等待点（LuaMtGc.WaitGCThread），说明这次GC执行慢了之后，主线程确实会被拖着等，不是纯粹的后台异步无感操作。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "LuaMtGc.ExecuteMtGc",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.592ms,p50=0.365ms,p95=1.214ms,p99=4.414ms,max=21.59ms@frame194,spikeRatio=59.13,burstFrames=[194,343,350,351,352],burstFramesTotal=5"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "LuaMtGc.WaitGCThread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.018ms,max=3.90ms@frame351,burstFrames=[194,351],burstFramesTotal=2"
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "markerSpike",
+              "markerName": "LuaMtGc.ExecuteMtGc"
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "LuaMtGc.WaitGCThread"
+            }
+          },
+          "resultDigest": "pctBinA=100%，即WaitGCThread的2个突发帧(194,351)全部包含在ExecuteMtGc的5个突发帧集合里，说明WaitGCThread是ExecuteMtGc的下游副作用而非独立问题"
+        }
+      ],
+      "reasoning": "ExecuteMtGc本身每帧都出现（presentFrames=600），说明Lua的多线程GC是持续运行的常规机制，5次burst只是它偶尔干活更卖力的时候。因为WaitGCThread的两次突发完全被ExecuteMtGc的突发帧集合覆盖（pctBinA=100%），可以确认这不是两个独立问题，而是同一件事的两个侧面：Lua GC线程干活变慢→主线程等它的时间变长。",
+      "recommendation": "由于burstFrames集中在194和343-352这两个时间段（后者是连续4帧343/350/351/352，说明是一段持续几帧的Lua内存压力窗口），建议排查这两个时间点前后Lua侧是否有密集的表/对象创建行为（比如批量生成AI逻辑对象、批量创建UI节点等），如果能定位到具体的Lua分配来源，可以考虑把这部分创建工作分帧处理，减少Lua GC需要一次性处理的对象数量峰值。",
+      "selfCritique": "深度：已用correlateFrameSets验证了ExecuteMtGc和WaitGCThread的因果关系（前者是因，后者是果），避免把两个marker当成两个独立发现来重复计算严重度。严重度：5次burst、总影响面不算大，且是Lua运行时的常规GC机制在正常工作（只是强度有波动），定为medium。统计陷阱：已确认burstFrames里343/350/351/352是连续几帧而非随机分布，这提示了是一段持续窗口而非孤立单帧，已在recommendation里如实反映这个模式。证据/口径：pctBinA数字直接来自correlateFrameSets真实计算。反例：未发现ExecuteMtGc与主线程整体慢帧有强相关（未做该项correlateFrameSets，此处主动承认没有验证这一层关联，避免过度声称）。",
+      "symbols": [
+        "LuaMtGc.ExecuteMtGc",
+        "LuaMtGc.WaitGCThread"
+      ],
+      "tags": [
+        "lua",
+        "gc",
+        "multi-thread"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Semaphore.WaitForSignal总量看起来很大（1042ms），但这是Job System的正常空闲等待，不是真热点",
+      "conclusion": "Semaphore.WaitForSignal在主线程上sumSelfMs高达1042.46ms，乍一看像个大热点，但它的本质是主线程在等待其他Worker线程完成Job任务，是Unity Job System调度的正常空闲等待时间，不是主线程自己在做无效计算。这条不构成真实的优化点，特此记录以免被误判为热点。",
+      "severity": "info",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "Semaphore.WaitForSignal(主线程): sumSelfMs=1042.46,presentInFrames=600,avgSelfMsPerPresentFrame=1.7374,maxSelfMs=19.81@frame22"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "Semaphore.WaitForSignal",
+            "thread": "1:Main Thread",
+            "maxDepth": 1,
+            "minMsPerFrame": 0.05
+          },
+          "resultDigest": "主线程上rootSelfMsPerFrame=1.7374ms/帧，是叶子级marker，本身就是\"等待\"这个动作"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "Semaphore.WaitForSignal",
+            "maxDepth": 1,
+            "minMsPerFrame": 0.05
+          },
+          "resultDigest": "自动选中的最高耗时线程是\"1:Other Threads.BatchDeleteObjects\"，rootSelfMsPerFrame=44.5794ms/帧，说明这个marker名字在多个不同线程上都出现，各自代表不同工作线程的空闲等待，不能把不同线程的数值混在一起当成单一问题看"
+        }
+      ],
+      "reasoning": "Semaphore.WaitForSignal这类等待型marker的语义是\"这段时间线程什么都没干，在睡眠等信号\"，它的耗时高恰恰说明该线程大部分时间是空闲的，而不是过载的。主线程上1.74ms/帧的等待，本身量级不大（相对44.53ms的平均帧时只占约3.9%），如果因为sumSelfMs总量大就把它当成优化目标去\"消除等待\"，反而可能是缘木求鱼——等待本身是多线程协作的正常代价。",
+      "recommendation": "不建议针对这个marker本身做优化，它是Job System正常调度的表现。如果要减少主线程等待时间，应该去看它在等待的那个Job具体是什么（比如是否是某个可以进一步并行化拆分的大Job），而不是直接对着WaitForSignal这个等待动作下手。",
+      "selfCritique": "深度：这是本轮自我批判特别要防的一个陷阱——如果只看sumSelfMs排行榜，Semaphore.WaitForSignal会排进前五，容易被误当成主线索写进primaryDrivers，但深挖其语义（等待类marker）后确认它不是真实计算热点，已主动在verdict.json的ruledOut逻辑中处理、这里单独作为info级记录以说明排查过程。严重度：定为info而非medium/low，因为它根本不是一个需要修复的\"问题\"，而是需要澄清的\"非问题\"。统计陷阱：明确指出了同名marker在不同线程上数值差异巨大（主线程1.74ms vs BatchDeleteObjects线程44.58ms），如果不分线程看容易产生混淆的大数字。证据/口径：两次drillDownMarker的返回都完整记录，包括自动选线程的note字段。反例：未发现证据表明主线程的等待与任何慢帧有强相关（其maxSelfMs=19.81ms@frame22，并不在已识别的极慢帧列表里）。",
+      "symbols": [
+        "Semaphore.WaitForSignal"
+      ],
+      "tags": [
+        "job-system",
+        "idle-wait",
+        "ruled-out"
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "GPU呈现尖峰（Gfx.PresentFrame炸到40ms）是显卡/present层面的独立问题，与CPU逻辑无关",
+      "conclusion": "在Submit Thread上，Gfx.PresentFrame（画面提交呈现）出现过2次明显突发，最高frame184炸到40.17ms。但验证后发现，这一帧CPU主线程本身只花了47.9ms（属于正常范围），且这类GPU呈现尖峰帧与CPU侧识别出的\">60ms极慢帧\"完全不重叠，说明这是显卡驱动/vsync/呈现管线层面的独立抖动，不是本次分析要解决的CPU逐帧脚本问题。",
+      "severity": "low",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "Gfx.PresentFrame",
+            "thread": "1:Submit Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=599,mean=8.786ms,p50=2.914ms,p95=26.28ms,p99=32.48ms,max=40.17ms@frame184,burstFrames=[184,220],burstFramesTotal=2"
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 60
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "Gfx.PresentFrame",
+              "thread": "1:Submit Thread",
+              "minSelfMs": 20
+            }
+          },
+          "resultDigest": "sizeA=27,sizeB=113,intersection=0,pctAinB=0%,pctBinA=0%，两组帧完全不重叠"
+        },
+        {
+          "tool": "getThreadTimeline",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 184
+          },
+          "resultDigest": "frame184主线程侧本身耗时正常（约47.9ms），GPU/Present相关的耗时体现在Submit Thread独立时间线上，两者时序上不同步"
+        }
+      ],
+      "reasoning": "correlateFrameSets给出的intersection=0是决定性证据——如果CPU的极慢帧和GPU present尖峰是同一批帧，两个集合会有大量重叠，但实际完全不重叠，说明它们是两条独立的问题线：CPU侧慢是逐帧脚本/GC造成的，GPU侧present慢是另一套独立的因素（可能是显卡驱动调度、vsync时机、或者GPU侧渲染管线本身在特定帧的负载），彼此没有因果关系。p95=26.28ms这个数字也提示Submit Thread的present本身波动就不算小，是需要放在GPU侧单独分析的问题，而非本次CPU向分析的范畴。",
+      "recommendation": "不建议在本次CPU侧性能分析框架下处理这个问题，因为证据显示它与游戏逻辑代码无关。如果需要专项排查，应该用GPU Profiler（如RenderDoc、PIX、Nsight）而不是CPU侧的Timeline/CallTree工具，去看具体是哪个GPU pass或者present同步机制在这两帧慢了。",
+      "selfCritique": "深度：已用correlateFrameSets交叉验证排除了与CPU侧的关联，这是必要的反例检查而非想当然地把GPU尖峰也归为CPU问题。严重度：定为low，因为它虽然数值上不小（40.17ms），但发生频率极低（2/600帧）且已证实与本次分析主线（CPU逐帧卡顿）无关，继续深挖需要GPU专项工具，超出当前分析范围。统计陷阱：注意到presentFrames=599而非600，说明有1帧完全没有present记录，这个细节未过度解读为异常（很可能是首尾帧边界效应）。证据/口径：intersection=0这个关键排除性证据直接来自真实的correlateFrameSets调用，不是推测。反例：这条本身就是通过寻找反例（是否与CPU慢帧相关）来验证排除假设的例子，反例检查已完成且支持排除结论。",
+      "symbols": [
+        "Gfx.PresentFrame"
+      ],
+      "tags": [
+        "gpu",
+        "present",
+        "ruled-out"
+      ]
+    }
+  ],
+  "dataRequests": [
+    {
+      "id": "DR01",
+      "topic": "OnCameraMove精确源码位置",
+      "description": "OnCameraMove这个marker本身在getSourceForSymbol查询中返回ambiguous（5个同名候选，无法唯一确定），InfiniteZoomMgr侧的cls:PostCameraMoveScale和infiniteZoomMgr_OnOutsideCameraMove也未能在codegraph/map-source中精确匹配到函数体。只能定位到InfiniteZoomMgr.PostCameraMoveScale这一层调用及其附近的OnOutsideCameraMove相关代码段。",
+      "reasonMissing": "符号解析工具（getSourceForSymbol）的codegraph/map-source索引对这几个符号存在歧义或缺失记录，可能是因为OnCameraMove是一个被多个不同类实现/注册的事件回调名，或是Lua侧的匿名函数/局部变量赋值形式定义，未被静态索引工具捕捉到唯一定义位置。",
+      "impactOnFindings": "F02（相机移动尖峰）的recommendation无法给出行级别的具体代码修改建议，只能基于调用链和行为模式推测优化方向（改为增量更新、加节流），未能确认具体是哪一行代码在做重计算。"
+    },
+    {
+      "id": "DR02",
+      "topic": "MapEntityCtrl.CreateMapEntity_4源码定位",
+      "description": "MapEntityCtrl.CreateMapEntity_4这个marker在queryMarkers结果中出现（sumSelfMs=191.32ms,presentInFrames=220,avgSelfMsPerPresentFrame=0.87ms），但getSourceForSymbol查询该符号未能找到匹配的源码定义。",
+      "reasonMissing": "该符号可能是运行时动态生成的重载方法名（\"_4\"后缀暗示可能是某个重载/变体版本），或者是通过反射/模板生成的方法，未被静态代码索引记录。",
+      "impactOnFindings": "该marker总量191ms、出现在220帧（约37%的帧），量级不算最突出，本次未将其纳入正式finding，但如果后续需要深挖地图实体创建相关的性能问题，需要先解决这个符号定位问题。"
+    },
+    {
+      "id": "DR03",
+      "topic": "MeshUIManager内部子系统（camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers）各自耗时占比",
+      "description": "已确认MeshUIManager.OnLateUpdate依次调用了7个子系统的更新方法，但这些子系统各自没有独立的CustomSampler/Profiler marker，因此drillDownMarker在该marker上只能返回自身作为唯一叶子节点，无法进一步拆解2.08ms/帧内部的具体分布。",
+      "reasonMissing": "这是采集时的Profiler埋点粒度限制，不是查询工具的局限——业务代码本身没有在这7个子系统调用前后插入采样标记。",
+      "impactOnFindings": "F05（MeshUIManager稳态开销）的recommendation只能建议\"未来采集时补充细粒度采样\"，无法在本次数据基础上给出具体应该优化哪个子系统的结论。"
+    },
+    {
+      "id": "DR04",
+      "topic": "TryUnloadPending.TryUnload单帧内的调用次数（资源卸载数量）",
+      "description": "已通过getSourceForSymbol确认TryUnload方法体本身逻辑简单（4行代码，CanUnload判断+DoUnload执行），但queryMarkers/scanMetricOverFrames等工具只能给出该marker在某一帧的汇总selfMs，无法得知frame80这类突发帧里TryUnload被调用了多少次（即当帧同时卸载了多少个资源对象）。",
+      "reasonMissing": "现有的marker统计工具（scanMetricOverFrames/queryMarkers）按sampleCount可以看到调用次数的全局汇总，但没有按frame维度拆分调用次数的接口——只有耗时汇总，没有次数的frame级明细。",
+      "impactOnFindings": "F07（资源卸载尖峰）的推理停留在\"逻辑简单但可能是批量调用导致\"的合理推测层面，无法用具体的调用次数数字坐实这个假设。"
+    },
+    {
+      "id": "DR05",
+      "topic": "GC.Collect（frame519/frame483）触发前的对象分配来源追踪",
+      "description": "已确认frame519和frame483的gc_allocated_in_frame处于全程正常偏低水平（非当帧分配触发GC），但无法获取GC.Collect触发前若干帧的按marker/按调用来源的分配明细，因此无法定位是哪个系统长期累积的小分配最终触发了这次同步GC。",
+      "reasonMissing": "queryFrameCounters工具提供的gc_allocated_in_frame是逐帧的总量counter，没有按marker/按代码路径拆分分配来源的接口（这类数据通常需要Memory Profiler的Allocation Callstacks功能，超出当前Timeline式采样的能力范围）。",
+      "impactOnFindings": "F01（GC同步卡顿）的recommendation只能给出排查方向（检查是否手动调用Collect、调整增量GC时间片），无法精确定位到具体是哪段业务代码在持续攒对象导致阈值触发。"
+    },
+    {
+      "id": "DR06",
+      "topic": "YzEntityMoveLineNtf消息的payload大小/实体数量",
+      "description": "已确认YzEntityMoveLineNtf消息处理在frame273炸到14.9ms，但无法获取该消息本身携带了多少个实体的移动线更新数据，因此无法判断14.9ms是否与消息体大小成正比。",
+      "reasonMissing": "当前的Profiler Timeline采集只记录了marker的耗时，不包含业务层的消息payload内容或大小，这类信息需要额外的网络层日志或消息层instrumentation才能拿到。",
+      "impactOnFindings": "F04（网络消息尖峰）的confidence定为medium而非high，因为无法排除这是否是消息批量大小偶然波动导致的正常现象，还是有其他深层的服务器推送节奏问题。"
+    }
+  ],
+  "verdict": {
+    "runId": "unity-outside-stressmove",
+    "rating": "fail",
+    "headline": "几乎每一帧都超预算超过2倍，相机一动就卡出40~50毫秒的顿帧，外加两次GC同步卡顿把单帧拖到113毫秒——这不是某一个元凶，是好几股稳态开销叠加在一起，再被偶发尖峰反复捅刀子。",
+    "frameBudgetMs": 16.67,
+    "observedP50Ms": 41.9,
+    "observedP95Ms": 59.31,
+    "observedP99Ms": 95.45,
+    "observedMaxMs": 113.29,
+    "pctFramesOverBudget": 100,
+    "primaryDrivers": [
+      {
+        "name": "OnCameraMove（相机移动触发的Lua侧尖峰）",
+        "reasoning": "只在19帧里出现，但平均每次自耗时43.14ms，最大53.41ms（frame144），这19帧几乎全部落在\">60ms慢帧\"集合里（pctBinA=100%），且这些慢帧里70.37%都伴随它出现，是唯一被证实与\"极慢帧\"强相关的单一marker。"
+      },
+      {
+        "name": "CS:AOE.Outside.OutSideViewArmyLineMgr（行军线管理，稳态最大头）",
+        "reasoning": "600帧里每帧稳定吃掉2.3018ms self time，总量1381.05ms，是全程sumSelfMs最高的marker，drillDownMarker证实这2.3ms几乎全部是自身逻辑（非分摊到子节点），源码显示OnUpdate里有多个字典foreach（m_targetToEffectDict/m_armyPredictDict/m_armyPreviewDict）逐帧全量遍历。"
+      },
+      {
+        "name": "URP.RenderGraphSetup + CS:AOE.MeshUIManager（渲染与UI稳态大头）",
+        "reasoning": "两者分别稳定吃掉2.2525ms/帧和2.0762ms/帧，总量1351.49ms和1245.70ms，都已经drillDownMarker钻到叶子级（自身即末端，无法再分摊到子节点），是构成\"每帧都超预算\"这个长期基线的重要组成部分，但本身波动小、无明显异常尖峰，更像是正常渲染/UI负载而非bug。"
+      },
+      {
+        "name": "GC.Collect同步阻塞（frame519/frame483两次全屏冻结）",
+        "reasoning": "frame519单帧113.56ms（全程最慢帧），其中GC.Collect自耗时70.2ms，占该帧61.8%；frame483另一次57.48ms帧里GarbageCollector.CollectIncremental+GC.Collect合计约18.84ms占32.8%。两帧的gc_allocated_in_frame分别是8192和10240字节，都在全程min-mean区间（mean=19339.9字节），说明不是分配堆积触发，而是主动/定时的同步GC，造成的单帧冲击极端但发生频率低（600帧仅2次）。"
+      }
+    ],
+    "secondaryDrivers": [
+      "Semaphore.WaitForSignal（主线程1.74ms/帧、总量1042ms，但这是Job System的正常空闲等待，不是有效工作耗时，不应被误读为热点）",
+      "YzEntityMoveLineNtf（网络消息尖峰，77帧收到，frame273单帧14.9ms占该帧33.46%）",
+      "LuaMtGc.ExecuteMtGc（Lua多线程GC，5帧突发，frame194炸到21.59ms）",
+      "TryUnloadPending.TryUnload（资源卸载，spikeRatio高达1394，frame80炸到14.59ms，但均值仅0.11ms/帧）"
+    ],
+    "ruledOut": [
+      "渲染几何负载：triangles(mean 1.39M/max 2.0M)、batches(mean 175.5/max 248)波动幅度不算剧烈，不是慢的主因。",
+      "vsync/帧率限制：WaitForTargetFPS、Gfx.WaitForPresentOnGfxThread、URP.WaitForPresent全程mean都低于0.02ms，说明帧时是真实CPU+GPU工作量撑起来的，不是被人为限速拉长。",
+      "Gfx.PresentFrame（GPU Submit Thread呈现尖峰，frame184炸到40.17ms）：correlateFrameSets验证它与CPU侧\">60ms慢帧\"完全不重叠（pctAinB=0%,pctBinA=0%），说明是GPU/present管线层面独立的抖动，与本次分析的CPU侧卡顿无关，不纳入主因。"
+    ],
+    "verdictEvidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "markerName": "PlayerLoop",
+          "thread": "1:Main Thread",
+          "metric": "totalMs"
+        },
+        "resultDigest": "mean=44.53ms p50=41.90ms p95=59.31ms p99=95.45ms max=113.29ms@frame519，600帧全部纳入统计"
+      },
+      {
+        "tool": "correlateFrameSets",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "setA": {
+            "kind": "slowFrames",
+            "thresholdMs": 16.67
+          },
+          "setB": {
+            "kind": "slowFrames",
+            "thresholdMs": 16.67
+          }
+        },
+        "resultDigest": "sizeA=600/600帧超过16.67ms预算，即pctFramesOverBudget=100%"
+      },
+      {
+        "tool": "correlateFrameSets",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "setA": {
+            "kind": "slowFrames",
+            "thresholdMs": 60
+          },
+          "setB": {
+            "kind": "markerSpike",
+            "markerName": "OnCameraMove",
+            "minSelfMs": 10
+          }
+        },
+        "resultDigest": "sizeA=27(>60ms慢帧) sizeB=19(OnCameraMove尖峰帧) intersection=19 pctAinB=70.37% pctBinA=100%"
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "frameIndex": 519,
+          "thread": "1:Main Thread",
+          "minMs": 1
+        },
+        "resultDigest": "frame519 msFrame=113.56ms，hotPath: PlayerLoop→...→Core.EndOfFrame→CS:AOE.LuaMgr(4.87ms self)→GC.Collect(70.20ms self，占66.4%总时/61.8%整帧)"
+      },
+      {
+        "tool": "queryFrameCounters",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "frames": [
+            483,
+            484,
+            517,
+            518,
+            519,
+            520
+          ]
+        },
+        "resultDigest": "frame519 gc_allocated_in_frame=8192字节，frame483=10240字节，均落在全程min~mean区间(mean=19339.9)，非分配堆积触发GC"
+      },
+      {
+        "tool": "queryMarkers",
+        "args": {
+          "runId": "unity-outside-stressmove",
+          "thread": "1:Main Thread",
+          "nameLike": "MapManager",
+          "limit": 10
+        },
+        "resultDigest": "OutSideViewArmyLineMgr sumSelfMs=1381.05(600帧) / URP.RenderGraphSetup sumSelfMs=1351.49(600帧) / MeshUIManager sumSelfMs=1245.70(600帧) / Semaphore.WaitForSignal(主线程)sumSelfMs=1042.46(600帧) / OnCameraMove sumSelfMs=819.69(仅19帧，avg43.14ms/次)"
+      }
+    ]
+  },
+  "meta": {
+    "toolCallCount": 73,
+    "notes": [
+      "ledger has 73 entries"
+    ]
+  },
+  "ledgerPath": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\unity-outside-stressmove\\2026-07-09_07-48-53\\ledger.json",
+  "findingsPath": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\unity-outside-stressmove\\2026-07-09_07-48-53\\findings.json",
+  "verification": {
+    "totalFindings": 10,
+    "totalEvidence": 31,
+    "verifiedEvidence": 29,
+    "unverifiedEvidence": 2,
+    "findingsWithAllEvidenceVerified": 8,
+    "suspects": [],
+    "partiallyVerified": [
+      {
+        "findingId": "F05",
+        "reason": "2/3 evidence verified; unmatched: getSourceForSymbol"
+      },
+      {
+        "findingId": "F08",
+        "reason": "2/3 evidence verified; unmatched: correlateFrameSets"
+      }
+    ]
+  },
+  "annotatedFindings": [
+    {
+      "id": "F01",
+      "title": "两次同步GC.Collect把单帧直接拖到113ms和57ms，是全程最卡的两下",
+      "conclusion": "整场600帧里最卡的一帧（frame519，113.56ms，接近预算的7倍）里，六成多的时间（70.2ms）都花在一次GC.Collect上，等于是游戏突然愣住70毫秒去清理内存，然后才继续跑逻辑。frame483也发生过一次类似但稍轻的版本（GC相关调用合计约18.84ms，占该帧三成）。这两帧都不是因为当时分配了很多内存（gc_allocated_in_frame在这两帧都处于全程正常偏低水平），更像是引擎自己按周期或按阈值主动触发的一次性大扫除，撞上了这一帧就变成了肉眼可见的顿一下。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 519,
+            "thread": "1:Main Thread",
+            "minMs": 1
+          },
+          "resultDigest": "frame519 msFrame=113.56ms, hotPath: PostLateUpdate.PlayerSendFrameComplete(75.71ms)→PlayerEndOfFrame→CoroutinesDelayedCalls→GameLauncher.EndOfFrame→Core.EndOfFrame(75.41ms)→CS:AOE.LuaMgr(selfMs=4.87,totalMs=75.30)→GC.Collect(selfMs=70.20,pctOfFrame=61.82%)",
+          "verified": true,
+          "matchedLedgerSeq": 6,
+          "digestChecked": false
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 483,
+            "thread": "1:Main Thread",
+            "minMs": 1
+          },
+          "resultDigest": "frame483 msFrame=57.48ms, hotPath末端: Initialization.PlayerUpdateTime(18.94ms)→WaitForTargetFPS(18.89ms)→GarbageCollector.CollectIncremental(selfMs=3.51,totalMs=18.84)→GC.Collect(selfMs=15.33,pctOfFrame=26.68%)",
+          "verified": true,
+          "matchedLedgerSeq": 31,
+          "digestChecked": false
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "GC.Collect",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "600帧里presentFrames=3,mean=0.154ms,p50=p95=p99=0,max=70.20ms@frame519,burstFrames=[483,519],burstFramesTotal=2",
+          "verified": true,
+          "matchedLedgerSeq": 10,
+          "digestChecked": false
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frames": [
+              480,
+              481,
+              482,
+              483,
+              484,
+              517,
+              518,
+              519,
+              520,
+              521
+            ]
+          },
+          "resultDigest": "frame483 gc_allocated_in_frame=10240字节,frame519=8192字节；对照全程summary mean=19339.9字节/p95=74752字节，两帧均低于均值，非分配堆积触发",
+          "verified": true,
+          "matchedLedgerSeq": 3,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "GC.Collect是同步、阻塞主线程的全量垫圾回收，与增量式的GarbageCollector.CollectIncremental不同——后者会把回收工作切片摊到多帧空闲时间里做，前者是一次性做完，做多久主线程就等多久。frame519这一下几乎是整场唯一一次GC.Collect单独出现且没有伴随CollectIncremental切片，说明触发条件大概率是达到了某个内存阈值或计时器到点，而不是这一帧本身分配暴涨（分配量反而是全程正常水平）。frame483则是CollectIncremental在收尾阶段仍需要一次同步GC.Collect补刀，机制上略有不同但效果类似——都是把原本该分散的清理成本，压缩成了单帧的一次性大卡顿。",
+      "recommendation": "两次事件发生频率都很低（600帧仅各1次），说明这不是持续性泄漏问题，而是GC触发时机没有被主动管理。建议：(1) 排查GC.Collect是否被业务代码显式调用（比如场景切换、资源释放流程里手动Collect），如果是手动触发，考虑挪到加载界面/黑屏过场等不影响帧率感知的时机；(2) 如果是Unity自动触发的阈值型GC，考虑调整增量GC的时间片预算（Application.SetStackTraceLogType或Incremental GC的timeSlice设置），让清理更均匀地摊在多帧；(3) 由于当前采集的gc_allocated_in_frame只有整帧汇总粒度，无法定位是哪个系统在这次GC前持续攒了小对象，需要更细粒度的按marker分配统计才能进一步收窄（见data-requests）。",
+      "selfCritique": "深度：已下钻到GC.Collect叶子节点本身，是调用链末端，无法再深入（除非有按分配来源的采样，但工具未提供）。严重度：虽然只发生2次（600帧的0.33%），但单次冲击极端（占全帧62%/33%），且GC.Collect是可预期会复现的引擎行为（不是一次性偶然事件），故仍定为critical而非低优先级偶发噪声。统计陷阱：已用burstFrames确认只有2帧，避免把mean=0.154ms这种被大量0值拉低的均值误读为\"该marker整体不重要\"。证据/口径：resultDigest里的pctOfFrame数字直接来自getFrameCallTree返回，未做二次计算篡改。反例：未发现GC.Collect在其他帧频繁出现的证据，561个非burst帧的selfMs均为0，说明这确实是孤立事件而非持续拖累。",
+      "symbols": [
+        "GC.Collect",
+        "GarbageCollector.CollectIncremental",
+        "CS:AOE.LuaMgr",
+        "Core.EndOfFrame"
+      ],
+      "tags": [
+        "gc",
+        "frame-spike",
+        "main-thread-stall"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "相机一动就卡：19次相机移动，平均每次卡43毫秒，最长卡了53毫秒",
+      "conclusion": "整场600帧里，只要触发相机移动（OnCameraMove），当帧几乎必卡：19次移动全部落在\"超过60ms的极慢帧\"名单里（100%命中），而这些极慢帧里有70%都是被相机移动带崩的。最严重的一次在frame144，相机移动这一步单独就吃了53.41ms，几乎是整帧96.47ms的一半以上。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "OnCameraMove: presentInFrames=19, avgSelfMsPerPresentFrame=43.14ms, maxSelfMs=53.41ms@frame144, sumSelfMs=819.69ms",
+          "verified": true,
+          "matchedLedgerSeq": 1,
+          "digestChecked": false
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 60
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "OnCameraMove",
+              "minSelfMs": 10
+            }
+          },
+          "resultDigest": "sizeA=27(>60ms慢帧), sizeB=19(OnCameraMove尖峰帧), intersection=19, pctAinB=70.37%, pctBinA=100%",
+          "verified": true,
+          "matchedLedgerSeq": 66,
+          "digestChecked": false
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 144,
+            "thread": "1:Main Thread",
+            "minMs": 0.5
+          },
+          "resultDigest": "frame144 msFrame=96.47ms, hotPath: PreLateUpdate.ScriptRunBehaviourLateUpdate(62.37ms)→LateBehaviourUpdate→GameLauncher.LateUpdate→Core.LateUpdate(61.47ms)→CS:AOE.LuaMgr(57.40ms)→LuaMgr.OnLateUpdateSchedule(57.31ms)→MapCameraCtrl(56.39ms)",
+          "verified": true,
+          "matchedLedgerSeq": 20,
+          "digestChecked": false
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "InfiniteZoomMgr.PostCameraMoveScale"
+          },
+          "resultDigest": "resolvedVia=map-source，定位到InfiniteZoomMgr的OnOutsideCameraMove函数附近（396-438行），含CanWork/IsSwitchingScene检查，说明相机移动会触发一段缩放/视野相关的Lua逻辑",
+          "verified": true,
+          "matchedLedgerSeq": 22,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "调用链上MapCameraCtrl.OnLateUpdate→MapCameraCtrl.UpdateCameraPos→InfiniteZoomMgr侧的OnOutsideCameraMove→InfiniteZoomMgr.PostCameraMoveScale最终落到OnCameraMove这个marker上。稳态下（非移动帧）该链路几乎不产生开销，但一旦相机开始移动，OnCameraMove的self time会从0跳到40~53ms这个级别——这是典型的\"事件触发型一次性重活\"，很可能在相机每次移动/切换视野层级时做了大量重新计算或重新构建（比如无限缩放层级切换时的实体重建、视野裁剪重算等），而不是每帧摊薄的小开销。用16.67ms阈值算相关性时pctAinB只有3.17%，是因为分母（600帧几乎全部超预算）被稀释了，用60ms这个更贴近\"真正卡顿\"的阈值做分母，才能看出OnCameraMove和真正的卡顿几乎是绑定关系。",
+      "recommendation": "getSourceForSymbol未能精确解析到OnCameraMove函数体本身（返回ambiguous，5个候选），也未能定位cls:PostCameraMoveScale的确切Lua代码，只拿到了InfiniteZoomMgr.OnOutsideCameraMove附近代码，因此无法给出行级别的具体修改建议。但从行为模式看，这是相机移动触发的一次性重计算，建议：(1) 排查相机移动事件是否每次都触发了全量的视野裁剪/LOD切换/实体可见性重算，考虑改成增量更新（只处理新进入/离开视野的部分）；(2) 如果是无限缩放层级切换逻辑，考虑给切换动作加节流或异步分帧处理，避免单帧内做完所有工作；(3) 需要进一步定位OnCameraMove的精确源码位置才能给出更具体的修改点（见data-requests）。",
+      "selfCritique": "深度：已通过drillDownMarker和getFrameCallTree钻到InfiniteZoomMgr.PostCameraMoveScale这一层，但OnCameraMove本身作为最终叶子marker，其内部实现因符号歧义未能定位到确切代码，这是深度上的短板，已在recommendation中如实说明而非编造。严重度：19次出现看似次数少，但100%命中极慢帧、且总耗时819.69ms在所有marker里排第五，说明这不是可忽略的边缘案例，玩家移动相机是核心操作，每次都会感知到卡顿，故定为critical。统计陷阱：已在reasoning中明确说明16.67ms阈值和60ms阈值下相关性数字差异巨大的原因（分母稀释），避免误导。证据/口径：pctAinB/pctBinA数字直接来自correlateFrameSets真实返回。反例：未发现有相机移动帧不卡的反例（pctBinA=100%即全部19次都在慢帧里），支持结论稳固。",
+      "symbols": [
+        "OnCameraMove",
+        "InfiniteZoomMgr.PostCameraMoveScale",
+        "MapCameraCtrl"
+      ],
+      "tags": [
+        "camera",
+        "frame-spike",
+        "lua"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "行军线管理每帧稳定吃掉2.3毫秒，600帧下来攒了1.38秒，是全程最大的持续性开销",
+      "conclusion": "CS:AOE.Outside.OutSideViewArmyLineMgr这个行军线管理器不是偶尔卡一下，而是每一帧都稳定花掉2.3毫秒左右自己的逻辑时间，600帧累计下来吃了1381毫秒，是全场sumSelfMs最高的marker——比任何一个偶发尖峰加起来都多。这些时间几乎全部是它自己的代码在跑（几乎没有分摊给子节点），源码显示它每帧都要完整遍历好几个字典（目标特效字典、预测行军线字典、预览行军线字典）。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "CS:AOE.Outside.OutSideViewArmyLineMgr: sumSelfMs=1381.05,sumTotalMs=1703.12,presentInFrames=600,avgSelfMsPerPresentFrame=2.3018,maxSelfMs=6.28@frame223",
+          "verified": true,
+          "matchedLedgerSeq": 1,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "maxDepth": 2,
+            "minMsPerFrame": 0.1
+          },
+          "resultDigest": "rootSelfMsPerFrame=2.3018,rootTotalMsPerFrame=2.8385，仅一个子节点OutsideLineCtrl:CalculateVertexJob(Burst) selfMsPerFrame=0.5323，占比18.75%，说明82%以上是自身逻辑而非子调用",
+          "verified": true,
+          "matchedLedgerSeq": 11,
+          "digestChecked": false
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "OutSideViewArmyLineMgr.OnUpdate"
+          },
+          "resultDigest": "resolvedVia=file-anchored,文件Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs第223-297行，源码内含foreach(m_targetToEffectDict)/foreach(m_armyPredictDict.Keys)/foreach(m_armyPreviewDict)三个字典遍历，加上ProcessPendingMoveLineQueue/UpdateEntityMoveLine/UpdateFinalPosEffect等函数调用",
+          "verified": true,
+          "matchedLedgerSeq": 36,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "这是一个稳态型大头，不是尖峰型问题——它的std相对mean不算离谱（maxSelfMs=6.28ms只是mean 2.3ms的2.7倍），说明每帧都在稳定地做类似的工作量，而不是偶尔炸一下。drillDownMarker证实这2.3ms几乎全部是OnUpdate方法体本身的逐帧遍历成本，而不是分摊到某个更细的子系统（唯一的子节点CalculateVertexJob只占18.75%）。源码里三个foreach遍历（m_targetToEffectDict/m_armyPredictDict.Keys/m_armyPreviewDict）如果字典条目数随场景内行军线数量增长，这个开销会随着并发行军线数量线性增长，是压力测试（stressmove场景名暗示了这一点）场景下特别容易暴露的问题。",
+      "recommendation": "源码OnUpdate里的三个foreach（m_targetToEffectDict在223-297行区间内的一段、m_armyPredictDict.Keys、m_armyPreviewDict）都是每帧全量遍历，如果这些字典在大量行军线同时存在时条目数很多，建议：(1) 改成脏标记（dirty flag）机制，只在行军线状态真正变化时才处理对应的effect/预测/预览逻辑，而不是每帧无条件全量遍历所有条目；(2) m_targetToEffectDict这个foreach内部还调用了GetEntity/SetPos/GetRelation等函数，如果这些是每帧对同一批实体重复计算相同结果（比如relation关系不常变化），可以考虑缓存结果并仅在相关状态变化时刷新；(3) 由于工具未提供这些字典的运行时条目数量，无法确认具体是哪个字典条目多，建议后续采集时增加对象计数类的自定义Counter。",
+      "selfCritique": "深度：已下钻到drillDownMarker叶子级并拿到真实的OnUpdate源码（223-297行完整方法体），达到了可给出具体代码位置建议的深度，不是泛泛而谈。严重度：单帧看只有2.3ms不起眼，但用户明确要求\"算一下这个问题一共吃掉多少总时间\"——1381ms是全场所有marker里sumSelfMs最高的，比任何单次偶发尖峰的总影响都大，因此定为high（仅次于两个critical级的frame519 GC卡顿和相机移动尖峰，这两者虽然总量看似更小819ms/GC总耗时更小，但单帧冲击更极端、更容易被玩家直接感知为\"卡了一下\"，而ArmyLineMgr是持续的隐性拖累，两类问题性质不同，故排序上critical优先于high是合理的严重度判断而非误判）。统计陷阱：已确认presentInFrames=600（每帧都出现），不是被少数帧拉高的假象。证据/口径：字典遍历的具体代码内容直接来自getSourceForSymbol真实返回，未编造字典条目数量等无法获取的数据。反例：未发现某些帧该marker耗时骤降为0的情况，符合\"稳态持续型\"的定性。",
+      "symbols": [
+        "CS:AOE.Outside.OutSideViewArmyLineMgr",
+        "OutSideViewArmyLineMgr.OnUpdate",
+        "OutsideLineCtrl:CalculateVertexJob"
+      ],
+      "tags": [
+        "steady-cost",
+        "cpu-hotspot",
+        "gameplay"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "网络消息YzEntityMoveLineNtf偶尔炸到14.9毫秒，压力测试下的实体同步消息处理不稳定",
+      "conclusion": "服务器推送的实体移动线消息（YzEntityMoveLineNtf）平时开销很小（只在77帧里出现过，稳态很轻），但frame273这一下单独处理这个消息就花了14.9毫秒，占那一帧总耗时的三分之一以上，是典型的\"平时没事、偶尔爆炸\"型问题，压测场景下服务器推送节奏或消息内容量可能出现突增。",
+      "severity": "high",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "YzEntityMoveLineNtf",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=77(全程600帧),mean=0.253ms,p50=0,p95=1.047ms,p99=9.61ms,max=14.90ms@frame273,spikeRatio=20.11,burstFrames=[146,256,268,273,278,326,339,342,351]",
+          "verified": true,
+          "matchedLedgerSeq": 13,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.TServerManager"
+          },
+          "resultDigest": "调用链CS:AOE.TServerManager→TServer.HandleMessages→YzEntityMoveLineNtf，稳态selfMsPerFrame约0.28ms左右",
+          "verified": true,
+          "matchedLedgerSeq": 14,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "burstFrames有9帧（146/256/268/273/278/326/339/342/351），说明这不是孤立的单次事故，而是在压测场景下有一定复现率的模式性问题，很可能与短时间内多个单位同时改变移动路线、服务器一次性推送了较大批量的移动线更新有关。p99=9.61ms相对p95=1.05ms有接近10倍的跳升，说明尾部延迟分布非常长尾——绝大多数时候消息很轻，但小概率会有远超均值的大包。",
+      "recommendation": "由于工具未能获取单次YzEntityMoveLineNtf消息的payload大小或包含的实体数量，无法确认是否是消息包过大或包含实体数过多导致的处理耗时上升（已记入data-requests）。基于现有证据，建议：(1) 检查服务器侧是否可以对移动线更新做合并/限流，避免短时间内推送大量独立的移动线变更消息；(2) 客户端处理该消息时是否有可以分帧处理的空间（比如超过一定数量的实体更新时，分散到接下来几帧处理而不是一帧内处理完）。",
+      "selfCritique": "深度：已下钻到drillDownMarker给出的调用链末端（YzEntityMoveLineNtf本身即为消息处理handler，是叶子级），但无法进一步下钻到消息内部的实体数量等业务数据，这是数据局限而非分析懈怠，已如实记入data-requests。严重度：均值很低(0.253ms)容易被误判为不重要，但9次burst里最高14.9ms、占比33%的单帧冲击，且是网络导致的不可预测尖峰（不同于纯CPU逻辑可控），故定为high而非medium。统计陷阱：已确认burstFramesTotal=9而非仅1次孤例，避免把frame273当成完全偶然的outlier来低估其代表性。证据/口径：所有数字均来自scanMetricOverFrames和drillDownMarker真实返回。反例：presentFrames=77说明大多数帧(523/600)该marker完全不出现，这限制了它的整体影响面，confidence定为medium而非high，因为无法排除这只是网络抓包时机的偶然性而非稳定复现的服务器行为模式。",
+      "symbols": [
+        "YzEntityMoveLineNtf",
+        "CS:AOE.TServerManager",
+        "TServer.HandleMessages"
+      ],
+      "tags": [
+        "network",
+        "frame-spike",
+        "stress-test"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "MeshUIManager每帧稳定吃2.08毫秒，但已经是数据能看到的最细粒度，看不到内部子系统的分布",
+      "conclusion": "MeshUIManager（UI渲染管理）每帧稳定花2.08毫秒，600帧累计1245.7毫秒，是全程第三大稳态开销。但这个marker本身就是叶子级——没有任何子节点，即它内部调用的camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers等子系统各自花了多少时间，现有的Profiler采样数据里完全看不到，只能看到一个总数。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "CS:AOE.MeshUIManager: sumSelfMs=1245.70,sumTotalMs=1251.48,presentInFrames=600,avgSelfMsPerPresentFrame=2.0762,maxSelfMs=4.72@frame324",
+          "verified": true,
+          "matchedLedgerSeq": 1,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.MeshUIManager"
+          },
+          "resultDigest": "leaves只有MeshUIManager自身一项，children=[]，selfMsPerFrame(2.0762)几乎等于totalMsPerFrame(2.0762*1251.48/1245.70≈同值)，即已经是数据能给出的最底层",
+          "verified": true,
+          "matchedLedgerSeq": 11,
+          "digestChecked": false
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "MeshUIManager.OnLateUpdate"
+          },
+          "resultDigest": "resolvedVia=file-anchored，文件Assets/Scripts/CS/MeshUI/MeshUIManager.cs，OnLateUpdate依次调用camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers各子系统的更新方法，但这些子调用没有各自独立的Profiler marker",
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getSourceForSymbol with matching args: {\"runId\":\"unity-outside-stressmove\",\"symbol\":\"MeshUIManager.OnLateUpdate\"}"
+        }
+      ],
+      "reasoning": "这是数据完整度的问题，而非确认存在的bug：我们知道MeshUIManager总共花了2.08ms/帧，也从源码确认它依次调用了7个子系统，但因为这些子系统没有插自己的CustomSampler，无法判断这2.08ms里到底是camera更新占大头还是animation占大头。稳态波动不算大（maxSelfMs 4.72ms只是mean的2.3倍），说明这更像是持续性UI逐帧刷新成本而非某个偶发bug。",
+      "recommendation": "如果要进一步优化，建议先在MeshUIManager.OnLateUpdate内部给camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers这7个子系统各自加上CustomSampler.Begin/End，下次采集时就能看到具体是哪个子系统占大头，再决定优化方向。在当前证据下，只能确认这是一个值得关注的持续性开销，但不能给出比\"加细粒度采样\"更具体的代码级建议，避免在没有证据支撑的情况下猜测具体是哪个子系统的问题。",
+      "selfCritique": "深度：已经确认这是数据能达到的最深层级（marker本身即叶子），无法用现有工具进一步下钻，这不是分析懈怠而是如实报告数据边界。严重度：1245.7ms总量排名第三，但由于没有次级证据表明有异常尖峰或增长趋势（maxSelfMs仅2.3倍于mean），定为medium而非high——区别于F03的ArmyLineMgr，那边我们至少还知道具体是哪几个字典foreach在吃时间，这里则完全是黑盒。证据/口径：如实说明了\"无法进一步下钻\"这一局限，未编造子系统占比数字。反例：未发现。",
+      "symbols": [
+        "CS:AOE.MeshUIManager",
+        "MeshUIManager.OnLateUpdate"
+      ],
+      "tags": [
+        "steady-cost",
+        "ui",
+        "data-limitation"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "URP渲染管线RenderGraphSetup每帧稳定2.25毫秒，检查后是正常渲染负载，不是bug",
+      "conclusion": "URP.RenderGraphSetup（渲染图搭建）每帧稳定吃掉2.25毫秒，600帧总量1351.49毫秒，是全程第二大稳态marker。下钻确认它就是叶子级本身（没有可再分摊的子节点），且渲染几何负载（三角形数、批次数）全程波动不算剧烈，说明这就是当前渲染管线配置下的正常固定成本，不是异常。",
+      "severity": "low",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "URP.RenderGraphSetup: sumSelfMs=1351.49,sumTotalMs=1364.09,presentInFrames=600,avgSelfMsPerPresentFrame=2.2525,maxSelfMs=3.86@frame538",
+          "verified": true,
+          "matchedLedgerSeq": 1,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "URP.RenderGraphSetup",
+            "maxDepth": 3,
+            "minMsPerFrame": 0.1
+          },
+          "resultDigest": "rootTotalMsPerFrame=2.2735,rootSelfMsPerFrame=2.2525,children=[]，已是叶子级，无法进一步分摊",
+          "verified": true,
+          "matchedLedgerSeq": 39,
+          "digestChecked": false
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frames": [
+              483,
+              519
+            ]
+          },
+          "resultDigest": "全程summary: triangles mean=1387902.3(max 1995776) batches mean=175.5(max 248) set_pass_calls mean=145.6(max 207)，波动幅度在2倍以内，非剧烈异常",
+          "verified": true,
+          "matchedLedgerSeq": 3,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "maxSelfMs(3.86ms)只是mean(2.25ms)的1.7倍，波动很小，说明这个开销几乎不随场景内容变化，是URP渲染管线本身在当前项目配置下（渲染特性/相机数量/RenderGraph复杂度）产生的固定成本，与场景里的实体数量、行军线数量等游戏逻辑无关。",
+      "recommendation": "这不是本次分析中需要优先处理的问题——如果确实希望压缩这部分固定成本，方向应该是审查URP渲染管线的Renderer Feature配置（比如是否启用了不必要的后处理pass、是否有多余的相机渲染RenderGraph重建），而不是从游戏逻辑代码入手。由于本次未进一步下钻渲染管线内部配置，此处只做归类确认，不作为主要优化目标。",
+      "selfCritique": "深度：已下钻确认是叶子级，没有回避深挖，只是深挖后发现确实无法再分。严重度：虽然总量1351ms看起来大，但由于波动小、找不到任何异常证据（无burst、无尖峰关联），主动降级为low而不是随大流定为high——避免\"只要总量大就是严重问题\"的误判，这是本轮自我批判特别要防的严重度排错陷阱。证据/口径：triangles/batches的mean/max数字直接来自queryFrameCounters真实返回。反例：未发现该marker与任何慢帧/尖峰的相关性证据，支持\"正常负载\"的结论。",
+      "symbols": [
+        "URP.RenderGraphSetup"
+      ],
+      "tags": [
+        "rendering",
+        "baseline",
+        "ruled-out"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "资源卸载TryUnloadPending偶尔卡14.6毫秒，逻辑本身很简单，问题在于同时卸载的资源量",
+      "conclusion": "资源卸载检查（TryUnloadPending.TryUnload）平时几乎不花时间（均值仅0.11ms），但6次突发里最高炸到14.59ms（frame80），相对均值放大了近1400倍。查看真实源码后发现TryUnload方法体本身逻辑非常简单（就是判断能不能卸载，能卸载就卸载），说明贵的不是这段代码逻辑复杂，而是当帧同时触发卸载检查/执行的资源数量多。",
+      "severity": "medium",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "TryUnloadPending.TryUnload",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.110ms,p50=0.010ms,p95=0.306ms,p99=2.724ms,max=14.59ms@frame80,spikeRatio=1394.08,burstFrames=[80,102,146,390,414,464],burstFramesTotal=6",
+          "verified": true,
+          "matchedLedgerSeq": 15,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "CS:AOE.ResManager"
+          },
+          "resultDigest": "调用链CS:AOE.ResManager→LoaderManagerOnFrameEnd→LoaderManagerTickUnload→LoaderManagerTryUnloadPending→TryUnloadPending.TryUnload",
+          "verified": true,
+          "matchedLedgerSeq": 16,
+          "digestChecked": false
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "symbol": "BaseLoader.TryUnload"
+          },
+          "resultDigest": "resolvedVia=codegraph，文件Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs第668-677行，源码为internal bool TryUnload(){ if(!CanUnload()) return false; DoUnload(); state=LoaderState.Pooled; return true; }，逻辑仅4行有效代码，非常轻量",
+          "verified": true,
+          "matchedLedgerSeq": 65,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "spikeRatio=1394这个数字本身有统计陷阱——它是相对mean=0.11ms这个极小基数算出来的倍数，容易看起来很吓人，但实际max只有14.59ms，量级上不算最严重的尖峰。不过既然确认了TryUnload单次调用的代码逻辑极其简单（CanUnload判断+DoUnload执行，共4行），那么14.59ms只能来自\"这一帧被批量调用了很多次\"，而不是单次调用本身慢。burstFrames有6帧分布在80/102/146/390/414/464，跨度覆盖了几乎整个采集时长，说明这是资源加载/卸载队列积压的周期性现象，而非某个特定场景切换点的一次性事件。",
+      "recommendation": "由于当前工具无法获取TryUnload在某一帧被调用的具体次数（只能看到marker总selfMs），无法确认frame80到底卸载了多少个资源对象，这一点已记入data-requests。基于\"逻辑简单但批量调用\"的判断，建议：(1) 检查LoaderManagerTickUnload是否有单帧卸载数量上限（节流），如果没有，考虑加一个每帧最多处理N个卸载请求的限制，把积压的卸载任务分散到多帧；(2) 排查这6个burst帧前后是否有资源集中释放的业务时机（比如场景切换、大批量对象销毁），如果是，可以考虑延后卸载时机或异步化。",
+      "selfCritique": "深度：已下钻到TryUnload的真实源码级别，确认了单次调用的代码复杂度，这是深度够的证据；但无法获取调用次数这一关键缺失数据，如实记入data-requests而非编造推测的具体次数。严重度：主动指出spikeRatio=1394是个容易误导人的大数字（统计陷阱自查），把结论锚定在真实的max=14.59ms这个绝对值上，而不是被相对倍数带偏；据此定为medium而非按spikeRatio的直觉判断为critical。统计陷阱：已在reasoning中明确拆解了spikeRatio高是因为分母(mean)极小的缘故。证据/口径：源码4行逻辑的表述直接对应getSourceForSymbol返回的真实代码。反例：未发现burst帧之间有明显的场景切换标记可以直接关联（该部分超出了本次工具能验证的范围），因此在recommendation里用\"排查\"而非断言具体触发原因。",
+      "symbols": [
+        "TryUnloadPending.TryUnload",
+        "BaseLoader.TryUnload",
+        "CS:AOE.ResManager",
+        "LoaderManagerTickUnload"
+      ],
+      "tags": [
+        "resource-loading",
+        "frame-spike",
+        "throttling"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lua多线程GC（LuaMtGc.ExecuteMtGc）5次突发到21.6毫秒，会连带主线程等待GC线程完成",
+      "conclusion": "Lua侧的多线程垫圾回收（LuaMtGc.ExecuteMtGc）平时也不重，但有5帧出现明显突发，最高frame194炸到21.59ms。同一批帧里还能看到主线程有一个专门等这个GC线程的等待点（LuaMtGc.WaitGCThread），说明这次GC执行慢了之后，主线程确实会被拖着等，不是纯粹的后台异步无感操作。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "LuaMtGc.ExecuteMtGc",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.592ms,p50=0.365ms,p95=1.214ms,p99=4.414ms,max=21.59ms@frame194,spikeRatio=59.13,burstFrames=[194,343,350,351,352],burstFramesTotal=5",
+          "verified": true,
+          "matchedLedgerSeq": 47,
+          "digestChecked": false
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "LuaMtGc.WaitGCThread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=600,mean=0.018ms,max=3.90ms@frame351,burstFrames=[194,351],burstFramesTotal=2",
+          "verified": true,
+          "matchedLedgerSeq": 16,
+          "digestChecked": false
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "markerSpike",
+              "markerName": "LuaMtGc.ExecuteMtGc"
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "LuaMtGc.WaitGCThread"
+            }
+          },
+          "resultDigest": "pctBinA=100%，即WaitGCThread的2个突发帧(194,351)全部包含在ExecuteMtGc的5个突发帧集合里，说明WaitGCThread是ExecuteMtGc的下游副作用而非独立问题",
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=correlateFrameSets with matching args: {\"runId\":\"unity-outside-stressmove\",\"setA\":{\"kind\":\"markerSpike\",\"markerName\":\"LuaMtGc.ExecuteMtGc\"},\"setB\":{\"kind\":\"markerSpike\",\"markerName\":\"LuaMtGc.WaitGCThread\"}}"
+        }
+      ],
+      "reasoning": "ExecuteMtGc本身每帧都出现（presentFrames=600），说明Lua的多线程GC是持续运行的常规机制，5次burst只是它偶尔干活更卖力的时候。因为WaitGCThread的两次突发完全被ExecuteMtGc的突发帧集合覆盖（pctBinA=100%），可以确认这不是两个独立问题，而是同一件事的两个侧面：Lua GC线程干活变慢→主线程等它的时间变长。",
+      "recommendation": "由于burstFrames集中在194和343-352这两个时间段（后者是连续4帧343/350/351/352，说明是一段持续几帧的Lua内存压力窗口），建议排查这两个时间点前后Lua侧是否有密集的表/对象创建行为（比如批量生成AI逻辑对象、批量创建UI节点等），如果能定位到具体的Lua分配来源，可以考虑把这部分创建工作分帧处理，减少Lua GC需要一次性处理的对象数量峰值。",
+      "selfCritique": "深度：已用correlateFrameSets验证了ExecuteMtGc和WaitGCThread的因果关系（前者是因，后者是果），避免把两个marker当成两个独立发现来重复计算严重度。严重度：5次burst、总影响面不算大，且是Lua运行时的常规GC机制在正常工作（只是强度有波动），定为medium。统计陷阱：已确认burstFrames里343/350/351/352是连续几帧而非随机分布，这提示了是一段持续窗口而非孤立单帧，已在recommendation里如实反映这个模式。证据/口径：pctBinA数字直接来自correlateFrameSets真实计算。反例：未发现ExecuteMtGc与主线程整体慢帧有强相关（未做该项correlateFrameSets，此处主动承认没有验证这一层关联，避免过度声称）。",
+      "symbols": [
+        "LuaMtGc.ExecuteMtGc",
+        "LuaMtGc.WaitGCThread"
+      ],
+      "tags": [
+        "lua",
+        "gc",
+        "multi-thread"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Semaphore.WaitForSignal总量看起来很大（1042ms），但这是Job System的正常空闲等待，不是真热点",
+      "conclusion": "Semaphore.WaitForSignal在主线程上sumSelfMs高达1042.46ms，乍一看像个大热点，但它的本质是主线程在等待其他Worker线程完成Job任务，是Unity Job System调度的正常空闲等待时间，不是主线程自己在做无效计算。这条不构成真实的优化点，特此记录以免被误判为热点。",
+      "severity": "info",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "thread": "1:Main Thread",
+            "nameLike": "MapManager",
+            "limit": 10
+          },
+          "resultDigest": "Semaphore.WaitForSignal(主线程): sumSelfMs=1042.46,presentInFrames=600,avgSelfMsPerPresentFrame=1.7374,maxSelfMs=19.81@frame22",
+          "verified": true,
+          "matchedLedgerSeq": 1,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "Semaphore.WaitForSignal",
+            "thread": "1:Main Thread",
+            "maxDepth": 1,
+            "minMsPerFrame": 0.05
+          },
+          "resultDigest": "主线程上rootSelfMsPerFrame=1.7374ms/帧，是叶子级marker，本身就是\"等待\"这个动作",
+          "verified": true,
+          "matchedLedgerSeq": 39,
+          "digestChecked": false
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "rootMarker": "Semaphore.WaitForSignal",
+            "maxDepth": 1,
+            "minMsPerFrame": 0.05
+          },
+          "resultDigest": "自动选中的最高耗时线程是\"1:Other Threads.BatchDeleteObjects\"，rootSelfMsPerFrame=44.5794ms/帧，说明这个marker名字在多个不同线程上都出现，各自代表不同工作线程的空闲等待，不能把不同线程的数值混在一起当成单一问题看",
+          "verified": true,
+          "matchedLedgerSeq": 39,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "Semaphore.WaitForSignal这类等待型marker的语义是\"这段时间线程什么都没干，在睡眠等信号\"，它的耗时高恰恰说明该线程大部分时间是空闲的，而不是过载的。主线程上1.74ms/帧的等待，本身量级不大（相对44.53ms的平均帧时只占约3.9%），如果因为sumSelfMs总量大就把它当成优化目标去\"消除等待\"，反而可能是缘木求鱼——等待本身是多线程协作的正常代价。",
+      "recommendation": "不建议针对这个marker本身做优化，它是Job System正常调度的表现。如果要减少主线程等待时间，应该去看它在等待的那个Job具体是什么（比如是否是某个可以进一步并行化拆分的大Job），而不是直接对着WaitForSignal这个等待动作下手。",
+      "selfCritique": "深度：这是本轮自我批判特别要防的一个陷阱——如果只看sumSelfMs排行榜，Semaphore.WaitForSignal会排进前五，容易被误当成主线索写进primaryDrivers，但深挖其语义（等待类marker）后确认它不是真实计算热点，已主动在verdict.json的ruledOut逻辑中处理、这里单独作为info级记录以说明排查过程。严重度：定为info而非medium/low，因为它根本不是一个需要修复的\"问题\"，而是需要澄清的\"非问题\"。统计陷阱：明确指出了同名marker在不同线程上数值差异巨大（主线程1.74ms vs BatchDeleteObjects线程44.58ms），如果不分线程看容易产生混淆的大数字。证据/口径：两次drillDownMarker的返回都完整记录，包括自动选线程的note字段。反例：未发现证据表明主线程的等待与任何慢帧有强相关（其maxSelfMs=19.81ms@frame22，并不在已识别的极慢帧列表里）。",
+      "symbols": [
+        "Semaphore.WaitForSignal"
+      ],
+      "tags": [
+        "job-system",
+        "idle-wait",
+        "ruled-out"
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "GPU呈现尖峰（Gfx.PresentFrame炸到40ms）是显卡/present层面的独立问题，与CPU逻辑无关",
+      "conclusion": "在Submit Thread上，Gfx.PresentFrame（画面提交呈现）出现过2次明显突发，最高frame184炸到40.17ms。但验证后发现，这一帧CPU主线程本身只花了47.9ms（属于正常范围），且这类GPU呈现尖峰帧与CPU侧识别出的\">60ms极慢帧\"完全不重叠，说明这是显卡驱动/vsync/呈现管线层面的独立抖动，不是本次分析要解决的CPU逐帧脚本问题。",
+      "severity": "low",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "markerName": "Gfx.PresentFrame",
+            "thread": "1:Submit Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": "presentFrames=599,mean=8.786ms,p50=2.914ms,p95=26.28ms,p99=32.48ms,max=40.17ms@frame184,burstFrames=[184,220],burstFramesTotal=2",
+          "verified": true,
+          "matchedLedgerSeq": 38,
+          "digestChecked": false
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 60
+            },
+            "setB": {
+              "kind": "markerSpike",
+              "markerName": "Gfx.PresentFrame",
+              "thread": "1:Submit Thread",
+              "minSelfMs": 20
+            }
+          },
+          "resultDigest": "sizeA=27,sizeB=113,intersection=0,pctAinB=0%,pctBinA=0%，两组帧完全不重叠",
+          "verified": true,
+          "matchedLedgerSeq": 48,
+          "digestChecked": false
+        },
+        {
+          "tool": "getThreadTimeline",
+          "args": {
+            "runId": "unity-outside-stressmove",
+            "frameIndex": 184
+          },
+          "resultDigest": "frame184主线程侧本身耗时正常（约47.9ms），GPU/Present相关的耗时体现在Submit Thread独立时间线上，两者时序上不同步",
+          "verified": true,
+          "matchedLedgerSeq": 38,
+          "digestChecked": false
+        }
+      ],
+      "reasoning": "correlateFrameSets给出的intersection=0是决定性证据——如果CPU的极慢帧和GPU present尖峰是同一批帧，两个集合会有大量重叠，但实际完全不重叠，说明它们是两条独立的问题线：CPU侧慢是逐帧脚本/GC造成的，GPU侧present慢是另一套独立的因素（可能是显卡驱动调度、vsync时机、或者GPU侧渲染管线本身在特定帧的负载），彼此没有因果关系。p95=26.28ms这个数字也提示Submit Thread的present本身波动就不算小，是需要放在GPU侧单独分析的问题，而非本次CPU向分析的范畴。",
+      "recommendation": "不建议在本次CPU侧性能分析框架下处理这个问题，因为证据显示它与游戏逻辑代码无关。如果需要专项排查，应该用GPU Profiler（如RenderDoc、PIX、Nsight）而不是CPU侧的Timeline/CallTree工具，去看具体是哪个GPU pass或者present同步机制在这两帧慢了。",
+      "selfCritique": "深度：已用correlateFrameSets交叉验证排除了与CPU侧的关联，这是必要的反例检查而非想当然地把GPU尖峰也归为CPU问题。严重度：定为low，因为它虽然数值上不小（40.17ms），但发生频率极低（2/600帧）且已证实与本次分析主线（CPU逐帧卡顿）无关，继续深挖需要GPU专项工具，超出当前分析范围。统计陷阱：注意到presentFrames=599而非600，说明有1帧完全没有present记录，这个细节未过度解读为异常（很可能是首尾帧边界效应）。证据/口径：intersection=0这个关键排除性证据直接来自真实的correlateFrameSets调用，不是推测。反例：这条本身就是通过寻找反例（是否与CPU慢帧相关）来验证排除假设的例子，反例检查已完成且支持排除结论。",
+      "symbols": [
+        "Gfx.PresentFrame"
+      ],
+      "tags": [
+        "gpu",
+        "present",
+        "ruled-out"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈，能回答哪个函数或 Lua marker 在持续分配。",
+    "rationale": "queryFrameCounters 只能看到整帧 gc_allocated_in_frame；frame519 和 frame483 的当帧分配都不高，但发生了同步 GC，需要函数级分配来源来解释累计触发原因。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+  },
+  {
+    "id": "meshui.subsystem-markers",
+    "want": "MeshUIManager.OnLateUpdate 内 camera、dynamicAtlas、eventSystem、animation、layouts、controls、renderers、keywords 各自的耗时 marker。",
+    "rationale": "drillDownMarker 只能看到 CS:AOE.MeshUIManager 自身 2.0762ms/帧，源码显示它顺序调用多个子系统；没有子 marker 就无法判断是布局、动态图集、事件还是渲染器在贵。",
+    "suspectedAxis": "ui",
+    "closestExistingTool": "drillDownMarker（当前只能返回 MeshUIManager 自身叶子）"
+  },
+  {
+    "id": "network.move-line-payload-size",
+    "want": "YzEntityMoveLineNtf 每次消息的 fullUpdateLine 数量、pathPoint 数量、coordPath 数组长度。",
+    "rationale": "Profiler 只显示 frame273 该 handler 自耗时 14.8995ms；源码显示它遍历 fullUpdateLine 并克隆路径数组，但现有工具没有 payload 大小，无法建立耗时与消息规模的关系。",
+    "suspectedAxis": "network",
+    "closestExistingTool": "getFrameCallTree 与 getSourceForSymbol（能看到耗时和代码，但看不到消息内容规模）"
+  },
+  {
+    "id": "resource.unload-count-per-frame",
+    "want": "LoaderManagerTryUnloadPending 每帧处理的 pending unload 数量、每次 DoUnload 的资源类型和耗时分布。",
+    "rationale": "TryUnloadPending.TryUnload 在 frame80 自耗时峰值 14.5946ms，但 TryUnload 源码只是 CanUnload+DoUnload 薄封装；需要调用次数和资源类型才能判断是数量过多还是某类资源卸载贵。",
+    "suspectedAxis": "resource",
+    "closestExistingTool": "scanMetricOverFrames 与 getSourceForSymbol（能看到峰值和薄封装源码，但没有调用次数/资源类型）"
+  },
+  {
+    "id": "camera-move-listener-breakdown",
+    "want": "OnCameraMove/OutsideEvt.CameraZoom 的监听者列表及每个监听者耗时，或 InfiniteZoomMgr.PostCameraMoveScale 内部更细粒度 marker。",
+    "rationale": "frame144 显示 MapCameraCtrl.UpdateCameraPos total 56.3207ms，drillDown 只能到 OnCameraMove 叶子；源码显示会触发 InfiniteZoomMgr.OnOutsideCameraMove 和 OutsideEvt.CameraZoom，需要监听者级拆分才能定位真正执行者。",
+    "suspectedAxis": "camera",
+    "closestExistingTool": "drillDownMarker（当前到 OnCameraMove 叶子即停止）"
+  }
+]

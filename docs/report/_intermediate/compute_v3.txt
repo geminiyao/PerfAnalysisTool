@@ -1,0 +1,54 @@
+主线程 (%global): base=46.102%, stressmove=39.291%
+采样总数: base=36133, stressmove=47228 (ratio=1.307)
+
+==================================================================================================================================
+模块                                                      base %main   sm %main   base abs     sm abs      abs Δ
+==================================================================================================================================
+FrameworkCore_OnUpdate（业务总入口）                               12.56%     30.12%       2092       5590    +167.2%
+LuaMgr_OnUpdate                                              8.62%     14.38%       1435       2669     +86.0%
+BaseLuaMgr_OnUpdate                                          8.62%     14.37%       1435       2666     +85.8%
+TServerManager_OnUpdate                                      0.36%      0.73%         60        136    +128.7%
+TServer_Tick                                                 0.27%      0.68%         45        127    +184.3%
+TServer_DecodeMessages                                       0.00%      0.38%          0         71       N/A 
+TServer_RecvMessages                                         0.14%      0.00%         24          0    -100.0%
+MapManager_OnUpdate (C#)                                     2.24%     13.90%        373       2580    +590.9%
+BattleUIManager_OnUpdate                                     0.43%      6.08%         72       1128   +1460.1%
+BattleUIManager_UpdateMUIPos                                 0.00%      5.46%          0       1013       N/A 
+BattleUIManager_UpdateSingleUIPos                            0.13%      0.00%         21          0    -100.0%
+OutSideViewArmyLineMgr_OnUpdate                              0.26%      5.44%         43       1009   +2221.0%
+OutSideViewArmyLineMgr_UpdateStraightMoveLine                0.00%      5.27%          0        977       N/A 
+OutSideViewArmyLineMgr_RefreshArmyLine                       0.00%      0.52%          0         97       N/A 
+OutSideViewArmyLineMgr_GetArmyLineID                         0.00%      0.50%          0         93       N/A 
+OutSideViewArmyLineMgr_OnUpdateLineEffect                    0.08%      0.00%         13          0    -100.0%
+MapManager_OnLateUpdate (C#)                                 3.65%      2.63%        609        489     -19.7%
+MapManager_MeetScope                                         0.23%      0.00%         39          0    -100.0%
+
+==================================================================================================================================
+Burst Job (lib_burst_generated) Top hotspots:
+
+  [base]
+
+  [stressmove]
+
+  [base] Top Burst self% (lib_burst_generated.so):
+     0.540% global  abs=  195  AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamplerHeights_0000FC5B$BurstDirectCall.Invoke(ref
+
+  [stressmove] Top Burst self% (lib_burst_generated.so):
+     1.363% global  abs=  644  Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_SoldierMoveSystem.
+     0.985% global  abs=  465  AOE.DOTS.RotationLerpSystem.DoSmoothLerp(ref AOE.DOTS.RotationLerpData rotationLerpData, r
+     0.851% global  abs=  402  Unity.Rendering.WriteInstanceDataJob.DoWriteData(Unity.Rendering.WriteInstanceDataJob* thi
+     0.700% global  abs=  331  AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamplerHeights_0000FC5B$BurstDirectCall.Invoke(ref
+     0.694% global  abs=  328  Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.SyncViewEntitySystem.SyncVie
+     0.640% global  abs=  302  Unity.Transforms.LocalToParentSystem.UpdateHierarchy.ChildLocalToWorld(Unity.Transforms.Lo
+     0.487% global  abs=  230  Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_ArmyMoveSystem.Arm
+     0.442% global  abs=  209  AOE.DOTS.MoveChain_SoldierMoveSystem.SoldierMoveJob.OnStepMove(AOE.DOTS.MoveChain_SoldierM
+     0.431% global  abs=  204  Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.SyncLogicEntitySystem.SyncLo
+     0.410% global  abs=  194  Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_SoldierMoveSystem.
+     0.389% global  abs=  184  AOE.DOTS.MoveChain_ArmyMoveSystem.RefreshCurPosition(ref AOE.DOTS.PathPointData pathPointD
+
+==================================================================================================================================
+业务层 +86.5% 拆分（按 lib 绝对样本数变化）:
+  libil2cpp                     base 19.59% ( 7080)  sm 18.38% ( 8682)  abs Δ=+1602 (+22.6%)
+  libxlua                       base  5.33% ( 1927)  sm  5.27% ( 2488)  abs Δ= +562 (+29.2%)
+  lib_burst_generated           base  1.42% (  513)  sm 10.63% ( 5019)  abs Δ=+4506 (+878.3%)
+  业务层总增量 (samples): 6670

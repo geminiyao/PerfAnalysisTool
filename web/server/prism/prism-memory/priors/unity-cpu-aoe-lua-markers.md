@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.361Z
 source: unity-cpu
 title: "AOE Lua 层 Profiler Marker 及实测数据"
 tags: ["aoe","lua","marker","实测数据"]
+dataSource: unity
 ---
 
 AOE Lua 层通过 CustomSampler 插桩的 Marker 及实机采集耗时（PC/二档机，战斗压测/行军压测）：

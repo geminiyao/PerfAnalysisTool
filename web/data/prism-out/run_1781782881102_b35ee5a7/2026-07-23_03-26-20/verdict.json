@@ -1,0 +1,30 @@
+{
+  "rating": "fail",
+  "headline": "整体严重不达标：主线程 p50 41.9ms 是 16.67ms 帧预算的 2.51 倍，全部 600 帧超预算，稳态脚本+渲染负载是主因，相机移动偶发炸到 96ms",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.9,
+  "observedP99Ms": 95.4,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "steady.mainthread-overload",
+    "spike.camera-move",
+    "steady.lua-mgr"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {"markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs"},
+      "resultDigest": {"mean": 44.53, "p50": 41.9, "p95": 59.31, "p99": 95.4, "max": 113.29, "maxFrameIndex": 519, "frameCount": 600}
+    },
+    {
+      "tool": "drillDownMarker",
+      "args": {"rootMarker": "PlayerLoop", "thread": "1:Main Thread", "maxDepth": 5},
+      "resultDigest": {"rootTotalMsPerFrame": 44.53, "topSegments": [{"name": "Update.ScriptRunBehaviourUpdate", "msPerFrame": 13.96, "pctOfRoot": 0.3135}, {"name": "PostLateUpdate.FinishFrameRendering", "msPerFrame": 12.52, "pctOfRoot": 0.2811}, {"name": "PreLateUpdate.ScriptRunBehaviourLateUpdate", "msPerFrame": 8.21, "pctOfRoot": 0.1844}]}
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 33}, "setB": {"kind": "markerSpike", "markerName": "OnCameraMove", "minSelfMs": 20}},
+      "resultDigest": {"sizeA": 600, "sizeB": 19, "intersection": 19, "pctBinA": 100, "pctAinB": 3.17, "note": "全部 600 帧均超 33ms，即 100% 帧超预算；19 次相机移动全部落入慢帧"}
+    }
+  ]
+}

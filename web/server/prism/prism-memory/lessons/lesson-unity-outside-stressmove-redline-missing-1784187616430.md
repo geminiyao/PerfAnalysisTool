@@ -1,0 +1,10 @@
+---
+id: lesson-unity-outside-stressmove-redline-missing-1784187616430
+category: lessons
+createdAt: 2026-07-16T07:40:16.430Z
+source: narrative-redteam/unity-outside-stressmove
+title: "redline-missing: v5.3 §5 callTree 节点 🔴/🟡 标注"
+dataSource: unity
+---
+
+runId=unity-outside-stressmove 的 findings.json 无 callTreeAnnotations 字段（v5.3 §5 callTree 节点标 🔴/🟡/🟢 严重程度）。修法：explore LLM 用 getPerfettoCallTree / queryCallTreeSubtree 查调用树时，在 finding 的 evidence.resultDigest.callTreeAnnotations 里给每个关键节点标 redlineFlag/foldChange/severityTag。render 层会从 findings 读这些标注注入 callTree 节点。

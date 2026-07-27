@@ -11,6 +11,8 @@ import {
   PartitionOutlined,
   BranchesOutlined,
   DiffOutlined,
+  FileTextOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -18,23 +20,28 @@ const { Sider } = Layout;
 /** v2 §4 信息架构: 7 项导航 — 单次分析进 Runs 详情, 对比独立一项。 */
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
+  { key: '/collect', icon: <ThunderboltOutlined />, label: '自动采集' },
   { key: '/upload', icon: <UploadOutlined />, label: '采集上传' },
   { key: '/runs', icon: <PartitionOutlined />, label: 'Runs' },
   { key: '/compare', icon: <SwapOutlined />, label: '对比分析' },
   { key: '/perfetto-triad', icon: <BranchesOutlined />, label: 'Perfetto 三态' },
   { key: '/simpleperf-diff', icon: <DiffOutlined />, label: 'Simpleperf 差分' },
   { key: '/unity-compare', icon: <DiffOutlined />, label: 'Unity 差分' },
+  { key: '/report-view', icon: <FileTextOutlined />, label: '报告视图' },
   { key: '/trends', icon: <LineChartOutlined />, label: '趋势' },
   { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
 ];
 
 function selectedMenuKey(pathname: string): string {
+  if (pathname.startsWith('/collect')) return '/collect';
   if (pathname.startsWith('/runs')) return '/runs';
   if (pathname.startsWith('/compare')) return '/compare';
   if (pathname.startsWith('/perfetto-triad')) return '/perfetto-triad';
   if (pathname.startsWith('/simpleperf-diff')) return '/simpleperf-diff';
   if (pathname.startsWith('/unity-compare')) return '/unity-compare';
+  if (pathname.startsWith('/report-view')) return '/report-view';
+  if (pathname.startsWith('/report-preview')) return '/report-preview';
   return pathname;
 }
 

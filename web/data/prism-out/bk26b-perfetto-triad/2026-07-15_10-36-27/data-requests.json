@@ -1,0 +1,37 @@
+[
+  {
+    "id": "gc.per-marker-alloc-detail",
+    "want": "per-marker 的 GC 分配字节数（哪个函数在分配多少字节），不是分配次数。当前 queryGcAllocByModule 只给 count/perFrame（次数），没有字节大小，无法判断 URP.BeforeRendering 每帧 130 次分配到底分配了多少内存、是哪种对象。",
+    "rationale": "cur 态 GC 分配 208568 次（throttle 59518 次），URP.BeforeRendering 和 Inl_OpaquePass 是大头，但只有次数没有字节，无法评估堆压力严重度，也无法定位是 command buffer / render texture / 材质属性块中的哪一种。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryGcAllocByModule"
+  },
+  {
+    "id": "gc.collect.pre-trigger-frames",
+    "want": "GC.Collect 触发前若干帧的按 marker/按调用来源的分配明细，判断是分配尖峰触发还是定时 GC。cur 有 3 次 GC.Collect（avg 18ms），throttle 有 1 次（32.9ms），但无法看触发前几帧哪个 marker 在累积分配。",
+    "rationale": "GC.Collect 虽然占总窗口 <0.4% 不是主因，但 throttle 单次 32.9ms 是潜在卡顿源。要判断是'渲染管线持续分配累积触发'还是'Lua 业务层突发分配触发'，需要触发前的函数级分配明细。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryGcAllocByModule"
+  },
+  {
+    "id": "gpu.busy.counter",
+    "want": "GPU busy/freq counter（GPU 占用率和频率），用于从间接强信号档升级到 confirmed GPU 满载。当前只能用 wait slice 重叠法 + Render 线程变闲 + Choreographer 稳定做多信号同向，但给不出'GPU 100% 满载'硬结论。",
+    "rationale": "throttle 态单次 Gfx.WaitForPresent 17.8ms 已超 vsync，是强 GPU-bound 信号，但无 GPU counter 无法确认是 GPU 算力不足（shader 复杂/分辨率高）还是 GPU 也被热限流降频。这影响优化方向：前者优化渲染负载，后者解决散热。",
+    "suspectedAxis": "gpu",
+    "closestExistingTool": "queryOffCpuAttribution"
+  },
+  {
+    "id": "render.camera.count",
+    "want": "URP.RenderCameraStack 每帧渲染的相机数量和每个相机的耗时。throttle 态 URP.RenderCameraStack count=854（427 帧，约 2 相机/帧），但无法拆分每个相机的渲染成本，也无法确认是否有不必要的额外相机。",
+    "rationale": "GPU-bound 优化需要知道是哪个相机的渲染最贵（主相机/UI 相机/特效相机等），当前只有 RenderCameraStack 聚合数据，无法定位到具体相机。",
+    "suspectedAxis": "gpu",
+    "closestExistingTool": "getPerfettoCallTree"
+  },
+  {
+    "id": "outside.armyline.count",
+    "want": "OutSideViewArmyLineMgr 每帧处理的行军线数量、每条行军线的 vertex 计算量。throttle 态 OutSideViewArmyLineMgr 1042ms（5.22%），子节点 CalculateVertexJob (Burst) 51240 次调用，但无法知道这是多少条行军线、每条多少 vertex。",
+    "rationale": "OutSideViewArmyLineMgr 在 throttle 涨 37%（761→1042ms），是业务侧唯一显著增长的模块。要判断是行军线数量过多（需裁剪视野外的）还是单条 vertex 计算贵（需优化算法），需要行军线数量和 vertex 规模数据。",
+    "suspectedAxis": "business",
+    "closestExistingTool": "queryCallTreeSubtree"
+  }
+]

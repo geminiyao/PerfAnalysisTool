@@ -1,0 +1,141 @@
+{
+  "total": {
+    "start": 1784884948568,
+    "end": 1784887229251
+  },
+  "explore": {
+    "start": 1784884948589,
+    "toolCalls": [
+      {
+        "seq": 1,
+        "name": "Bash",
+        "toolNames": "queryUnityMarkers+queryUnityMarkers…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"queryUnityMarkers\",\"args\":{\"thread\":\"1:Main Thread\",\"to",
+        "ts": 1784885000653,
+        "resultTs": 1784885048195,
+        "toolMs": 47542,
+        "resultLen": 30485
+      },
+      {
+        "seq": 2,
+        "name": "Bash",
+        "toolNames": "scanMetricOverFrames+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"scanMetricOverFrames\",\"args\":{\"markerName\":\"PlayerLoop\"",
+        "ts": 1784885108726,
+        "resultTs": 1784885116261,
+        "toolMs": 7535,
+        "resultLen": 30533
+      },
+      {
+        "seq": 3,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"CS:AOE.Outside.W",
+        "ts": 1784885173056,
+        "resultTs": 1784885184567,
+        "toolMs": 11511,
+        "resultLen": 30643
+      },
+      {
+        "seq": 4,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"PlayerLoop\",\"thr",
+        "ts": 1784885308742,
+        "resultTs": 1784885320096,
+        "toolMs": 11354,
+        "resultLen": 30652
+      },
+      {
+        "seq": 5,
+        "name": "Bash",
+        "toolNames": "getFrameCallTree+queryFrameCounters…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getFrameCallTree\",\"args\":{\"frameIndex\":278,\"thread\":\"1:",
+        "ts": 1784885406880,
+        "resultTs": 1784885412103,
+        "toolMs": 5223,
+        "resultLen": 28681
+      },
+      {
+        "seq": 6,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"MapSignificanceM",
+        "ts": 1784885524910,
+        "resultTs": 1784885533664,
+        "toolMs": 8754,
+        "resultLen": 30606
+      },
+      {
+        "seq": 7,
+        "name": "Bash",
+        "toolNames": "getFrameCallTree+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getFrameCallTree\",\"args\":{\"frameIndex\":552,\"thread\":\"1:",
+        "ts": 1784885669395,
+        "resultTs": 1784885675733,
+        "toolMs": 6338,
+        "resultLen": 30642
+      },
+      {
+        "seq": 8,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784885963260,
+        "resultTs": 1784885963402,
+        "toolMs": 142,
+        "resultLen": 165
+      },
+      {
+        "seq": 9,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784886174164,
+        "resultTs": 1784886174310,
+        "toolMs": 146,
+        "resultLen": 166
+      },
+      {
+        "seq": 10,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784886211134,
+        "resultTs": 1784886211182,
+        "toolMs": 48,
+        "resultLen": 171
+      },
+      {
+        "seq": 11,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const fs=require('fs');const d='data/prism-out/camera_ab_24072PX77C_20260723_194703/2026-07-24_09-22-",
+        "ts": 1784886225515,
+        "resultTs": 1784886227245,
+        "toolMs": 1730,
+        "resultLen": 675
+      }
+    ],
+    "end": 1784886269187
+  },
+  "narrative": {
+    "start": 1784886269187,
+    "end": 1784887182084,
+    "subStages": {
+      "start": 1784886269188,
+      "precheck": 1,
+      "prompt_inject": 149,
+      "cli_resolve": 0,
+      "llm_call": 912339,
+      "artifact_check": 0,
+      "json_parse": 2,
+      "provenance_check": 0,
+      "red_team": 397
+    }
+  },
+  "render": {
+    "start": 1784887182084,
+    "end": 1784887229248
+  }
+}

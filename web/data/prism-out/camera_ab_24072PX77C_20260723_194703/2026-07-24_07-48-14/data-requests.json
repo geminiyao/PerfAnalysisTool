@@ -1,0 +1,37 @@
+[
+  {
+    "id": "frame-counters-all-zero",
+    "want": "逐帧 GC 分配字节(gc_allocated_in_frame)/三角形面数(triangles)/批次(batches)/内存等帧级计数器,本次采集全部为 0",
+    "rationale": "queryFrameCounters 返回所有计数器 mean/max/p95 全为 0——这些计数器在本次 Unity 采集里没有被记录。导致:(1)无法定位 GC.Collect 的分配源(哪个系统/函数分配触发);(2)无法判断慢帧是否与渲染负载(triangles/batches 飙高)相关;(3)无法评估内存增长趋势。这是本次分析最大的数据缺口。",
+    "suspectedAxis": "memory+render",
+    "closestExistingTool": "queryFrameCounters(返回全 0,等于不可用)"
+  },
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节数(哪个函数/Lua marker 在分配),不是整帧总量",
+    "rationale": "本次有5次同步 GC.Collect(9-11ms/次),但因帧计数器全0且无 per-marker 分配数据,无法定位是哪个系统的分配累积触发了 GC。要定位 GC 根因需要函数级分配来源。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters(只有整帧 gc_allocated_in_frame,且本次全0;到不了函数级)"
+  },
+  {
+    "id": "recyclegotask.source",
+    "want": "RecycleGOTask 的源码实现(回收逻辑、批量触发条件、是否有分帧)",
+    "rationale": "RecycleGOTask 单帧19.5ms 是实体回收尖峰的主因,但 getSourceForSymbol 返回 not-found(不在 codegraph/map-source 中)。无法确认它是对象池回收还是直接 Destroy、是否可分帧、批量触发条件是什么。需要源码才能给可落地建议。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getSourceForSymbol(对该符号返回 not-found)"
+  },
+  {
+    "id": "coroutine.content",
+    "want": "CoroutinesDelayedCalls 内部具体是哪些协程在跑、各自耗时",
+    "rationale": "frame143(全程最差54ms)中 CoroutinesDelayedCalls 占11ms(20%),但这是 Unity 内置 marker,无法从 profiler 数据看出具体是哪些业务协程。可能是相机移动触发的加载/实体初始化协程,但需协程级拆分才能定位优化点。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getFrameCallTree(CoroutinesDelayedCalls 是叶子,无子节点拆分)"
+  },
+  {
+    "id": "frame552.sync-load-nesting",
+    "want": "frame552 三个同步加载 marker([res]entityLoader_sync 20.88ms / assetLoader_sync 18.29ms / asset_sync 18.10ms)的嵌套关系——是串行叠加还是嵌套包含",
+    "rationale": "这三个同步加载 marker 总和约57ms但帧只46.83ms,说明有嵌套重叠,但 getThreadTimeline 的 mainThreadWaits 未给出嵌套层级。若三者嵌套(一个等另一个),优化点在最外层;若串行,三个都要优化。需调用树层级确认。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "getFrameCallTree(frame552 树因 minPct 剪枝未完整展示这三个 marker 的嵌套层级)"
+  }
+]

@@ -652,3 +652,198 @@ export async function fetchReportViewSamples(): Promise<{
 }> {
   return request('/report-view/samples');
 }
+
+// ============================================================
+// Prism 三段管线 API (WT-051b)
+// ============================================================
+
+/** 触发 Prism 三段管线分析 (explore → narrative → render) */
+export async function generatePrismAnalysis(
+  runId: string,
+  opts: { source: 'unity' | 'perfetto'; multiStateDir?: string; skipExplore?: boolean },
+): Promise<{ sessionId: string; status: string; position: number }> {
+  return request(`/runs/${runId}/generate-prism-analysis`, {
+    method: 'POST',
+    body: JSON.stringify(opts),
+  });
+}
+
+/** Prism 报告 iframe URL */
+export function prismReportUrl(sessionId: string): string {
+  return `${BASE_URL}/prism-report/${sessionId}`;
+}
+
+/** Prism pipeline timing 详情 */
+export async function fetchPrismTiming(analysisId: string): Promise<PipelineTiming | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/prism-timing/${analysisId}`);
+    if (!res.ok) return null;
+    return await res.json() as PipelineTiming;
+  } catch {
+    return null;
+  }
+}
+
+export interface PipelineTiming {
+  explore?: {
+    start: number;
+    end: number;
+    toolCalls: Array<{
+      seq: number;
+      name: string;
+      toolNames: string;
+      cmd: string;
+      ts: number;
+      resultTs?: number;
+      toolMs: number | null;
+      resultLen: number;
+    }>;
+  };
+  narrative?: {
+    start: number;
+    end: number;
+    subStages?: Record<string, number>;
+  };
+  render?: { start: number; end: number };
+  total: { start: number; end?: number };
+}
+
+// ============================================================
+// 自动采集 API (Auto Collector)
+// ============================================================
+
+export interface CollectConfigSummary {
+  file: string;
+  name: string;
+  project: string;
+  package: string;
+  sceneLabel: string;
+  scene: string;
+  tools: { simpleperf: boolean; perfetto: boolean; unity: boolean };
+  steps: { primitive: string; duration?: number }[];
+  defaultDuration: number;
+  description: string;
+}
+
+export interface CollectConfigDetail {
+  summary: CollectConfigSummary;
+  yaml: any;
+  rawText: string;
+}
+
+export interface CollectDevice {
+  serial: string;
+  state: string;       // device / offline / unauthorized
+  model?: string;
+  abi?: string;
+  androidVersion?: string;
+  appVersion?: string;
+  appPid?: string;
+}
+
+export interface CollectJobInfo {
+  id: string;
+  config: string;
+  status: 'processing' | 'done' | 'failed';
+  runId?: string;
+  outDir?: string;
+  ingestStatus?: 'idle' | 'processing' | 'done' | 'failed';
+  ingestRunId?: string;
+  error?: string;
+  createdAt: number;
+  completedAt?: number;
+  exitCode?: number;
+}
+
+export interface CollectLogEvent {
+  jobId: string;
+  type: 'log' | 'stage' | 'done' | 'failed' | 'connected';
+  message: string;
+  createdAt: number;
+}
+
+/** 列出可用采集配置 */
+export async function listCollectConfigs(): Promise<{ configs: CollectConfigSummary[] }> {
+  return request('/collect/configs');
+}
+
+/** 获取指定配置的完整解析 (parsed YAML + 摘要) */
+export async function getCollectConfigDetail(file: string): Promise<CollectConfigDetail> {
+  const encoded = encodeURIComponent(file);
+  return request(`/collect/configs/${encoded}`);
+}
+
+/** 探测 adb 设备 (可选 package 探测游戏进程) */
+export async function checkCollectDevice(packageName?: string): Promise<{ devices: CollectDevice[]; adbAvailable: boolean }> {
+  const qs = packageName ? `?package=${encodeURIComponent(packageName)}` : '';
+  return request(`/collect/device${qs}`);
+}
+
+/** 启动采集 */
+export async function startCollect(body: {
+  config: string;
+  label?: string;
+  runs?: number;
+  device?: string;
+  tools?: string[];
+  configOverrides?: {
+    project?: { name?: string; package?: string };
+    scenes?: { default?: { scene?: string; label?: string } };
+    action?: { defaultDuration?: number; steps: { primitive: string; params: Record<string, any> }[] };
+  };
+}): Promise<{ jobId: string; status: string }> {
+  return request('/collect/start', { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** 获取采集任务状态 */
+export async function getCollectJob(jobId: string): Promise<{ job: CollectJobInfo; events: CollectLogEvent[] }> {
+  return request(`/collect/jobs/${jobId}`);
+}
+
+/** 中止采集 */
+export async function stopCollectJob(jobId: string): Promise<{ stopped: boolean }> {
+  return request(`/collect/jobs/${jobId}/stop`, { method: 'POST', body: '{}' });
+}
+
+/** 触发入库预处理 */
+export async function ingestCollectJob(jobId: string): Promise<{ jobId: string; ingestStarted: boolean }> {
+  return request(`/collect/jobs/${jobId}/ingest`, { method: 'POST', body: '{}' });
+}
+
+/** 订阅采集日志 SSE */
+export function subscribeCollectLogs(jobId: string, onEvent: (event: CollectLogEvent) => void): () => void {
+  const es = new EventSource(`${BASE_URL}/collect/jobs/${jobId}/events`);
+  es.onmessage = (msg) => {
+    try { onEvent(JSON.parse(msg.data)); } catch { /* skip */ }
+  };
+  es.onerror = () => { es.close(); };
+  return () => es.close();
+}
+
+// ============================================================
+// 历史采集 (History)
+// ============================================================
+
+export interface CollectHistoryItem {
+  dir: string;
+  runLabel: string;
+  project: string;
+  scene: string;
+  device: string;
+  version?: string;
+  tools: string[];
+  frameCount?: number;
+  durationSec?: number;
+  profileOk?: boolean;
+  createdAt: number;
+}
+
+/** 列出历史采集目录 */
+export async function listCollectHistory(): Promise<{ history: CollectHistoryItem[] }> {
+  return request('/collect/history');
+}
+
+/** 按目录入库预处理 */
+export async function ingestCollectDir(dir: string): Promise<{ jobId: string; ingestStarted: boolean }> {
+  return request('/collect/ingest-dir', { method: 'POST', body: JSON.stringify({ dir }) });
+}

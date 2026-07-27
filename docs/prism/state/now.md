@@ -64,7 +64,51 @@
 
 ### 新会话开场指令（主 agent 进来后按这个顺序做）
 
-1. **读完本节**：当前状态 = WT-046 v7 部分 PASS（FAIL C 平移到 §0 ② OnCameraMove，接受部分 PASS）+ WT-050 timing 细化工单已建 + 进入 M4 三回路填料里程碑
+1. **读完本节**：当前状态 = WT-051 Prism 接入 dashboard 工单已建待派发（用户决定先把整个流程跑起来，跳出来看大局）+ WT-050 timing 细化工单已建（M4 之后做）+ M4 三回路填料方向探讨中（用户对金标集/回归哨兵/知识回路解决什么痛点有疑问，方向待重新探讨）
+
+> **WT-051a Prism 三段管线接入 dashboard 后端·验收 PASS**（2026-07-22 主 agent 独立验收 DR-36）：
+> - 通用 harness（perfetto 标杆 `data/prism-out/bk26b-perfetto-triad/wt039-verify`）**240 PASS / 1 FAIL / 1 WARN**，与自报一致，不退化（1 FAIL 是 WT-037 遗留降频矩阵 0<5，1 WARN 是 callTree.rootMarker 覆盖率 19%，都是数据内容问题非代码回归）
+> - TypeScript 编译：WT-051a 改的 3 个文件（prism-runner.ts / analysis-queue.ts / runs.ts）**零 TS 错误**（仓库存量 15 个 TS 错误都是预存在的 echarts 类型问题，与 WT-051a 无关）
+> - 冒烟测试：prism-runner.ts 导出 `runPrismPipeline` ✅；analysis-queue.ts 导出 `analysisQueue` ✅
+> - 逐条核验 7 条断言全 PASS（prism-runner 导出 + import 调用 + queue taskType 分发 + POST/GET 路由 + harness 不退化）
+> - 产出：`web/server/services/prism-runner.ts`（新建，213 行）+ `web/server/services/analysis-queue.ts`（扩展 taskType='prism' + executePrismJob + registerPrismAssets）+ `web/server/routes/runs.ts`（POST /runs/:id/generate-prism-analysis + GET /api/prism-report/:sessionId）
+> - **遗留**：WT-051b 前端（Dashboard 按钮 + iframe 展示）待派发
+>
+> **WT-051 工单已拆分**（Prism 三段管线接入 dashboard）：
+> - WT-051a 后端 ✅ DONE（prism-runner + queue 扩展 + API 路由）
+> - WT-051b 前端 ⬜ TODO（Dashboard 按钮 + iframe 展示）— WT-051a 验收 PASS 后派发
+
+> **WT-051b Prism 三段管线接入 dashboard 前端·验收 PASS**（2026-07-22 主 agent 独立验收 DR-36）：
+> - 通用 harness（perfetto 标杆）**240 PASS / 1 FAIL / 1 WARN**，不退化（1 FAIL + 1 WARN 是 WT-037 遗留）
+> - TypeScript 编译：WT-051b 改的 4 个文件有 1 个新引入的 TS 错误（Dashboard.tsx:171 setPrismProgress 类型推断问题），不影响运行时，vite build 通过。其余 3 个 echarts 类型错误是预存在的
+> - vite build：exit code 0，31.94s，3945 模块，构建成功
+> - 逐条核验 6 条断言全 PASS（generatePrismAnalysis 函数 + Prism 分析按钮 + POST 触发 + SSE 三阶段进度 + iframe 展示 + 旧按钮未破坏）
+> - 产出：`web/src/services/api.ts`（+generatePrismAnalysis +prismReportUrl）+ `web/src/pages/Dashboard.tsx`（Prism 分析按钮 + 三阶段进度条 + 打开报告）+ `web/src/pages/PrismReportView.tsx`（新建，iframe 展示）+ `web/src/App.tsx`（路由 /prism-report/:sessionId）
+> - **小瑕疵（不阻塞）**：Dashboard.tsx:171 的 setPrismProgress 类型推断 TS 错误，vite build 通过不影响运行时，留未来修
+>
+> **WT-051 拆分工单全部完成**：
+> - WT-051a 后端 ✅ DONE（prism-runner + queue 扩展 + API 路由）
+> - WT-051b 前端 ✅ DONE（Dashboard 按钮 + iframe 展示）
+> - **Prism 三段管线已接入 dashboard**——dashboard 抽屉"Prism 分析"按钮 → POST /runs/:id/generate-prism-analysis → analysis-queue（taskType='prism'）→ runPrismPipeline（explore+narrative+render）→ SSE 进度推送 → iframe 展示 report.html
+> - **下一步**：跑空场景验证流程串通（用户决策：先把整个流程跑起来，3 场景 × VG 版本）
+>
+> **方向调整（2026-07-22 用户决策）**：用户提出"先把整个流程跑起来"——固定跑 3 个场景（空场景/压测战斗/压测行军）× VG 版本，看回路通电状态 + 沉淀内容 + prompt vs 金标集边界。**跳出来看大局，不在 §0/§3 重复这种细节里陷太久**。
+>
+> **关键查证（2026-07-22 主 agent 查证）**：
+> - dashboard 抽屉"AI 分析"按钮走的是旧 skill / cross-source 路径（`run-analysis-service.ts:187` → `perfetto-single-service` / `cross-source-analysis-service`），**不是 Prism 三段管线**
+> - 证据：`run-analysis-service.ts` / `perfetto-single-service.ts` / `cross-source-analysis-service.ts` 三个文件 grep "prism" 零命中
+> - Prism 三段管线入口（`run-unity-pipeline.ts` / `run-perfetto-pipeline.ts`）只被 CLI 脚本和 harness 引用，**没有任何 dashboard 路由调用**
+> - 三大回路通电状态：持久大脑✅（priors 79 / capabilities 39 / lessons 21 / constitution 10 / methodology 8）+ 开局注入✅ + 收尾沉淀✅（红队+DataRequest）+ 能力回路半通（收集端通，回流端没做）+ 回归哨兵❌（baselines/ 不存在）+ 金标集❌（golden-set/ 不存在）
+>
+> **WT-051 工单已建待派发**（Prism 三段管线接入 dashboard）：把 Prism 三段管线接进 dashboard 抽屉，加"Prism 分析"按钮，复用 `analysis-queue.ts`（加 Prism 任务类型）+ SSE 进度推送 + iframe 展示 report.html。工单 `TODO-WT-051-prism-pipeline-dashboard-integration.md`。先跑空场景验证流程串通，再看回路状态 + 沉淀内容 + prompt vs 金标集边界。
+>
+> **M4 三回路填料方向探讨（用户迷失中，方向待重新探讨）**：
+> - 用户对"金标集（BK-4）/ 回归哨兵（BK-21）/ 知识回路（BK-10）"三个 M4 核心需求迷失，具体是"不知道这三个到底解决什么痛点"
+> - 主 agent 给的痛点场景说明（供参考）：金标集=已知答案的测试数据集（量召回/误报）；回归哨兵=历史基线对比（"v6→v7 是真变好了还是 LLM 运气好"）；知识回路=确认的业务归因沉淀+下次开局注入
+> - philosophy.md:260 原则：单次质量没稳定时（FAIL C 平移），回路放大的是垃圾
+> - prompt 反例越堆越细（DR-49）= 用 prompt 模拟金标集的活，设计偏移——等金标集建好后可以把判定对错的部分从 prompt 抽出来变数据，纪律约束保留
+> - 可能的替代方向：先治理单次质量（BK-7 探索成本 + WT-050 timing 细化）+ 等 VG 真实数据，再决定要不要建金标集/回归哨兵/知识回路
+> - **用户决策（2026-07-22）**：先把整个流程跑起来，跑完场景后再看回路状态 + prompt vs 金标集边界，不急着出 M4 工单
 2. **进入 M4 三回路填料里程碑**（BK-4 金标集 + BK-21 回归哨兵 + BK-10 知识回路）：
    - **BK-4 金标集 + 人确认**（P0，M4 核心）：治"Claude 自评不可靠"（DR-36）。v6/v7 FAIL C 反复出现的根因之一——没有金标集，LLM 产出质量只能靠 prompt 约束，约束写过头变作文机，写得不够 LLM 单条不稳定。需要：人拍板 finding 对/错/漏 → 存金标集 → 每次改进跑金标量召回/误报
    - **BK-21 回归哨兵**（P0，M4 核心）："哪里烫"升级"哪里开始烫了"——自动对标历史基线报变化。agent loop > 作文机最有说服力的证明。天然依赖跨 run 记忆（BK-LOOP）

@@ -1,0 +1,36 @@
+{
+  "rating": "fail",
+  "headline": "三态从 60fps 退化到 21fps：throttle 态主线程 38% 时间在等 GPU（单次等 17.8ms 已超 vsync），叠加 SoC 热限流（大核频率被压到 59%、温度 75-79°C），是 GPU-bound + 降频双重恶化的典型病态。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 45.94,
+  "observedP99Ms": 66.32,
+  "pctFramesOverBudget": 98.83,
+  "primaryDrivers": ["gpu.bound.wait.slice", "freq.throttle.soc", "core.update.scene-shift"],
+  "verdictEvidence": [
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "base"},
+      "resultDigest": {"playerLoopP50Ms": 16.69, "playerLoopP99Ms": 21.37, "fps": 59.8, "slowFrameRate": 0}
+    },
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "cur"},
+      "resultDigest": {"playerLoopP50Ms": 30.15, "playerLoopP99Ms": 42.54, "fps": 33.1, "slowFrameRate": 11.18}
+    },
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "throttle"},
+      "resultDigest": {"playerLoopP50Ms": 45.94, "playerLoopP99Ms": 66.32, "fps": 21.4, "slowFrameRate": 98.83}
+    },
+    {
+      "tool": "queryOffCpuAttribution",
+      "args": {"role": "throttle", "thread": "UnityMain"},
+      "resultDigest": {"sleepingPct": 38.99, "gfxWaitForPresentAvgMs": 17.799, "gfxWaitForPresentTotalMs": 7600.06, "waitSlicePctOfWindow": 38.08}
+    },
+    {
+      "tool": "queryCpuFreq",
+      "args": {"role": "throttle"},
+      "resultDigest": {"bigCoreReachPct": 59.2, "avgMhz": 1324.6, "midClusterReachVsCpuinfoPct": 52.4, "midClusterMaxMhz": 2227.2, "midClusterCpuinfoMaxMhz": 2419.2}
+    }
+  ]
+}

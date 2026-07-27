@@ -1,0 +1,20 @@
+--------- beginning of main
+07-21 11:52:52.925 29912 29912 I Unity   : onPause
+07-21 11:52:52.975 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:52:52.977 29912 29912 I Unity   : onNewIntent
+07-21 11:52:52.987 29912 29912 I Unity   : onResume
+07-21 11:52:53.001 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:52:53.018 29912 30031 D Unity   : Choreographer available: Enabling VSYNC timing
+07-21 11:52:53.059 29912 30031 E Unity   : [CombinedProfile] START name=test frame=33806 time=794.95 duration=5 mono_ns=573244625060856
+07-21 11:52:53.059 29912 30031 E Unity   : XLua.CSObjectWrap.UnityEngineDebugWrap:_m_LogError_xlua_st_(IntPtr)
+07-21 11:52:53.059 29912 30031 E Unity   : XLua.LuaDLL.Lua:lua_pcall(IntPtr, Int32, Int32, Int32)
+07-21 11:52:53.059 29912 30031 E Unity   : XLua.DelegateBridge:PCall(IntPtr, Int32, Int32, Int32)
+07-21 11:52:53.059 29912 30031 E Unity   : XLua.DelegateBridge:__Gen_Delegate_Imp96(String, String, Int32)
+07-21 11:52:53.059 29912 30031 E Unity   : System.Action`3:Invoke(T1, T2, T3)
+07-21 11:52:53.059 29912 30031 E Unity   : System.Action`3:Invoke(T1, T2, T3)
+07-21 11:52:53.059 29912 30031 E Unity   : AOE.Launcher:DispatchProfileCommand(String)
+07-21 11:52:53.059 29912 30031 E Unity   : System.Action`2:Invoke(T1, T2)
+07-21 11:52:53.059 29912 30031 E Unity   : AOE.Launcher:NativeCustomMessage(String)
+07-21 11:52:53.059 29912 30031 E Unity   :  
+07-21 11:52:53.059 29912 30031 E Unity   : (Filename: ./Runtime/Export/Debug/Debug.bindings.h Line: 35)
+07-21 11:52:53.059 29912 30031 E Unity   : 

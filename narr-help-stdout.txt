@@ -1,0 +1,11 @@
+[narrative] Spawning codebuddy CLI (C:\Users\garyychen\AppData\Roaming\npm\codebuddy)...
+[narrative] source=unity, runId=unity-outside-stressmove, outputDir=K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/unity-outside-stressmove
+[narrative] OK: K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\unity-outside-stressmove\narrative.json
+[narrative] overview: 这不是单一元凶的故事——600 帧全程压在 41.9ms 中位数（超 16.67ms 预算 2.5 倍，100% 帧超预算），底盘由 URP 渲染管线（10.6
+[narrative] topConclusions: 7
+[narrative] sections: 5
+[narrative] red-team found 2 gaps, sedimenting lessons...
+[narrative] sedimented 2 lessons to prism-memory/lessons/
+
+[narrative-service] SUCCESS
+  narrative.json: K:\AI\PerfAnalysisTool_Codebuddy\web\data\prism-out\unity-outside-stressmove\narrative.json

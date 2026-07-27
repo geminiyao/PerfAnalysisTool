@@ -1,0 +1,53 @@
+{
+  "rating": "fail",
+  "headline": "Every one of 600 frames misses the 16.67ms (60fps) budget; median frame (41.90ms) is 2.5x over budget, driven by a high continuous baseline (URP render pipeline + script Update spread-cost) plus severe periodic GC.Collect stalls (up to 70.20ms, 61.82% of a single frame) and camera-move spikes (up to 53.41ms).",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.90,
+  "observedP95Ms": 59.31,
+  "observedP99Ms": 95.45,
+  "observedMaxMs": 113.29,
+  "observedMaxFrameIndex": 519,
+  "pctFramesOverBudget": 100,
+  "pctFramesOver2xBudget": 100,
+  "primaryDrivers": [
+    {
+      "driver": "Continuous baseline cost (spread across render pipeline + script Update, no single hotspot)",
+      "impact": "Accounts for the ~41-55ms floor seen on ordinary, non-burst frames (e.g. frames 20/40/60/100/234 = 48.64/45.86/54.88/41.40/46.91ms).",
+      "evidenceRefs": ["aggregateSubtree(Core.Update)", "aggregateSubtree(URP.RenderSingleCamera)"]
+    },
+    {
+      "driver": "Synchronous GC.Collect stalls",
+      "impact": "Single-frame spikes up to 70.20ms (61.82% of frame 519) and 15.33ms (26.68% of frame 483); rare (3/600 frames) but catastrophic when they occur.",
+      "evidenceRefs": ["scanMetricOverFrames(GC.Collect)", "getFrameCallTree(519)", "getFrameCallTree(483)"]
+    },
+    {
+      "driver": "Periodic incremental GC pressure",
+      "impact": "Strong autocorrelation (coefficient=0.68 at lag=2) with a 20-frame burst window (462-481), preceding the frame-483 GC.Collect spike -- indicates a recurring GC cycle, not a one-off.",
+      "evidenceRefs": ["scanMetricOverFrames(GarbageCollector.CollectIncremental)"]
+    },
+    {
+      "driver": "Camera-move stalls (OnCameraMove / MapCameraCtrl.UpdateCameraPos)",
+      "impact": "19 frames affected, avg 43.14ms/frame when present, peak 53.41ms @ frame144 (58.38% of that frame). 100% of these spike frames fall inside the slow-frame set, but they only explain ~3% of all slow frames.",
+      "evidenceRefs": ["queryMarkers(OnCameraMove)", "scanMetricOverFrames(OnCameraMove)", "correlateFrameSets(slowFrames vs OnCameraMove spikes)"]
+    },
+    {
+      "driver": "Resource-unload scan spikes (LoaderManagerTryUnloadPending)",
+      "impact": "5 burst frames (80,102,146,414,464), max 29.31ms totalMs (30.45% of frame 80's 70.09ms total), all 5 fall within the slow-frame set (100% overlap) but are a small (0.83%) contributor overall.",
+      "evidenceRefs": ["scanMetricOverFrames(LoaderManagerTryUnloadPending)", "getFrameCallTree(80)", "correlateFrameSets"]
+    }
+  ],
+  "verdictEvidence": [
+    {
+      "statement": "p50=41.90ms vs 16.67ms budget = 2.51x over budget",
+      "tool": "scanMetricOverFrames",
+      "args": {"runId": "unity-outside-stressmove", "thread": "1:Main Thread", "markerName": "PlayerLoop", "metric": "totalMs"},
+      "resultDigest": "mean=44.53, p50=41.90, p95=59.31, p99=95.45, max=113.29 @frame519"
+    },
+    {
+      "statement": "100% of frames (600/600) exceed the 16.67ms budget",
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 16.67}},
+      "resultDigest": "sizeA=600 out of frameCount=600"
+    }
+  ]
+}

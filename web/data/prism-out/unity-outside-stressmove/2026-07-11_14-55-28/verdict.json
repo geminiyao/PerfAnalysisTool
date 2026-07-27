@@ -1,0 +1,90 @@
+{
+  "rating": "fail",
+  "headline": "这次采集不满足 60fps，也没守住 30fps：600/600 帧都超过 33.33ms，中位帧 41.90ms，是脚本/地图逻辑与 URP 渲染基线共同过重，并叠加相机、GC、网络消息等尖峰。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.89875030517578,
+  "observedP99Ms": 95.44776153564453,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "baseline.main.overbudget",
+    "lua.mapsignificance.entitytask",
+    "urp.rendergraph.baseline"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {
+        "markerName": "PlayerLoop",
+        "thread": "1:Main Thread",
+        "metric": "totalMs"
+      },
+      "resultDigest": {
+        "frameCount": 600,
+        "presentFrames": 600,
+        "mean": 44.53066216786703,
+        "p50": 41.89875030517578,
+        "p95": 59.309844970703125,
+        "p99": 95.44776153564453,
+        "max": 113.28797149658203,
+        "maxFrameIndex": 519
+      }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {
+        "setA": {
+          "kind": "slowFrames",
+          "thresholdMs": 16.67
+        },
+        "setB": {
+          "kind": "slowFrames",
+          "thresholdMs": 16.67
+        }
+      },
+      "resultDigest": {
+        "sizeA": 600,
+        "sizeB": 600,
+        "intersection": 600,
+        "pctAinB": 100,
+        "pctBinA": 100
+      }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {
+        "setA": {
+          "kind": "slowFrames",
+          "thresholdMs": 33.33
+        },
+        "setB": {
+          "kind": "slowFrames",
+          "thresholdMs": 33.33
+        }
+      },
+      "resultDigest": {
+        "sizeA": 600,
+        "sizeB": 600,
+        "intersection": 600,
+        "pctAinB": 100,
+        "pctBinA": 100
+      }
+    },
+    {
+      "tool": "aggregateSubtree",
+      "args": {
+        "thread": "1:Main Thread",
+        "topN": 10,
+        "fanoutThreshold": 0.6,
+        "minTotalMsPerFrame": 2
+      },
+      "resultDigest": {
+        "Core.Update.subtreeMsPerFrame": 12.879,
+        "URP.RenderSingleCamera.subtreeMsPerFrame": 10.64,
+        "Core.LateUpdate.subtreeMsPerFrame": 6.857,
+        "LuaMgr.OnTick&UpdateSchedule.subtreeMsPerFrame": 6.755,
+        "CS:AOE.Outside.MapManager.subtreeMsPerFrame": 6.139,
+        "CS:AOE.MeshUIManager.selfMsPerFrameFromQueryMarkers": 2.0761745852510165
+      }
+    }
+  ]
+}

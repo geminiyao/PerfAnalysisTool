@@ -1,0 +1,32 @@
+[
+  {
+    "id": "D1",
+    "request": "frames 462-481增量GC堆积窗口期间的按分配来源(marker/子系统级)内存分配字节明细，而非仅有全帧汇总的gc_allocated_in_frame一个数字；以及frame483/519两次GC.Collect的具体触发源头(是Lua侧主动调用的强制GC，还是Unity引擎GC调度器基于堆大小阈值的自动触发)。",
+    "reason": "queryFrameCounters的gc_allocated_in_frame只能给出整帧的分配总量，无法归因到具体是哪个marker/子系统在持续分配；getFrameCallTree能看到GC.Collect嵌套在CS:AOE.LuaMgr标记边界之下，但无法穿透到Lua VM内部查看是否有显式的collectgarbage()调用或类似触发逻辑。这两个信息缺口直接影响F4(GC.Collect)和F5(增量GC堆积)的根因判断置信度。",
+    "hypothesisToTest": "假设1：某个特定子系统(如相机/地图更新、实体同步、Lua逐帧tick)在frames 462-481期间持续分配，导致增量GC压力堆积并最终诱发frame483的全量回收。假设2：GC.Collect是由Lua侧显式触发的计划性回收(与C#侧内存压力无关)，与frame519的触发原因可能不同(frame483嵌套在WaitForTargetFPS等待窗口内，frame519则出现在正常执行路径中，提示可能存在两种不同的触发路径)。"
+  },
+  {
+    "id": "D2",
+    "request": "LoaderManagerTryUnloadPending对应的待卸载资源队列(pending-unload queue)的深度/大小的时间序列或事件日志，覆盖frames 80/102/146/414/464附近区间。",
+    "reason": "8个工具中没有一个能读取ResManager/LoaderManager内部的队列状态，只能看到marker执行耗时(selfMs/totalMs)。F6已经确认这是一个周期性批量处理模式(5帧尖峰，均落在同一调用链上)，但无法解释为什么恰好是这5个帧触发了大批量处理而非相邻帧，也无法判断触发条件是固定时间间隔还是队列深度阈值。",
+    "hypothesisToTest": "假设待卸载资源在中间帧持续入队但不处理，达到某个数量或时间阈值后在这5帧集中处理；若能获取队列深度数据，可验证阈值具体数值并评估分帧处理(time-sliced)方案的可行区间。"
+  },
+  {
+    "id": "D3",
+    "request": "YzEntityMoveLineNtf对应网络消息的实际条数与payload大小(而非仅执行耗时)，用于判断“批量到达”推测的实际网络侵入程度。",
+    "reason": "F7已经证实TServer.HandleMessages自身几乎不耗时(selfMs均值0.04ms)、耗时全部来自子节点YzEntityMoveLineNtf的多次调用，且已用getFrameCallTree观察到frame273内该marker在同一帧内被多次调用——但当前工具集只能统计marker调用的时间维度，无法读取网络层的消息条数/字节数，因此“消息批量到达”仍是基于调用次数堆积现象的合理推测，未从网络协议层直接证实。",
+    "hypothesisToTest": "若能获取网络消息日志，可验证这9个尖峰帧(146,256,268,273,278,326,339,342,351)对应的实体移动同步消息数量是否显著高于其余68个YzEntityMoveLineNtf present帧，从而确认是服务器批量下发还是客户端处理逻辑本身的问题。"
+  },
+  {
+    "id": "D4",
+    "request": "Submit Thread的Gfx.PresentFrame耗时波动(mean=8.79ms, std=9.21ms)背后的GPU侧实际执行时间/等待时间拆解，而非仅有CPU侧marker记录的时间。",
+    "reason": "F8已用queryFrameCounters核实frame184/220附近的draw calls/triangles计数并未同步大幅跳变，倾向于排除“渲染负载暴涨”这一解释，但当前8个工具均只提供CPU侧的Unity Profiler marker时间戳和frame计数器快照，没有GPU侧的实际执行时间线(如RenderDoc capture或GPU frame time breakdown)，无法确认这究竟是GPU执行本身变慢、还是CPU-GPU同步/VSync层面的等待抖动。",
+    "hypothesisToTest": "若接入GPU侧profiling数据，可验证frame184/220的present耗时飙升是否对应GPU实际渲染时间同步增长，还是CPU侧空等GPU完成缓冲区交换导致的纯同步开销。"
+  },
+  {
+    "id": "D5",
+    "request": "CS:AOE.LuaMgr的Update tick(F2中确认的6.82ms/帧持续成本，本次运行绝对量级最大的单一组件)内部的Lua函数级调用耗时分布。",
+    "reason": "getFrameCallTree只能展示Unity Profiler原生标记边界，Lua VM内部执行的具体函数调用栈对这套工具完全不可见——CS:AOE.LuaMgr在调用树中呈现为一个不透明的黑盒节点，无法进一步下钻定位是哪些具体Lua模块/函数造成了这6.82ms/帧的持续成本。这是F2(本报告严重度最高的持续性基线成本)中最大但也最不透明的单一组成部分。",
+    "hypothesisToTest": "若能获取Lua侧的函数级profiling数据(如通过Lua profiler hook)，可能会发现少数几个高频调用的Lua函数或模块主导了这6.82ms/帧，从而给出比“优化LuaMgr整体”更具体可执行的优化目标。"
+  }
+]

@@ -34,9 +34,9 @@ flowchart LR
     classDef done fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef now fill:#fff3e0,stroke:#e65100,color:#bf360c
     classDef todo fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
-    class C0,C1 done
-    class C2 now
-    class C3,C4,C5 todo
+    class C0,C1,C2 done
+    class C3 now
+    class C4,C5 todo
 ```
 
 **读法**：C0 是起点（1-2 天跑通"说需求→采数据"）。C1-C2 是加厚采集能力（硬编码→可配置→可组合）。C3 加记忆。C4-C5 加智能。**每个里程碑可独立交付价值，中途可停。**
@@ -171,7 +171,7 @@ flowchart LR
 |---|---|---|---|
 | **C0 最小循环** | CL-1 collect.py 通用脚本、CL-2 需求解析、CL-3 端到端验证 | ✅ 完成 | 1-2 天 |
 | **C1 配置化** | CL-4 YAML Schema、CL-5 Orchestrator 读 YAML、CL-6 项目级配置 | ✅ 完成 | 3-5 天 |
-| **C2 可组合** | CL-7 Driver 热插拔、CL-8 Primitive 框架、CL-9 runs 写入、CL-10 端到端验证 | ⬜ | 1-2 周 |
+| **C2 可组合** | CL-7 Driver 热插拔、CL-8 Primitive 框架、CL-9 runs 写入、CL-10 端到端验证 | ✅ 完成 | 1-2 周 |
 | **C3 记忆回路** | CL-11 collector-memory、CL-12 历史沉淀、CL-13 教训沉淀、CL-14 采集计划 | ⬜ | 3-5 天 |
 | **C4 Agent+告警** | CL-15 规划 prompt、CL-16 回归告警、CL-17 Web UI、CL-18 LLM 解析 | ⬜ | 1-2 周 |
 | **C5 闭环+NL** | CL-19 DataRequest 消费、CL-20 闭环验证、CL-21 完全自然语言 | ⬜ | 1 周 |

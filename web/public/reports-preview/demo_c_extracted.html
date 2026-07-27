@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方式 C · 提取重渲染</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+  .rundetail-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 24px; background: #161b22; border-bottom: 1px solid #30363d;
+  }
+  .rundetail-bar .back { color: #58a6ff; cursor: pointer; font-size: 13px; }
+  .rundetail-bar .title { font-size: 15px; font-weight: 600; }
+  .rundetail-bar .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #21262d; border: 1px solid #30363d; color: #a855f7; }
+  .rundetail-bar .btn { font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; }
+  .tabs { display: flex; padding: 0 24px; background: #161b22; border-bottom: 1px solid #30363d; }
+  .tab { padding: 8px 16px; font-size: 13px; color: #8b949e; border-bottom: 2px solid transparent; }
+  .tab.active { color: #e6edf3; border-bottom-color: #f78166; }
+  .label-badge { position: fixed; top: 50px; right: 24px; background: #52c41a; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 4px; z-index: 10; }
+  .content { max-width: 900px; margin: 0 auto; padding: 20px 24px; }
+
+  /* 评级横条 */
+  .rating-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #161b22; border: 1px solid #f4433630; border-radius: 8px; margin-bottom: 16px; }
+  .rating-bar .emoji { font-size: 20px; }
+  .rating-bar .label { font-size: 14px; font-weight: 600; color: #f44336; }
+  .rating-bar .overview { font-size: 13px; color: #b1bac4; line-height: 1.6; margin-left: 8px; }
+
+  /* 指标行 (Ant Statistic 风格) */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px 16px; }
+  .stat-card .title { font-size: 11px; color: #8b949e; margin-bottom: 6px; }
+  .stat-card .value { font-size: 22px; font-weight: 700; }
+  .stat-card .value.warn { color: #f44336; }
+  .stat-card .suffix { font-size: 12px; color: #8b949e; font-weight: 400; }
+
+  /* 结论卡 (Ant Card 风格) */
+  .section-label { font-size: 12px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 12px; }
+  .concl-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .concl-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #21262d; }
+  .concl-rank { width: 24px; height: 24px; border-radius: 50%; background: #30363d; color: #e6edf3; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .concl-problem { font-size: 14px; font-weight: 600; flex: 1; }
+  .concl-kind { font-size: 11px; color: #8b949e; padding: 2px 8px; background: #21262d; border-radius: 4px; }
+  .sev { font-size: 11px; padding: 2px 10px; border-radius: 4px; font-weight: 600; }
+  .sev.critical { color: #f44336; background: #f4433620; }
+  .sev.high { color: #ff9800; background: #ff980020; }
+  .concl-body { padding: 12px 16px; }
+  .concl-contribution { font-size: 12px; color: #b1bac4; line-height: 1.6; margin-bottom: 12px; }
+
+  /* 调用树 (Ant Progress 风格) */
+  .tree-title { font-size: 11px; color: #8b949e; margin-bottom: 8px; }
+  .tree-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .tree-label { font-size: 12px; min-width: 180px; color: #b1bac4; }
+  .tree-label.script { color: #64b5f6; }
+  .tree-label.render { color: #81c784; }
+  .tree-label.wait { color: #bdbdbd; }
+  .tree-bar-wrap { flex: 1; height: 18px; background: #21262d; border-radius: 3px; overflow: hidden; position: relative; }
+  .tree-bar-fill { height: 100%; border-radius: 3px; }
+  .tree-bar-fill.script { background: #2196f330; border-left: 2px solid #2196f3; }
+  .tree-bar-fill.render { background: #4caf5030; border-left: 2px solid #4caf50; }
+  .tree-bar-fill.wait { background: #9e9e9e30; border-left: 2px solid #757575; }
+  .tree-ms { font-size: 11px; color: #e6edf3; min-width: 50px; text-align: right; }
+  .tree-pct { font-size: 11px; color: #8b949e; min-width: 40px; text-align: right; }
+  .tree-redline { font-size: 10px; color: #f44336; margin-left: 4px; }
+
+  /* 章节卡 */
+  .section-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; }
+  .section-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #58a6ff; }
+  .section-card p { font-size: 13px; color: #b1bac4; line-height: 1.7; }
+  .section-card .sub { font-size: 12px; color: #8b949e; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="rundetail-bar">
+  <span class="back">← 返回 Dashboard</span>
+  <span class="title">bk26b-perfetto-triad</span>
+  <span class="tag">Perfetto</span>
+</div>
+<div class="tabs">
+  <div class="tab">概览</div>
+  <div class="tab active">AI 分析报告</div>
+  <div class="tab">原始数据</div>
+</div>
+<div class="label-badge">方式 C: 提取重渲染</div>
+
+<div class="content">
+  <!-- 评级 + 概览 -->
+  <div class="rating-bar">
+    <span class="emoji">🔴</span>
+    <span class="label">不合格</span>
+    <span class="overview">三态从 60fps 退化到 21fps：GPU 溢出 + 降频放大 + 稳态业务税三者叠加的系统性退化</span>
+  </div>
+
+  <!-- 指标 -->
+  <div class="stat-row">
+    <div class="stat-card"><div class="title">帧预算</div><div class="value">16.7<span class="suffix">ms</span></div></div>
+    <div class="stat-card"><div class="title">P50</div><div class="value warn">45.9<span class="suffix">ms</span></div></div>
+    <div class="stat-card"><div class="title">P99</div><div class="value warn">66.3<span class="suffix">ms</span></div></div>
+    <div class="stat-card"><div class="title">超预算</div><div class="value warn">98.8<span class="suffix">%</span></div></div>
+  </div>
+
+  <!-- 核心结论 -->
+  <div class="section-label">核心结论</div>
+
+  <div class="concl-card">
+    <div class="concl-head">
+      <div class="concl-rank">1</div>
+      <div class="concl-problem">throttle 态 GPU 撑爆 swapchain，主线程近四成时间在等渲染</div>
+      <span class="concl-kind">稳态等待大头</span>
+      <span class="sev critical">严重</span>
+    </div>
+    <div class="concl-body">
+      <div class="concl-contribution">throttle 主线程 Sleeping 38.99%，Gfx.WaitForPresent 单次 avg 17.8ms（超 vsync 16.66ms），427 帧每帧都在等。三态 wait: base 0.9ms → cur 5.8ms → throttle 17.8ms (×2.7)，是 throttle 从 33fps 跌到 21fps 的第一主因。</div>
+      <div class="tree-title">调用树 (per-frame avg)</div>
+      <div class="tree-row">
+        <span class="tree-label render">URP.AfterRendering</span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill render" style="width:100%"></div></div>
+        <span class="tree-ms">3.42ms</span><span class="tree-pct">22.5%</span>
+      </div>
+      <div class="tree-row" style="padding-left:20px">
+        <span class="tree-label render">URP.Submit</span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill render" style="width:38%"></div></div>
+        <span class="tree-ms">1.31ms</span><span class="tree-pct">21.6%</span>
+      </div>
+      <div class="tree-row" style="padding-left:40px">
+        <span class="tree-label wait">URP.WaitForPresent</span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill wait" style="width:34%"></div></div>
+        <span class="tree-ms">1.17ms</span><span class="tree-pct">19.3%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="concl-card">
+    <div class="concl-head">
+      <div class="concl-rank">2</div>
+      <div class="concl-problem">业务脚本 Core.Update 稳态占 24%：LuaMgr + MapManager 是大头</div>
+      <span class="concl-kind">稳态业务税</span>
+      <span class="sev high">高</span>
+    </div>
+    <div class="concl-body">
+      <div class="concl-contribution">cur 态 Core.Update 每帧 7.32ms，占 PlayerLoop p50 的 24.1%（远超 5% 红线），是 GPU 等待之外的第二成本。LuaMgr 12.5% + MapManager 9.5%。</div>
+      <div class="tree-title">调用树 (per-frame avg)</div>
+      <div class="tree-row">
+        <span class="tree-label script">Core.Update <span class="tree-redline">🔴 占 24.1%</span></span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill script" style="width:100%"></div></div>
+        <span class="tree-ms">7.32ms</span><span class="tree-pct">24.1%</span>
+      </div>
+      <div class="tree-row" style="padding-left:20px">
+        <span class="tree-label script">CS:AOE.LuaMgr <span class="tree-redline">🔴 占 12.5%</span></span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill script" style="width:52%"></div></div>
+        <span class="tree-ms">3.80ms</span><span class="tree-pct">12.5%</span>
+      </div>
+      <div class="tree-row" style="padding-left:40px">
+        <span class="tree-label script">LuaMgr.OnTick</span>
+        <div class="tree-bar-wrap"><div class="tree-bar-fill script" style="width:51%"></div></div>
+        <span class="tree-ms">3.75ms</span><span class="tree-pct">12.3%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 章节预览 -->
+  <div class="section-label">下钻章节</div>
+  <div class="section-card">
+    <h3>§3 主线程 off-CPU 归因</h3>
+    <p>throttle 态主线程 Sleeping 38.99%，其中 Gfx.WaitForPresent 占绝对主导。通过 wait slice 重叠法分离出三态的 wait 来源：base 态几乎无 wait（0.9ms），cur 态开始出现 GPU 回压（5.8ms），throttle 态 wait 爆发至 17.8ms——每次等待都超过一个 vsync 周期，说明 GPU 已完全无法在单帧内完成渲染。</p>
+    <div class="sub">三态 wait 对比: base 0.9ms → cur 5.8ms → throttle 17.8ms (×6.2 增长)</div>
+  </div>
+  <div class="section-card">
+    <h3>§4 降频时序</h3>
+    <p>throttle 态 CPU4/CPU5 大核平均频率 1.88GHz（满频 3.0GHz 的 59%），形态为持续压制而非间歇降频。频率压制导致单帧计算变慢、GPU 指令提交延迟、swapchain 膨胀进一步加剧。</p>
+    <div class="sub">大核频率: 3.0GHz → 1.88GHz (降频 41%)</div>
+  </div>
+  <div class="section-card">
+    <h3>§6 GPU-bound 判定矩阵</h3>
+    <p>多信号同向：①主线程 wait 占比 38.99% ②Gfx.WaitForPresent 超过 vsync ③GPU 频率未降但提交堆积 ④swapchain 膨胀。四信号同向 → 判定 GPU-bound 成立。</p>
+    <div class="sub">诚实声明: 无 GPU 计数器数据, 判定基于 CPU 侧 wait 信号间接推导</div>
+  </div>
+</div>
+</body>
+</html>

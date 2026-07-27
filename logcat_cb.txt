@@ -1,0 +1,40 @@
+--------- beginning of main
+07-21 12:25:02.304  4828  4828 I Unity   : onPause
+07-21 12:25:02.356  4828  5010 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 12:25:02.360  4828  4828 I Unity   : onNewIntent
+07-21 12:25:02.374  4828  4828 I Unity   : onResume
+07-21 12:25:02.424  4828  5010 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 12:25:02.543  4828  5010 D Unity   : Choreographer available: Enabling VSYNC timing
+07-21 12:25:02.629  4828  5426 D Unity   : Sync Compiled shader: TBU/Standard/Env/Water/River, pass: FORWARD, stage: all, keywords CENTER_FOAM_USE_DOUBLE_UV_FLOW CENTER_FOAM_USE_NOISE_MASK DEPTH_FETCH_ON EDGE_FOAM_USE_MESH_UV ENABLE_CAUSTICS ENABLE_CENTER_FOAM ENABLE_CUSTOM_CUBE_REFLECTION ENABLE_EDGE_FOAM FLOW_MAP_ON INSTANCING_ON PLANAR_SHADOW_MAP_ON WATER_SPECULAR_NORMAL_ON
+07-21 12:25:02.629  4828  5426 D Unity   : Sync Compiled shader: TBU/Standard/Env/Water/River, pass: FORWARD, stage: all, keywords CENTER_FOAM_USE_DOUBLE_UV_FLOW CENTER_FOAM_USE_NOISE_MASK DEPTH_FETCH_ON EDGE_FOAM_USE_MESH_UV ENABLE_CAUSTICS ENABLE_CENTER_FOAM ENABLE_CUSTOM_CUBE_REFLECTION ENABLE_EDGE_FOAM FLOW_MAP_ON INSTANCING_ON PLANAR_SHADOW_MAP_ON WATER_SPECULAR_NORMAL_ON
+07-21 12:25:03.329  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords AOE_HUE_VARIATION INSTANCING_ON PLANAR_SHADOW_MAP_ON
+07-21 12:25:03.329  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords AOE_HUE_VARIATION INSTANCING_ON PLANAR_SHADOW_MAP_ON
+07-21 12:25:03.348  4828  5010 E Unity   : [ViewTreeInstancing] prefabIndex=110 mesh or material is null after async load, skipped. path=assets/bundleresources/environment/foliages/trees/worldtree1/p_s1001_worldleaftree_02.prefab
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.Outside.ViewTreePrefabManager:ProcessLoadResult(PrefabLoadRequest)
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.Outside.ViewTreePrefabManager:CheckPrefabAsyncLoading()
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.Outside.ViewTreeInstancing:OnLateUpdate()
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.Outside.OutsideViewTreeMgr:OnLateUpdate(Single)
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.Outside.MapManager:OnLateUpdate(Single)
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.FrameworkCore:OnLateUpdate(Single)
+07-21 12:25:03.348  4828  5010 E Unity   : AOE.GameLauncher:LateUpdate()
+07-21 12:25:03.348  4828  5010 E Unity   :  
+07-21 12:25:03.348  4828  5010 E Unity   : (Filename: ./Runtime/Export/Debug/Debug.bindings.h Line: 35)
+07-21 12:25:03.348  4828  5010 E Unity   : 
+07-21 12:25:03.393  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON
+07-21 12:25:03.393  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON
+07-21 12:25:03.403  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON WORLDPOS_HUE_VARIATION
+07-21 12:25:03.404  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON WORLDPOS_HUE_VARIATION
+07-21 12:25:03.560  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON VERTICAL_COLOR_TINT_ON WORLDPOS_HUE_VARIATION
+07-21 12:25:03.561  4828  5426 D Unity   : Sync Compiled shader: AOE/World/FoliageTwoSide, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON SELF_SHADOW_TINT_ON VERTICAL_COLOR_TINT_ON WORLDPOS_HUE_VARIATION
+07-21 12:25:03.969  4828  5426 D Unity   : Sync Compiled shader: AOE/Base/EmptyPass, pass: EmptyPass, stage: all, keywords <no keywords>
+07-21 12:25:03.969  4828  5426 D Unity   : Sync Compiled shader: AOE/Base/EmptyPass, pass: EmptyPass, stage: all, keywords <no keywords>
+07-21 12:25:03.989  4828  5426 D Unity   : Sync Compiled shader: AOE/World/Decal, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON
+07-21 12:25:03.989  4828  5426 D Unity   : Sync Compiled shader: AOE/World/Decal, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON
+07-21 12:25:05.571  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT USE_UP_DIR_MIX _HEIGHTBLEND_ON
+07-21 12:25:05.571  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT USE_UP_DIR_MIX _HEIGHTBLEND_ON
+07-21 12:25:05.862  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT USE_UP_DIR_MIX _TERRAINBLEND_ON
+07-21 12:25:05.862  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT USE_UP_DIR_MIX _TERRAINBLEND_ON
+07-21 12:25:05.872  4828  5426 D Unity   : Sync Compiled shader: AOE/World/Cliff, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_TERRAIN_VT _HEIGHTBLEND_ON _TERRAINBLEND_ON_NOTEXARRAY
+07-21 12:25:05.872  4828  5426 D Unity   : Sync Compiled shader: AOE/World/Cliff, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_TERRAIN_VT _HEIGHTBLEND_ON _TERRAINBLEND_ON_NOTEXARRAY
+07-21 12:25:07.255  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT _TERRAINBLEND_ON
+07-21 12:25:07.255  4828  5426 D Unity   : Sync Compiled shader: AOE/World/CliffDetail, pass: FORWARD, stage: all, keywords INSTANCING_ON PLANAR_SHADOW_MAP_ON USE_NEW_TRIPLANAR USE_TERRAIN_VT _TERRAINBLEND_ON

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "source.oncameramove.true-impl",
+    "want": "OnCameraMove这个marker对应的真实业务函数体源码（C#或Lua均可），而不是ambiguous匹配里的某个不相关同名节点",
+    "rationale": "OnCameraMove是四个primaryDrivers之一(camera.oncameramove.spike)，均值1.366ms但p99=49.87ms、单次最高53.41ms，19次事件100%落入慢帧集合(pctAinB=100%)，是全场因果关联最强、单事件冲击最尖锐的问题之一；但getSourceForSymbol('OnCameraMove')匹配到5个ambiguous候选节点，未能定位到InfiniteZoomMgr.PostCameraMoveScale调用链下真正执行的那个实现，导致drillDownMarker已确认OnCameraMove是调用树叶子（无法再往下钻）之后，仍无法给出该叶子内部具体在计算什么、能否优化的代码级建议",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（对同名符号的ambiguous匹配缺少'按调用路径/父节点消歧'的能力，只能拿到候选列表而无法自动选中调用链上下文匹配的那一个）"
+  },
+  {
+    "id": "source.armylinemgr.onupdate-body",
+    "want": "CS:AOE.Outside.OutSideViewArmyLineMgr的逐帧更新方法真实代码体",
+    "rationale": "该marker是baseline.coreupdate.luamgr-mapmanager finding里MapManager子树下贡献最大的一项(selfMs=2.302ms/帧，600帧全勤，81%自耗非分摊到子节点，是四个候选里绝对总耗时最大的纯自耗型marker)；本轮直接用getSourceForSymbol查询类名'OutSideViewArmyLineMgr'，返回resolvedVia=none/found=false（'symbol not in codegraph nor map-source'），确认这不是参数错误导致的假阴性，而是真实的数据覆盖局限，导致无法判断这2.3ms/帧具体花在哪段逐帧遍历/连线计算逻辑上",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（类名直接查询在codegraph里未命中，可能需要更精确的类全名/命名空间前缀或该类型本身未被纳入codegraph索引范围）"
+  },
+  {
+    "id": "gc.collect.caller-attribution",
+    "want": "frame519里GC.Collect的调用者信息——是LuaMgr.EndOfFrame流程里哪一行/哪个业务函数主动调用了System.GC.Collect",
+    "rationale": "frame519是全场最慢帧(113.56ms)，GC.Collect单次吃掉70.2ms(占该帧61.82%)，已用getFrameCallTree确认走的是'CS:AOE.LuaMgr>Core.EndOfFrame'路径的主动同步Full GC（区别于frame461/483走WaitForTargetFPS的常规引擎增量GC步进，量级也差5-10倍），且queryFrameCounters已排除'内存分配暴涨触发'的假设(frame519分配量8192字节反而是相邻帧最低值)；但getFrameCallTree/drillDownMarker只能看到GC.Collect本身是调用树的叶子节点，看不到是LuaMgr.EndOfFrame流程里哪个具体业务函数(如资源卸载/场景切换/Lua侧Full GC触发逻辑)主动调用了这次同步GC，无法定位可能存在的手动触发代码位置",
+    "suspectedAxis": "marker-caller-chain",
+    "closestExistingTool": "getFrameCallTree（只能看marker的父子调用关系，看不到是哪行C#/Lua代码主动调用了引擎GC API；需要更细粒度的自定义marker插桩或托管栈回溯能力）"
+  },
+  {
+    "id": "source.luamtgc.native-impl",
+    "want": "LuaMtGc.ExecuteMtGc底层真正执行GC工作的Lua VM/native层实现代码（而非C#薄封装转发层）",
+    "rationale": "该marker是全场第二套独立GC机制(gc.luamtgc.executemtgc.spike finding)，均值0.592ms但在5个burstFrames里飙到最高21.591ms(是均值的36.5倍)；getSourceForSymbol('LuaMtGc.ExecuteMtGc')确实找到了源码(resolvedVia=codegraph, BaseLuaMgr.cs:1475-1481)，但内容只是`public void ExecuteMtGc() { if (this.env != null) { env.ExecuteMtGc(); } }`一个转发调用，真正的GC扫描/回收逻辑在env.ExecuteMtGc()内部的Lua VM/native层，该层代码不在本次codegraph可查范围内，无法判断burstFrames里21.591ms具体花在GC扫描哪类对象或哪个阶段",
+    "suspectedAxis": "codegraph-coverage",
+    "closestExistingTool": "getSourceForSymbol（codegraph覆盖C#层完整，但不索引Lua VM/native层实现，这是工具索引范围本身的边界，非查询参数问题）"
+  },
+  {
+    "id": "source.dounload.body",
+    "want": "BaseLoader.TryUnload内部调用的DoUnload()方法真实代码体",
+    "rationale": "resource.tryunload.spike finding显示frame80单次TryUnloadPending.TryUnload耗时14.59ms(是均值0.11ms的132倍)；已用getSourceForSymbol确认TryUnload()本身源码(BaseLoader.cs:668-677)，内部有CanUnload()前置检查后调用DoUnload()，但进一步查询'DoUnload'返回ambiguous=true(6个候选)/resolvedVia=none，无法确认这6个候选里哪个是当前调用链上实际执行的那个重载，导致drillDownMarker已钻到具体bundle文件卸载的叶子级别之后，仍无法看到DoUnload()内部是否有可优化的具体逐资源处理逻辑",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（同OnCameraMove/OnUpdate类问题，裸方法名在多个类里重名导致无法自动消歧到调用链上下文对应的那个重载）"
+  },
+  {
+    "id": "memory.gc-alloc.per-marker",
+    "want": "per-marker/per-function级别的GC分配字节数（哪个函数在分配内存），而非queryFrameCounters提供的整帧汇总值",
+    "rationale": "本轮用queryFrameCounters核查frame519/483/461附近的gc_allocated_in_frame时，只能拿到整帧总量(如frame519=8192字节、frame518=9216、frame520=15360)，据此排除了'frame519是被分配暴涨触发GC'的假设；但这个排除本身只是一个'整帧维度的间接推断'，无法进一步定位到底是哪个marker/函数在贡献这些分配量，也无法判断LuaMtGc.ExecuteMtGc的burstFrames(194/343/350/351/352)期间是否存在特定Lua侧分配模式的关联，限制了对两套GC机制根因的进一步细化",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧gc_allocated_in_frame汇总列，到不了marker/函数级；需要类似Unity Profiler的Allocation Callstacks级别数据）"
+  }
+]

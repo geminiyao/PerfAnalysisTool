@@ -1,0 +1,7 @@
+--------- beginning of main
+07-21 11:55:38.429 29912 29912 I Unity   : onPause
+07-21 11:55:38.476 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:55:38.478 29912 29912 I Unity   : onNewIntent
+07-21 11:55:38.488 29912 29912 I Unity   : onResume
+07-21 11:55:38.502 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:55:38.505 29912 30031 D Unity   : Choreographer available: Enabling VSYNC timing

@@ -1,0 +1,7 @@
+--------- beginning of main
+07-21 12:10:45.015  1625  1625 I Unity   : onPause
+07-21 12:10:45.075  1625  1625 I Unity   : onNewIntent
+07-21 12:10:45.086  1625  1625 I Unity   : onResume
+07-21 12:10:46.496  1625  1745 W Unity   : tileIdx has trnLoader, still load: (11, 1) 
+07-21 12:10:46.496  1625  1745 W Unity   : (Filename: ./Runtime/Export/Debug/Debug.bindings.h Line: 35)
+07-21 12:10:46.496  1625  1745 W Unity   : 

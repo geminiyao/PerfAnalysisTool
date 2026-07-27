@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.480Z
 source: unity-cpu
 title: "AOE 已知问题：战斗 UI 极端耗时"
 tags: ["aoe","已知问题","ugui","战斗ui","critical"]
+dataSource: unity
 ---
 
 **触发场景**：300 部队带 UI。

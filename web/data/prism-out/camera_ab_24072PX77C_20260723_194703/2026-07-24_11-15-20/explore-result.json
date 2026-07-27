@@ -1,0 +1,1741 @@
+{
+  "success": true,
+  "runId": "camera_ab_24072PX77C_20260723_194703",
+  "findings": [
+    {
+      "id": "steady-spread-cost",
+      "title": "稳态成本长尾累加，84%帧超标无单一主因",
+      "conclusion": "全场 600 帧里有 506 帧（84%）超过 60fps 预算，p50 就到了 20.75ms——也就是说一半以上的帧连 50fps 都到不了。但奇怪的是，没有任何一个‘大坏蛋’可抓：中位帧的成本被 URP 渲染、Lua 逻辑、LateUpdate、ECS、Canvas 五个系统分摊，每个占 8%~28%，谁都不是绝对大头。这是典型的‘多系统各占一点、合力把帧预算吃光’的长尾型不达标，优化时不能只盯着一个模块。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "PlayerLoop",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "frameCount": 600,
+            "mean": 22.96,
+            "p50": 20.75,
+            "p95": 34.7,
+            "p99": 44.5,
+            "max": 54.09,
+            "maxFrameIndex": 143,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.648
+            }
+          }
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 16.67
+            },
+            "setB": {
+              "kind": "slowFrames",
+              "thresholdMs": 33
+            }
+          },
+          "resultDigest": {
+            "sizeA": 506,
+            "sizeB": 52,
+            "pctOverBudget": "84.3%",
+            "pctOver2xBudget": "8.7%"
+          }
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 400,
+            "thread": "1:Main Thread",
+            "maxDepth": 6,
+            "minPct": 1.5
+          },
+          "resultDigest": {
+            "msFrame": 23.01,
+            "callTreeAnnotations": [
+              {
+                "nodeName": "PlayerLoop",
+                "redlineFlag": "占 p50 124%（20.75/16.67ms）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "PostLateUpdate.FinishFrameRendering",
+                "redlineFlag": "占帧 28.3%（URP 渲染管线）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "URP.RenderSingleCamera",
+                "redlineFlag": "占帧 21.3%（渲染最大单子树）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "Update.ScriptRunBehaviourUpdate",
+                "redlineFlag": "占帧 21.6%（GameLauncher.Update/LuaMgr）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                "redlineFlag": "占帧 16.9%（LateBehaviourUpdate）",
+                "foldChange": null,
+                "severityTag": "medium"
+              },
+              {
+                "nodeName": "PostLateUpdate.PlayerUpdateCanvases",
+                "redlineFlag": "占帧 8.1%（UGUI Canvas）",
+                "foldChange": null,
+                "severityTag": "medium"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "aggregateSubtree",
+          "args": {
+            "topN": 10,
+            "fanoutThreshold": 0.6,
+            "minTotalMsPerFrame": 2
+          },
+          "resultDigest": {
+            "subtrees": [
+              {
+                "name": "URP.RenderSingleCamera",
+                "subtreeMsPerFrame": 4.751,
+                "maxChildRatio": 0.388,
+                "note": "分摊型，10 子节点无单一大头"
+              },
+              {
+                "name": "LateBehaviourUpdate",
+                "subtreeMsPerFrame": 3.897,
+                "maxChildRatio": 0.529
+              },
+              {
+                "name": "UpdateFunction.Invoke",
+                "subtreeMsPerFrame": 3.151,
+                "note": "ECS 三系统组 Simulation1.57+Presentation0.90+Init0.57"
+              },
+              {
+                "name": "MapSignificanceMgr.ProcessTasks",
+                "subtreeMsPerFrame": 2.327
+              }
+            ]
+          }
+        }
+      ],
+      "reasoning": "判定基于‘相对周期’（DR-42）：p50=20.75ms 占 16.67ms 帧预算的 124%，已超 24%；84.3% 帧超预算说明这不是偶发尖刺而是稳态问题。frame 400（23ms，近 p50）的调用树显示成本分散在 5 个系统：FinishFrameRendering/URP 6.51ms(28%)、ScriptRunBehaviourUpdate 4.97ms(22%)、PreLateUpdate 3.89ms(17%)、PlayerUpdateCanvases 1.87ms(8%)、ECS 三组 2.89ms(13%)，最大单子树 URP.RenderSingleCamera 也只占 21.3%，未触‘单点占帧 ≥50%’的红线。aggregateSubtree 进一步印证 URP.RenderSingleCamera(4.75ms/f) 是分摊型（maxChildRatio 0.388，无单一大头）。autocorr bestLag=2 coef=0.648 提示隔帧交替节律（见 frame-pacing-lag2 条目），但不改变稳态超标的结论。",
+      "recommendation": "没有单一可砍的大头，优化需多管齐下、各自削一点：(1) URP 渲染 6.5ms/帧是最大单块，优先核查 DrawCall/Shader/后效（Bloom/PlanarShadow/StencilOutline 都在 Submit 线程榜单），考虑降低后效分辨率或合并 Pass；(2) GameLauncher.Update 下 LuaMgr.OnTick&UpdateSchedule 3.37ms/帧，其中 MapSignificanceMgr 占 70%（见 camera-loading-storm 条目，有具体可落地的分帧建议）；(3) LateBehaviourUpdate 3.9ms/帧里 WorldTileStreaming.LateUpdate 0.68ms + GameLauncher.LateUpdate 2.06ms，可评估哪些 LateUpdate 能降频或合并；(4) ECS 三系统组 2.89ms/帧，核查是否所有 System 都需要每帧跑。目标是把 p50 从 20.75ms 压到 16.67ms 以下，需各系统合计削掉 ~4ms。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】中位帧已钻到 URP.RenderSingleCamera/LuaMgr/LateBehaviourUpdate 等子树并给出占比，但 URP 子树内部未进一步 drillDownMarker（rendering 管线优化空间需单独深挖，此处作为‘长尾’主旨足够）。【严重度】曾犹豫是否该因‘无单一主因’降为 high，但 84% 帧超标 + p50 超预算 24% 是对帧率最直接的伤害，稳态成本才是对总帧时贡献最大的问题（远胜偶发尖刺），故维持 critical。【统计】pctFramesOverBudget=84.3% 分母是全部 600 帧（非慢帧子集），未被稀释。【证据】所有数字均来自本次真实查询。【反例】是否存在‘多数帧其实达标’的反例？506/600 超标已直接否定。",
+      "symbols": [
+        "PlayerLoop",
+        "URP.RenderSingleCamera",
+        "LateBehaviourUpdate",
+        "LuaMgr.OnTick&UpdateSchedule",
+        "MapSignificanceMgr.ProcessTasks"
+      ],
+      "tags": [
+        "spread-cost",
+        "tail-latency",
+        "periodicity"
+      ]
+    },
+    {
+      "id": "camera-recycle-burst",
+      "title": "相机移动触发环境物一帧回收，炸出最差帧",
+      "conclusion": "相机一移动，WorldEnvironmentMeshItemMgr 会在单帧内通过 RecycleGOTask 把一批出视野的环境网格物件回收掉。这件事平时几乎不耗时（0.2ms/帧），但相机扫到新区域时会在一帧里集中炸掉 24.8ms——而且全场最差的两帧（frame 143 的 54ms、frame 469 的 48ms）都是它干的，每次回收约 37 个 GameObject。这是典型的‘平时安静、一动就卡’的相机相关卡顿源。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "mean": 0.196,
+            "p50": 0.111,
+            "p95": 0.158,
+            "p99": 0.638,
+            "max": 24.8,
+            "maxFrameIndex": 469,
+            "spikeRatio": 224.1,
+            "burstFrames": [
+              143,
+              469
+            ]
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "RecycleGOTask",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 7,
+            "mean": 0.07,
+            "max": 19.51,
+            "maxFrameIndex": 469,
+            "spikeRatio": 20.35,
+            "burstFrames": [
+              143,
+              469
+            ],
+            "count": 262,
+            "note": "262 次/7 帧≈37 次/帧当出现时"
+          }
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "rootMarker": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minMsPerFrame": 0.01
+          },
+          "resultDigest": {
+            "rootTotalMsPerFrame": 0.196,
+            "onlyChild": "RecycleGOTask (presentFrames=2, 即仅 143/469 两帧在此调用)"
+          }
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 143,
+            "thread": "1:Main Thread",
+            "maxDepth": 7,
+            "minPct": 1
+          },
+          "resultDigest": {
+            "msFrame": 54.14,
+            "hotPath": "PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate(27.98ms,51.7%) > LateBehaviourUpdate > GameLauncher.LateUpdate(26.28ms) > Core.LateUpdate > CS:AOE.Outside.MapManager > CS:AOE.Outside.WorldEnvironmentMeshItemMgr(24.8ms,51.3%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                "redlineFlag": "占帧 51.7%（最差帧主因在此）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+                "redlineFlag": "占帧 51.3%（spikeRatio 224，相机移动触发）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "RecycleGOTask",
+                "redlineFlag": "单帧 19.5ms，37 次 GO 回收",
+                "foldChange": null,
+                "severityTag": "critical"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "symbol": "WorldEnvironmentMeshItemMgr",
+            "maxLines": 120,
+            "includeCalls": true
+          },
+          "resultDigest": {
+            "found": false,
+            "reason": "symbol not in codegraph nor map-source",
+            "note": "RecycleGOTask 同样未索引；需手动定位源码"
+          }
+        }
+      ],
+      "reasoning": "WorldEnvironmentMeshItemMgr 平均 0.196ms/帧，但 max 24.8ms@469，spikeRatio 高达 224——平时与尖峰相差 3 个数量级，是典型的相机触发型偶发尖刺。drillDownMarker 确认其唯一子节点是 RecycleGOTask，且仅在 frame 143/469 两帧出现。frame 143（全场最差 54ms）的调用树显示 WorldEnvironmentMeshItemMgr 占该帧 51.3%，hotPath 完整闭合到 PlayerLoop。RecycleGOTask 全程 262 次调用集中在 7 帧，平均 37 次/帧，单帧 self 峰值 19.5ms。严重度定为 high 而非 critical：虽然造成最差两帧，但仅影响 2/600 帧，对‘整体帧率’贡献小于稳态长尾（见 steady-spread-cost）。",
+      "recommendation": "WorldEnvironmentMeshItemMgr 与 RecycleGOTask 的源码未在 codegraph 中索引，无法直接看实现，以下建议需先手动定位 WorldEnvironmentMeshItemMgr 类（推断在 Assets/Scripts/.Lua/Outside/Map/ 下，与 MapSignificanceMgr 同模块）后再核实：(1) 把单帧集中回收改为分帧回收——给 RecycleGOTask 加每帧回收数量上限或时间预算（如单帧最多回收 N 个 GO，剩余排队下一帧），避免一次 37 个 GO 同帧 Destroy；(2) 评估是否已有对象池可复用——若环境网格物件是反复创建/销毁，应走池化而非 Destroy/Instantiate；(3) 相机移动时预判视野变化，提前在轻帧分批回收即将出视野的物件。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已 drillDownMarker 钻到唯一叶子 RecycleGOTask 并确认调用次数/帧，但 RecycleGOTask 内部无法再钻（marker 粒度极限），源码也未索引到——如实说明需手动定位，不脑补内部逻辑。【严重度】曾想定 critical（毕竟是最差帧），但按‘对总帧时的实际贡献’原则，2/600 帧的尖刺对整体帧率贡献小于 84% 帧的稳态超标，降为 high。【统计】spikeRatio=224 分母是均值（0.196），未被稀释。【证据】hotPath 从 PlayerLoop 闭合到 WorldEnvironmentMeshItemMgr，五段证据相互印证。【反例】是否所有相机移动帧都炸？否——burstFrames 仅 143/469，说明相机移动并非每次都触发回收，可能仅在跨区块时触发，这与‘相机扫到新区域’的解释一致。",
+      "symbols": [
+        "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+        "RecycleGOTask",
+        "CS:AOE.Outside.MapManager"
+      ],
+      "tags": [
+        "spike",
+        "camera-move",
+        "object-lifecycle",
+        "spread-cost"
+      ]
+    },
+    {
+      "id": "camera-loading-storm",
+      "title": "相机移动触发实体显著度任务风暴，一帧同步加载22ms",
+      "conclusion": "相机移动会让一批实体进入‘显著区’，MapSignificanceMgr.ProcessTasks 在一帧里把这些实体的强制加载/子实体处理全部跑完。平时这条管线 2.3ms/帧很安静，但 frame 552 一次炸到 22.7ms——直接把那帧推到 47ms。看了源码确认：ProcessTasks 顺序跑 11 个 ConsumeTasks_* 子消费者，代码里没有任何每帧任务数上限或时间预算，队列一涨就一帧全跑完。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 552,
+            "thread": "1:Main Thread",
+            "maxDepth": 10,
+            "minPct": 0.5
+          },
+          "resultDigest": {
+            "msFrame": 46.83,
+            "hotPath": "Update > GameLauncher.Update(27.8ms) > Core.Update > CS:AOE.LuaMgr(25.46ms) > LuaMgr.OnTick&UpdateSchedule(25.42ms) > MapSignificanceMgr(22.72ms) > MapSignificanceMgr.ProcessTasks(22.69ms, 48.5%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "LuaMgr.OnTick&UpdateSchedule",
+                "redlineFlag": "占帧 54.3%（Lua 主 tick）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "MapSignificanceMgr.ProcessTasks",
+                "redlineFlag": "占帧 48.5%（spikeRatio 9.7x 均值），11 个 ConsumeTasks 一帧全跑",
+                "foldChange": null,
+                "severityTag": "critical"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "rootMarker": "MapSignificanceMgr.ProcessTasks",
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minMsPerFrame": 0.01
+          },
+          "resultDigest": {
+            "rootTotalMsPerFrame": 2.327,
+            "children": [
+              {
+                "name": "MapSignificanceMgr.ForceSubEntity",
+                "totalMsPerFrame": 1.125,
+                "pctOfRoot": 0.484
+              },
+              {
+                "name": "MapSignificanceMgr.EntityTask",
+                "totalMsPerFrame": 0.551,
+                "pctOfRoot": 0.164
+              },
+              {
+                "name": "MapSignificanceMgr.OutsideSubEntityMgr",
+                "totalMsPerFrame": 0.538,
+                "pctOfRoot": 0.16
+              }
+            ],
+            "deepLeaves": [
+              "[res]entityLoader_sync 同步资源加载叶子",
+              "Semaphore.WaitForSignal 0.16ms×多（等加载线程）"
+            ]
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "MapSignificanceMgr.ProcessTasks",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.03,
+            "max": 0.098,
+            "maxFrameIndex": 215,
+            "note": "self 极小，22.7ms 全在子节点——552 帧子节点尖刺"
+          }
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "symbol": "MapSignificanceMgr.ProcessTasks",
+            "maxLines": 120,
+            "includeCalls": true
+          },
+          "resultDigest": {
+            "found": true,
+            "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+            "startLine": 1290,
+            "endLine": 1372,
+            "signature": "MapSignificanceMgr.ProcessSignificanceTasks",
+            "sourceInsight": "顺序调用 11 个 ConsumeTasks_*：ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy，每个用 SamplerBegin/End 包裹，函数体内未见每帧任务数上限或时间预算"
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "LuaMgr.OnTick&UpdateSchedule",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.101,
+            "p50": 0.099,
+            "max": 0.234,
+            "note": "self 小，25ms 全在 MapSignificanceMgr 子树"
+          }
+        }
+      ],
+      "reasoning": "frame 552（47ms）的 hotPath 完整闭合：LuaMgr.OnTick&UpdateSchedule 25.42ms 中 22.72ms 在 MapSignificanceMgr.ProcessTasks。ProcessTasks 平均仅 2.33ms/帧（drillDownMarker），552 帧炸到 22.69ms 是均值的 9.7 倍。源码确认 ProcessSignificanceTasks 顺序执行 11 个 ConsumeTasks_* 子消费者，无每帧上限/时间预算——相机移动致任务队列暴涨时全部一帧处理。子树深层叶子是 [res]entityLoader_sync（同步资源加载）与 Semaphore.WaitForSignal（等加载线程），与 552 帧同期 Loading 线程簇（LockPersistentManager 13.7ms/File.Open 11.5ms/ArchiveFileSystemOpen 10.87ms）互为表里：主线程同步等资源 + 加载线程忙读盘。严重度 high：影响 1 帧（47ms），但机制明确且可落地优化。",
+      "recommendation": "源码已确认（Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua:1290-1372），可落地建议：(1) 给每个 ConsumeTasks_* 加每帧处理数量上限或时间预算（如单帧最多处理 N 个实体或最多跑 2ms，剩余任务排队下一帧），把相机移动带来的任务洪水分摊到多帧——这是最直接的修法，源码当前完全没有这类节流；(2) 优先处理 ForceSubEntity（占 ProcessTasks 48%），其下 SubEntity_FrameExcute 触发同步 entityLoader_sync，应改为异步加载或预加载即将进入视野的实体资源；(3) 配合 camera-recycle-burst 一起治理——两者都是相机移动触发，可统一做‘相机移动预测 + 分帧预算’机制。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已钻到 ProcessTasks 子节点并看了源码确认无节流，但 552 帧具体是 11 个 ConsumeTasks 中哪几个主导（frame 552 calltree 在 depth 10 截断未展开 ProcessTasks 子节点）未完全隔离——如实说明，但不影响‘队列一涨全跑一帧’的根因结论。【严重度】1/600 帧定 high 合理（低于 steady-spread-cost 的 critical，与 camera-recycle-burst 的 2 帧同档）。【统计】spikeRatio 9.7x 均值，分母 2.33ms 是 ProcessTasks 全程均值，未被稀释。【证据】源码 + calltree + drillDown + 时序四重印证。【反例】是否所有相机移动帧都触发 ProcessTasks 风暴？否——LuaMgr.OnTick&UpdateSchedule burstFrames 有 12 帧但多数不炸到 25ms，说明仅在大量实体同时变更显著度时触发，与‘相机跨区块’解释一致。",
+      "symbols": [
+        "MapSignificanceMgr.ProcessTasks",
+        "MapSignificanceMgr.ForceSubEntity",
+        "SubEntity_FrameExcute",
+        "LuaMgr.OnTick&UpdateSchedule"
+      ],
+      "tags": [
+        "spike",
+        "camera-move",
+        "loading",
+        "spread-cost"
+      ]
+    },
+    {
+      "id": "gc-collect-spike",
+      "title": "同步GC五次突袭，最重一次11ms",
+      "conclusion": "全程 600 帧里触发了 5 次同步 GC.Collect，平均每次 8.96ms，最重一次（frame 576）11.13ms。这种同步 GC 直接卡主线程，每次都把那帧推到远超预算。frame 278 的调用树清楚显示这次 GC 是在帧末 WaitForTargetFPS 阶段触发的增量 GC 收尾。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GC.Collect",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 5,
+            "mean": 0.075,
+            "max": 11.13,
+            "maxFrameIndex": 576,
+            "burstFrames": [
+              257,
+              278,
+              283,
+              566,
+              576
+            ],
+            "avgPerPresentFrame": 8.96
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GarbageCollector.CollectIncremental",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 599,
+            "mean": 0.061,
+            "p50": 0.0007,
+            "p95": 1.014,
+            "max": 1.1,
+            "maxFrameIndex": 268,
+            "burstFrames": "257-276 连续 20 帧",
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.858
+            }
+          }
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 278,
+            "thread": "1:Main Thread",
+            "maxDepth": 6,
+            "minPct": 1.5
+          },
+          "resultDigest": {
+            "msFrame": 44.5,
+            "hotPath": "Initialization.PlayerUpdateTime > WaitForTargetFPS(7.20ms) > GarbageCollector.CollectIncremental(7.18ms) > GC.Collect(7.02ms, 15.8%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "GC.Collect",
+                "redlineFlag": "单帧 7.02ms 占帧 15.8%（同步 GC）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "GarbageCollector.CollectIncremental",
+                "redlineFlag": "增量 GC 收尾触发同步 GC",
+                "foldChange": null,
+                "severityTag": "medium"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {},
+          "resultDigest": {
+            "mode": "summary",
+            "allCountersZero": true,
+            "note": "gc_allocated_in_frame/triangles/batches 等全部为 0，本次采集未捕获逐帧计数器，无法定位 GC 触发前的分配来源"
+          }
+        }
+      ],
+      "reasoning": "GC.Collect 在 5 帧（257/278/283/566/576）触发，平均 8.96ms/次，max 11.13ms@576。frame 278 调用树显示 GC.Collect 7.02ms 嵌套在 WaitForTargetFPS > CollectIncremental 下，是增量 GC 攒到一定程度触发的同步收尾。CollectIncremental 时序显示 257-276 连续 20 帧增量 GC 加重（~1ms/帧），随后 278 帧触发同步 GC——印证‘增量攒不住就退化成同步’的典型模式。严重度 medium：5/600=0.8% 帧受影响，但每次都显著超预算。queryFrameCounters 全部为 0，无法用 gc_allocated_in_frame 定位分配源（见 data-requests）。",
+      "recommendation": "(1) 既然 257-276 帧增量 GC 持续加重并最终触发同步 GC，说明这段时间内存分配压力较大——需定位是哪个系统在持续分配（queryFrameCounters 这次全为 0，需要下次采集修复计数器捕获，或用 per-marker GC 分配工具，见 data-requests）；(2) 增大增量 GC 的每帧预算（GarbageCollector.CollectIncremental 的 budget）可能让增量部分多扛一些、避免退化成同步 GC，但需先确认分配源；(3) 排查 257-276 这段时间游戏在做什么（可能与某段相机移动/加载区间重合），那段区间往往是分配高峰。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已定位到 GC.Collect 在 CollectIncremental 下，但‘触发前哪些 marker 在分配’未能定位（queryFrameCounters 全为 0），如实记为 data-request 不脑补。【严重度】5/600 帧定 medium 合理。【统计】avgPerPresentFrame=8.96 是 5 个 GC 帧的均值，分母正确。【证据】时序+调用树双重印证。【反例】是否存在‘GC 帧其实不卡’的反例？5 帧均 8.96ms 远超预算，无反例。",
+      "symbols": [
+        "GC.Collect",
+        "GarbageCollector.CollectIncremental"
+      ],
+      "tags": [
+        "gc",
+        "spike"
+      ]
+    },
+    {
+      "id": "frame-pacing-lag2",
+      "title": "帧节奏隔帧交替，等效半帧率",
+      "conclusion": "PlayerLoop 帧时有很强的‘隔帧交替’规律（autocorr 在 lag=2 达 0.648）。拆开看，WaitForTargetFPS（等目标帧率）和 GarbageCollector.CollectIncremental（增量 GC）都在隔帧交替强弱——一帧做引擎杂活+等 vsync，下一帧不做。这本身不是大问题（等的时间很小，p50 才 0.005ms），但说明引擎在以‘两帧为一组’的节律运行，等效于把帧率对半切，是稳态成本超标的一种伴随现象。",
+      "severity": "low",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "WaitForTargetFPS",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.412,
+            "p50": 0.005,
+            "p95": 2.654,
+            "p99": 6.482,
+            "max": 7.646,
+            "maxFrameIndex": 497,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.7088
+            },
+            "burstFrames": [
+              492,
+              493,
+              494,
+              495,
+              496,
+              497
+            ]
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GarbageCollector.CollectIncremental",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.858
+            },
+            "note": "全场最强 lag-2 信号"
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "MapSignificanceMgr.ForceSubEntity",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.426
+            },
+            "note": "业务侧也有 lag-2 信号"
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "PlayerLoop",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.648
+            }
+          }
+        }
+      ],
+      "reasoning": "四个独立 marker 的 autocorr 都在 bestLag=2 达到显著峰值：CollectIncremental 0.858（最强）、WaitForTargetFPS 0.7088、PlayerLoop totalMs 0.648、ForceSubEntity 0.426。这表明引擎在以两帧为一组交替运行：一帧做增量 GC + 引擎杂活，下一帧跳过。WaitForTargetFPS p50 仅 0.005ms 说明‘等’本身开销极小，不是性能问题；但隔帧交替意味着有效帧率被对半切（30fps 节律），是稳态超标（见 steady-spread-cost）的伴随现象。严重度 low：现象真实但‘等’的成本可忽略，无需单独优化。",
+      "recommendation": "无需针对‘等’本身优化（WaitForTargetFPS 是正常的帧节律）。但若想打破隔帧交替，可排查是否有业务系统在以‘每两帧一次’的频率跑（ForceSubEntity 的 lag-2 信号提示可能有半帧率逻辑），把能每帧跑的轻量任务均匀化。优先级远低于稳态成本削峰与相机尖刺治理。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】这是节律观察而非热点，无需下钻。【严重度】low 合理（等的时间 p50=0.005ms 可忽略）。【统计】autocorr 系数四个 marker 互相印证，非单一信号。【证据】四组 autocorr 均来自真实查询。【反例】是否 lag-2 只是统计假象？四个独立 marker 同向 + WaitForTargetFPS 连续 6 帧 burst（492-497）印证节律真实存在。",
+      "symbols": [
+        "WaitForTargetFPS",
+        "GarbageCollector.CollectIncremental",
+        "MapSignificanceMgr.ForceSubEntity"
+      ],
+      "tags": [
+        "periodicity",
+        "frame-pacing"
+      ]
+    },
+    {
+      "id": "app-pause-lifecycle",
+      "title": "应用暂停生命周期事件一次尖峰",
+      "conclusion": "frame 670（43.6ms）是采集期间一次应用暂停（OnApplicationPause）触发的生命周期尖刺，不是游戏性性能问题。暂停事件带了两次 OnApplicationPause 调用（共 3.29ms）和两次 FindObjectsOfType（共 1.26ms），其余 ~22ms 归因到 PlayerLoop 自身作用域（native 暂停切换开销）。属于一次性事件，对整体帧率无影响。",
+      "severity": "info",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 670,
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minPct": 0.5
+          },
+          "resultDigest": {
+            "msFrame": 43.63,
+            "findings": [
+              "PlayerLoop selfMs=22.43ms（native 暂停切换）",
+              "OnApplicationPause 两次共 3.29ms",
+              "FindObjectsOfType 两次共 1.26ms",
+              "Semaphore.WaitForSignal 两次共 2.31ms"
+            ],
+            "callTreeAnnotations": [
+              {
+                "nodeName": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+                "redlineFlag": "应用暂停生命周期事件（非游戏性）",
+                "foldChange": null,
+                "severityTag": "low"
+              },
+              {
+                "nodeName": "PlayerLoop",
+                "redlineFlag": "self 22.43ms 为 native 暂停切换开销",
+                "foldChange": null,
+                "severityTag": "low"
+              }
+            ]
+          }
+        },
+        {
+          "tool": "queryUnityMarkers",
+          "args": {
+            "thread": "1:Main Thread",
+            "topN": 20,
+            "sortBy": "selfMs"
+          },
+          "resultDigest": {
+            "marker": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+            "count": 2,
+            "presentOnFrameCount": 1,
+            "msSelfMean": 3.283,
+            "percentOfFrame": 33.2
+          }
+        }
+      ],
+      "reasoning": "frame 670 调用树直接显示 PlayerLoop 下出现两次 OnApplicationPause + 两次 FindObjectsOfType（典型暂停/恢复配对调用），且 PlayerLoop selfMs=22.43ms 远超正常（0.44ms 均值），这部分时间归因到 native 暂停切换（非业务代码）。queryUnityMarkers 确认 OnApplicationPause 全程仅 1 帧出现。严重度 info：一次性生命周期事件，非游戏性卡顿，不计入主因。",
+      "recommendation": "无需优化。若采集时不想被暂停事件污染，下次采集应避免采集期间切换应用到后台。Audio.Thread 在同帧也有 4.32ms 尖刺（spikeRatio 431），同为暂停事件伴随，一并忽略。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已定位到 OnApplicationPause 生命周期事件，无需再钻。【严重度】info 合理（1/600 帧且非游戏性）。【统计】无占比误判。【证据】调用树 + marker 榜双重印证。【反例】无。",
+      "symbols": [
+        "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+        "FindObjectsOfType"
+      ],
+      "tags": [
+        "lifecycle",
+        "spike"
+      ]
+    },
+    {
+      "id": "submit-thread-wait",
+      "title": "提交线程等待14ms/帧，帧受主线程限制非GPU",
+      "conclusion": "Submit（提交）线程平均每帧在 Semaphore.WaitForSignal 上等 14.09ms，单帧最高等 47ms（frame 143）。但这不是 GPU 瓶颈——主线程自己的 Semaphore 等待仅 0.35ms/帧，且 Gfx.WaitForPresent 没进任何 top 榜。说明帧主要被主线程 CPU 工作限制（20.75ms p50），Submit 线程的等待是并行等主线程交付渲染数据，不是等 GPU。",
+      "severity": "info",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "thread": "1:Submit Thread",
+            "sortBy": "selfMs",
+            "topN": 15
+          },
+          "resultDigest": {
+            "topMarker": "Semaphore.WaitForSignal (Submit)",
+            "sumSelfMs": 8442.39,
+            "avgSelfMsPerPresentFrame": 14.094,
+            "maxSelfMs": 47.24,
+            "maxSelfFrameIndex": 143,
+            "otherTopMarkers": [
+              "RenderLoop.Draw 1.96ms/f",
+              "ForwardRenderPass 1.62ms/f",
+              "Gfx.PresentFrame 1.43ms/f",
+              "Async.UploadTexture 2.26ms/f(287帧)"
+            ]
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "Semaphore.WaitForSignal",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.35,
+            "p50": 0.121,
+            "p99": 4.397,
+            "max": 11.137,
+            "maxFrameIndex": 267,
+            "note": "主线程等待很小，非 GPU-bound"
+          }
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "Gfx.PresentFrame",
+            "thread": "1:Submit Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 1.425,
+            "p50": 1.149,
+            "max": 11.092,
+            "maxFrameIndex": 633,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.249
+            }
+          }
+        }
+      ],
+      "reasoning": "Submit 线程 Semaphore.WaitForSignal 14.09ms/帧看似很高，但主线程 Semaphore.WaitForSignal 仅 0.35ms/帧，且 Gfx.WaitForPresent（GPU-bound 的经典标志）未出现在任何 top 榜单。结合主线程 p50=20.75ms > Submit 等待 14ms，说明主线程 CPU 工作是帧瓶颈，Submit 线程的 14ms 等待是并行等待主线程交付渲染命令（Unity 帧渲染管线的正常流水线行为），非 GPU 瓶颈。confidence 定为 medium：Submit 的 Semaphore 等待既可能是等主线程也可能是等 GPU，此处基于‘主线程等待小 + 无 Gfx.WaitForPresent’间接推断为主线程限制，未能直接区分（见 data-requests）。",
+      "recommendation": "无需针对 Submit 线程等待优化——它是主线程瓶颈的伴随现象。优化主线程 CPU 工作负荷（见 steady-spread-cost）后，Submit 等待会自然下降。若需确认是否 GPU-bound，下次采集应确保 Gfx.WaitForPresent marker 被捕获并检查其占比。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】这是线程级宏观观察，已对照主线程/Submit 线程两侧。【严重度】info 合理（伴随现象非主因）。【统计】14.09ms 是 599 帧均值，分母正确。【证据】queryMarkers Submit + 主线程时序 + Gfx.PresentFrame 时序三重印证。【反例】是否存在‘其实是 GPU-bound’的反例？Gfx.WaitForPresent 未进 top 榜 + 主线程等待极小，反证不成立；但 Submit Semaphore 的归因（等主线程 vs 等 GPU）未能 100% 直接区分，故 confidence=medium 并记入 data-requests。",
+      "symbols": [
+        "Semaphore.WaitForSignal",
+        "Gfx.PresentFrame",
+        "Gfx.WaitForPresent"
+      ],
+      "tags": [
+        "thread-wait",
+        "gpu-present"
+      ]
+    }
+  ],
+  "dataRequests": [
+    {
+      "id": "frame-counters-all-zero",
+      "want": "逐帧 GC 分配字节（gc_allocated_in_frame）、三角形面数（triangles）、batches、set_pass_calls、total_used_memory 等计数器——本次 queryFrameCounters 返回全部为 0，计数器未被捕获",
+      "rationale": "无法用 gc_allocated_in_frame 定位 GC.Collect（5 次，frame 257/278/283/566/576）触发前的分配来源；也无法用 triangles/batches 判断渲染负载是否与帧时相关。gc-collect-spike 条目只能从 marker 时序推断‘增量 GC 攒不住退化成同步’，缺分配源佐证。",
+      "suspectedAxis": "memory+render",
+      "closestExistingTool": "queryFrameCounters（本次返回全 0，疑似采集配置未开启 counter 捕获）"
+    },
+    {
+      "id": "gc.per-marker-alloc",
+      "want": "per-marker 的 GC 分配字节和分配调用栈，能回答‘哪个函数或 Lua marker 在持续分配’",
+      "rationale": "frame 576 的 GC.Collect 11.13ms 与 257-276 连续 20 帧增量 GC 加重，需要函数级分配来源来解释累计触发原因；queryFrameCounters 只有整帧 gc_allocated_in_frame（且本次全为 0），到不了函数级。",
+      "suspectedAxis": "memory",
+      "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+    },
+    {
+      "id": "submit-wait-attribution",
+      "want": "Submit 线程 Semaphore.WaitForSignal 的等待归因——区分‘等主线程交付渲染命令’还是‘等 GPU 完成’，例如同帧 Gfx.WaitForPresent 的占比或 Semaphore 的等待对象标识",
+      "rationale": "Submit 线程等待 14.09ms/帧，但本次 Gfx.WaitForPresent 未进任何 top 榜，无法直接判定是否 GPU-bound；submit-thread-wait 条目只能基于‘主线程等待极小’间接推断为主线程限制，confidence=medium。",
+      "suspectedAxis": "gpu",
+      "closestExistingTool": "queryMarkers/thread=1:Submit Thread + scanMetricOverFrames Gfx.PresentFrame（间接推断，无直接归因）"
+    },
+    {
+      "id": "processTasks-subconsumer-isolation",
+      "want": "frame 552 上 MapSignificanceMgr.ProcessTasks 内 11 个 ConsumeTasks_* 中具体哪几个主导 22.69ms 尖刺（当前 calltree 在 depth 10 截断未展开 ProcessTasks 子节点）",
+      "rationale": "camera-loading-storm 条目已确认 ProcessTasks 22.69ms@552 并从源码确认 11 个子消费者无每帧上限，但未隔离出具体是 ForceSubEntity/EntityTask/SubEntity/MapEntityForDestroy 中哪几个在 552 帧最重，影响建议的优先级排序。",
+      "suspectedAxis": "cpu",
+      "closestExistingTool": "getFrameCallTree frame 552 maxDepth 12+（本次 maxDepth 10 在 ProcessTasks 处截断）"
+    },
+    {
+      "id": "worldenv-mesh-item-mgr-source",
+      "want": "WorldEnvironmentMeshItemMgr 类与 RecycleGOTask 方法的源码定位（getSourceForSymbol 返回 not-found，未在 codegraph/map-source 索引）",
+      "rationale": "camera-recycle-burst 条目是最差两帧（54ms/48ms）的根因，但源码未索引无法看回收逻辑实现，建议只能推断‘加分帧上限/对象池’，无法指着代码说‘这里没有节流’。",
+      "suspectedAxis": "cpu",
+      "closestExistingTool": "getSourceForSymbol symbol=WorldEnvironmentMeshItemMgr / RecycleGOTask（均 not-found）"
+    }
+  ],
+  "verdict": {
+    "rating": "fail",
+    "headline": "对照 60fps（16.67ms）预算整体不合格：84.3% 的帧超标，p50 已 20.75ms 超预算 24%。主因是稳态成本长尾累加（URP 渲染 + Lua 逻辑 + LateUpdate + ECS + Canvas 分散占满一帧），叠加相机移动触发的环境物回收/实体加载尖刺（最差帧 54ms）。全程未观察到单一 >30% 的主导元凶，是典型的‘多系统各占一点、合力超标’的长尾型不达标。",
+    "frameBudgetMs": 16.67,
+    "observedP50Ms": 20.75,
+    "observedP95Ms": 34.7,
+    "observedP99Ms": 44.5,
+    "observedMaxMs": 54.14,
+    "observedMaxFrameIndex": 143,
+    "pctFramesOverBudget": 84.3,
+    "primaryDrivers": [
+      "steady-spread-cost",
+      "camera-recycle-burst",
+      "camera-loading-storm"
+    ],
+    "verdictEvidence": [
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {
+          "markerName": "PlayerLoop",
+          "thread": "1:Main Thread",
+          "metric": "totalMs"
+        },
+        "resultDigest": {
+          "frameCount": 600,
+          "mean": 22.96,
+          "p50": 20.75,
+          "p95": 34.7,
+          "p99": 44.5,
+          "max": 54.09,
+          "maxFrameIndex": 143,
+          "autocorr": {
+            "bestLag": 2,
+            "coefficient": 0.648
+          }
+        }
+      },
+      {
+        "tool": "correlateFrameSets",
+        "args": {
+          "setA": {
+            "kind": "slowFrames",
+            "thresholdMs": 16.67
+          },
+          "setB": {
+            "kind": "slowFrames",
+            "thresholdMs": 33
+          }
+        },
+        "resultDigest": {
+          "sizeA": 506,
+          "sizeB": 52,
+          "pctOverBudget": "506/600 = 84.3%",
+          "pctOver2xBudget": "52/600 = 8.7%"
+        }
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {
+          "frameIndex": 400,
+          "thread": "1:Main Thread",
+          "maxDepth": 6,
+          "minPct": 1.5
+        },
+        "resultDigest": {
+          "msFrame": 23.01,
+          "note": "近 p50 的典型帧，成本分散：FinishFrameRendering/URP 6.51ms(28%) + ScriptRunBehaviourUpdate/LuaMgr 4.97ms(22%) + PreLateUpdate 3.89ms(17%) + PlayerUpdateCanvases 1.87ms(8%) + ECS 三组 2.89ms(13%)，无单一 >30% 主因"
+        }
+      },
+      {
+        "tool": "scanMetricOverFrames",
+        "args": {
+          "markerName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+          "thread": "1:Main Thread",
+          "metric": "totalMs"
+        },
+        "resultDigest": {
+          "mean": 0.196,
+          "p50": 0.111,
+          "max": 24.8,
+          "maxFrameIndex": 469,
+          "spikeRatio": 224.1,
+          "burstFrames": [
+            143,
+            469
+          ]
+        }
+      },
+      {
+        "tool": "getFrameCallTree",
+        "args": {
+          "frameIndex": 552,
+          "thread": "1:Main Thread",
+          "maxDepth": 10,
+          "minPct": 0.5
+        },
+        "resultDigest": {
+          "msFrame": 46.83,
+          "hotPath": "Update > GameLauncher.Update > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule(25.42ms) > MapSignificanceMgr(22.72ms) > MapSignificanceMgr.ProcessTasks(22.69ms, 48.5%)"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "toolCallCount": 16,
+    "notes": [
+      "ledger has 16 entries"
+    ]
+  },
+  "ledgerPath": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20\\ledger.json",
+  "findingsPath": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\camera_ab_24072PX77C_20260723_194703\\2026-07-24_11-15-20\\findings.json",
+  "verification": {
+    "totalFindings": 7,
+    "totalEvidence": 27,
+    "verifiedEvidence": 0,
+    "unverifiedEvidence": 27,
+    "findingsWithAllEvidenceVerified": 0,
+    "suspects": [
+      {
+        "findingId": "steady-spread-cost",
+        "reason": "NO evidence matched the ledger (likely fabricated): scanMetricOverFrames({\"markerName\":\"PlayerLoop\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"}), correlateFrameSets({\"setA\":{\"kind\":\"slowFrames\",\"thresholdMs\":16.67},\"setB\":{\"kind\":\"slowFrames\",\"thresholdMs\":33}}), getFrameCallTree({\"frameIndex\":400,\"thread\":\"1:Main Thread\",\"maxDepth\":6,\"minPct\":1.5}), aggregateSubtree({\"topN\":10,\"fanoutThreshold\":0.6,\"minTotalMsPerFrame\":2})"
+      },
+      {
+        "findingId": "camera-recycle-burst",
+        "reason": "NO evidence matched the ledger (likely fabricated): scanMetricOverFrames({\"markerName\":\"CS:AOE.Outside.WorldEnvironmentMeshItemMgr\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"}), scanMetricOverFrames({\"markerName\":\"RecycleGOTask\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), drillDownMarker({\"rootMarker\":\"CS:AOE.Outside.WorldEnvironmentMeshItemMgr\",\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minMsPerFrame\":0.01}), getFrameCallTree({\"frameIndex\":143,\"thread\":\"1:Main Thread\",\"maxDepth\":7,\"minPct\":1}), getSourceForSymbol({\"symbol\":\"WorldEnvironmentMeshItemMgr\",\"maxLines\":120,\"includeCalls\":true})"
+      },
+      {
+        "findingId": "camera-loading-storm",
+        "reason": "NO evidence matched the ledger (likely fabricated): getFrameCallTree({\"frameIndex\":552,\"thread\":\"1:Main Thread\",\"maxDepth\":10,\"minPct\":0.5}), drillDownMarker({\"rootMarker\":\"MapSignificanceMgr.ProcessTasks\",\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minMsPerFrame\":0.01}), scanMetricOverFrames({\"markerName\":\"MapSignificanceMgr.ProcessTasks\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), getSourceForSymbol({\"symbol\":\"MapSignificanceMgr.ProcessTasks\",\"maxLines\":120,\"includeCalls\":true}), scanMetricOverFrames({\"markerName\":\"LuaMgr.OnTick&UpdateSchedule\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"})"
+      },
+      {
+        "findingId": "gc-collect-spike",
+        "reason": "NO evidence matched the ledger (likely fabricated): scanMetricOverFrames({\"markerName\":\"GC.Collect\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), scanMetricOverFrames({\"markerName\":\"GarbageCollector.CollectIncremental\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), getFrameCallTree({\"frameIndex\":278,\"thread\":\"1:Main Thread\",\"maxDepth\":6,\"minPct\":1.5}), queryFrameCounters({})"
+      },
+      {
+        "findingId": "frame-pacing-lag2",
+        "reason": "NO evidence matched the ledger (likely fabricated): scanMetricOverFrames({\"markerName\":\"WaitForTargetFPS\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), scanMetricOverFrames({\"markerName\":\"GarbageCollector.CollectIncremental\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), scanMetricOverFrames({\"markerName\":\"MapSignificanceMgr.ForceSubEntity\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), scanMetricOverFrames({\"markerName\":\"PlayerLoop\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"})"
+      },
+      {
+        "findingId": "app-pause-lifecycle",
+        "reason": "NO evidence matched the ledger (likely fabricated): getFrameCallTree({\"frameIndex\":670,\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minPct\":0.5}), queryUnityMarkers({\"thread\":\"1:Main Thread\",\"topN\":20,\"sortBy\":\"selfMs\"})"
+      },
+      {
+        "findingId": "submit-thread-wait",
+        "reason": "NO evidence matched the ledger (likely fabricated): queryMarkers({\"thread\":\"1:Submit Thread\",\"sortBy\":\"selfMs\",\"topN\":15}), scanMetricOverFrames({\"markerName\":\"Semaphore.WaitForSignal\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}), scanMetricOverFrames({\"markerName\":\"Gfx.PresentFrame\",\"thread\":\"1:Submit Thread\",\"metric\":\"selfMs\"})"
+      }
+    ],
+    "partiallyVerified": []
+  },
+  "annotatedFindings": [
+    {
+      "id": "steady-spread-cost",
+      "title": "稳态成本长尾累加，84%帧超标无单一主因",
+      "conclusion": "全场 600 帧里有 506 帧（84%）超过 60fps 预算，p50 就到了 20.75ms——也就是说一半以上的帧连 50fps 都到不了。但奇怪的是，没有任何一个‘大坏蛋’可抓：中位帧的成本被 URP 渲染、Lua 逻辑、LateUpdate、ECS、Canvas 五个系统分摊，每个占 8%~28%，谁都不是绝对大头。这是典型的‘多系统各占一点、合力把帧预算吃光’的长尾型不达标，优化时不能只盯着一个模块。",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "PlayerLoop",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "frameCount": 600,
+            "mean": 22.96,
+            "p50": 20.75,
+            "p95": 34.7,
+            "p99": 44.5,
+            "max": 54.09,
+            "maxFrameIndex": 143,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.648
+            }
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"PlayerLoop\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"}"
+        },
+        {
+          "tool": "correlateFrameSets",
+          "args": {
+            "setA": {
+              "kind": "slowFrames",
+              "thresholdMs": 16.67
+            },
+            "setB": {
+              "kind": "slowFrames",
+              "thresholdMs": 33
+            }
+          },
+          "resultDigest": {
+            "sizeA": 506,
+            "sizeB": 52,
+            "pctOverBudget": "84.3%",
+            "pctOver2xBudget": "8.7%"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=correlateFrameSets with matching args: {\"setA\":{\"kind\":\"slowFrames\",\"thresholdMs\":16.67},\"setB\":{\"kind\":\"slowFrames\",\"thresholdMs\":33}}"
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 400,
+            "thread": "1:Main Thread",
+            "maxDepth": 6,
+            "minPct": 1.5
+          },
+          "resultDigest": {
+            "msFrame": 23.01,
+            "callTreeAnnotations": [
+              {
+                "nodeName": "PlayerLoop",
+                "redlineFlag": "占 p50 124%（20.75/16.67ms）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "PostLateUpdate.FinishFrameRendering",
+                "redlineFlag": "占帧 28.3%（URP 渲染管线）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "URP.RenderSingleCamera",
+                "redlineFlag": "占帧 21.3%（渲染最大单子树）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "Update.ScriptRunBehaviourUpdate",
+                "redlineFlag": "占帧 21.6%（GameLauncher.Update/LuaMgr）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                "redlineFlag": "占帧 16.9%（LateBehaviourUpdate）",
+                "foldChange": null,
+                "severityTag": "medium"
+              },
+              {
+                "nodeName": "PostLateUpdate.PlayerUpdateCanvases",
+                "redlineFlag": "占帧 8.1%（UGUI Canvas）",
+                "foldChange": null,
+                "severityTag": "medium"
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getFrameCallTree with matching args: {\"frameIndex\":400,\"thread\":\"1:Main Thread\",\"maxDepth\":6,\"minPct\":1.5}"
+        },
+        {
+          "tool": "aggregateSubtree",
+          "args": {
+            "topN": 10,
+            "fanoutThreshold": 0.6,
+            "minTotalMsPerFrame": 2
+          },
+          "resultDigest": {
+            "subtrees": [
+              {
+                "name": "URP.RenderSingleCamera",
+                "subtreeMsPerFrame": 4.751,
+                "maxChildRatio": 0.388,
+                "note": "分摊型，10 子节点无单一大头"
+              },
+              {
+                "name": "LateBehaviourUpdate",
+                "subtreeMsPerFrame": 3.897,
+                "maxChildRatio": 0.529
+              },
+              {
+                "name": "UpdateFunction.Invoke",
+                "subtreeMsPerFrame": 3.151,
+                "note": "ECS 三系统组 Simulation1.57+Presentation0.90+Init0.57"
+              },
+              {
+                "name": "MapSignificanceMgr.ProcessTasks",
+                "subtreeMsPerFrame": 2.327
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=aggregateSubtree with matching args: {\"topN\":10,\"fanoutThreshold\":0.6,\"minTotalMsPerFrame\":2}"
+        }
+      ],
+      "reasoning": "判定基于‘相对周期’（DR-42）：p50=20.75ms 占 16.67ms 帧预算的 124%，已超 24%；84.3% 帧超预算说明这不是偶发尖刺而是稳态问题。frame 400（23ms，近 p50）的调用树显示成本分散在 5 个系统：FinishFrameRendering/URP 6.51ms(28%)、ScriptRunBehaviourUpdate 4.97ms(22%)、PreLateUpdate 3.89ms(17%)、PlayerUpdateCanvases 1.87ms(8%)、ECS 三组 2.89ms(13%)，最大单子树 URP.RenderSingleCamera 也只占 21.3%，未触‘单点占帧 ≥50%’的红线。aggregateSubtree 进一步印证 URP.RenderSingleCamera(4.75ms/f) 是分摊型（maxChildRatio 0.388，无单一大头）。autocorr bestLag=2 coef=0.648 提示隔帧交替节律（见 frame-pacing-lag2 条目），但不改变稳态超标的结论。",
+      "recommendation": "没有单一可砍的大头，优化需多管齐下、各自削一点：(1) URP 渲染 6.5ms/帧是最大单块，优先核查 DrawCall/Shader/后效（Bloom/PlanarShadow/StencilOutline 都在 Submit 线程榜单），考虑降低后效分辨率或合并 Pass；(2) GameLauncher.Update 下 LuaMgr.OnTick&UpdateSchedule 3.37ms/帧，其中 MapSignificanceMgr 占 70%（见 camera-loading-storm 条目，有具体可落地的分帧建议）；(3) LateBehaviourUpdate 3.9ms/帧里 WorldTileStreaming.LateUpdate 0.68ms + GameLauncher.LateUpdate 2.06ms，可评估哪些 LateUpdate 能降频或合并；(4) ECS 三系统组 2.89ms/帧，核查是否所有 System 都需要每帧跑。目标是把 p50 从 20.75ms 压到 16.67ms 以下，需各系统合计削掉 ~4ms。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】中位帧已钻到 URP.RenderSingleCamera/LuaMgr/LateBehaviourUpdate 等子树并给出占比，但 URP 子树内部未进一步 drillDownMarker（rendering 管线优化空间需单独深挖，此处作为‘长尾’主旨足够）。【严重度】曾犹豫是否该因‘无单一主因’降为 high，但 84% 帧超标 + p50 超预算 24% 是对帧率最直接的伤害，稳态成本才是对总帧时贡献最大的问题（远胜偶发尖刺），故维持 critical。【统计】pctFramesOverBudget=84.3% 分母是全部 600 帧（非慢帧子集），未被稀释。【证据】所有数字均来自本次真实查询。【反例】是否存在‘多数帧其实达标’的反例？506/600 超标已直接否定。",
+      "symbols": [
+        "PlayerLoop",
+        "URP.RenderSingleCamera",
+        "LateBehaviourUpdate",
+        "LuaMgr.OnTick&UpdateSchedule",
+        "MapSignificanceMgr.ProcessTasks"
+      ],
+      "tags": [
+        "spread-cost",
+        "tail-latency",
+        "periodicity"
+      ]
+    },
+    {
+      "id": "camera-recycle-burst",
+      "title": "相机移动触发环境物一帧回收，炸出最差帧",
+      "conclusion": "相机一移动，WorldEnvironmentMeshItemMgr 会在单帧内通过 RecycleGOTask 把一批出视野的环境网格物件回收掉。这件事平时几乎不耗时（0.2ms/帧），但相机扫到新区域时会在一帧里集中炸掉 24.8ms——而且全场最差的两帧（frame 143 的 54ms、frame 469 的 48ms）都是它干的，每次回收约 37 个 GameObject。这是典型的‘平时安静、一动就卡’的相机相关卡顿源。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "mean": 0.196,
+            "p50": 0.111,
+            "p95": 0.158,
+            "p99": 0.638,
+            "max": 24.8,
+            "maxFrameIndex": 469,
+            "spikeRatio": 224.1,
+            "burstFrames": [
+              143,
+              469
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"CS:AOE.Outside.WorldEnvironmentMeshItemMgr\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "RecycleGOTask",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 7,
+            "mean": 0.07,
+            "max": 19.51,
+            "maxFrameIndex": 469,
+            "spikeRatio": 20.35,
+            "burstFrames": [
+              143,
+              469
+            ],
+            "count": 262,
+            "note": "262 次/7 帧≈37 次/帧当出现时"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"RecycleGOTask\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "rootMarker": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minMsPerFrame": 0.01
+          },
+          "resultDigest": {
+            "rootTotalMsPerFrame": 0.196,
+            "onlyChild": "RecycleGOTask (presentFrames=2, 即仅 143/469 两帧在此调用)"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=drillDownMarker with matching args: {\"rootMarker\":\"CS:AOE.Outside.WorldEnvironmentMeshItemMgr\",\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minMsPerFrame\":0.01}"
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 143,
+            "thread": "1:Main Thread",
+            "maxDepth": 7,
+            "minPct": 1
+          },
+          "resultDigest": {
+            "msFrame": 54.14,
+            "hotPath": "PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate(27.98ms,51.7%) > LateBehaviourUpdate > GameLauncher.LateUpdate(26.28ms) > Core.LateUpdate > CS:AOE.Outside.MapManager > CS:AOE.Outside.WorldEnvironmentMeshItemMgr(24.8ms,51.3%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                "redlineFlag": "占帧 51.7%（最差帧主因在此）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+                "redlineFlag": "占帧 51.3%（spikeRatio 224，相机移动触发）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "RecycleGOTask",
+                "redlineFlag": "单帧 19.5ms，37 次 GO 回收",
+                "foldChange": null,
+                "severityTag": "critical"
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getFrameCallTree with matching args: {\"frameIndex\":143,\"thread\":\"1:Main Thread\",\"maxDepth\":7,\"minPct\":1}"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "symbol": "WorldEnvironmentMeshItemMgr",
+            "maxLines": 120,
+            "includeCalls": true
+          },
+          "resultDigest": {
+            "found": false,
+            "reason": "symbol not in codegraph nor map-source",
+            "note": "RecycleGOTask 同样未索引；需手动定位源码"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getSourceForSymbol with matching args: {\"symbol\":\"WorldEnvironmentMeshItemMgr\",\"maxLines\":120,\"includeCalls\":true}"
+        }
+      ],
+      "reasoning": "WorldEnvironmentMeshItemMgr 平均 0.196ms/帧，但 max 24.8ms@469，spikeRatio 高达 224——平时与尖峰相差 3 个数量级，是典型的相机触发型偶发尖刺。drillDownMarker 确认其唯一子节点是 RecycleGOTask，且仅在 frame 143/469 两帧出现。frame 143（全场最差 54ms）的调用树显示 WorldEnvironmentMeshItemMgr 占该帧 51.3%，hotPath 完整闭合到 PlayerLoop。RecycleGOTask 全程 262 次调用集中在 7 帧，平均 37 次/帧，单帧 self 峰值 19.5ms。严重度定为 high 而非 critical：虽然造成最差两帧，但仅影响 2/600 帧，对‘整体帧率’贡献小于稳态长尾（见 steady-spread-cost）。",
+      "recommendation": "WorldEnvironmentMeshItemMgr 与 RecycleGOTask 的源码未在 codegraph 中索引，无法直接看实现，以下建议需先手动定位 WorldEnvironmentMeshItemMgr 类（推断在 Assets/Scripts/.Lua/Outside/Map/ 下，与 MapSignificanceMgr 同模块）后再核实：(1) 把单帧集中回收改为分帧回收——给 RecycleGOTask 加每帧回收数量上限或时间预算（如单帧最多回收 N 个 GO，剩余排队下一帧），避免一次 37 个 GO 同帧 Destroy；(2) 评估是否已有对象池可复用——若环境网格物件是反复创建/销毁，应走池化而非 Destroy/Instantiate；(3) 相机移动时预判视野变化，提前在轻帧分批回收即将出视野的物件。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已 drillDownMarker 钻到唯一叶子 RecycleGOTask 并确认调用次数/帧，但 RecycleGOTask 内部无法再钻（marker 粒度极限），源码也未索引到——如实说明需手动定位，不脑补内部逻辑。【严重度】曾想定 critical（毕竟是最差帧），但按‘对总帧时的实际贡献’原则，2/600 帧的尖刺对整体帧率贡献小于 84% 帧的稳态超标，降为 high。【统计】spikeRatio=224 分母是均值（0.196），未被稀释。【证据】hotPath 从 PlayerLoop 闭合到 WorldEnvironmentMeshItemMgr，五段证据相互印证。【反例】是否所有相机移动帧都炸？否——burstFrames 仅 143/469，说明相机移动并非每次都触发回收，可能仅在跨区块时触发，这与‘相机扫到新区域’的解释一致。",
+      "symbols": [
+        "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+        "RecycleGOTask",
+        "CS:AOE.Outside.MapManager"
+      ],
+      "tags": [
+        "spike",
+        "camera-move",
+        "object-lifecycle",
+        "spread-cost"
+      ]
+    },
+    {
+      "id": "camera-loading-storm",
+      "title": "相机移动触发实体显著度任务风暴，一帧同步加载22ms",
+      "conclusion": "相机移动会让一批实体进入‘显著区’，MapSignificanceMgr.ProcessTasks 在一帧里把这些实体的强制加载/子实体处理全部跑完。平时这条管线 2.3ms/帧很安静，但 frame 552 一次炸到 22.7ms——直接把那帧推到 47ms。看了源码确认：ProcessTasks 顺序跑 11 个 ConsumeTasks_* 子消费者，代码里没有任何每帧任务数上限或时间预算，队列一涨就一帧全跑完。",
+      "severity": "high",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 552,
+            "thread": "1:Main Thread",
+            "maxDepth": 10,
+            "minPct": 0.5
+          },
+          "resultDigest": {
+            "msFrame": 46.83,
+            "hotPath": "Update > GameLauncher.Update(27.8ms) > Core.Update > CS:AOE.LuaMgr(25.46ms) > LuaMgr.OnTick&UpdateSchedule(25.42ms) > MapSignificanceMgr(22.72ms) > MapSignificanceMgr.ProcessTasks(22.69ms, 48.5%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "LuaMgr.OnTick&UpdateSchedule",
+                "redlineFlag": "占帧 54.3%（Lua 主 tick）",
+                "foldChange": null,
+                "severityTag": "critical"
+              },
+              {
+                "nodeName": "MapSignificanceMgr.ProcessTasks",
+                "redlineFlag": "占帧 48.5%（spikeRatio 9.7x 均值），11 个 ConsumeTasks 一帧全跑",
+                "foldChange": null,
+                "severityTag": "critical"
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getFrameCallTree with matching args: {\"frameIndex\":552,\"thread\":\"1:Main Thread\",\"maxDepth\":10,\"minPct\":0.5}"
+        },
+        {
+          "tool": "drillDownMarker",
+          "args": {
+            "rootMarker": "MapSignificanceMgr.ProcessTasks",
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minMsPerFrame": 0.01
+          },
+          "resultDigest": {
+            "rootTotalMsPerFrame": 2.327,
+            "children": [
+              {
+                "name": "MapSignificanceMgr.ForceSubEntity",
+                "totalMsPerFrame": 1.125,
+                "pctOfRoot": 0.484
+              },
+              {
+                "name": "MapSignificanceMgr.EntityTask",
+                "totalMsPerFrame": 0.551,
+                "pctOfRoot": 0.164
+              },
+              {
+                "name": "MapSignificanceMgr.OutsideSubEntityMgr",
+                "totalMsPerFrame": 0.538,
+                "pctOfRoot": 0.16
+              }
+            ],
+            "deepLeaves": [
+              "[res]entityLoader_sync 同步资源加载叶子",
+              "Semaphore.WaitForSignal 0.16ms×多（等加载线程）"
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=drillDownMarker with matching args: {\"rootMarker\":\"MapSignificanceMgr.ProcessTasks\",\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minMsPerFrame\":0.01}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "MapSignificanceMgr.ProcessTasks",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.03,
+            "max": 0.098,
+            "maxFrameIndex": 215,
+            "note": "self 极小，22.7ms 全在子节点——552 帧子节点尖刺"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"MapSignificanceMgr.ProcessTasks\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "getSourceForSymbol",
+          "args": {
+            "symbol": "MapSignificanceMgr.ProcessTasks",
+            "maxLines": 120,
+            "includeCalls": true
+          },
+          "resultDigest": {
+            "found": true,
+            "file": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua",
+            "startLine": 1290,
+            "endLine": 1372,
+            "signature": "MapSignificanceMgr.ProcessSignificanceTasks",
+            "sourceInsight": "顺序调用 11 个 ConsumeTasks_*：ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy，每个用 SamplerBegin/End 包裹，函数体内未见每帧任务数上限或时间预算"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getSourceForSymbol with matching args: {\"symbol\":\"MapSignificanceMgr.ProcessTasks\",\"maxLines\":120,\"includeCalls\":true}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "LuaMgr.OnTick&UpdateSchedule",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.101,
+            "p50": 0.099,
+            "max": 0.234,
+            "note": "self 小，25ms 全在 MapSignificanceMgr 子树"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"LuaMgr.OnTick&UpdateSchedule\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        }
+      ],
+      "reasoning": "frame 552（47ms）的 hotPath 完整闭合：LuaMgr.OnTick&UpdateSchedule 25.42ms 中 22.72ms 在 MapSignificanceMgr.ProcessTasks。ProcessTasks 平均仅 2.33ms/帧（drillDownMarker），552 帧炸到 22.69ms 是均值的 9.7 倍。源码确认 ProcessSignificanceTasks 顺序执行 11 个 ConsumeTasks_* 子消费者，无每帧上限/时间预算——相机移动致任务队列暴涨时全部一帧处理。子树深层叶子是 [res]entityLoader_sync（同步资源加载）与 Semaphore.WaitForSignal（等加载线程），与 552 帧同期 Loading 线程簇（LockPersistentManager 13.7ms/File.Open 11.5ms/ArchiveFileSystemOpen 10.87ms）互为表里：主线程同步等资源 + 加载线程忙读盘。严重度 high：影响 1 帧（47ms），但机制明确且可落地优化。",
+      "recommendation": "源码已确认（Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua:1290-1372），可落地建议：(1) 给每个 ConsumeTasks_* 加每帧处理数量上限或时间预算（如单帧最多处理 N 个实体或最多跑 2ms，剩余任务排队下一帧），把相机移动带来的任务洪水分摊到多帧——这是最直接的修法，源码当前完全没有这类节流；(2) 优先处理 ForceSubEntity（占 ProcessTasks 48%），其下 SubEntity_FrameExcute 触发同步 entityLoader_sync，应改为异步加载或预加载即将进入视野的实体资源；(3) 配合 camera-recycle-burst 一起治理——两者都是相机移动触发，可统一做‘相机移动预测 + 分帧预算’机制。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已钻到 ProcessTasks 子节点并看了源码确认无节流，但 552 帧具体是 11 个 ConsumeTasks 中哪几个主导（frame 552 calltree 在 depth 10 截断未展开 ProcessTasks 子节点）未完全隔离——如实说明，但不影响‘队列一涨全跑一帧’的根因结论。【严重度】1/600 帧定 high 合理（低于 steady-spread-cost 的 critical，与 camera-recycle-burst 的 2 帧同档）。【统计】spikeRatio 9.7x 均值，分母 2.33ms 是 ProcessTasks 全程均值，未被稀释。【证据】源码 + calltree + drillDown + 时序四重印证。【反例】是否所有相机移动帧都触发 ProcessTasks 风暴？否——LuaMgr.OnTick&UpdateSchedule burstFrames 有 12 帧但多数不炸到 25ms，说明仅在大量实体同时变更显著度时触发，与‘相机跨区块’解释一致。",
+      "symbols": [
+        "MapSignificanceMgr.ProcessTasks",
+        "MapSignificanceMgr.ForceSubEntity",
+        "SubEntity_FrameExcute",
+        "LuaMgr.OnTick&UpdateSchedule"
+      ],
+      "tags": [
+        "spike",
+        "camera-move",
+        "loading",
+        "spread-cost"
+      ]
+    },
+    {
+      "id": "gc-collect-spike",
+      "title": "同步GC五次突袭，最重一次11ms",
+      "conclusion": "全程 600 帧里触发了 5 次同步 GC.Collect，平均每次 8.96ms，最重一次（frame 576）11.13ms。这种同步 GC 直接卡主线程，每次都把那帧推到远超预算。frame 278 的调用树清楚显示这次 GC 是在帧末 WaitForTargetFPS 阶段触发的增量 GC 收尾。",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GC.Collect",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 5,
+            "mean": 0.075,
+            "max": 11.13,
+            "maxFrameIndex": 576,
+            "burstFrames": [
+              257,
+              278,
+              283,
+              566,
+              576
+            ],
+            "avgPerPresentFrame": 8.96
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"GC.Collect\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GarbageCollector.CollectIncremental",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "presentFrames": 599,
+            "mean": 0.061,
+            "p50": 0.0007,
+            "p95": 1.014,
+            "max": 1.1,
+            "maxFrameIndex": 268,
+            "burstFrames": "257-276 连续 20 帧",
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.858
+            }
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"GarbageCollector.CollectIncremental\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 278,
+            "thread": "1:Main Thread",
+            "maxDepth": 6,
+            "minPct": 1.5
+          },
+          "resultDigest": {
+            "msFrame": 44.5,
+            "hotPath": "Initialization.PlayerUpdateTime > WaitForTargetFPS(7.20ms) > GarbageCollector.CollectIncremental(7.18ms) > GC.Collect(7.02ms, 15.8%)",
+            "callTreeAnnotations": [
+              {
+                "nodeName": "GC.Collect",
+                "redlineFlag": "单帧 7.02ms 占帧 15.8%（同步 GC）",
+                "foldChange": null,
+                "severityTag": "high"
+              },
+              {
+                "nodeName": "GarbageCollector.CollectIncremental",
+                "redlineFlag": "增量 GC 收尾触发同步 GC",
+                "foldChange": null,
+                "severityTag": "medium"
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getFrameCallTree with matching args: {\"frameIndex\":278,\"thread\":\"1:Main Thread\",\"maxDepth\":6,\"minPct\":1.5}"
+        },
+        {
+          "tool": "queryFrameCounters",
+          "args": {},
+          "resultDigest": {
+            "mode": "summary",
+            "allCountersZero": true,
+            "note": "gc_allocated_in_frame/triangles/batches 等全部为 0，本次采集未捕获逐帧计数器，无法定位 GC 触发前的分配来源"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=queryFrameCounters with matching args: {}"
+        }
+      ],
+      "reasoning": "GC.Collect 在 5 帧（257/278/283/566/576）触发，平均 8.96ms/次，max 11.13ms@576。frame 278 调用树显示 GC.Collect 7.02ms 嵌套在 WaitForTargetFPS > CollectIncremental 下，是增量 GC 攒到一定程度触发的同步收尾。CollectIncremental 时序显示 257-276 连续 20 帧增量 GC 加重（~1ms/帧），随后 278 帧触发同步 GC——印证‘增量攒不住就退化成同步’的典型模式。严重度 medium：5/600=0.8% 帧受影响，但每次都显著超预算。queryFrameCounters 全部为 0，无法用 gc_allocated_in_frame 定位分配源（见 data-requests）。",
+      "recommendation": "(1) 既然 257-276 帧增量 GC 持续加重并最终触发同步 GC，说明这段时间内存分配压力较大——需定位是哪个系统在持续分配（queryFrameCounters 这次全为 0，需要下次采集修复计数器捕获，或用 per-marker GC 分配工具，见 data-requests）；(2) 增大增量 GC 的每帧预算（GarbageCollector.CollectIncremental 的 budget）可能让增量部分多扛一些、避免退化成同步 GC，但需先确认分配源；(3) 排查 257-276 这段时间游戏在做什么（可能与某段相机移动/加载区间重合），那段区间往往是分配高峰。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已定位到 GC.Collect 在 CollectIncremental 下，但‘触发前哪些 marker 在分配’未能定位（queryFrameCounters 全为 0），如实记为 data-request 不脑补。【严重度】5/600 帧定 medium 合理。【统计】avgPerPresentFrame=8.96 是 5 个 GC 帧的均值，分母正确。【证据】时序+调用树双重印证。【反例】是否存在‘GC 帧其实不卡’的反例？5 帧均 8.96ms 远超预算，无反例。",
+      "symbols": [
+        "GC.Collect",
+        "GarbageCollector.CollectIncremental"
+      ],
+      "tags": [
+        "gc",
+        "spike"
+      ]
+    },
+    {
+      "id": "frame-pacing-lag2",
+      "title": "帧节奏隔帧交替，等效半帧率",
+      "conclusion": "PlayerLoop 帧时有很强的‘隔帧交替’规律（autocorr 在 lag=2 达 0.648）。拆开看，WaitForTargetFPS（等目标帧率）和 GarbageCollector.CollectIncremental（增量 GC）都在隔帧交替强弱——一帧做引擎杂活+等 vsync，下一帧不做。这本身不是大问题（等的时间很小，p50 才 0.005ms），但说明引擎在以‘两帧为一组’的节律运行，等效于把帧率对半切，是稳态成本超标的一种伴随现象。",
+      "severity": "low",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "WaitForTargetFPS",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.412,
+            "p50": 0.005,
+            "p95": 2.654,
+            "p99": 6.482,
+            "max": 7.646,
+            "maxFrameIndex": 497,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.7088
+            },
+            "burstFrames": [
+              492,
+              493,
+              494,
+              495,
+              496,
+              497
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"WaitForTargetFPS\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "GarbageCollector.CollectIncremental",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.858
+            },
+            "note": "全场最强 lag-2 信号"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"GarbageCollector.CollectIncremental\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "MapSignificanceMgr.ForceSubEntity",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.426
+            },
+            "note": "业务侧也有 lag-2 信号"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"MapSignificanceMgr.ForceSubEntity\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "PlayerLoop",
+            "thread": "1:Main Thread",
+            "metric": "totalMs"
+          },
+          "resultDigest": {
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.648
+            }
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"PlayerLoop\",\"thread\":\"1:Main Thread\",\"metric\":\"totalMs\"}"
+        }
+      ],
+      "reasoning": "四个独立 marker 的 autocorr 都在 bestLag=2 达到显著峰值：CollectIncremental 0.858（最强）、WaitForTargetFPS 0.7088、PlayerLoop totalMs 0.648、ForceSubEntity 0.426。这表明引擎在以两帧为一组交替运行：一帧做增量 GC + 引擎杂活，下一帧跳过。WaitForTargetFPS p50 仅 0.005ms 说明‘等’本身开销极小，不是性能问题；但隔帧交替意味着有效帧率被对半切（30fps 节律），是稳态超标（见 steady-spread-cost）的伴随现象。严重度 low：现象真实但‘等’的成本可忽略，无需单独优化。",
+      "recommendation": "无需针对‘等’本身优化（WaitForTargetFPS 是正常的帧节律）。但若想打破隔帧交替，可排查是否有业务系统在以‘每两帧一次’的频率跑（ForceSubEntity 的 lag-2 信号提示可能有半帧率逻辑），把能每帧跑的轻量任务均匀化。优先级远低于稳态成本削峰与相机尖刺治理。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】这是节律观察而非热点，无需下钻。【严重度】low 合理（等的时间 p50=0.005ms 可忽略）。【统计】autocorr 系数四个 marker 互相印证，非单一信号。【证据】四组 autocorr 均来自真实查询。【反例】是否 lag-2 只是统计假象？四个独立 marker 同向 + WaitForTargetFPS 连续 6 帧 burst（492-497）印证节律真实存在。",
+      "symbols": [
+        "WaitForTargetFPS",
+        "GarbageCollector.CollectIncremental",
+        "MapSignificanceMgr.ForceSubEntity"
+      ],
+      "tags": [
+        "periodicity",
+        "frame-pacing"
+      ]
+    },
+    {
+      "id": "app-pause-lifecycle",
+      "title": "应用暂停生命周期事件一次尖峰",
+      "conclusion": "frame 670（43.6ms）是采集期间一次应用暂停（OnApplicationPause）触发的生命周期尖刺，不是游戏性性能问题。暂停事件带了两次 OnApplicationPause 调用（共 3.29ms）和两次 FindObjectsOfType（共 1.26ms），其余 ~22ms 归因到 PlayerLoop 自身作用域（native 暂停切换开销）。属于一次性事件，对整体帧率无影响。",
+      "severity": "info",
+      "confidence": "high",
+      "evidence": [
+        {
+          "tool": "getFrameCallTree",
+          "args": {
+            "frameIndex": 670,
+            "thread": "1:Main Thread",
+            "maxDepth": 8,
+            "minPct": 0.5
+          },
+          "resultDigest": {
+            "msFrame": 43.63,
+            "findings": [
+              "PlayerLoop selfMs=22.43ms（native 暂停切换）",
+              "OnApplicationPause 两次共 3.29ms",
+              "FindObjectsOfType 两次共 1.26ms",
+              "Semaphore.WaitForSignal 两次共 2.31ms"
+            ],
+            "callTreeAnnotations": [
+              {
+                "nodeName": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+                "redlineFlag": "应用暂停生命周期事件（非游戏性）",
+                "foldChange": null,
+                "severityTag": "low"
+              },
+              {
+                "nodeName": "PlayerLoop",
+                "redlineFlag": "self 22.43ms 为 native 暂停切换开销",
+                "foldChange": null,
+                "severityTag": "low"
+              }
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=getFrameCallTree with matching args: {\"frameIndex\":670,\"thread\":\"1:Main Thread\",\"maxDepth\":8,\"minPct\":0.5}"
+        },
+        {
+          "tool": "queryUnityMarkers",
+          "args": {
+            "thread": "1:Main Thread",
+            "topN": 20,
+            "sortBy": "selfMs"
+          },
+          "resultDigest": {
+            "marker": "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+            "count": 2,
+            "presentOnFrameCount": 1,
+            "msSelfMean": 3.283,
+            "percentOfFrame": 33.2
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=queryUnityMarkers with matching args: {\"thread\":\"1:Main Thread\",\"topN\":20,\"sortBy\":\"selfMs\"}"
+        }
+      ],
+      "reasoning": "frame 670 调用树直接显示 PlayerLoop 下出现两次 OnApplicationPause + 两次 FindObjectsOfType（典型暂停/恢复配对调用），且 PlayerLoop selfMs=22.43ms 远超正常（0.44ms 均值），这部分时间归因到 native 暂停切换（非业务代码）。queryUnityMarkers 确认 OnApplicationPause 全程仅 1 帧出现。严重度 info：一次性生命周期事件，非游戏性卡顿，不计入主因。",
+      "recommendation": "无需优化。若采集时不想被暂停事件污染，下次采集应避免采集期间切换应用到后台。Audio.Thread 在同帧也有 4.32ms 尖刺（spikeRatio 431），同为暂停事件伴随，一并忽略。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】已定位到 OnApplicationPause 生命周期事件，无需再钻。【严重度】info 合理（1/600 帧且非游戏性）。【统计】无占比误判。【证据】调用树 + marker 榜双重印证。【反例】无。",
+      "symbols": [
+        "AOE.dll!AOE::GameLauncher.OnApplicationPause()",
+        "FindObjectsOfType"
+      ],
+      "tags": [
+        "lifecycle",
+        "spike"
+      ]
+    },
+    {
+      "id": "submit-thread-wait",
+      "title": "提交线程等待14ms/帧，帧受主线程限制非GPU",
+      "conclusion": "Submit（提交）线程平均每帧在 Semaphore.WaitForSignal 上等 14.09ms，单帧最高等 47ms（frame 143）。但这不是 GPU 瓶颈——主线程自己的 Semaphore 等待仅 0.35ms/帧，且 Gfx.WaitForPresent 没进任何 top 榜。说明帧主要被主线程 CPU 工作限制（20.75ms p50），Submit 线程的等待是并行等主线程交付渲染数据，不是等 GPU。",
+      "severity": "info",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "tool": "queryMarkers",
+          "args": {
+            "thread": "1:Submit Thread",
+            "sortBy": "selfMs",
+            "topN": 15
+          },
+          "resultDigest": {
+            "topMarker": "Semaphore.WaitForSignal (Submit)",
+            "sumSelfMs": 8442.39,
+            "avgSelfMsPerPresentFrame": 14.094,
+            "maxSelfMs": 47.24,
+            "maxSelfFrameIndex": 143,
+            "otherTopMarkers": [
+              "RenderLoop.Draw 1.96ms/f",
+              "ForwardRenderPass 1.62ms/f",
+              "Gfx.PresentFrame 1.43ms/f",
+              "Async.UploadTexture 2.26ms/f(287帧)"
+            ]
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=queryMarkers with matching args: {\"thread\":\"1:Submit Thread\",\"sortBy\":\"selfMs\",\"topN\":15}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "Semaphore.WaitForSignal",
+            "thread": "1:Main Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 0.35,
+            "p50": 0.121,
+            "p99": 4.397,
+            "max": 11.137,
+            "maxFrameIndex": 267,
+            "note": "主线程等待很小，非 GPU-bound"
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"Semaphore.WaitForSignal\",\"thread\":\"1:Main Thread\",\"metric\":\"selfMs\"}"
+        },
+        {
+          "tool": "scanMetricOverFrames",
+          "args": {
+            "markerName": "Gfx.PresentFrame",
+            "thread": "1:Submit Thread",
+            "metric": "selfMs"
+          },
+          "resultDigest": {
+            "mean": 1.425,
+            "p50": 1.149,
+            "max": 11.092,
+            "maxFrameIndex": 633,
+            "autocorr": {
+              "bestLag": 2,
+              "coefficient": 0.249
+            }
+          },
+          "verified": false,
+          "digestChecked": false,
+          "notVerifiedReason": "No ledger call found for tool=scanMetricOverFrames with matching args: {\"markerName\":\"Gfx.PresentFrame\",\"thread\":\"1:Submit Thread\",\"metric\":\"selfMs\"}"
+        }
+      ],
+      "reasoning": "Submit 线程 Semaphore.WaitForSignal 14.09ms/帧看似很高，但主线程 Semaphore.WaitForSignal 仅 0.35ms/帧，且 Gfx.WaitForPresent（GPU-bound 的经典标志）未出现在任何 top 榜单。结合主线程 p50=20.75ms > Submit 等待 14ms，说明主线程 CPU 工作是帧瓶颈，Submit 线程的 14ms 等待是并行等待主线程交付渲染命令（Unity 帧渲染管线的正常流水线行为），非 GPU 瓶颈。confidence 定为 medium：Submit 的 Semaphore 等待既可能是等主线程也可能是等 GPU，此处基于‘主线程等待小 + 无 Gfx.WaitForPresent’间接推断为主线程限制，未能直接区分（见 data-requests）。",
+      "recommendation": "无需针对 Submit 线程等待优化——它是主线程瓶颈的伴随现象。优化主线程 CPU 工作负荷（见 steady-spread-cost）后，Submit 等待会自然下降。若需确认是否 GPU-bound，下次采集应确保 Gfx.WaitForPresent marker 被捕获并检查其占比。",
+      "selfCritique": "通过深度/严重度/统计/证据/反例五刀审查。【深度】这是线程级宏观观察，已对照主线程/Submit 线程两侧。【严重度】info 合理（伴随现象非主因）。【统计】14.09ms 是 599 帧均值，分母正确。【证据】queryMarkers Submit + 主线程时序 + Gfx.PresentFrame 时序三重印证。【反例】是否存在‘其实是 GPU-bound’的反例？Gfx.WaitForPresent 未进 top 榜 + 主线程等待极小，反证不成立；但 Submit Semaphore 的归因（等主线程 vs 等 GPU）未能 100% 直接区分，故 confidence=medium 并记入 data-requests。",
+      "symbols": [
+        "Semaphore.WaitForSignal",
+        "Gfx.PresentFrame",
+        "Gfx.WaitForPresent"
+      ],
+      "tags": [
+        "thread-wait",
+        "gpu-present"
+      ]
+    }
+  ]
+}

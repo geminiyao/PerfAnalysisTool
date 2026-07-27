@@ -1,0 +1,4 @@
+[config] skillProjectPath 无效 (/data/workspace/PerfAnalysisTool)，已回退到 K:\AI\PerfAnalysisTool_Codebuddy
+��Ϣ: ���ṩ��ģʽ�޷��ҵ��ļ���
+��Ϣ: ���ṩ��ģʽ�޷��ҵ��ļ���
+[narrative] report template not found, using default skeleton: K:\AI\PerfAnalysisTool_Codebuddy\web\server\prism\prompts\report-templates\unity-multi-state.txt

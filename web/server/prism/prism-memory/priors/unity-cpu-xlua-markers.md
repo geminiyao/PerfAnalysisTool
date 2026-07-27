@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.326Z
 source: unity-cpu
 title: "xLua 关键 Marker 及性能影响"
 tags: ["xlua","marker","桥接"]
+dataSource: unity
 ---
 
 | Marker | 含义 | 性能影响 |

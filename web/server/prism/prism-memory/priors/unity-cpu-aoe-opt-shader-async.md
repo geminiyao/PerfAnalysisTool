@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.926Z
 source: unity-cpu
 title: "AOE Shader 异步编译经验"
 tags: ["aoe","shader","异步编译","warmup"]
+dataSource: unity
 ---
 
 - ShaderVariantCollection WarmUp 在进野外 Loading 时异步执行。

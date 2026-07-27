@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:29:27.291Z
 source: aoe-cpu
 title: "Lua 主循环调用栈：LuaMgr.OnTick & UpdateSchedule"
 tags: ["Lua","调用栈","LuaMgr"]
+dataSource: unity
 ---
 
 游戏重度使用 Lua 脚本，Lua 主循环调用值得重点关注。调用栈：

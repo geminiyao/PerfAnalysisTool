@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方式 B · 摘要卡 + 全屏</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 0; }
+  .rundetail-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 24px; background: #161b22; border-bottom: 1px solid #30363d;
+  }
+  .rundetail-bar .back { color: #58a6ff; cursor: pointer; font-size: 13px; }
+  .rundetail-bar .title { font-size: 15px; font-weight: 600; }
+  .rundetail-bar .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #21262d; border: 1px solid #30363d; color: #a855f7; }
+  .rundetail-bar .btn { font-size: 12px; padding: 4px 12px; border-radius: 4px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; }
+  .tabs { display: flex; padding: 0 24px; background: #161b22; border-bottom: 1px solid #30363d; }
+  .tab { padding: 8px 16px; font-size: 13px; color: #8b949e; border-bottom: 2px solid transparent; }
+  .tab.active { color: #e6edf3; border-bottom-color: #f78166; }
+  .label-badge { position: fixed; top: 50px; right: 24px; background: #f78166; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 4px; z-index: 10; }
+  .content { max-width: 800px; margin: 0 auto; padding: 24px; }
+
+  /* 摘要卡 */
+  .summary-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px 24px; margin-bottom: 16px; }
+  .summary-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .rating-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+  .rating-badge.bad { color: #f44336; background: #f4433620; border: 1px solid #f4433640; }
+  .summary-title { font-size: 18px; font-weight: 700; }
+  .overview-text { color: #b1bac4; font-size: 14px; line-height: 1.7; margin-bottom: 20px; }
+
+  /* 指标条 */
+  .metrics-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .metric { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 16px; min-width: 90px; text-align: center; }
+  .metric .lbl { font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+  .metric .val { font-size: 16px; font-weight: 600; }
+  .metric .val.warn { color: #f44336; }
+
+  /* 结论卡 */
+  .conclusions-title { font-size: 14px; font-weight: 600; color: #8b949e; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .conclusion-item { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; display: flex; gap: 12px; }
+  .conclusion-rank { font-size: 18px; font-weight: 700; color: #30363d; min-width: 24px; }
+  .conclusion-body { flex: 1; }
+  .conclusion-problem { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .contribution { font-size: 12px; color: #8b949e; line-height: 1.5; }
+  .sev { display: inline-block; font-size: 10px; padding: 1px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+  .sev.critical { color: #f44336; background: #f4433620; }
+  .sev.high { color: #ff9800; background: #ff980020; }
+
+  /* 全屏按钮 */
+  .fullscreen-cta { text-align: center; padding: 24px 0; }
+  .fullscreen-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 28px; background: #1f6feb; color: #fff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; }
+  .fullscreen-btn:hover { background: #388bfd; }
+  .fullscreen-hint { color: #8b949e; font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="rundetail-bar">
+  <span class="back">← 返回 Dashboard</span>
+  <span class="title">bk26b-perfetto-triad</span>
+  <span class="tag">Perfetto</span>
+</div>
+<div class="tabs">
+  <div class="tab">概览</div>
+  <div class="tab active">AI 分析报告</div>
+  <div class="tab">原始数据</div>
+</div>
+<div class="label-badge">方式 B: 摘要卡 + 全屏</div>
+
+<div class="content">
+  <div class="summary-card">
+    <div class="summary-header">
+      <span class="rating-badge bad">🔴 不合格</span>
+      <span class="summary-title">Prism 性能分析报告</span>
+    </div>
+    <div class="overview-text">
+      三态从 60fps 一路退化到 21fps：throttle 态主线程近四成时间在等 GPU（单次等 17.8ms 已超过一个 vsync 周期），叠加 SoC 大核频率被压到 59% 的降频，业务脚本 Core.Update 稳态吃掉 24% 是第二成本——这不是单一元凶，是 GPU 溢出 + 降频放大 + 稳态业务税三者叠加的系统性退化。
+    </div>
+    <div class="metrics-row">
+      <div class="metric"><div class="lbl">帧预算</div><div class="val">16.7ms</div></div>
+      <div class="metric"><div class="lbl">P50</div><div class="val warn">45.9ms</div></div>
+      <div class="metric"><div class="lbl">P99</div><div class="val warn">66.3ms</div></div>
+      <div class="metric"><div class="lbl">超预算%</div><div class="val warn">98.8%</div></div>
+    </div>
+  </div>
+
+  <div class="conclusions-title">核心结论 (Top 3)</div>
+
+  <div class="conclusion-item">
+    <div class="conclusion-rank">1</div>
+    <div class="conclusion-body">
+      <div class="conclusion-problem">throttle 态 GPU 撑爆 swapchain，主线程近四成时间在等渲染<span class="sev critical">严重</span></div>
+      <div class="contribution">throttle 主线程 Sleeping 38.99%，其中 Gfx.WaitForPresent 单次 avg 17.8ms（超 vsync 16.66ms），427 帧每帧都在等；三态 wait 从 base 0.9ms → cur 5.8ms → throttle 17.8ms，是 throttle 从 33fps 跌到 21fps 的第一主因。</div>
+    </div>
+  </div>
+
+  <div class="conclusion-item">
+    <div class="conclusion-rank">2</div>
+    <div class="conclusion-body">
+      <div class="conclusion-problem">业务脚本 Core.Update 稳态占 24%：LuaMgr + MapManager 是大头<span class="sev high">高</span></div>
+      <div class="contribution">cur 态 Core.Update 每帧 7.32ms，占 PlayerLoop p50 的 24.1%（远超 5% 红线），是 GPU 等待之外的第二成本。LuaMgr 12.5% + MapManager 9.5%（含行军线 5.19%）。</div>
+    </div>
+  </div>
+
+  <div class="conclusion-item">
+    <div class="conclusion-rank">3</div>
+    <div class="conclusion-body">
+      <div class="conclusion-problem">SoC 大核降频至 59%，频率压制放大 GPU 等待时长<span class="sev high">高</span></div>
+      <div class="contribution">throttle 态 CPU4/CPU5 平均频率 1.88GHz（满频 3.0GHz 的 59%），导致单帧计算变慢、GPU 指令提交延迟、swapchain 膨胀进一步加剧。</div>
+    </div>
+  </div>
+
+  <div class="fullscreen-cta">
+    <a class="fullscreen-btn" href="bk26b_perfetto_triad.html" target="_blank">⤢ 全屏查看完整报告 (8 个章节 + 调用树 + 判定矩阵)</a>
+    <div class="fullscreen-hint">在新标签页打开完整 Prism 报告，含 §0-§7 下钻分析</div>
+  </div>
+</div>
+</body>
+</html>

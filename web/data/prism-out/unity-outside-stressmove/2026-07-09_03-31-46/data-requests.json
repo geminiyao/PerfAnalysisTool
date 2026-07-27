@@ -1,0 +1,37 @@
+[
+  {
+    "id": "source.oncameramove.true-impl",
+    "want": "OnCameraMove这个marker对应的真实业务函数体源码（C#或Lua均可），而不是同名Lua菜单类里的空函数体",
+    "rationale": "OnCameraMove是四个primaryDrivers之一(camera.oncameramove.spike)，单次移动平均卡43ms、最高53ms，是全场最尖锐的问题；但getSourceForSymbol('OnCameraMove')匹配到5个同名节点，选中的是Menu_SoldierRecruit_Main.lua里一个空函数体(function cls:OnCameraMove(params) end)，不是真正执行大量计算的实现，导致无法给出代码级优化建议",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（对同名符号的ambiguous匹配缺少'按调用路径/父节点消歧'的能力，只能拿到字符串最短或任意一个匹配）"
+  },
+  {
+    "id": "source.armylinemgr.onupdate-body",
+    "want": "CS:AOE.Outside.OutSideViewArmyLineMgr的OnUpdate方法真实逐帧代码体",
+    "rationale": "该marker是primaryDrivers之一(steady.armylinemgr.selfcost)，累计1381ms、selfMs占比81%(非分摊到子系统)，是四个候选里绝对总耗时最大的一个；但'OnUpdate'字符串在codegraph里匹配到466个同名节点，getSourceForSymbol只能返回其中一个不相关的接口声明(ILauncherExtension.cs的空签名)，用类名直接查询也未命中(resolvedVia=none)，只拿到字段声明看不到方法体，无法判断这2.3ms/帧具体花在哪段逐帧遍历逻辑上",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（需要能用'类名+方法名'组合限定，或用marker挂载的调用栈信息反查具体重载，而非裸方法名字符串匹配）"
+  },
+  {
+    "id": "source.meshuimanager.onupdate-body",
+    "want": "CS:AOE.MeshUIManager每帧调度的Update/Tick方法真实代码体",
+    "rationale": "该marker是primaryDrivers之一(steady.meshuimanager.selfcost)，累计1246ms、drillDownMarker证实是100%纯叶子marker(profiler采样粒度极限)，但只拿到类的静态基础设施声明(resource/renderers/controls等子系统字段+OnCreate初始化)，看不到每帧真正执行的调度代码，无法判断2.1ms/帧具体花在UI布局重算、渲染批次合并还是字体渲染等哪个子系统",
+    "suspectedAxis": "symbol-disambiguation",
+    "closestExistingTool": "getSourceForSymbol（同上，'OnUpdate'裸方法名匹配污染问题）"
+  },
+  {
+    "id": "gc.collect.caller-attribution",
+    "want": "frame519里GC.Collect的调用者信息——是LuaMgr.EndOfFrame流程里哪一行/哪个函数主动调用了System.GC.Collect",
+    "rationale": "frame519是全场最慢帧(113.6ms)，GC.Collect单次吃掉70.2ms(62%)，且确认走的是'CS:AOE.LuaMgr>Core.EndOfFrame'路径的主动同步Full GC(区别于frame461/483走WaitForTargetFPS的常规增量GC步进)，但getFrameCallTree/drillDownMarker只能看到GC.Collect本身是调用树的叶子，看不到是哪个业务函数触发了这次同步GC调用，无法定位可能存在的'手动触发Full GC'的具体代码位置",
+    "suspectedAxis": "marker-caller-chain",
+    "closestExistingTool": "getFrameCallTree（只能看marker的父子调用关系，看不到是哪行C#/Lua代码主动调用了引擎GC API；需要类似托管栈回溯或更细粒度的自定义marker插桩）"
+  },
+  {
+    "id": "memory.gc-alloc.per-function",
+    "want": "per-marker/per-function级别的GC分配字节数（哪个函数在分配内存），而非整帧总量",
+    "rationale": "queryFrameCounters只提供gc_allocated_in_frame这个整帧汇总值，用于区分'分配触发的GC'和'定时触发的GC'时只能看整体趋势(如本次验证frame519分配量8192字节反而是相邻帧最低)，但无法定位具体是哪个marker/函数在贡献分配量，限制了对GC根因的进一步细化",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧gc_allocated_in_frame汇总列，到不了marker/函数级）"
+  }
+]

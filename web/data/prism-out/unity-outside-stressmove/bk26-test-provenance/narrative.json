@@ -1,0 +1,368 @@
+{
+  "runId": "unity-outside-stressmove",
+  "overview": "这次不是某一个尖峰把体验打坏，而是全程基线已经塌了：600/600 帧都超过 33.33ms，PlayerLoop 中位 41.90ms，稳定成本由 URP.RenderSingleCamera、Lua/MapSignificanceMgr、MapManager/行军线、MeshUI 共同垫高；在这个高基线上，相机移动、同步 GC、移动线消息、资源卸载和 Present 等待再制造尾部顿挫。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "全程基线超预算",
+      "kind": "整体帧率失败",
+      "contribution": "600/600 帧超过 16.67ms，且 600/600 帧也超过 33.33ms；PlayerLoop p50=41.90ms、p95=59.31ms、p99=95.45ms，说明不是偶发卡顿，而是整段采集都跑不进 30fps。",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "critical"
+    },
+    {
+      "rank": 2,
+      "problem": "URP.RenderSingleCamera 主线程渲染基线过高",
+      "kind": "稳态大头",
+      "contribution": "URP.RenderSingleCamera 每帧平均 10.64ms，单项就吃掉 60fps 预算的 64%；成本分散在透明渲染、AfterRendering、RendererSetup/RenderGraphSetup、BeforeRendering，不是单个 pass 可解释。",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 3,
+      "problem": "Lua MapSignificanceMgr 常驻重",
+      "kind": "稳态大头 + 局部尖峰",
+      "contribution": "MapSignificanceMgr 600/600 帧出现，平均 3.99ms/帧、p95=6.18ms，最坏 frame321 达 22.49ms；其 EntityTask 平均 3.57ms/帧，是 Lua 更新中最明确的稳定业务大头。",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh",
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 4,
+      "problem": "地图行军线 + MeshUI 每帧常驻税",
+      "kind": "稳态开销群",
+      "contribution": "OutSideViewArmyLineMgr 平均 2.30ms/帧，MeshUIManager 平均 2.08ms/帧，二者都 600/600 帧出现，合计约 4.38ms/帧；单看不像爆点，但持续压低帧率天花板。",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "medium"
+    },
+    {
+      "rank": 5,
+      "problem": "相机移动交互尖峰",
+      "kind": "低频高冲击交互尖峰",
+      "contribution": "OnCameraMove 只出现 19 帧，但出现时平均自耗时 43.14ms，最重 frame144 把整帧推到 96.47ms；它不是全程基线主因，却是玩家拖动/缩放地图时最容易感知的一类顿挫。",
+      "dimensions": [
+        "outlier",
+        "absoluteCost"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 6,
+      "problem": "同步 GC 单帧炸帧",
+      "kind": "低频极端尖峰",
+      "contribution": "GC.Collect 只出现 3 帧，但 frame519 单次 self=70.20ms，占整帧 61.82%；frame483 也有 15.33ms GC.Collect。频率低于稳态项，但单次冲击极端。",
+      "dimensions": [
+        "outlier",
+        "absoluteCost"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 7,
+      "problem": "YzEntityMoveLineNtf 移动线消息长尾",
+      "kind": "网络消息尖峰",
+      "contribution": "YzEntityMoveLineNtf present 77 帧，p95 仅 1.05ms，但 p99 到 9.61ms、max 14.90ms；frame273 下 TServerManager 路径 total 22.31ms，像批量移动线更新没分帧消化。",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "needsDomainKnowledge",
+      "severity": "high"
+    },
+    {
+      "rank": 8,
+      "problem": "资源卸载偶发尖峰",
+      "kind": "资源管理尖峰",
+      "contribution": "TryUnloadPending.TryUnload p50 只有 0.01ms，但 frame80 峰值 14.59ms，LoaderManagerTryUnloadPending total 21.34ms；源码显示 TryUnload 本身很薄，更像当帧处理数量/DoUnload 类型导致。",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "medium"
+    },
+    {
+      "rank": 9,
+      "problem": "Present/Gfx 等待叠加",
+      "kind": "渲染等待尖峰",
+      "contribution": "Semaphore.WaitForSignal 主线程 p95=7.50ms，frame22 达 20.68ms；同帧 URP.WaitForPresent/Gfx.WaitForPresentOnGfxThread 约 19.8ms。它不是全程最差帧主因，但会叠加在已超预算的渲染基线上。",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "needsBaseline",
+      "severity": "medium"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "本次采集整体失败：600/600 帧超过 16.67ms 且 600/600 帧超过 33.33ms，单源即可判定不达标。",
+      "本次采集内的相对贡献：URP.RenderSingleCamera、MapSignificanceMgr、行军线、MeshUI 是稳定基线大头；相机、GC、网络消息、资源卸载、Present 等待是尾部尖峰。",
+      "哪些问题已经下钻到源码或路径：MapCameraCtrl.UpdateCameraPos、MapSignificanceMgr.ProcessTasks、YzEntityMoveLineNtf、WorldCoordFormatUtil.FormatWorldPosition_MoveAttr、MeshUIManager、OutSideViewArmyLineMgr、BaseLoader.TryUnload。"
+    ],
+    "cannotJudge": [
+      "没有历史基线时，无法判断某些常驻成本在该游戏压测场景下是否“正常但贵”还是“明显回退”；例如行军线 2.30ms/帧、MeshUI 2.08ms/帧仍需历史版本或业务规模基线。",
+      "现有采集没有 per-marker 分配、网络 payload 大小、资源卸载数量、MeshUI 子系统 marker、相机事件监听者耗时，所以部分建议只能到补采/限流方向，不能直接给最终代码改法。",
+      "Present/Gfx 等待只能说明主线程在等渲染链路，不能单源断言 GPU、Render Thread、VSync 或具体渲染 pass 是根因。"
+    ]
+  },
+  "ruledOut": [],
+  "sections": [
+    {
+      "heading": "总账：先承认这是基线失败，不是找一个最大尖峰就能修好",
+      "intro": "本次最重要的变化是先把整段采集作为一个失败系统看：p50 已经 41.90ms，连 30fps 都没守住。后面的每个点都要分成两类：一类是每帧都在缴的常驻税，决定天花板；另一类是偶发尖峰，决定顿挫感。",
+      "items": [
+        {
+          "findingIds": [
+            "baseline.main.overbudget"
+          ],
+          "title": "600帧全超预算：脚本、地图/UI 和 URP 一起把基线垫高",
+          "narrative": "如果只盯 frame519 的 GC 或 frame144 的相机移动，会误以为这是几个偶发炸点。但 PlayerLoop 的统计更直接：600帧全部超过 16.67ms，也全部超过 33.33ms，p50=41.90ms、p95=59.31ms。这说明即使没有最坏尖峰，游戏也已经稳定跑不进目标帧率。aggregateSubtree 把基线拆成几块：Core.Update 12.88ms/帧、URP.RenderSingleCamera 10.64ms/帧、Core.LateUpdate 6.86ms/帧、LuaMgr.OnTick&UpdateSchedule 6.75ms/帧、MapManager 6.14ms/帧。优化顺序应先压稳定大头，再处理尖峰。",
+          "callTree": {
+            "rootMarker": "PlayerLoop",
+            "note": "总帧时入口；本项用于总账，不代表单一函数可直接优化。"
+          },
+          "sourceInsight": "这是跨系统总账，不对应单个源码函数；后续章节分别拆到 URP、Lua、MapManager/MeshUI 和具体事件尖峰。",
+          "recommendations": [
+            "先以稳定基线拆账：URP.RenderSingleCamera、Lua/MapSignificanceMgr、MapManager/OutSideViewArmyLineMgr、MeshUIManager 分别设目标和复测 marker。",
+            "不要先围绕单个最大尖峰做局部修补；即使消掉 GC frame519，p50 仍会远超预算。",
+            "后续回归报告应保留 PlayerLoop p50/p95/p99 和 30fps/60fps 超预算比例作为第一屏总账。"
+          ],
+          "severity": "critical"
+        }
+      ]
+    },
+    {
+      "heading": "稳态开销：决定帧率天花板的常驻税",
+      "intro": "这些项不是偶尔炸，而是 600 帧都在。它们的单帧数字未必最吓人，但每帧都扣预算，才是 p50 高企的主体。",
+      "items": [
+        {
+          "findingIds": [
+            "urp.rendergraph.baseline"
+          ],
+          "title": "URP.RenderSingleCamera：10.64ms/帧，渲染主线程成本已接近一整帧预算",
+          "narrative": "URP.RenderSingleCamera 的 mean=10.64ms、p50=9.61ms、p95=16.74ms，单它就吃掉 60fps 预算的大半。下钻后不是某一个 RenderGraphSetup 独占，而是透明主渲染、AfterRendering、RendererSetup/RenderGraphSetup、BeforeRendering 多个阶段共同构成稳定成本。旧报告把 RenderGraphSetup 单独降成 low/ruled-out，这次更准确的口径是：RenderGraphSetup 只是 URP 基线的一部分，真正要看的是 RenderSingleCamera 整体。",
+          "callTree": {
+            "rootMarker": "URP.RenderSingleCamera",
+            "note": "子项分散：MainRenderingTransparent、AfterRendering、RendererSetup/RenderGraphSetup、BeforeRendering 都有稳定成本。"
+          },
+          "sourceInsight": "URP.RenderGraphSetup 无法通过 getSourceForSymbol 锚定到项目源码；这里应通过渲染特性、透明队列、相机栈、RenderGraph pass 开关做 A/B，而不是编造函数级改法。",
+          "recommendations": [
+            "先做渲染特性/Renderer Feature、透明队列、相机栈、RenderGraph pass 的开关 A/B，每次复测 URP.RenderSingleCamera、URP.RenderGraphSetup、URP.MainRenderingTransparent。",
+            "把 URP.RenderSingleCamera 作为渲染主指标，而不是只看 RenderGraphSetup 单点。",
+            "结合 frame22 的 Present/Gfx 等待复查：降低 URP 基线后，看等待尖峰是否同步下降。"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "lua.mapsignificance.entitytask"
+          ],
+          "title": "MapSignificanceMgr：Lua 侧最明确的常驻业务大头",
+          "narrative": "MapSignificanceMgr 600 帧全出现，平均 3.99ms/帧，p95=6.18ms，最坏 frame321 达 22.49ms。更关键的是，下钻显示它不是一个空壳父节点：EntityTask 平均 3.57ms/帧，其中 MapEntityAdd 1.55ms/帧、MapObjRefresh 1.20ms/帧、MapObjCleanUp 0.47ms/帧。frame321 的调用树里，MapSignificanceMgr.ProcessTasks 占该帧 37.4%，说明它既是稳态大头，也会在部分帧放大成尖峰。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "重点看 EntityTask 下的 MapEntityAdd、MapObjRefresh、MapObjCleanUp。"
+          },
+          "sourceInsight": "MapSignificanceMgr.ProcessTasks 源码附近已有 ReadyForProcessTask、isDynamicMode、队列长度和 headUITaskCount/localResTaskCount 阈值逻辑；问题更可能是预算/阈值在压测下仍允许单帧过量消化。",
+          "recommendations": [
+            "检查 PrepareTaskDuraion、headUITaskCount/localResTaskCount 阈值是否过宽，给 ProcessTasks 增加真实的每帧耗时/数量预算。",
+            "对同实体重复 add/refresh/cleanup 做合并，避免同一帧重复刷新。",
+            "复测时单独盯 MapSignificanceMgr.totalMs、EntityTask、ProcessTask_MapEntityAdd、ProcessTask_MapObjRefresh。"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "map.armyline.meshui.baseline"
+          ],
+          "title": "行军线 + MeshUI：合计 4.38ms/帧的地图/UI 常驻税",
+          "narrative": "OutSideViewArmyLineMgr 平均 self=2.30ms/帧，MeshUIManager 平均 self=2.08ms/帧，二者都 600 帧全出现。它们不像 GC 那样制造最坏帧，但每帧都吃掉预算。行军线下钻能看到 CalculateVertexJob 和自身逻辑；MeshUI 则几乎全部落在自身 marker，是采样粒度不足导致的黑盒。",
+          "callTree": {
+            "rootMarker": "CS:AOE.Outside.MapManager",
+            "note": "MapManager 下可同时看到 OutSideViewArmyLineMgr、MUI_UpdateUIPos、CalculateVertexJob 等地图/UI 相关常驻项。"
+          },
+          "sourceInsight": "OutSideViewArmyLineMgr 源码包含 pendingCreateQueue/pendingDeleteQueue/pendingEntityIds 等队列字段；MeshUIManager.OnLateUpdate 顺序调用 camera、dynamicAtlas、eventSystem、animation、layouts、controls、renderers、keywords，但缺少子 marker。",
+          "recommendations": [
+            "验证行军线 pendingCreateQueue/pendingDeleteQueue 是否真的限制每帧创建/删除量，必要时补每帧数量预算。",
+            "行军线固定自耗时要继续拆 marker，区分队列处理、顶点计算、UI 位置更新等来源。",
+            "MeshUIManager 内部给 camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers/keywords 补 CustomSampler，否则无法决定优化哪个子系统。"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "交互与尾部尖峰：不决定 p50，但决定玩家看到的顿一下",
+      "intro": "这些项频率低于稳态大头，但命中时冲击很强。处理顺序要看玩家触发频率和单次体感：相机移动是核心操作，应排在普通偶发尖峰前。",
+      "items": [
+        {
+          "findingIds": [
+            "camera.move.spike"
+          ],
+          "title": "相机移动：UpdateCameraPos → InfiniteZoomMgr/OnCameraMove 的交互型巨型尖峰",
+          "narrative": "OnCameraMove 只出现 19 帧，但每次出现平均 self=43.14ms，最重 frame144 把整帧推到 96.47ms。调用树把问题放在 LateUpdate→LuaMgr→MapCameraCtrl.UpdateCameraPos；源码显示 UpdateCameraPos 在 zoomMoveDirty 时会调用 infiniteZoomMgr:OnOutsideCameraMove，并广播 OutsideEvt.CameraZoom。也就是说，这不是每帧常驻税，而是玩家拖动或缩放地图时触发的一次性重活。",
+          "callTree": {
+            "rootMarker": "MapCameraCtrl.UpdateCameraPos",
+            "note": "frame144 中 UpdateCameraPos total=56.32ms，占整帧 58.38%；下钻到 infiniteZoomMgr_OnOutsideCameraMove / PostCameraMoveScale / OnCameraMove。"
+          },
+          "sourceInsight": "Assets/Scripts/.Lua/Outside/Map/Visual/MapCameraCtrl.lua 第623-666行附近：UpdateCameraPos 内会触发 self:OnCameraPosChanged()、mgr.infiniteZoomMgr:OnOutsideCameraMove(...)、mgr.evt:Post(OutsideEvt.CameraZoom, ...)。",
+          "recommendations": [
+            "先补 OnCameraMove/OutsideEvt.CameraZoom 监听者耗时，确认到底是哪个监听者在做重活。",
+            "把只受缩放层级变化影响的工作从每次 camera move 中拆出来，只在层级/可见性真正变化时执行。",
+            "不要只粗暴降频 UpdateCameraPos；已有 hasCameraMoved、CheckCameraMoveInterval、zoomMoveDirty 逻辑，继续包节流可能掩盖正确性问题。"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "gc.sync.collect"
+          ],
+          "title": "同步 GC：少数帧出现，但单次足以把画面冻结",
+          "narrative": "frame519 中 GC.Collect self=70.20ms，占整帧 61.82%，直接解释全场最坏帧；frame483 也有 15.33ms GC.Collect。关键反证是这两帧的 gc_allocated_in_frame 不高，frame519 只有 8192 bytes、frame483 只有 10240 bytes，低于全程均值 19339.9 bytes，因此不能写成“当帧分配尖峰导致 GC”。更像累计到阈值或主动触发的同步回收。",
+          "callTree": {
+            "rootMarker": "GC.Collect",
+            "note": "GC.Collect 是叶子级阻塞点；现有数据能证明它是直接原因，但不能证明谁长期分配导致触发。"
+          },
+          "sourceInsight": "现有源码归因未定位到主动 GC 调用点；需要排查 EndOfFrame/LuaMgr 或资源流程里是否显式触发 GC。",
+          "recommendations": [
+            "排查 EndOfFrame/LuaMgr 是否存在业务主动 GC 或 Lua/C# 桥接触发的回收策略。",
+            "补 per-marker GC allocation 和分配调用栈，定位长期累积分配源。",
+            "如果是主动 GC，把触发点移到加载/黑屏/低交互窗口；如果是自动阈值触发，调整增量 GC 策略。"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "network.move-line.ntf"
+          ],
+          "title": "移动线消息：批量 fullUpdateLine 可能一帧吃完",
+          "narrative": "YzEntityMoveLineNtf 平时不总出现，但 frame273 中消息处理 total=14.16ms，占该帧 21.23%；整条 TServerManager 路径 total=22.31ms。源码显示 handler 对 msg.fullUpdateLine 做 pairs 遍历，并调用 WorldCoordFormatUtil.FormatWorldPosition_MoveAttr；后者会 FormatWorldPositionArray，并 Clone xArray/yArray。现有数据没有 payload 大小，所以不能判断是消息过大还是处理策略过重，但“收到即全量处理”是明确风险。",
+          "callTree": {
+            "rootMarker": "CS:AOE.TServerManager",
+            "note": "TServer.HandleMessages → YzEntityMoveLineNtf；frame273 是关键尖峰帧。"
+          },
+          "sourceInsight": "NetMsgPostProcesser.lua 第122-133行遍历 msg.fullUpdateLine；WorldCoordFormatUtil.lua 第156-194行会 Clone coordPath.xArray/yArray 并处理 pathPoint。",
+          "recommendations": [
+            "对 fullUpdateLine 按条数或路径点数做分帧队列处理。",
+            "审查 TblUtil.Clone(coordPath.xArray/yArray) 是否必须复制，若只是读用，应减少数组克隆或复用缓冲。",
+            "补消息 payload 大小、pathPoint 数量、coordPath 数组长度，用来设每帧处理上限。"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "resource.unload.spike"
+          ],
+          "title": "资源卸载：TryUnload 很薄，尖峰更像批量数量问题",
+          "narrative": "TryUnloadPending.TryUnload p50 只有 0.01ms，但 frame80 峰值 self=14.59ms，LoaderManagerTryUnloadPending total=21.34ms。源码显示 TryUnload 只有 CanUnload 和 DoUnload 的薄封装，所以峰值更可能来自当帧处理了较多待卸载对象，或某类 DoUnload 特别贵。现有数据缺少调用次数和资源类型，不能继续坐实。",
+          "callTree": {
+            "rootMarker": "LoaderManagerTryUnloadPending",
+            "note": "frame80 中 LoaderManagerTryUnloadPending total=21.34ms，占整帧 30.45%。"
+          },
+          "sourceInsight": "Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs 第668-677行：TryUnload 只做 CanUnload()、DoUnload()、state=Pooled。",
+          "recommendations": [
+            "给 LoaderManagerTryUnloadPending 增加每帧卸载数量或耗时预算，超过预算延后。",
+            "补记录单帧 TryUnload 调用次数、DoUnload 资源类型和耗时分布。",
+            "排查 frame80 前后是否有集中释放/场景对象销毁窗口。"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "渲染等待：不是最坏帧主因，但会放大已超预算的渲染链路",
+      "intro": "等待类 marker 不能简单按 selfMs 当 CPU 热点处理。这里能确认的是 frame22 主线程在等 Present/Gfx，不能单源证明 GPU 或某个 pass 是根因。",
+      "items": [
+        {
+          "findingIds": [
+            "present.wait.occasional"
+          ],
+          "title": "frame22 Present/Gfx 等待：作为 URP 优化后的复查项",
+          "narrative": "主线程 Semaphore.WaitForSignal p95=7.50ms，frame22 达 20.68ms；同帧 URP.WaitForPresent 和 Gfx.WaitForPresentOnGfxThread 都约 19.8ms。frame22 的 triangles=1856512、batches=199、set_pass_calls=157，说明渲染负载不低，但不能仅凭这一帧断言 GPU、Render Thread、VSync 哪一个是根因。它更适合作为 URP 基线优化后的复查指标：如果降低 RenderSingleCamera/透明 pass 后等待也下降，才说明链路相关。",
+          "callTree": {
+            "rootMarker": "URP.RenderSingleCamera",
+            "note": "等待项挂在 URP 渲染链路下；renderer 会重查 URP 子树。"
+          },
+          "sourceInsight": "等待类 marker 没有项目源码可改；它是症状，不是直接代码热点。",
+          "recommendations": [
+            "先做 URP.RenderSingleCamera 的 pass/透明队列/相机栈 A/B，再复查 WaitForPresent/Gfx.WaitForPresentOnGfxThread 是否下降。",
+            "若等待仍高，需要 GPU/Render Thread 专项工具继续排查，而不是在 CPU 脚本里硬找锅。"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "补采缺口：下一轮要让报告从“方向正确”变成“可直接改代码”",
+      "intro": "这次报告能把问题分层，但仍有几处关键证据缺口。补这些采样后，下一轮报告才能从“建议方向”进一步收敛到具体阈值、具体监听者、具体资源类型。",
+      "items": [
+        {
+          "findingIds": [
+            "gc.sync.collect",
+            "map.armyline.meshui.baseline",
+            "network.move-line.ntf",
+            "resource.unload.spike",
+            "camera.move.spike"
+          ],
+          "title": "五个 DataRequest 是下一轮优化闭环的入口",
+          "narrative": "本轮沉淀的 5 个 DataRequest 不是装饰：它们正好对应当前无法下最终改法的边界。GC 需要 per-marker allocation；MeshUI 需要子系统 marker；移动线消息需要 payload size；资源卸载需要每帧 unload count 和资源类型；相机移动需要监听者级耗时。没有这些数据，报告只能到“哪个方向该查”，不能到“改哪一行/阈值设多少”。",
+          "sourceInsight": "这些缺口已经写入 data-requests.json 并沉淀到 capabilities 记忆，后续 run 应优先复用。",
+          "recommendations": [
+            "按 data-requests.json 的稳定 id 建采集任务：gc.per-marker-alloc、meshui.subsystem-markers、network.move-line-payload-size、resource.unload-count-per-frame、camera-move-listener-breakdown。",
+            "下一轮报告验收时，不只看有没有发现，还要看这些缺口是否被新数据消解。"
+          ],
+          "severity": "info"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "先做总账拆解和 URP.RenderSingleCamera A/B：渲染特性、透明队列、相机栈、RenderGraph pass 逐项开关复测。",
+      "benefit": "URP mean=10.64ms/帧，是当前最大稳定基线之一；不压它，p50 很难回到 30fps/60fps。"
+    },
+    {
+      "priority": "P0",
+      "action": "MapSignificanceMgr.ProcessTasks 加真实每帧预算，并合并同实体重复 add/refresh/cleanup。",
+      "benefit": "Lua 侧最明确业务大头，平均 3.99ms/帧且最坏 22.49ms；既影响基线也影响尖峰。"
+    },
+    {
+      "priority": "P1",
+      "action": "相机移动链路补监听者耗时，拆分 InfiniteZoomMgr/OutsideEvt.CameraZoom 下的重活。",
+      "benefit": "OnCameraMove 出现时平均 43.14ms，直接影响拖动/缩放地图的体感。"
+    },
+    {
+      "priority": "P1",
+      "action": "行军线和 MeshUI 补细 marker / 队列数量 counter，确认 4.38ms/帧常驻税中可优化部分。",
+      "benefit": "二者每帧都在，合计约 26% 的 60fps 帧预算，但目前 MeshUI 内部仍是黑盒。"
+    },
+    {
+      "priority": "P2",
+      "action": "处理 GC、网络消息、资源卸载、Present 等尾部尖峰：先补缺口数据，再做限流/分帧/触发时机调整。",
+      "benefit": "这些不是 p50 主因，但会决定压测中的顿挫尾巴和最坏帧体验。"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "rating": "fail",
+  "headline": "84% 的帧超过 60fps 预算：稳态帧时 20.75ms 已超标 25%，相机移动再叠 24ms 回收风暴和 23ms 显著性尖峰，最差帧 54ms 是预算 3.2 倍",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 20.75,
+  "observedP95Ms": 34.7,
+  "observedP99Ms": 44.5,
+  "observedMaxMs": 54.09,
+  "observedMaxFrameIndex": 143,
+  "pctFramesOverBudget": 84.33,
+  "primaryDrivers": [
+    "steady-state-baseline-over-budget",
+    "camera-move-recycle-storm",
+    "map-significance-spike"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {"markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs"},
+      "resultDigest": {"frameCount": 600, "mean": 22.96, "p50": 20.75, "p95": 34.7, "p99": 44.5, "max": 54.09, "maxFrameIndex": 143, "burstFrames": [143, 278, 283, 469, 552, 601, 670]}
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 16.67}, "setB": {"kind": "slowFrames", "thresholdMs": 0}},
+      "resultDigest": {"sizeA": 506, "sizeB": 600, "intersection": 506, "pctBinA": 84.33, "note": "506/600 帧超过 16.67ms 预算"}
+    },
+    {
+      "tool": "drillDownMarker",
+      "args": {"rootMarker": "PlayerLoop", "thread": "1:Main Thread", "maxDepth": 4, "minMsPerFrame": 0.5, "topPerLevel": 8},
+      "resultDigest": {"rootTotalMsPerFrame": 22.96, "topChildren": [{"name": "PostLateUpdate.FinishFrameRendering", "msPerFrame": 6.01, "pctOfRoot": 0.262}, {"name": "Update.ScriptRunBehaviourUpdate", "msPerFrame": 4.61, "pctOfRoot": 0.201}, {"name": "PreLateUpdate.ScriptRunBehaviourLateUpdate", "msPerFrame": 3.9, "pctOfRoot": 0.17}, {"name": "PostLateUpdate.PlayerUpdateCanvases", "msPerFrame": 1.84, "pctOfRoot": 0.08}], "note": "稳态三大头合计 14.5ms = 预算 87%"}
+    }
+  ]
+}

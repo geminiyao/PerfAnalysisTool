@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>通用 Narrative 渲染器 (增强版)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+.bar { display: flex; align-items: center; gap: 12px; padding: 10px 24px; background: #161b22; border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 10; flex-wrap: wrap; }
+.bar .back { color: #58a6ff; cursor: pointer; font-size: 13px; }
+.bar .title { font-size: 15px; font-weight: 600; }
+.bar .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #21262d; border: 1px solid #30363d; color: #a855f7; }
+.bar .src-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.bar .src-label { font-size: 11px; color: #8b949e; }
+.bar .src-select { font-size: 13px; background: #1f6feb; color: #fff; border: 1px solid #1f6feb; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-weight: 600; }
+.bar .gen-badge { background: #52c41a; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 4px; }
+.content { max-width: 960px; margin: 0 auto; padding: 20px 24px 60px; }
+
+/* 评级 */
+.rating-bar { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; }
+.rating-bar.excellent { background: #161b22; border: 1px solid #52c41a40; } .rating-bar.pass { background: #161b22; border: 1px solid #4caf5040; }
+.rating-bar.weak { background: #161b22; border: 1px solid #ff980040; } .rating-bar.fail { background: #161b22; border: 1px solid #f4433640; }
+.rating-bar .emoji { font-size: 20px; } .rating-bar .label { font-size: 14px; font-weight: 700; }
+.rating-bar.excellent .label { color: #52c41a; } .rating-bar.pass .label { color: #4caf50; }
+.rating-bar.weak .label { color: #ff9800; } .rating-bar.fail .label { color: #f44336; }
+.rating-bar .overview { font-size: 13px; color: #b1bac4; line-height: 1.6; }
+
+/* 指标行 */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; }
+.stat-card .t { font-size: 10px; color: #8b949e; margin-bottom: 4px; } .stat-card .v { font-size: 18px; font-weight: 700; }
+.stat-card .v.warn { color: #f44336; } .stat-card .s { font-size: 11px; color: #8b949e; }
+
+/* 章节标题 */
+.sec-label { font-size: 12px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; padding-left: 10px; border-left: 3px solid #30363d; }
+
+/* 卡片 */
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid #21262d; }
+.card-head .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.card-head .title { font-size: 13px; font-weight: 600; flex: 1; }
+.card-head .kind { font-size: 11px; color: #8b949e; padding: 2px 8px; background: #21262d; border-radius: 4px; }
+.card-body { padding: 12px 16px; }
+.narrative { font-size: 12.5px; color: #b1bac4; line-height: 1.7; margin-bottom: 10px; white-space: pre-wrap; }
+
+/* 严重度 */
+.sev { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.sev.critical { color: #f44336; background: #f4433620; } .sev.high { color: #ff9800; background: #ff980020; }
+.sev.medium { color: #ffc107; background: #ffc10720; } .sev.low { color: #8bc34a; background: #8bc34a20; } .sev.info { color: #2196f3; background: #2196f320; }
+.dot.critical { background: #f44336; } .dot.high { background: #ff9800; } .dot.medium { background: #ffc107; } .dot.low { background: #8bc34a; } .dot.info { background: #2196f3; }
+
+/* 表格 */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; border-radius: 4px; overflow: hidden; }
+.tbl th { background: #1f6feb30; padding: 8px 12px; text-align: left; color: #58a6ff; font-weight: 600; border-bottom: 2px solid #1f6feb40; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tbl td { padding: 8px 12px; border-bottom: 1px solid #21262d; color: #b1bac4; }
+.tbl tr:nth-child(even) td { background: #0d111780; }
+.tbl tr:hover td { background: #1f6feb10; }
+.tbl td.lvl-confirmed { color: #4caf50; font-weight: 600; } .tbl td.lvl-likely { color: #ff9800; font-weight: 600; } .tbl td.lvl-suspected { color: #ffc107; font-weight: 600; }
+.tbl-title { font-size: 11px; color: #8b949e; margin-bottom: 4px; font-weight: 600; }
+
+/* ASCII/可视化容器 */
+.viz-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; margin-top: 8px; }
+.viz-box .viz-title { font-size: 11px; color: #8b949e; margin-bottom: 6px; font-weight: 600; }
+.viz-box .viz-caption { font-size: 11px; color: #6e7681; margin-top: 6px; font-style: italic; }
+.viz-box pre { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 11px; color: #b1bac4; line-height: 1.6; white-space: pre-wrap; }
+
+/* ★ 增强1: ASCII 智能解析出的条形图 */
+.bar-viz-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.bar-viz-label { font-size: 11px; color: #b1bac4; min-width: 100px; white-space: nowrap; }
+.bar-viz-track { flex: 1; height: 18px; background: #21262d; border-radius: 3px; overflow: hidden; display: flex; }
+.bar-viz-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; overflow: hidden; white-space: nowrap; }
+.bar-viz-val { font-size: 11px; color: #e6edf3; min-width: 60px; text-align: right; }
+
+/* ★ 增强1: ASCII 智能解析出的树形结构 */
+.tree-viz-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.tree-viz-label { font-size: 11px; min-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #b1bac4; }
+.tree-viz-track { flex: 1; height: 16px; background: #21262d; border-radius: 3px; overflow: hidden; }
+.tree-viz-fill { height: 100%; border-radius: 3px; border-left: 2px solid; }
+.tree-viz-fill.script { background: #2196f330; border-color: #2196f3; }
+.tree-viz-fill.render { background: #4caf5030; border-color: #4caf50; }
+.tree-viz-fill.wait { background: #9e9e9e30; border-color: #757575; }
+.tree-viz-fill.default { background: #6e768130; border-color: #6e7681; }
+.tree-viz-ms { font-size: 11px; color: #e6edf3; min-width: 46px; text-align: right; }
+.tree-viz-pct { font-size: 10px; color: #8b949e; min-width: 36px; text-align: right; }
+
+/* ★ 增强2: callTree (从 report.html 提取) */
+.calltree-section { margin-top: 10px; }
+.calltree-section .ct-header { font-size: 11px; color: #8b949e; margin-bottom: 6px; font-weight: 600; }
+.calltree-loading { font-size: 11px; color: #8b949e; padding: 8px 0; }
+/* 复用 render-html 的 tree-row 样式 (从 report.html 提取的 HTML 自带 class) */
+.calltree-injected .tree-row { margin-bottom: 4px; margin-left: var(--tree-indent, 0); }
+.calltree-injected .tree-bar { position: relative; display: grid; grid-template-columns: minmax(280px, 1fr) auto auto; align-items: center; padding: 4px 8px; background: var(--tree-bg, #21262d); border-left: 2px solid var(--tree-border, #30363d); border-radius: 3px; }
+.calltree-injected .tree-fill { grid-column: 1; position: absolute; left: 0; top: 0; bottom: 0; width: var(--tree-width, 0%); background: var(--tree-bg, #21262d); border-radius: 3px; z-index: 0; }
+.calltree-injected .tree-label { grid-column: 1; position: relative; z-index: 1; font-size: 11px; padding-left: 4px; }
+.calltree-injected .tree-ms { grid-column: 2; font-size: 11px; color: #e6edf3; padding: 0 8px; z-index: 1; }
+.calltree-injected .tree-pct { grid-column: 3; font-size: 10px; color: #8b949e; z-index: 1; }
+.calltree-injected .tree-redline { color: #ff7961; font-size: 10px; margin-left: 4px; }
+
+/* 推荐建议 */
+.rec { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; margin-top: 10px; }
+.rec-label { font-size: 11px; font-weight: 700; color: #52c41a; margin-bottom: 6px; }
+.rec ol { padding-left: 18px; } .rec li { font-size: 12px; color: #b1bac4; line-height: 1.7; margin-bottom: 3px; }
+
+/* 边界声明 */
+.boundary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.boundary-col { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; }
+.boundary-col h4 { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.boundary-col.can h4 { color: #4caf50; } .boundary-col.cannot h4 { color: #f44336; }
+.boundary-col ul { padding-left: 16px; } .boundary-col li { font-size: 12px; color: #b1bac4; line-height: 1.6; margin-bottom: 4px; }
+
+/* 已排除 */
+.ruled-out { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; margin-top: 8px; }
+.ruled-out-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.ruled-out-item .name { color: #8bc34a; font-weight: 600; min-width: 200px; } .ruled-out-item .why { color: #8b949e; }
+
+/* 优先级表 */
+.pri-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pri-tbl th { background: #21262d; padding: 8px 10px; text-align: left; color: #8b949e; }
+.pri-tbl td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
+.pri-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.pri-tag.p0 { color: #f44336; background: #f4433620; } .pri-tag.p1 { color: #ff9800; background: #ff980020; } .pri-tag.p2 { color: #ffc107; background: #ffc10720; }
+
+.footer { text-align: center; padding: 20px; font-size: 11px; color: #6e7681; border-top: 1px solid #21262d; margin-top: 30px; }
+.loading { text-align: center; padding: 80px; font-size: 14px; color: #8b949e; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="back">← 返回 Dashboard</span>
+  <span class="title" id="run-title">加载中...</span>
+  <span class="tag">通用渲染 (增强版)</span>
+  <div class="src-wrap">
+    <span class="src-label">📋 切换报告:</span>
+    <select class="src-select" id="src-select">
+      <option value="narrative_demo.json|bk26b_perfetto_triad.html">bk26b-perfetto-triad (wt039)</option>
+      <option value="narrative_udiff.json|udiff_report.html">udiff 对比报告 (wt046_v6)</option>
+    </select>
+    <span class="gen-badge">从 narrative.json 通用渲染</span>
+  </div>
+</div>
+<div class="content" id="report-root">
+  <div class="loading">加载 narrative.json...</div>
+</div>
+
+<script>
+// ============================================================
+// 通用 NarrativeReport 渲染器 (增强版)
+// 增强1: ASCII 智能解析 (█░条形 / ├─树形 / →对比)
+// 增强2: callTree 从 report.html 提取注入
+// 增强3: 指标从 table visualAsset 提取画顶部指标行
+// ============================================================
+
+const RATING_META = {
+  excellent: { emoji: '🟢', label: '优秀' }, pass: { emoji: '🟢', label: '合格' },
+  weak: { emoji: '🟡', label: '弱' }, fail: { emoji: '🔴', label: '不合格' },
+};
+
+// ★ 增强3: 关键指标关键词 (通用, 非报告特定)
+const METRIC_KEYWORDS = ['fps', 'p50', 'p95', 'p99', '帧预算', '超预算', 'slowFrame', '帧数', '最差帧', 'frame budget'];
+
+// ---- 渲染入口 ----
+let currentReportHtml = null; // 缓存 report.html DOM
+
+async function renderReport(selectValue) {
+  const [jsonPath, htmlPath] = selectValue.split('|');
+  const root = document.getElementById('report-root');
+  root.innerHTML = '<div class="loading">加载 narrative.json...</div>';
+  currentReportHtml = null;
+
+  try {
+    const [narrativeRes, htmlRes] = await Promise.all([
+      fetch(jsonPath).then(r => r.json()),
+      fetch(htmlPath).then(r => r.text()).catch(() => null),
+    ]);
+    if (htmlRes) {
+      const parser = new DOMParser();
+      currentReportHtml = parser.parseFromString(htmlRes, 'text/html');
+    }
+    document.getElementById('run-title').textContent = narrativeRes.runId || '报告';
+    root.innerHTML = renderNarrativeReport(narrativeRes);
+  } catch (e) {
+    root.innerHTML = `<div class="loading">加载失败: ${e.message}</div>`;
+  }
+}
+
+// ---- 主渲染 ----
+function renderNarrativeReport(data) {
+  const parts = [];
+  // 评级
+  parts.push(renderRating(data.rating, data.overview));
+  // ★ 增强3: 指标行
+  const metrics = extractMetrics(data);
+  if (metrics.length) parts.push(renderStatRow(metrics));
+  // 核心结论
+  if (data.topConclusions?.length) {
+    parts.push('<div class="sec-label">核心结论</div>');
+    parts.push(data.topConclusions.map(c => renderConclusion(c)).join(''));
+  }
+  // 判定边界
+  if (data.judgmentBoundary) { parts.push('<div class="sec-label">判定边界 (诚实声明)</div>'); parts.push(renderBoundary(data.judgmentBoundary)); }
+  // 已排除
+  if (data.ruledOut?.length) { parts.push('<div class="sec-label">已排除项</div>'); parts.push(renderRuledOut(data.ruledOut)); }
+  // 主题分群
+  if (data.sections?.length) parts.push(data.sections.map(s => renderSection(s)).join(''));
+  // 优化优先级
+  if (data.prioritySummary?.length) { parts.push('<div class="sec-label">优化优先级</div>'); parts.push(renderPriority(data.prioritySummary)); }
+  // 页脚
+  const prov = data.narrativeProvenance;
+  parts.push(`<div class="footer">runId: ${esc(data.runId)} · 产出: ${esc(prov?.generatedBy)} · stage: ${esc(prov?.stage)} · 通用渲染器 (增强版)</div>`);
+  return parts.join('');
+}
+
+// ---- 评级 ----
+function renderRating(rating, overview) {
+  const meta = RATING_META[rating] || RATING_META.weak;
+  return `<div class="rating-bar ${rating}"><span class="emoji">${meta.emoji}</span><span class="label">${meta.label}</span><span class="overview">${esc(overview)}</span></div>`;
+}
+
+// ★ 增强3: 从 table visualAsset 提取关键指标 (只取单值, 过滤对比串)
+function extractMetrics(data) {
+  const metrics = [];
+  const seen = new Set();
+  const scanTable = (tbl) => {
+    if (!tbl?.headers || !tbl?.rows) return;
+    for (const row of tbl.rows) {
+      const key = String(row[0] || '').toLowerCase();
+      const matched = METRIC_KEYWORDS.some(kw => key.includes(kw.toLowerCase()));
+      if (matched && row.length >= 2) {
+        const label = row[0];
+        // 取最后一列的值
+        const val = String(row[row.length - 1] || '');
+        // ★ 过滤: 排除对比串 (含 → / 或多个空格分隔的数值)
+        const isComparison = /[→│]/.test(val) || /\b(base|cur|throttle)\b.*\b(base|cur|throttle)\b/i.test(val);
+        // 只取纯数值 (可选带 ms/%/GHz 单位)
+        const isNumeric = /^[\d.]+\s*(ms|%|GHz|MHz|fps)?$/i.test(val.trim());
+        if (!seen.has(label) && !isComparison && isNumeric) {
+          seen.add(label);
+          const numMatch = val.match(/^([\d.]+)/);
+          const num = numMatch ? parseFloat(numMatch[1]) : 0;
+          const isWarn = num > 20 || /slow|超预算/i.test(label);
+          metrics.push({ label, value: val.trim(), warn: isWarn });
+        }
+      }
+    }
+  };
+  for (const sec of data.sections || []) {
+    for (const item of sec.items || []) {
+      if (item.visualAsset?.type === 'table') scanTable(item.visualAsset.table);
+    }
+  }
+  return metrics.slice(0, 6);
+}
+
+function renderStatRow(metrics) {
+  return `<div class="stat-row">${metrics.map(m =>
+    `<div class="stat-card"><div class="t">${esc(m.label)}</div><div class="v">${esc(m.value)}</div></div>`
+  ).join('')}</div>`;
+}
+
+// ---- 核心结论 ----
+function renderConclusion(c) {
+  let body = `<div class="narrative">${esc(c.contribution)}</div>`;
+  if (c.asciiArt) body += renderAsciiEnhanced(c.asciiArt);
+  if (c.callTree) body += renderCallTreeRef(c.callTree, c.problem);
+  return `<div class="card"><div class="card-head"><span class="dot ${c.severity}"></span><span class="title">#${c.rank} ${esc(c.problem)}</span>${c.kind ? `<span class="kind">${esc(c.kind)}</span>` : ''}<span class="sev ${c.severity}">${c.severity}</span></div><div class="card-body">${body}</div></div>`;
+}
+
+// ---- 判定边界/已排除/优先级 (同之前) ----
+function renderBoundary(b) {
+  return `<div class="boundary"><div class="boundary-col can"><h4>✓ 能判定的</h4><ul>${(b.canJudge||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="boundary-col cannot"><h4>✗ 判不了的</h4><ul>${(b.cannotJudge||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
+}
+function renderRuledOut(items) {
+  return `<div class="ruled-out">${items.map(r=>`<div class="ruled-out-item"><span class="name">${esc(r.name)}</span><span class="why">${esc(r.why)}</span></div>`).join('')}</div>`;
+}
+function renderPriority(items) {
+  const CLS = { P0:'p0', P1:'p1', P2:'p2' };
+  return `<div class="card"><div class="card-body"><table class="pri-tbl"><thead><tr><th>优先级</th><th>动作</th><th>收益</th></tr></thead><tbody>${items.map(p=>`<tr><td><span class="pri-tag ${CLS[p.priority]||''}">${esc(p.priority)}</span></td><td>${esc(p.action)}</td><td>${esc(p.benefit)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ---- 主题分群 ----
+function renderSection(s) {
+  let parts = `<div class="sec-label">${esc(s.heading)}</div>`;
+  if (s.intro) parts += `<div class="narrative" style="color:#8b949e;font-size:12px">${esc(s.intro)}</div>`;
+  if (s.items?.length) parts += s.items.map(item => renderSectionItem(item)).join('');
+  return parts;
+}
+
+function renderSectionItem(item) {
+  let body = `<div class="narrative">${esc(item.narrative)}</div>`;
+  if (item.visualAsset) body += renderVisualAsset(item.visualAsset);
+  if (item.callTree) body += renderCallTreeRef(item.callTree, item.title);
+  if (item.recommendations?.length) body += renderRecommendations(item.recommendations);
+  return `<div class="card"><div class="card-head"><span class="dot ${item.severity||'info'}"></span><span class="title">${esc(item.title)}</span><span class="sev ${item.severity||'info'}">${item.severity||'info'}</span></div><div class="card-body">${body}</div></div>`;
+}
+
+// ---- VisualAsset 通用分发 ----
+function renderVisualAsset(va) {
+  if (!va) return '';
+  switch (va.type) {
+    case 'table': return renderTable(va);
+    case 'ascii': return renderAsciiEnhanced(va.ascii || va);
+    case 'matrix': return renderMatrix(va);
+    default: return `<div class="viz-box">未知 type: ${esc(va.type)}</div>`;
+  }
+}
+
+// table
+function renderTable(va) {
+  const t = va.table; if (!t?.headers) return '';
+  let headers = [...t.headers];
+  let rows = t.rows.map(r => [...r]);
+  // ★ 自动检测 "base X / cur Y / throttle Z" 格式, 拆成三列
+  if (headers.length === 2 && rows.some(r => /\b(base|cur|throttle)\b.*\/.*\b(base|cur|throttle)\b/i.test(String(r[1])))) {
+    headers = [headers[0], 'base', 'cur', 'throttle'];
+    rows = rows.map(r => {
+      const val = String(r[1] || '');
+      const parts = val.split('/').map(p => p.trim());
+      const get = (key) => { const m = parts.find(p => new RegExp(`\\b${key}\\b`, 'i').test(p)); return m ? m.replace(new RegExp(`\\b${key}\\b\\s*`, 'i'), '').trim() : '—'; };
+      return [r[0], get('base'), get('cur'), get('throttle')];
+    });
+  }
+  const isWarn = (v) => /[^0-9.]0$/.test(v) === false && parseFloat(v) > 20 && !isNaN(parseFloat(v));
+  return `<div class="viz-box"><div class="viz-title">${esc(va.title)}</div><table class="tbl"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map((c,i)=>`<td${i===row.length-1&&isWarn(String(c))?' style="color:#f44336;font-weight:600"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+// matrix
+function renderMatrix(va) {
+  const t = va.table; if (!t?.headers) return '';
+  const levelIdx = va.levelColumn ? t.headers.indexOf(va.levelColumn) : -1;
+  const LVL = { confirmed:'lvl-confirmed', likely:'lvl-likely', suspected:'lvl-suspected' };
+  return `<div class="viz-box"><div class="viz-title">${esc(va.title)}</div><table class="tbl"><thead><tr>${t.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${(t.rows||[]).map(row=>`<tr>${row.map((c,i)=>`<td class="${i===levelIdx?(LVL[c]||''):''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+// ★★★ 增强1: ASCII 块级智能解析 ★★★
+// 不再逐行解析, 而是先识别整个 ASCII 块的类型, 再统一渲染
+function renderAsciiEnhanced(aa) {
+  if (!aa) return '';
+  const content = aa.content || '';
+  const lines = content.split('\n').filter(l => l.length > 0);
+
+  // 检测块类型
+  const hasBarBlock = lines.some(l => /[█▓▒░]/.test(l));       // █░ 条形
+  const hasVBarBlock = lines.some(l => /▏/.test(l));            // ▏ 竖条
+  const hasTreeBlock = lines.some(l => /[├└]/.test(l) && /[─—]/.test(l)); // 树形
+  const hasArrowBlock = lines.some(l => /→/.test(l) && /\d/.test(l));    // 对比箭头
+  const hasPipeBlock = lines.some(l => l.includes('│') && /\d/.test(l)); // │ 分段
+
+  // 如果没有任何可解析模式, 降级为 <pre>
+  if (!hasBarBlock && !hasVBarBlock && !hasTreeBlock && !hasArrowBlock && !hasPipeBlock) {
+    return `<div class="viz-box">${aa.title?`<div class="viz-title">${esc(aa.title)}</div>`:''}<pre>${esc(content)}</pre>${aa.caption?`<div class="viz-caption">${esc(aa.caption)}</div>`:''}</div>`;
+  }
+
+  let html = `<div class="viz-box">${aa.title?`<div class="viz-title">${esc(aa.title)}</div>`:''}<div>`;
+
+  // 将行分组: 连续的可视化行归为一组, 非可视化行单独输出
+  const groups = [];
+  let currentGroup = [];
+  for (const line of lines) {
+    const isViz = /[█▓▒░▏├└→│]/.test(line) && /\d/.test(line);
+    if (isViz) {
+      currentGroup.push(line);
+    } else {
+      if (currentGroup.length) { groups.push({type:'viz', lines:currentGroup}); currentGroup = []; }
+      groups.push({type:'text', line});
+    }
+  }
+  if (currentGroup.length) groups.push({type:'viz', lines:currentGroup});
+
+  for (const g of groups) {
+    if (g.type === 'text') {
+      html += `<div style="font-size:12px;color:#8b949e;padding:4px 0">${esc(g.line)}</div>`;
+    } else {
+      // 可视化组: 检测具体类型并渲染
+      if (g.lines.some(l => /[├└]/.test(l))) {
+        html += renderTreeGroup(g.lines);
+      } else if (g.lines.some(l => /[█▓▒]/.test(l) && /[░]/.test(l))) {
+        html += renderStackedBarGroup(g.lines);
+      } else if (g.lines.some(l => /▏/.test(l))) {
+        html += renderVBarGroup(g.lines);
+      } else if (g.lines.some(l => /→/.test(l))) {
+        html += renderArrowGroup(g.lines);
+      } else if (g.lines.some(l => l.includes('│'))) {
+        html += renderPipeGroup(g.lines);
+      } else {
+        html += `<pre style="margin:0">${g.lines.map(esc).join('\n')}</pre>`;
+      }
+    }
+  }
+
+  html += '</div>';
+  if (aa.caption) html += `<div class="viz-caption">${esc(aa.caption)}</div>`;
+  return html + '</div>';
+}
+
+// █░ 堆叠条形组: "base ████████░░ Run 86.94% / Sleep 12.04%"
+function renderStackedBarGroup(lines) {
+  let html = '';
+  for (const line of lines) {
+    // 提取 label (bars 前面的文字)
+    const barStart = line.search(/[█▓▒░]/);
+    if (barStart < 0) { html += `<div style="font-size:12px;color:#8b949e;padding:2px 0">${esc(line.trim())}</div>`; continue; }
+    const label = line.substring(0, barStart).trim();
+    const barPart = line.substring(barStart);
+    // 分离 filled 和 empty
+    const filledMatch = barPart.match(/[█▓▒]+/);
+    const emptyMatch = barPart.match(/[░]+/);
+    const filledLen = filledMatch ? filledMatch[0].length : 0;
+    const emptyLen = emptyMatch ? emptyMatch[0].length : 0;
+    const totalLen = filledLen + emptyLen;
+    if (totalLen === 0) continue;
+    const filledPct = (filledLen / totalLen) * 100;
+    const emptyPct = (emptyLen / totalLen) * 100;
+    // 提取后面的数值 "Run 86.94% / Sleep 12.04%"
+    const afterBars = barPart.replace(/[█▓▒░\s]+/, '').trim();
+    const valMatch = afterBars.match(/Run\s*([\d.]+)%\s*\/\s*Sleep\s*([\d.]+)%/i);
+    if (valMatch) {
+      const runPct = parseFloat(valMatch[1]);
+      const sleepPct = parseFloat(valMatch[2]);
+      html += `<div class="bar-viz-row"><span class="bar-viz-label">${esc(label)}</span><div class="bar-viz-track"><div class="bar-viz-seg" style="width:${runPct}%;background:#4caf50">Run ${runPct}%</div><div class="bar-viz-seg" style="width:${sleepPct}%;background:#757575">Sleep ${sleepPct}%</div></div></div>`;
+    } else {
+      // 单值条形
+      const singleVal = afterBars.match(/([\d.]+)%?/);
+      const val = singleVal ? singleVal[1] : filledPct.toFixed(0);
+      const color = /sleep|wait/i.test(label) ? '#757575' : /run/i.test(label) ? '#4caf50' : '#2196f3';
+      html += `<div class="bar-viz-row"><span class="bar-viz-label">${esc(label)}</span><div class="bar-viz-track"><div class="bar-viz-seg" style="width:${filledPct}%;background:${color}">${filledPct>15?val:''}</div></div><span class="bar-viz-val">${esc(val)}</span></div>`;
+    }
+  }
+  return html;
+}
+
+// ▏ 竖条组: "base ▏ 0.9ms （远低于 vsync）"
+function renderVBarGroup(lines) {
+  // 先收集所有值, 算 max 做比例
+  const parsed = lines.map(line => {
+    const barStart = line.search(/▏/);
+    const label = barStart >= 0 ? line.substring(0, barStart).trim() : line.trim();
+    const barPart = barStart >= 0 ? line.substring(barStart) : '';
+    const barCount = (barPart.match(/▏/g) || []).length;
+    const valMatch = barPart.match(/([\d.]+)\s*(ms|GHz|MHz|%)/i);
+    const val = valMatch ? parseFloat(valMatch[1]) : barCount;
+    const unit = valMatch ? valMatch[2] : '';
+    const noteMatch = barPart.match(/[（(](.+?)[）)]/);
+    const note = noteMatch ? noteMatch[1] : '';
+    return { label, barCount, val, unit, note };
+  });
+  const maxVal = Math.max(...parsed.map(p => p.val), 1);
+  let html = '';
+  for (const p of parsed) {
+    const w = (p.val / maxVal) * 100;
+    const isOver = /超|撑爆|超过/.test(p.note);
+    const color = isOver ? '#f44336' : '#4caf50';
+    html += `<div class="bar-viz-row"><span class="bar-viz-label">${esc(p.label)}</span><div class="bar-viz-track"><div class="bar-viz-seg" style="width:${w}%;background:${color}">${p.val}${p.unit}</div></div>${p.note?`<span class="bar-viz-val" style="color:#8b949e;font-size:10px">${esc(p.note)}</span>`:'<span class="bar-viz-val"></span>'}</div>`;
+  }
+  return html;
+}
+
+// → 对比箭头组: "base 0.9ms → cur 5.8ms → throttle 17.8ms"
+function renderArrowGroup(lines) {
+  let html = '';
+  for (const line of lines) {
+    if (!line.includes('→')) {
+      html += `<div style="font-size:12px;color:#8b949e;padding:2px 0">${esc(line.trim())}</div>`;
+      continue;
+    }
+    const parts = line.split('→').map(p => p.trim());
+    const dataPoints = parts.map(p => {
+      const m = p.match(/(\S+)\s+([\d.]+)\s*(ms|%|GHz|MHz)?/i);
+      return m ? { label: m[1], val: parseFloat(m[2]), unit: m[3] || '' } : null;
+    }).filter(Boolean);
+    if (dataPoints.length < 2) {
+      html += `<div style="font-size:12px;color:#8b949e;padding:2px 0">${esc(line.trim())}</div>`;
+      continue;
+    }
+    const maxVal = Math.max(...dataPoints.map(d => d.val));
+    const colors = ['#4caf50', '#ff9800', '#f44336', '#9c27b0', '#2196f3'];
+    html += `<div class="bar-viz-row"><div class="bar-viz-track" style="min-width:200px">${dataPoints.map((d, i) => {
+      const w = (d.val / maxVal) * 100;
+      const c = colors[Math.min(i, colors.length-1)];
+      return `<div class="bar-viz-seg" style="width:${w}%;background:${c}40;border-left:2px solid ${c}" title="${d.label}: ${d.val}${d.unit}">${d.label} ${d.val}${d.unit}</div>`;
+    }).join('')}</div></div>`;
+  }
+  return html;
+}
+
+// │ 分段组: "大核 reach%: base 74.9% │ cur 75.6% │ throttle 59.2%"
+function renderPipeGroup(lines) {
+  let html = '';
+  for (const line of lines) {
+    if (!line.includes('│')) {
+      html += `<div style="font-size:12px;color:#8b949e;padding:2px 0">${esc(line.trim())}</div>`;
+      continue;
+    }
+    const parts = line.split('│').map(p => p.trim());
+    const colonIdx = parts[0].indexOf(':');
+    const label = colonIdx >= 0 ? parts[0].substring(0, colonIdx).trim() : parts[0].split(/\s+/).slice(0, 2).join(' ');
+    const segData = parts.map(p => {
+      const m = p.match(/(\S+)\s+([\d.]+)\s*(%|ms|GHz|MHz)?/i);
+      return m ? { sub: m[1], val: parseFloat(m[2]), unit: m[3] || '' } : null;
+    }).filter(Boolean);
+    if (segData.length < 2) continue;
+    const maxVal = Math.max(...segData.map(s => s.val));
+    const colors = ['#4caf50', '#ff9800', '#f44336'];
+    html += `<div class="bar-viz-row"><span class="bar-viz-label">${esc(label)}</span><div class="bar-viz-track">${segData.map((s, i) => {
+      const w = (s.val / maxVal) * 100;
+      const c = colors[Math.min(i, colors.length-1)];
+      return `<div class="bar-viz-seg" style="width:${w}%;background:${c}40;border-left:2px solid ${c}" title="${s.sub}: ${s.val}${s.unit}">${s.sub} ${s.val}${s.unit}</div>`;
+    }).join('')}</div></div>`;
+  }
+  return html;
+}
+
+// 树形组: ├─ └─ 缩进
+function renderTreeGroup(lines) {
+  let html = '';
+  for (const line of lines) {
+    if (!/[├└]/.test(line)) {
+      html += `<div style="font-size:12px;color:#8b949e;padding:2px 0">${esc(line.trim())}</div>`;
+      continue;
+    }
+    const depth = (line.match(/[│├└]/g) || []).length;
+    const content = line.replace(/[│├└─\s]+/, '').trim();
+    const msMatch = content.match(/([\d.]+)\s*ms/);
+    const pctMatch = content.match(/([\d.]+)\s*%/);
+    const ms = msMatch ? msMatch[1] : '';
+    const pct = pctMatch ? pctMatch[1] : '';
+    const name = content.replace(/\s*[\d.]+\s*(ms|%|×[\d.]+|🔴|📈|🟡).*/g, '').trim();
+    const w = pct ? parseFloat(pct) : (ms ? 30 : 10);
+    const isRedline = /🔴|红线|redline/i.test(content);
+    const cat = /render|URP|Submit|AfterRendering/i.test(name) ? 'render' : /wait|sleep|present/i.test(name) ? 'wait' : /update|core|lua|mgr/i.test(name) ? 'script' : 'default';
+    html += `<div class="tree-viz-row" style="padding-left:${depth * 18}px"><span class="tree-viz-label">${esc(name)}${isRedline?' <span style="color:#f44336">🔴</span>':''}</span><div class="tree-viz-track"><div class="tree-viz-fill ${cat}" style="width:${w}%"></div></div><span class="tree-viz-ms">${ms?ms+'ms':''}</span><span class="tree-viz-pct">${pct?pct+'%':''}</span></div>`;
+  }
+  return html;
+}
+
+// ★★★ 增强2: callTree 从 report.html 提取 ★★★
+function renderCallTreeRef(ct, contextTitle) {
+  if (!ct) return '';
+  // 尝试从 report.html 提取对应的 tree-section
+  if (currentReportHtml) {
+    // 在 report.html 里找包含 rootMarker 的 tree-section
+    const rootMarker = ct.rootMarker || '';
+    const treeSections = currentReportHtml.querySelectorAll('.tree-section');
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const ts of treeSections) {
+      const text = ts.textContent || '';
+      // 计算匹配度: rootMarker 出现在文本中
+      if (rootMarker && text.includes(rootMarker)) {
+        const score = rootMarker.length;
+        if (score > bestScore) { bestScore = score; bestMatch = ts; }
+      }
+      // 或用 contextTitle 匹配
+      if (contextTitle && text.includes(contextTitle.substring(0, 15))) {
+        if (text.length > bestScore) { bestScore = text.length; bestMatch = ts; }
+      }
+    }
+    if (bestMatch) {
+      return `<div class="calltree-section"><div class="ct-header">📊 调用树 (${esc(rootMarker || '匹配')})</div><div class="calltree-injected">${bestMatch.innerHTML}</div></div>`;
+    }
+  }
+  // 降级: 显示 note
+  return `<div class="calltree-section"><div class="ct-header">📊 调用树</div><div class="calltree-loading">${esc(ct.note || `rootMarker: ${ct.rootMarker || '—'} (未找到匹配的 tree-section)`)}</div></div>`;
+}
+
+// ---- 推荐建议 ----
+function renderRecommendations(recs) {
+  return `<div class="rec"><div class="rec-label">优化建议</div><ol>${recs.map(r=>`<li>${esc(r)}</li>`).join('')}</ol></div>`;
+}
+
+// ---- HTML 转义 ----
+function esc(s) { return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ---- 初始化 ----
+document.getElementById('src-select').addEventListener('change', e => renderReport(e.target.value));
+renderReport(document.getElementById('src-select').value);
+</script>
+</body>
+</html>

@@ -20,11 +20,11 @@
 
 按 ROI 排序的优化方向（详细见 §4）：
 
-<!-- LLM_FILL_ROI: 为下方每个红线模块各写 1 段「行动建议」（每段 80-150 字），引用知识库相应章节；禁用项目特化死字符；用模块表内出现的真实子函数名 -->
+1. **Wwise 音频中间件审视** —— Top-N #2（增量 +4,404 samples）：libAkSoundEngine 从 base 0.97% 全局暴涨至 cur 10.06% 全局，Wwise 工作线程独占 10.36% 全局，是本次最大单体增量来源。simpleperf 无法穿透 Wwise 黑盒定位具体事件，必须接入 **Wwise Profiler** 确认 Active Voices 数量，检查是否存在大量并发触发导致 Bus / MixBus 链路过深。首要优化点：Voice Limiting（每 Sound SFX 对象设置最大并发数）和 Distance Attenuation 控制（远距离音源提前截断），可参考知识库 §4.10。
 
-1. **Wwise 音频中间件审视** —— Top-N #2（增量 +4,404 samples）
-2. **MeshUI 子树优化** —— Top-N #3（增量 +931 samples）
-3. **行军线/路径刷新增量化** —— Top-N #6（增量 +224 samples）
+2. **MeshUI 子树优化** —— Top-N #3（增量 +931 samples）：cur 采集中 MUIControlManager.OnLateUpdate（360 self）和 MUILayout.Set3DPosition（332 self）是最重热点，总计占主线程 5.124%（超过 3% 红线）。核心原因是大量悬浮 UI 元素每帧全量做 3D 坐标变换和脏节点传播，伴随 `__memcpy`（0.32% global，来自 MeshUI 顶点上传路径）和 `GC_end_stubborn_change`（0.25% global，Enumerator.MoveNext 触发 Boehm GC 后台标记）。优化方向：对非活跃 UI 控件延迟刷新或跳帧刷新 MUILayoutRoot.UpdateDirtyNodes，减少 Enumerator 迭代分配（可参考知识库 §4.2.2）。
+
+3. **行军线/路径刷新增量化** —— Top-N #6（增量 +224 samples）：cur 采集新增 224 samples（base 为 0），主要集中在 OutsideLineCtrl.RefreshLine（69 self）和 OutSideViewArmyLineMgr.GetArmyLineID（65 self，Dictionary 线性查找）。ListExtensions.ToNativeList 分配（141 samples）表明每帧存在 NativeList 重建，可将其改为预分配复用；GetArmyLineID 可改用 HashMap 直查替代线性扫描；RefreshLine 中 CalculateVertexJob 已下沉 Job Worker，继续保持该并行化。可参考知识库 §4.1.3 相关业务管理器优化思路。
 
 ---
 
@@ -183,13 +183,18 @@ xychart-beta
 - Wwise 工作线程（comm = NativeThread, tid 19814）独占 base 1.06% → cur 10.36%（绝对 383 → 4,895 samples）
 - 库与线程两个口径同源（线程内绝大部分在 libAkSoundEngine 内）
 
-**业务含义**：<!-- LLM_FILL: 解读 base→cur 数字变化（用本节表格中的数据），结合采集场景 meta.sceneCur 说明音效负载激增的业务原因；60-120 字 -->
+**业务含义**：cur 采集中 libAkSoundEngine 绝对样本从 base 349 骤增至 4,753（+1,262%），Wwise 工作线程（tid 19814）全局占比从 1.06% 升至 10.36%，已独占一整条 CPU 核心。这表明 cur 场景下音效事件并发数量大幅提升——大量单位同时触发音效（如移动、战斗、UI 交互音等），导致 Wwise 混音链路处理量成倍膨胀。由于 Wwise 内部符号不可见，具体事件来源需用 Wwise Profiler 的 Voice Monitor 复核。
 
 **本源边界**：libAkSoundEngine 内部 symbol 多为 `[+offset]`（Wwise 未提供 debug 符号），simpleperf **无法定位 Wwise 内部哪个事件最重**，事件级归因必须用 **Wwise Profiler**。
 
-**调用入口**：<!-- LLM_FILL: 1 句话描述 Wwise 工作线程的执行入口 -->
+**调用入口**：Wwise 工作线程（comm=NativeThread, tid 19814）由 Wwise 内部音频调度器驱动，完全独立于 Unity PlayerLoop，其 99% 以上样本集中于 libAkSoundEngine.so 内部（symbol 为 `[+offset]` 黑盒）。
 
-**优化方向**：<!-- LLM_FILL: 3-5 条具体优化建议，参考知识库 §4.10 (Wwise 中间件)；不要用项目特化场景词，用 sceneCur 实际场景 -->
+**优化方向**：
+- 用 **Wwise Profiler → Voice Monitor** 确认 cur 场景下的 Active Voices 峰值数量，找出最高并发的 Sound SFX 对象。
+- 对触发频率高的音效（如单位移动音、技能音效等）设置 **Voice Limiting（Max Voices Per Object）**，将单事件并发数控制在合理范围内（通常 ≤ 8 voice/event）。
+- 检查 **MixBus 链深度**：Bus 层级过深会在每个 voice 触发时引入额外混音计算开销，建议扁平化 Bus 拓扑。
+- 对当前场景内距离较远的音源启用 **Distance Attenuation 截断**（超出 Max Attenuation 距离后完全停止 voice），减少不可听但仍在处理的 voice 数量。
+- 非关键音效（环境音、脚步声等）可降低采样率或改用 **SFX Multi-Channel 合并**，降低解码线程的 CPU 消耗。
 
 ### 4.4 动态 UI 子树（MeshUI 等）（Top-N #3，🔴）
 
@@ -209,13 +214,20 @@ xychart-beta
 | MeshUIManager.OnLateUpdate | 7 | 0.015% |  |
 | **模块 self 合计** | **931** | **1.97%** | — |
 
-**业务含义**：<!-- LLM_FILL: 基于上面表格的 base→cur 数字变化解读业务负载来源；用 meta.sceneCur 实际场景，禁用项目特化死字符；60-120 字 -->
+**业务含义**：MeshUI 模块在 base 采集中完全不存在（curAbs=0），cur 采集中新增 931 samples（全局 1.97%），触发主线程 5.124% 红线。负载集中在悬浮 UI 元素每帧的 3D 坐标更新路径：MUIControlManager.OnLateUpdate（360 self）负责遍历所有活跃控件并驱动 MUILayout.Set3DPosition（332 self）递归刷新位置，说明 cur 场景中屏幕上存在大量需要随实体位置同步的悬浮 MeshUI 控件，且这些控件均未做可见性裁剪或跳帧更新优化。
 
-**调用入口**：<!-- LLM_FILL: 用 §5.2 主线程调用树中实际出现的节点串成 1 句调用链描述 -->
+**调用入口**：主线程 ExecutePlayerLoop → Update.ScriptRunBehaviourUpdate → FrameworkCore_OnUpdate → MapManager_OnUpdate → BattleUIManager_OnUpdate → BattleUIManager.UpdateMUIPos → MUILayout.Set3DPosition（递归 8 层）；LateUpdate 路径则经 MeshUIManager.OnLateUpdate → MUIControlManager.OnLateUpdate 完成第二次遍历。
 
-**关联开销**：<!-- LLM_FILL: 列出本模块内的运行时反查开销（如 __memcpy / GC_end_stubborn_change 等），从 §10 反查表里取数；2-4 条 bullet -->
+**关联开销**：
+- `__memcpy` 0.32% global（路径：MUIDefaultRenderer → Mesh::SetVertexData → MUIRendererBase.FreshVertexAttribute，来自 MeshUI 顶点上传，见 §10.1）
+- `GC_end_stubborn_change` 0.25% global（路径：Enumerator.MoveNext → MUIControlManager.OnLateUpdate / MUILayout.Set3DPosition，Boehm GC 后台标记触发，见 §10.3）
 
-**优化方向**：<!-- LLM_FILL: 3-5 条优化建议，参考知识库相应章节（§4.2.2 MeshUI 或 §4.1.3 / §4.6 行军线相关业务管理器）；用模块表内出现的真实子函数名，禁止编造未出现的函数名 -->
+**优化方向**：
+- 对屏幕外或不可见的 MeshUI 控件跳过 MUILayout.Set3DPosition 调用，依赖相机视锥裁剪结果提前 early-out。
+- MUILayoutRoot.UpdateDirtyNodes 的脏标记可改为仅在位置真正发生变化时才触发，避免每帧全量传播。
+- Enumerator.MoveNext 所在迭代模式建议改用索引式 for 循环，消除 `GC_end_stubborn_change` 触发的 Boehm GC 后台标记开销。
+- MUIRendererBase.FreshVertexAttribute 中的 `__memcpy` 来自顶点数据 CPU→GPU 上传，可将静态 UI 内容标记为不可写，减少每帧顶点重建次数。
+- MUIControlManager.OnLateUpdate 和 MeshUIManager.OnLateUpdate 双路径存在部分重叠遍历，可合并成单次遍历，减少调用栈深度。
 
 ### 4.5 C# 业务管理器（行军/路径刷新等）（Top-N #6，🔴）
 
@@ -235,13 +247,20 @@ xychart-beta
 | OutSideViewArmyLineMgr.RefreshArmyLine | 4 | 0.008% |  |
 | **模块 self 合计** | **224** | **0.47%** | — |
 
-**业务含义**：<!-- LLM_FILL: 基于上面表格的 base→cur 数字变化解读业务负载来源；用 meta.sceneCur 实际场景，禁用项目特化死字符；60-120 字 -->
+**业务含义**：该模块在 base 采集中完全不存在（curAbs=0），cur 采集中新增 224 samples（全局 0.47%）。负载集中在 OutsideLineCtrl.RefreshLine（69 self）和 OutSideViewArmyLineMgr.GetArmyLineID（65 self）两个函数，说明 cur 场景中存在大量活跃移动单位，其路径/行军线需要每帧全量刷新网格和查询 ID。ListExtensions.ToNativeList（141 samples）显示每帧有 NativeList 分配开销，表明底层数据结构未做跨帧复用，这是当前开销偏高的直接原因。
 
-**调用入口**：<!-- LLM_FILL: 用 §5.2 主线程调用树中实际出现的节点串成 1 句调用链描述 -->
+**调用入口**：主线程 ExecutePlayerLoop → Update.ScriptRunBehaviourUpdate → FrameworkCore_OnUpdate → MapManager_OnUpdate → OutSideViewArmyLineMgr_OnUpdate → UpdateStraightMoveLine → OutsideLineCtrl.RefreshLine / RefreshArmyLine → GetArmyLineID。
 
-**关联开销**：<!-- LLM_FILL: 列出本模块内的运行时反查开销（如 __memcpy / GC_end_stubborn_change 等），从 §10 反查表里取数；2-4 条 bullet -->
+**关联开销**：
+- `ListExtensions.ToNativeList` 141 samples（路径：UpdateStraightMoveLine 下，每帧重建 NativeList，产生分配开销）
+- `EntityComponentStore.Exists` self 114（路径：MapEntityManager.GetEntity / EntityComponentStore.Exists，ECS 实体存在性检查频繁调用）
 
-**优化方向**：<!-- LLM_FILL: 3-5 条优化建议，参考知识库相应章节（§4.2.2 MeshUI 或 §4.1.3 / §4.6 行军线相关业务管理器）；用模块表内出现的真实子函数名，禁止编造未出现的函数名 -->
+**优化方向**：
+- OutSideViewArmyLineMgr.GetArmyLineID 当前为 Dictionary 线性扫描（65 self 占比高），改为直接以实体 ID 作为 Key 的 HashMap 查找，将 O(n) 降至 O(1)。
+- UpdateStraightMoveLine 中的 ListExtensions.ToNativeList 每帧重建，可将 NativeList 提升为成员变量并做跨帧复用，只在实体集合变化时才重建。
+- OutsideLineMesh.RefreshLineVertex（13 self）和 OutsideLineMesh.RefreshMesh（9 self）可引入增量更新机制——仅在顶点位置发生实质变化时才提交 Mesh 更新，静止单位的路径线跳过刷新。
+- CalculateVertexJob.CalculateVertex 和 SamplePathPointTerrainHeight 已下沉 Job Worker（IJobExtensions.JobStruct Execute），继续保持该并行化，不要将其提回主线程。
+- OutSideViewArmyLineMgr.RefreshArmyLine 可加入 per-frame 频率限制（如每 2 帧更新一次），在视觉效果可接受的前提下进一步降低主线程压力。
 
 ### 4.6 ECS Burst Job 工作量（Top-N #1，🟢 不需优化）
 
@@ -364,7 +383,7 @@ UnityMain (18,167 / 100% / cur 全局 38.47%)
 | MeshUI 子树 | 5.124 | 主线程% | >3% | 🔴 |  |
 | _其余 11 项探针_ | — | — | — | 🟢 | 全部 PASS |
 
-**注**：<!-- LLM_FILL: 1 句话解释 wrapper 高占比但 self 接近 0 的下钻关系（基于 §4 Top-N 与本表的实测模块），不要预设 BattleUIManager / OutSideViewArmyLineMgr 等模块名 -->
+**注**：表中仅 MeshUI 子树触发红线（5.124% 主线程），其余探针全部 PASS；需注意 MeshUI 探针对应的入口函数（MUIControlManager.OnLateUpdate 等）属于高 self 真热点，而其上层管理器节点（BattleUIManager_OnUpdate、MeshUIManager.OnLateUpdate 等）自身 self 接近 0，仅作为 wrapper 传递调用，真正的 CPU 开销在 §4.4 列出的叶子函数上。
 
 ---
 
@@ -536,7 +555,8 @@ cur 主要 Wait 路径（去重）：
 探针 `probe.lua.mtgc.worker`：0.014% global，🟢。
 
 **变化解读**：cur 下 Lua GC 工作线程负载相对 base **下降**（绝对 -141）。
-<!-- LLM_FILL: 用 1-2 句话解释 base→cur Lua GC 负载变化的可能业务原因（基于本次 Top-N 中 Lua / ECS Burst / 中间件等模块的相对增量），结合知识库 §4.9 多线程 GC 一节；不要预设场景词 -->
+
+cur 场景中 Lua VM 解释执行（luaV_execute）从 base 814 升至 1,196（+47%），但同时 `propagatemark`（GC 标记传播）从 base 329 **下降**至 215（-35%）——说明 cur 场景下 Lua 存活对象集合相对更稳定，GC 触发频率降低；叠加 ECS Burst Job 的大规模上线将部分原来由 Lua 管理的实体数据移至 C# 侧，间接减少了 Lua 堆的标记压力，符合知识库 §4.9 多线程 GC 中「Lua 对象分配减少 → MtGC 工作量随之下降」的规律。
 
 **对 Unity Profiler 用户的提示**：Profiler 中的 Lua GC 线程即 tid 19816；simpleperf 因 xLua 启动 C# GC 线程未设 comm 名，会显示为 `UnityMain`。Provider 已通过入口 symbol `LuaMultiThreadGC_LuaGCThreadProc` 反查 tid 完成消歧，与主线程严格分离，数据无漏采。
 
@@ -559,7 +579,7 @@ cur 主要 Wait 路径（去重）：
 | 0.21 | !!!0000!f56be09eb88f86833124f1df42e945!272cf717f5! < !!!0000!6b200851123c7898055 | 未分类 |
 | 0.13 | MUIRendererBase_FreshVertexAttribute_TisVector3_tDCF05E21F63 < MUIRendererBase_S | MeshUI 顶点上传 |
 
-**结论**：<!-- LLM_FILL: 1-2 句话总结 __memcpy 在哪些业务模块路径上集中（基于上面表格中的 Caller 链 + 业务模块列）；不预设业务模块名，必须从表格的 module 列里取真实模块名 -->
+**结论**：`__memcpy` 全局 3.14% 的开销主要集中在两类路径——其一是 RHI 线程上的 **RHI / GPU Instancing**（ConstantBuffersGLES::UpdateCB 和 InstancingBatcher::RenderInstancesWithBuffer，合计约 1.39% global），负责常量缓冲和 Instancing 数据从 CPU 写入驱动层；其二是主线程上的 **MeshUI 顶点上传**（Mesh::SetVertexData → MUIDefaultRenderer 和 MUIRendererBase.FreshVertexAttribute → MUILayout.Set3DPosition，合计约 0.45% global），每帧重建 MeshUI 控件顶点数据时触发。
 
 ### 10.2 `__ieee754_powf` 反查
 
@@ -571,7 +591,7 @@ cur 主要 Wait 路径（去重）：
 | 0.01 | UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-158 | UGUI 几何 Job |
 | 0.01 | UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-129 | UGUI 几何 Job |
 
-**结论**：<!-- LLM_FILL: 1 句话总结 powf 的主要 caller 来源；不预设 UGUI/MeshUI 等业务模块名，从上表里取 -->
+**结论**：`__ieee754_powf` 的全部 caller 均来自 **UGUI 几何 Job**（UI::UIGeometryJob），分布在 RHI 线程（0.49% global）和 Job Worker 线程（0.19% global），说明 powf 开销完全来源于 UGUI 几何批次重建 Job，与 MeshUI 或其他业务模块无关。
 
 ### 10.3 `GC_end_stubborn_change` 反查（Boehm GC 触发源）
 
@@ -579,7 +599,7 @@ cur 主要 Wait 路径（去重）：
 |---|---|
 | 0.25 | Enumerator_MoveNext_m04F91EFB2C11DE1ED39627288DD2CF031EC8819 < MUICont |
 
-**结论**：<!-- LLM_FILL: 1-2 句话总结 GC 后台标记的主要触发路径（基于上表 Caller 列），并给出 1 条优化建议；不要预设业务模块名 -->
+**结论**：`GC_end_stubborn_change` 触发的 Boehm GC 后台标记（全局 0.25%）几乎完全来自 **MeshUI** 模块（Enumerator.MoveNext → MUIControlManager.OnLateUpdate / MUILayout.Set3DPosition 调用链），建议将该路径内的迭代器模式改为索引式 for 循环，从根源消除每帧 Enumerator 对象分配，避免引发 Boehm GC 标记阶段干扰主线程。
 
 ### 10.4 `tlsf_memalign` / `ThreadsafeLinearAllocator::Allocate` 反查
 
@@ -588,7 +608,7 @@ cur 主要 Wait 路径（去重）：
 | MemoryManager::Allocate(unsigned long, unsigned long, MemLab < GfxDevi | RHI / GPU Instancing |
 | DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Al | URP / 命令缓冲 |
 
-**结论**：<!-- LLM_FILL: 1 句话总结 TLSF / ThreadsafeLinearAllocator 分配集中在哪些路径；从上表 module 列取名，不预设 -->
+**结论**：`tlsf_memalign` 和 `ThreadsafeLinearAllocator::Allocate` 的分配开销主要集中在两条路径——**URP / 命令缓冲**（RenderingCommandBuffer 构造、ScriptableRenderContext::ExecuteCommandBuffer，合计约 0.15% global）和 **RHI / GPU Instancing**（GfxDeviceClient::MapConstantBuffers → InstancingBatcher，0.12% global），建议检查每帧命令缓冲的创建销毁频率，考虑池化复用。
 
 ---
 
@@ -615,3 +635,16 @@ cur 主要 Wait 路径（去重）：
 7. Boehm GC 后台开销（区别于 GC.Collect STW）
 
 **工程化建议**：simpleperf + perfetto 互补采数；维护 binary_cache；对 wwise/meshUI 探针设 CI 回归阈值。
+
+---
+
+## §12 优化优先级汇总
+
+| 优先级 | 模块 | 预估收益 | 行动 |
+|---|---|---|---|
+| P0 🔴 | Wwise 音频中间件（+4,404 samples） | 消除 10% global 独占线程 | Wwise Profiler 确认 Active Voices；设置 Voice Limiting |
+| P1 🔴 | MeshUI 迭代位置刷新（+931 samples） | 降低主线程 5.124% → 目标 <3% | 可见性裁剪 + 脏标记 lazy 传播；消除 Enumerator 分配 |
+| P2 🔴 | 行军线/路径刷新（+224 samples） | 降低主线程约 0.5% | GetArmyLineID 改 HashMap；NativeList 跨帧复用 |
+| P3 🟡 | ECS Burst Job（+4,506 samples） | 已并行健康，持续监控 | CI 探针监控 Job Wait > 2% 红线 |
+
+> 以上行动建议均基于本次 simpleperf diff 数据（base 36,133 / cur 47,228 samples）。GPU 侧压力变化需另行采集 perfetto GPU counter 验证。

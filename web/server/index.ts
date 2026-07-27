@@ -23,6 +23,7 @@ import { triadTrendsRoutes } from './routes/triad-trends.js';
 import { runIngestRoutes } from './routes/run-ingest.js';
 import { reportPreviewRoutes } from './routes/report-preview.js';
 import { reportViewerRoutes } from './routes/report-viewer.js';
+import { collectRoutes } from './routes/collect.js';
 
 const config = getConfig();
 
@@ -68,6 +69,7 @@ async function start() {
     runIngestRoutes,
     reportPreviewRoutes,
     reportViewerRoutes,
+    collectRoutes,
   ];
   for (const routes of apiRouteGroups) {
     await app.register(routes, { prefix: '/api' });

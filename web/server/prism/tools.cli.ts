@@ -11,7 +11,10 @@
  *           querySchedState | queryAtraceSlices | queryFrameTimeline |
  *           queryCpuFreq | getPerfettoCallTree | correlateFrameSchedCpu |
  *           queryCallTreeSubtree | querySliceDeltas | queryOffCpuAttribution |
- *           queryGcAllocByModule
+ *           queryGcAllocByModule |
+ *           queryMarkersMultiState | queryFrameSummaryMultiState |
+ *           queryThreadsMultiState | queryAggCallTreeMultiState |
+ *           queryUnityMarkers
  *
  * SINGLE mode:
  *   node --import tsx server/prism/tools.cli.ts single '{"tool":"querySchedState","args":{"role":"cur"}}'
@@ -45,10 +48,13 @@ import {
   querySliceDeltas,
   queryOffCpuAttribution,
   queryGcAllocByModule,
+  queryMarkersMultiState,
+  queryFrameSummaryMultiState,
+  queryThreadsMultiState,
+  queryAggCallTreeMultiState,
+  queryUnityMarkers,
 } from './tools.js';
 import type Database from 'better-sqlite3';
-
-const DEFAULT_RUN_ID = 'unity-outside-stressmove';
 
 const PERFETTO_JSON_TOOL_NAMES = new Set([
   'querySchedState',
@@ -61,6 +67,15 @@ const PERFETTO_JSON_TOOL_NAMES = new Set([
   'querySliceDeltas',
   'queryOffCpuAttribution',
   'queryGcAllocByModule',
+]);
+
+// WT-044: Unity 多态/单态 JSON 工具集（不需要 sqlite，从 preprocess-result.json 读）
+const UNITY_JSON_TOOL_NAMES = new Set([
+  'queryMarkersMultiState',
+  'queryFrameSummaryMultiState',
+  'queryThreadsMultiState',
+  'queryAggCallTreeMultiState',
+  'queryUnityMarkers',
 ]);
 
 type ToolRunner = (db: Database.Database | null, args: Record<string, unknown>) => unknown;
@@ -86,6 +101,11 @@ const TOOLS: Record<string, ToolRunner> = {
   querySliceDeltas:      (db, a) => querySliceDeltas(db, a as unknown as Parameters<typeof querySliceDeltas>[1]),
   queryOffCpuAttribution:(db, a) => queryOffCpuAttribution(db, a as unknown as Parameters<typeof queryOffCpuAttribution>[1]),
   queryGcAllocByModule:  (db, a) => queryGcAllocByModule(db, a as unknown as Parameters<typeof queryGcAllocByModule>[1]),
+  queryMarkersMultiState:      (db, a) => queryMarkersMultiState(db, a as unknown as Parameters<typeof queryMarkersMultiState>[1]),
+  queryFrameSummaryMultiState:(db, a) => queryFrameSummaryMultiState(db, a as unknown as Parameters<typeof queryFrameSummaryMultiState>[1]),
+  queryThreadsMultiState:      (db, a) => queryThreadsMultiState(db, a as unknown as Parameters<typeof queryThreadsMultiState>[1]),
+  queryAggCallTreeMultiState:  (db, a) => queryAggCallTreeMultiState(db, a as unknown as Parameters<typeof queryAggCallTreeMultiState>[1]),
+  queryUnityMarkers:           (db, a) => queryUnityMarkers(db, a as unknown as Parameters<typeof queryUnityMarkers>[1]),
 };
 
 function usage(): never {
@@ -105,11 +125,23 @@ if (!toolName || (toolName !== 'single' && toolName !== 'batch' && !TOOLS[toolNa
 }
 
 function toolNeedsDb(name: string): boolean {
-  return !PERFETTO_JSON_TOOL_NAMES.has(name);
+  // perfetto JSON 工具 + unity 多态/单态 JSON 工具都不需要 sqlite
+  return !PERFETTO_JSON_TOOL_NAMES.has(name) && !UNITY_JSON_TOOL_NAMES.has(name);
 }
 
 function injectDefaultRunId(name: string, args: Record<string, unknown>): void {
-  if (toolNeedsDb(name) && !args.runId) args.runId = DEFAULT_RUN_ID;
+  if (args.runId) return; // 已有 runId，不覆盖
+  // 从环境变量读取（由 explore-service / narrative-service 在 spawn CLI 时注入）
+  const envRunId = process.env.PRISM_RUN_ID;
+  if (envRunId) {
+    args.runId = envRunId;
+    return;
+  }
+  // 没有环境变量 → 报错，杜绝硬编码默认值
+  throw new Error(
+    `Tool "${name}" requires runId but none provided. ` +
+    `Pass runId in args or set PRISM_RUN_ID env var.`
+  );
 }
 
 // ── SINGLE mode: JSON envelope { tool, args } ───────────────────────

@@ -1,0 +1,172 @@
+web/server/prism/explore-service.ts | 18 ++++++++--
+ web/server/prism/explore.cli.ts     | 12 +++++--
+ web/server/prism/narrative-types.ts | 70 +++++++++++++++++++++++++++++++++++++
+ web/server/prism/tools.ts           |  6 ++++
+ 4 files changed, 100 insertions(+), 6 deletions(-)
+
+--- Changes ---
+
+web/server/prism/explore-service.ts
+  @@ -258,6 +258,13 @@ export interface RunPrismExploreOpts {
+  +  /**
+  +   * 数据源标识（DR-44 B1）：决定加载哪个 explore-prompt。
+  +   * - 'unity'（默认）：prompts/explore-prompt.txt（Unity marker 工具集）
+  +   * - 'perfetto'：prompts/perfetto-explore-prompt.txt（Perfetto JSON 工具集）
+  +   * 路由到不同 prompt，但复用同一份 spawn CLI + ledger + verify 逻辑。
+  +   */
+  +  source?: 'unity' | 'perfetto';
+   }
+   
+   // ─────────────────────────────────────────────
+  @@ -657,7 +664,8 @@ export function verifyFindings(
+  -  const runId = opts.runId ?? 'unity-outside-stressmove';
+  +  const source = opts.source ?? 'unity';
+  +  const runId = opts.runId ?? (source === 'perfetto' ? 'bk26b-perfetto-triad' : 'unity-outside-stressmove');
+     const config = getConfig();
+   
+     // Resolve repo root robustly: this file is at web/server/prism/, so ../../.. from __dirname
+  @@ -680,8 +688,12 @@ export async function runPrismExplore(
+  -  // Read and substitute prompt template
+  -  const promptTemplatePath = path.join(__dirname, 'prompts', 'explore-prompt.txt');
+  +  // Read and substitute prompt template.
+  +  // DR-44 B1: 按 source 路由到不同 explore-prompt（unity / perfetto），复用同一份 spawn+ledger+verify 逻辑。
+  +  const promptFileName = source === 'perfetto'
+  +    ? 'perfetto-explore-prompt.txt'
+  +    : 'explore-prompt.txt';
+  +  const promptTemplatePath = path.join(__dirname, 'prompts', promptFileName);
+     if (!fs.existsSync(promptTemplatePath)) {
+       return makeError(runId, ledgerPath, findingsPath, `Prompt template not found: ${promptTemplatePath}`);
+     }
+  +15 -3
+
+web/server/prism/explore.cli.ts
+  @@ -2,7 +2,7 @@
+  - *   npx tsx web/server/prism/explore.cli.ts [--run-id <id>] [--provider codebuddy|claude] [--out <dir>]
+  + *   npx tsx web/server/prism/explore.cli.ts [--source unity|perfetto] [--run-id <id>] [--provider codebuddy|claude] [--out <dir>]
+    *
+    * Prints a concise summary to stdout:
+    *   - Number of findings and dataRequests
+  @@ -32,9 +32,10 @@ function hasFlag(flag: string): boolean {
+  -    'Usage: npx tsx web/server/prism/explore.cli.ts [--run-id <id>] [--provider codebuddy|claude] [--out <dir>] [--timeout-ms <ms>]\n' +
+  +    'Usage: npx tsx web/server/prism/explore.cli.ts [--source unity|perfetto] [--run-id <id>] [--provider codebuddy|claude] [--out <dir>] [--timeout-ms <ms>]\n' +
+       '\n' +
+  -    '  --run-id      Run ID to explore (default: unity-outside-stressmove)\n' +
+  +    '  --source      Data source: unity | perfetto (default: unity). Routes to different explore-prompt.\n' +
+  +    '  --run-id      Run ID to explore (default: by source — unity: unity-outside-stressmove, perfetto: bk26b-perfetto-triad)\n' +
+       '  --provider    CLI provider: codebuddy | claude (default: codebuddy)\n' +
+       '  --out         Output directory (default: web/data/prism-out/<runId>)\n' +
+       '  --timeout-ms  Timeout in milliseconds (default: 1200000 = 20 min)\n',
+  @@ -42,6 +43,10 @@ if (hasFlag('--help') || hasFlag('-h')) {
+  +const sourceRaw = getFlag('--source');
+  +const source = (sourceRaw === 'unity' || sourceRaw === 'perfetto')
+  +  ? sourceRaw
+  +  : undefined;
+   const runId = getFlag('--run-id');
+   const providerRaw = getFlag('--provider');
+   const outputDir = getFlag('--out');
+  @@ -61,6 +66,7 @@ console.log('[explore.cli] Starting Prism Phase-A exploration...');
+  +    source,
+       runId,
+       outputDir,
+       cliProvider: provider,
+  +9 -3
+
+web/server/prism/narrative-types.ts
+  @@ -32,6 +32,40 @@ export interface NarrativeItem {
+  +  /**
+  +   * 可选：视觉资产（表格/ASCII 图/矩阵），LLM 按 {{REPORT_TEMPLATE}} 注入的模板填。
+  +   * render 按类型渲染：table→<table>、ascii→<pre>、matrix→<table> 按 levelColumn 上色。
+  +   * 这是通用的（不硬编码 perfetto 特有概念），任何数据源的模板都能用。
+  +   */
+  +  visualAsset?: VisualAsset;
+  +}
+  +
+  +/**
+  + * 视觉资产（WT-036：从顶层字段移到 section item 里，去 perfetto 特有字段污染通用 schema）。
+  + * LLM 按 {{REPORT_TEMPLATE}} 注入的模板填，render 按 type 渲染。
+  + * 通用类型：table（表格）/ ascii（ASCII 图）/ matrix（矩阵，按 levelColumn 上色）。
+  + */
+  +export interface VisualAsset {
+  +  /** 资产类型：table（表格）/ ascii（ASCII 图）/ matrix（矩阵） */
+  +  type: 'table' | 'ascii' | 'matrix';
+  +  /** 资产标题（如"采集元信息"/"多线程宏观"/"降频判定矩阵"） */
+  +  title: string;
+  +  /** 表格数据（type=table 或 type=matrix 时填） */
+  +  table?: {
+  +    headers: string[];      // 表头
+  +    rows: string[][];       // 数据行
+  +  };
+  +  /** ASCII 图内容（type=ascii 时填） */
+  +  ascii?: {
+  +    content: string;         // ASCII 图文本
+  +    caption?: string;        // 图下方解读
+  +  };
+  +  /**
+  +   * 矩阵的判定档列名（type=matrix 时可选）。
+  +   * 指向 table.headers 里某一列的列名，该列的值是 confirmed/likely/suspected（或类似三档），
+  +   * render 按值上色。如 perfetto 降频矩阵的 levelColumn="判定档"。
+  +   */
+  +  levelColumn?: string;
+   }
+   
+   /** 一个主题群（如"稳态开销群"/"偶发尖峰群"/"工作线程"/"已排除"） */
+  @@ -43,6 +77,20 @@ export interface NarrativeSection {
+  +/**
+  + * narrative.json 产出溯源（DR-44 A2）。
+  + * render-html 校验 generatedBy==='LLM'，非 LLM 拒绝渲染——
+  + * 机制上拦截脚本拼的 narrative.json 绕过 narrative LLM 阶段。
+  + */
+  +export interface NarrativeProvenance {
+  +  /** 产出阶段标记，固定 'narrative-llm' */
+  +  stage: 'narrative-llm';
+  +  /** narrative-prompt 版本（如 'narrative-prompt.txt@v1'） */
+  +  promptVersion: string;
+  +  /** 产出方标记——必须是 'LLM'。脚本拼的 = 'script'，会被 render-html 拒绝渲染 */
+  +  generatedBy: 'LLM' | 'script';
+  +}
+  +
+   /** 三维定性维度：热点主要属于哪一类（可多选） */
+   export type HotspotDimension = 'absoluteCost' | 'shareHigh' | 'outlier';
+   
+  @@ -60,6 +108,25 @@ export interface TopConclusionRow {
+  +  /** 可选：挂在这条结论下的调用树（render 重查渲染，复用 NarrativeItem.callTree 的 CallTreeRef 类型） */
+  +  callTree?: CallTreeRef;
+  +  /** 可选：挂在这条结论下的 ASCII 图（LLM 产文本，render 原样渲染在 <pre> 块，复用 AsciiArt 类型） */
+  +  asciiArt?: AsciiArt;
+  +}
+  +
+  +// ─────────────────────── 视觉资产类型（WT-036：通用，不硬编码 perfetto 特有概念） ───────────────────────
+  +// 视觉资产现在挂在 NarrativeItem.visualAsset 字段里（不再有顶层 metaInfo/threadOverview 等 perfetto 特有字段）。
+  +// render 层只做呈现（画表格/原样渲染 ASCII），不写判定逻辑（判定在 explore LLM）。
+  +// 详见上方 VisualAsset 接口。
+  +
+  +/** ASCII 图资产（通用——任何数据源的核心结论/section item 都可能挂 ASCII 图） */
+  +export interface AsciiArt {
+  +  /** 图标题（如"主线程三态状态分布"） */
+  +  title: string;
+  +  /** ASCII 图文本（原样渲染在等宽 <pre> 块，不转义换行） */
+  +  content: string;
+  +  /** 可选：图下方的一句话解读 */
+  +  caption?: string;
+   }
+   
+   export interface NarrativeReport {
+  @@ -78,4 +145,7 @@ export interface NarrativeReport {
+  +
+  +  /** 产出溯源（DR-44 A2）：render-html 校验 generatedBy==='LLM'，非 LLM 拒绝渲染 */
+  +  narrativeProvenance: NarrativeProvenance;
+   }
+  +70 -0
+
+web/server/prism/tools.ts
+  @@ -987,6 +987,12 @@ export interface DrillDownNode {
+  +  /** WT-033: 红线触发标注（如 "单次 1.50ms 触红线" / "临近红线"），来自 findings 的 explore LLM 判定 */
+  +  redlineFlag?: string;
+  +  /** WT-033: 涨幅倍数标注（如 "×4.2"），多态从 querySliceDeltas 来 */
+  +  foldChange?: string;
+  +  /** WT-033: 严重度标签，render 据此上色（critical=触红线/high=临近/medium=占比显著/low/healthy） */
+  +  severityTag?: 'critical' | 'high' | 'medium' | 'low' | 'healthy';
+   }
+   
+   export interface DrillDownLeaf {
+  +6 -0

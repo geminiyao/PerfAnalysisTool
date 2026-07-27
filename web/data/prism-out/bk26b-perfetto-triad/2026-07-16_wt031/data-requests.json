@@ -1,0 +1,30 @@
+[
+  {
+    "id": "thermal.sidecar.missing",
+    "want": "采集前后的 CPU/GPU 温度（thermal_before/after.txt）和 scaling_max_freq，用于把降频判定从 likely 升到 confirmed",
+    "rationale": "queryCpuFreq 的 evidence 提示有 thermal/cpuinfo sidecar，但实际文件不存在；bigCoreReach 59.2% + per-CPU max 下降已构成 likely 降频，但缺温度 Δ≥5°C 或采后≥75°C 的第二信号，无法确认",
+    "suspectedAxis": "freq",
+    "closestExistingTool": "queryCpuFreq"
+  },
+  {
+    "id": "gc.per-marker.bytes",
+    "want": "per-marker 的 GC 分配字节数（不是次数），用于判断哪个模块分配的内存量最大",
+    "rationale": "queryGcAllocByModule 只给分配次数（URP.BeforeRendering 130次/帧），不给字节数；次数多不等于字节多，需要字节数才能定位真正的内存压力源",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryGcAllocByModule"
+  },
+  {
+    "id": "urp.afterrendering.breakdown",
+    "want": "URP.AfterRendering 内部各 Pass（PostProcessing/Blit/FinalBlit 等）的耗时 marker，用于拆分 41% 的渲染等待集中在哪个 Pass",
+    "rationale": "throttle 态 URP.AfterRendering 占 41.36% 但是叶子节点（无子 marker），无法判断是后处理、Blit 还是 FinalBlit 在贵；需要 URP Pass 级 instrumentation",
+    "suspectedAxis": "render",
+    "closestExistingTool": "queryCallTreeSubtree"
+  },
+  {
+    "id": "outsideview.armyline.breakdown",
+    "want": "OutSideViewArmyLineMgr 内部子模块的耗时 marker（顶点计算/线段更新/渲染提交），用于拆分 5.19% 的行军线管理成本",
+    "rationale": "OutSideViewArmyLineMgr 是 cur→throttle 唯一涨幅显著的业务模块（×1.37），但是叶子节点无子 marker；callTree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)，但无法判断顶点计算占多少比例",
+    "suspectedAxis": "script",
+    "closestExistingTool": "queryCallTreeSubtree"
+  }
+]

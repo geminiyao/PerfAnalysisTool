@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.814Z
 source: unity-cpu
 title: "AOE 已知问题：士兵 VT Crash"
 tags: ["aoe","已知问题","vt","crash","攻城"]
+dataSource: unity
 ---
 
 **触发场景**：攻城战。

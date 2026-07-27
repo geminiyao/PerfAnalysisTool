@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.965Z
 source: unity-cpu
 title: "AOE DOTS/部队优化经验"
 tags: ["aoe","dots","部队","job同步点","优化"]
+dataSource: unity
 ---
 
 - ParallelJob 弹道特效上限控制逻辑重构。

@@ -1,0 +1,50 @@
+=== PlayerLoop stages: base vs stressmove ===
+stage                                   base%main    sm%main   base abs     sm abs  abs delta
+
+=== Lua load ===
+  base: libxlua 5.33% + IL2CPP-XLua桥接 0.008% = Lua总 5.34%
+    samples: 1930
+  stressmove: libxlua 5.27% + IL2CPP-XLua桥接 0.023% = Lua总 5.29%
+    samples: 2499
+
+=== JobWorker thread balance ===
+  base: {'Thread_129': 2.496, 'Thread_136': 2.47, 'Thread_135': 2.457, 'Thread_158': 2.445}
+    max-min delta: 2.1%
+  stressmove: {'Thread_129': 4.101, 'Thread_135': 3.998, 'Thread_136': 3.947, 'Thread_158': 3.935}
+    max-min delta: 4.2%
+
+=== UnityMain WaitForJobGroupID detection ===
+  base: UnityMain Wait subtree pct (in-thread)=0.627%  global=0.280%
+    0.059%: ...tSystem_BeforeOnUpdate_m740F21A8BF2B13632D2606100>JobHandle_CombineDependenciesInternalPtr_mAB612F594D4A47AABC
+    0.059%: ...ombineDependenciesInternalPtr_mAB612F594D4A47AABC>JobHandle_CUSTOM_CombineDependenciesInternalPtr_Injected(voi
+    0.033%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+    0.075%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+    0.058%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+    0.078%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+  stressmove: UnityMain Wait subtree pct (in-thread)=1.856%  global=0.714%
+    0.362%: ...tem_UpdateNewParents_mD634270BBE222F898FF7877AA84A8>JobHandle_CUSTOM_ScheduleBatchedJobsAndComplete(JobFence&)
+    0.362%: ..._CUSTOM_ScheduleBatchedJobsAndComplete(JobFence&)>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+    0.065%: ...tSystem_BeforeOnUpdate_m740F21A8BF2B13632D2606100>JobHandle_CombineDependenciesInternalPtr_mAB612F594D4A47AABC
+    0.058%: ...ombineDependenciesInternalPtr_mAB612F594D4A47AABC>JobHandle_CUSTOM_CombineDependenciesInternalPtr_Injected(voi
+    0.052%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+    0.215%: ...angeDispatch::GetAndClearChangedAsBatchedJobs_Int>JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo
+
+=== Stressmove rendering pass subtree ===
+  thread   5.34% / global  2.05% | DrawRendererPass_Execute_mB0274D80F03D124D6C9974755F3AB0577DBC698B
+  thread   5.25% / global  2.02% | ShadowPass_ProcessShadow_mD0A47E6866E4FE4B38464BCBA494F9B3DA482526
+  thread   3.95% / global  1.52% | PlanarShadow_RenderShadow_m98C8B2E2CA705C8B691F39900DB640BAB96A90FA
+  thread   3.71% / global  1.43% | BloomPass_Execute_m0312AF6819191E5F184EC21C6C5A6FC0DB4D23DB
+  thread   3.25% / global  1.25% | MobileBaseRenderer_Setup_m6E6265C867AED4C31038CB3899C51118BA64AD5F
+  thread   2.61% / global  1.00% | RenderPipelineUtil_DrawFoliageInstanceRenderers_mA11238423A6454C15AB798B39122D8AD8FE284F4
+  thread   2.61% / global  1.00% | MobileBaseRenderer_SetupGameCamera_m9744481881CAD40F9064FEB347ADD20B6BCC4ABC
+  thread   2.13% / global  0.82% | MobileBaseRenderer_SetupRenderPassFromFeatures_m35ACB1DF6787A019AB289C3ADE164BD53A3094D8
+  thread   1.59% / global  0.61% | InitPlayerLoopCallbacks()::EarlyUpdateUpdateTextureStreamingManagerRegistrator::Forward() 
+  thread   1.59% / global  0.61% | TextureStreamingManager::Update()
+  thread   1.34% / global  0.52% | OutsideForestRenderer_DrawInternal_m0AC8B52485901DD383727955BB4FAE982A122A72
+  thread   1.24% / global  0.48% | InitPlayerLoopCallbacks()::PostLateUpdatePlayerUpdateCanvasesRegistrator::Forward() (.llvm
+  thread   1.15% / global  0.44% | PlanarShadow_BeginProcessShadow_m1102AE9035077A70E9034FC30B068E1EA8FFA603
+  thread   0.66% / global  0.25% | InitPlayerLoopCallbacks()::PostLateUpdatePlayerEmitCanvasGeometryRegistrator::Forward() (.
+  thread   0.33% / global  0.13% | MobileBaseRenderer_SetupCommonProperties_m2FB2243CCEACA054655C80F93F9AE1955A11DF14
+  thread   0.29% / global  0.11% | AoETextureStreamingManager_AddInstancedMaterial_m2BD8A65C31A2B20B3ED846C49246D1A6E26540B3
+  thread   0.18% / global  0.07% | AoETextureStreamingManager_AddTexture_mD0665E7D0E4545EE5432B6A48C8502CC624154AC
+  thread   0.03% / global  0.01% | AoETextureStreamingManager_ClearInstancedMaterialInfo_m4D227F4130B64BA69474549F342F3BA696F

@@ -1,0 +1,2876 @@
+{
+  "base": {
+    "label": "base",
+    "totalSamples": 36133,
+    "durationSec": 20
+  },
+  "cur": {
+    "label": "cur",
+    "totalSamples": 47228,
+    "durationSec": 20
+  },
+  "systemPressure": {
+    "totalSamplesDeltaPct": 30.7
+  },
+  "libs": [
+    {
+      "baseAbs": 513,
+      "curAbs": 5019,
+      "basePct": 1.42,
+      "curPct": 10.628,
+      "absDelta": 4506,
+      "absDeltaPct": 878.4,
+      "excessVsSystem": 847.7,
+      "lib": "lib_burst_generated"
+    },
+    {
+      "baseAbs": 349,
+      "curAbs": 4753,
+      "basePct": 0.967,
+      "curPct": 10.063,
+      "absDelta": 4404,
+      "absDeltaPct": 1261.9,
+      "excessVsSystem": 1231.2,
+      "lib": "libAkSoundEngine"
+    },
+    {
+      "baseAbs": 7080,
+      "curAbs": 8682,
+      "basePct": 19.595,
+      "curPct": 18.383,
+      "absDelta": 1602,
+      "absDeltaPct": 22.6,
+      "excessVsSystem": -8.1,
+      "lib": "libil2cpp"
+    },
+    {
+      "baseAbs": 2828,
+      "curAbs": 3459,
+      "basePct": 7.828,
+      "curPct": 7.325,
+      "absDelta": 631,
+      "absDeltaPct": 22.3,
+      "excessVsSystem": -8.4,
+      "lib": "libc"
+    },
+    {
+      "baseAbs": 1927,
+      "curAbs": 2488,
+      "basePct": 5.332,
+      "curPct": 5.269,
+      "absDelta": 561,
+      "absDeltaPct": 29.1,
+      "excessVsSystem": -1.6,
+      "lib": "libxlua"
+    },
+    {
+      "baseAbs": 15092,
+      "curAbs": 14664,
+      "basePct": 41.768,
+      "curPct": 31.05,
+      "absDelta": -428,
+      "absDeltaPct": -2.8,
+      "excessVsSystem": -33.5,
+      "lib": "libunity"
+    },
+    {
+      "baseAbs": 927,
+      "curAbs": 683,
+      "basePct": 2.565,
+      "curPct": 1.447,
+      "absDelta": -244,
+      "absDeltaPct": -26.3,
+      "excessVsSystem": -57.0,
+      "lib": "libart"
+    },
+    {
+      "baseAbs": 188,
+      "curAbs": 0,
+      "basePct": 0.519,
+      "curPct": 0,
+      "absDelta": -188,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "lib": "libgui"
+    },
+    {
+      "baseAbs": 214,
+      "curAbs": 400,
+      "basePct": 0.593,
+      "curPct": 0.846,
+      "absDelta": 186,
+      "absDeltaPct": 86.9,
+      "excessVsSystem": 56.2,
+      "lib": "linker64"
+    },
+    {
+      "baseAbs": 743,
+      "curAbs": 604,
+      "basePct": 2.055,
+      "curPct": 1.279,
+      "absDelta": -139,
+      "absDeltaPct": -18.7,
+      "excessVsSystem": -49.4,
+      "lib": "libm"
+    },
+    {
+      "baseAbs": 443,
+      "curAbs": 405,
+      "basePct": 1.226,
+      "curPct": 0.858,
+      "absDelta": -38,
+      "absDeltaPct": -8.6,
+      "excessVsSystem": -39.3,
+      "lib": "JIT_cache"
+    },
+    {
+      "baseAbs": 4775,
+      "curAbs": 4802,
+      "basePct": 13.214,
+      "curPct": 10.168,
+      "absDelta": 27,
+      "absDeltaPct": 0.6,
+      "excessVsSystem": -30.1,
+      "lib": "libGLESv2_adreno"
+    }
+  ],
+  "threads": [
+    {
+      "baseAbs": 383,
+      "curAbs": 4895,
+      "basePct": 1.059,
+      "curPct": 10.364,
+      "absDelta": 4512,
+      "absDeltaPct": 1178.1,
+      "excessVsSystem": 1147.4,
+      "key": "NativeThread#19814",
+      "identity": "wwise_worker",
+      "comm": "NativeThread",
+      "tid": 19814
+    },
+    {
+      "baseAbs": 16122,
+      "curAbs": 18167,
+      "basePct": 44.618,
+      "curPct": 38.467,
+      "absDelta": 2045,
+      "absDeltaPct": 12.7,
+      "excessVsSystem": -18.0,
+      "key": "UnityMain#19292",
+      "identity": "main_thread",
+      "comm": "UnityMain",
+      "tid": 19292
+    },
+    {
+      "baseAbs": 902,
+      "curAbs": 1937,
+      "basePct": 2.496,
+      "curPct": 4.101,
+      "absDelta": 1035,
+      "absDeltaPct": 114.7,
+      "excessVsSystem": 84.0,
+      "key": "Thread-129#19461",
+      "identity": "job_worker",
+      "comm": "Thread-129",
+      "tid": 19461
+    },
+    {
+      "baseAbs": 888,
+      "curAbs": 1888,
+      "basePct": 2.457,
+      "curPct": 3.998,
+      "absDelta": 1000,
+      "absDeltaPct": 112.6,
+      "excessVsSystem": 81.9,
+      "key": "Thread-135#19460",
+      "identity": "job_worker",
+      "comm": "Thread-135",
+      "tid": 19460
+    },
+    {
+      "baseAbs": 883,
+      "curAbs": 1858,
+      "basePct": 2.445,
+      "curPct": 3.935,
+      "absDelta": 975,
+      "absDeltaPct": 110.4,
+      "excessVsSystem": 79.7,
+      "key": "Thread-158#19459",
+      "identity": "job_worker",
+      "comm": "Thread-158",
+      "tid": 19459
+    },
+    {
+      "baseAbs": 892,
+      "curAbs": 1864,
+      "basePct": 2.47,
+      "curPct": 3.947,
+      "absDelta": 972,
+      "absDeltaPct": 109.0,
+      "excessVsSystem": 78.3,
+      "key": "Thread-136#19462",
+      "identity": "job_worker",
+      "comm": "Thread-136",
+      "tid": 19462
+    },
+    {
+      "baseAbs": 9714,
+      "curAbs": 10017,
+      "basePct": 26.883,
+      "curPct": 21.211,
+      "absDelta": 303,
+      "absDeltaPct": 3.1,
+      "excessVsSystem": -27.6,
+      "key": "Thread-102#19471",
+      "identity": "rhi_thread",
+      "comm": "Thread-102",
+      "tid": 19471
+    },
+    {
+      "baseAbs": 338,
+      "curAbs": 555,
+      "basePct": 0.935,
+      "curPct": 1.175,
+      "absDelta": 217,
+      "absDeltaPct": 64.2,
+      "excessVsSystem": 33.5,
+      "key": "AAudio_1#19826",
+      "identity": "audio_callback",
+      "comm": "AAudio_1",
+      "tid": 19826
+    },
+    {
+      "baseAbs": 4221,
+      "curAbs": 4410,
+      "basePct": 11.683,
+      "curPct": 9.338,
+      "absDelta": 189,
+      "absDeltaPct": 4.5,
+      "excessVsSystem": -26.2,
+      "key": "UnityGfxRenderS#19472",
+      "identity": "render_thread",
+      "comm": "UnityGfxRenderS",
+      "tid": 19472
+    },
+    {
+      "baseAbs": 461,
+      "curAbs": 320,
+      "basePct": 1.275,
+      "curPct": 0.678,
+      "absDelta": -141,
+      "absDeltaPct": -30.6,
+      "excessVsSystem": -61.3,
+      "key": "UnityMain#19816",
+      "identity": "main_subthread",
+      "comm": "UnityMain",
+      "tid": 19816
+    },
+    {
+      "baseAbs": 97,
+      "curAbs": 0,
+      "basePct": 0.269,
+      "curPct": 0,
+      "absDelta": -97,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Binder:19184_7#19435",
+      "identity": "unidentified",
+      "comm": "Binder:19184_7",
+      "tid": 19435
+    },
+    {
+      "baseAbs": 57,
+      "curAbs": 0,
+      "basePct": 0.159,
+      "curPct": 0,
+      "absDelta": -57,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Binder:19184_3#19215",
+      "identity": "unidentified",
+      "comm": "Binder:19184_3",
+      "tid": 19215
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 38,
+      "basePct": 0,
+      "curPct": 0.081,
+      "absDelta": 38,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Thread-102#20993",
+      "identity": "unidentified",
+      "comm": "Thread-102",
+      "tid": 20993
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 32,
+      "basePct": 0,
+      "curPct": 0.067,
+      "absDelta": 32,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Binder:19184_6#19380",
+      "identity": "unidentified",
+      "comm": "Binder:19184_6",
+      "tid": 19380
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 23,
+      "basePct": 0,
+      "curPct": 0.049,
+      "absDelta": 23,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Binder:19184_2#19202",
+      "identity": "unidentified",
+      "comm": "Binder:19184_2",
+      "tid": 19202
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 23,
+      "basePct": 0,
+      "curPct": 0.048,
+      "absDelta": 23,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Binder:19184_1#19201",
+      "identity": "unidentified",
+      "comm": "Binder:19184_1",
+      "tid": 19201
+    },
+    {
+      "baseAbs": 500,
+      "curAbs": 520,
+      "basePct": 1.385,
+      "curPct": 1.1,
+      "absDelta": 20,
+      "absDeltaPct": 4.0,
+      "excessVsSystem": -26.7,
+      "key": "UnityChoreograp#19559",
+      "identity": "choreographer",
+      "comm": "UnityChoreograp",
+      "tid": 19559
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 12,
+      "basePct": 0,
+      "curPct": 0.026,
+      "absDelta": 12,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Binder:19184_4#19221",
+      "identity": "unidentified",
+      "comm": "Binder:19184_4",
+      "tid": 19221
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 12,
+      "basePct": 0,
+      "curPct": 0.025,
+      "absDelta": 12,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Binder:19184_8#20876",
+      "identity": "unidentified",
+      "comm": "Binder:19184_8",
+      "tid": 20876
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 11,
+      "basePct": 0,
+      "curPct": 0.023,
+      "absDelta": 11,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "HeapTaskDaemon#19196",
+      "identity": "unidentified",
+      "comm": "HeapTaskDaemon",
+      "tid": 19196
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 0,
+      "basePct": 0.024,
+      "curPct": 0,
+      "absDelta": -9,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Thread-396#19463",
+      "identity": "job_worker",
+      "comm": "Thread-396",
+      "tid": 19463
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 0,
+      "basePct": 0.024,
+      "curPct": 0,
+      "absDelta": -9,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Thread-244#19464",
+      "identity": "job_worker",
+      "comm": "Thread-244",
+      "tid": 19464
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 9,
+      "basePct": 0,
+      "curPct": 0.018,
+      "absDelta": 9,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Thread-401#19463",
+      "identity": "job_worker",
+      "comm": "Thread-401",
+      "tid": 19463
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 0,
+      "basePct": 0.024,
+      "curPct": 0,
+      "absDelta": -9,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Thread-230#19467",
+      "identity": "job_worker",
+      "comm": "Thread-230",
+      "tid": 19467
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 8,
+      "basePct": 0,
+      "curPct": 0.017,
+      "absDelta": 8,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Thread-399#19467",
+      "identity": "job_worker",
+      "comm": "Thread-399",
+      "tid": 19467
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 8,
+      "basePct": 0,
+      "curPct": 0.017,
+      "absDelta": 8,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Thread-400#19464",
+      "identity": "job_worker",
+      "comm": "Thread-400",
+      "tid": 19464
+    },
+    {
+      "baseAbs": 119,
+      "curAbs": 126,
+      "basePct": 0.328,
+      "curPct": 0.266,
+      "absDelta": 7,
+      "absDeltaPct": 5.9,
+      "excessVsSystem": -24.8,
+      "key": "com.tencent.aoeyz#19184",
+      "identity": "unidentified",
+      "comm": "com.tencent.aoeyz",
+      "tid": 19184
+    },
+    {
+      "baseAbs": 123,
+      "curAbs": 117,
+      "basePct": 0.34,
+      "curPct": 0.248,
+      "absDelta": -6,
+      "absDeltaPct": -4.9,
+      "excessVsSystem": -35.6,
+      "key": "Thread-9#19316",
+      "identity": "unidentified",
+      "comm": "Thread-9",
+      "tid": 19316
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 5,
+      "basePct": 0,
+      "curPct": 0.01,
+      "absDelta": 5,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "key": "Profile Saver#19220",
+      "identity": "unidentified",
+      "comm": "Profile Saver",
+      "tid": 19220
+    },
+    {
+      "baseAbs": 13,
+      "curAbs": 8,
+      "basePct": 0.035,
+      "curPct": 0.018,
+      "absDelta": -5,
+      "absDeltaPct": -38.5,
+      "excessVsSystem": -69.2,
+      "key": "APM-Routine#19507",
+      "identity": "unidentified",
+      "comm": "APM-Routine",
+      "tid": 19507
+    },
+    {
+      "baseAbs": 5,
+      "curAbs": 0,
+      "basePct": 0.015,
+      "curPct": 0,
+      "absDelta": -5,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "key": "Thread-10#19317",
+      "identity": "unidentified",
+      "comm": "Thread-10",
+      "tid": 19317
+    },
+    {
+      "baseAbs": 69,
+      "curAbs": 64,
+      "basePct": 0.19,
+      "curPct": 0.135,
+      "absDelta": -5,
+      "absDeltaPct": -7.2,
+      "excessVsSystem": -37.9,
+      "key": "UnityMain#19830",
+      "identity": "main_subthread",
+      "comm": "UnityMain",
+      "tid": 19830
+    },
+    {
+      "baseAbs": 13,
+      "curAbs": 18,
+      "basePct": 0.037,
+      "curPct": 0.037,
+      "absDelta": 5,
+      "absDeltaPct": 38.5,
+      "excessVsSystem": 7.8,
+      "key": "Thread-233#19584",
+      "identity": "unidentified",
+      "comm": "Thread-233",
+      "tid": 19584
+    },
+    {
+      "baseAbs": 23,
+      "curAbs": 19,
+      "basePct": 0.063,
+      "curPct": 0.039,
+      "absDelta": -4,
+      "absDeltaPct": -17.4,
+      "excessVsSystem": -48.1,
+      "key": "Thread-226#19585",
+      "identity": "unidentified",
+      "comm": "Thread-226",
+      "tid": 19585
+    },
+    {
+      "baseAbs": 10,
+      "curAbs": 6,
+      "basePct": 0.027,
+      "curPct": 0.014,
+      "absDelta": -4,
+      "absDeltaPct": -40.0,
+      "excessVsSystem": -70.7,
+      "key": "GVoiceUtil#20300",
+      "identity": "unidentified",
+      "comm": "GVoiceUtil",
+      "tid": 20300
+    },
+    {
+      "baseAbs": 12,
+      "curAbs": 8,
+      "basePct": 0.033,
+      "curPct": 0.016,
+      "absDelta": -4,
+      "absDeltaPct": -33.3,
+      "excessVsSystem": -64.0,
+      "key": "m.tencent.aoeyz#19351",
+      "identity": "unidentified",
+      "comm": "m.tencent.aoeyz",
+      "tid": 19351
+    },
+    {
+      "baseAbs": 25,
+      "curAbs": 22,
+      "basePct": 0.068,
+      "curPct": 0.046,
+      "absDelta": -3,
+      "absDeltaPct": -12.0,
+      "excessVsSystem": -42.7,
+      "key": "Thread-250#20292",
+      "identity": "unidentified",
+      "comm": "Thread-250",
+      "tid": 20292
+    },
+    {
+      "baseAbs": 13,
+      "curAbs": 10,
+      "basePct": 0.037,
+      "curPct": 0.02,
+      "absDelta": -3,
+      "absDeltaPct": -23.1,
+      "excessVsSystem": -53.8,
+      "key": "AsyncWorker#19580",
+      "identity": "unidentified",
+      "comm": "AsyncWorker",
+      "tid": 19580
+    },
+    {
+      "baseAbs": 44,
+      "curAbs": 41,
+      "basePct": 0.123,
+      "curPct": 0.086,
+      "absDelta": -3,
+      "absDeltaPct": -6.8,
+      "excessVsSystem": -37.5,
+      "key": "Audio Mixer Thr#19476",
+      "identity": "unidentified",
+      "comm": "Audio Mixer Thr",
+      "tid": 19476
+    },
+    {
+      "baseAbs": 4,
+      "curAbs": 6,
+      "basePct": 0.012,
+      "curPct": 0.012,
+      "absDelta": 2,
+      "absDeltaPct": 50.0,
+      "excessVsSystem": 19.3,
+      "key": "gem-scheduled-0#20307",
+      "identity": "unidentified",
+      "comm": "gem-scheduled-0",
+      "tid": 20307
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 8,
+      "basePct": 0.024,
+      "curPct": 0.018,
+      "absDelta": -1,
+      "absDeltaPct": -11.1,
+      "excessVsSystem": -41.8,
+      "key": "Thread-94#19468",
+      "identity": "job_worker",
+      "comm": "Thread-94",
+      "tid": 19468
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 8,
+      "basePct": 0.024,
+      "curPct": 0.017,
+      "absDelta": -1,
+      "absDeltaPct": -11.1,
+      "excessVsSystem": -41.8,
+      "key": "Thread-398#19465",
+      "identity": "job_worker",
+      "comm": "Thread-398",
+      "tid": 19465
+    },
+    {
+      "baseAbs": 7,
+      "curAbs": 6,
+      "basePct": 0.02,
+      "curPct": 0.012,
+      "absDelta": -1,
+      "absDeltaPct": -14.3,
+      "excessVsSystem": -45.0,
+      "key": "UnityMain#19828",
+      "identity": "main_subthread",
+      "comm": "UnityMain",
+      "tid": 19828
+    },
+    {
+      "baseAbs": 9,
+      "curAbs": 8,
+      "basePct": 0.024,
+      "curPct": 0.017,
+      "absDelta": -1,
+      "absDeltaPct": -11.1,
+      "excessVsSystem": -41.8,
+      "key": "Thread-397#19466",
+      "identity": "job_worker",
+      "comm": "Thread-397",
+      "tid": 19466
+    },
+    {
+      "baseAbs": 30,
+      "curAbs": 29,
+      "basePct": 0.082,
+      "curPct": 0.062,
+      "absDelta": -1,
+      "absDeltaPct": -3.3,
+      "excessVsSystem": -34.0,
+      "key": "GVoiceRender#20302",
+      "identity": "unidentified",
+      "comm": "GVoiceRender",
+      "tid": 20302
+    },
+    {
+      "baseAbs": 21,
+      "curAbs": 20,
+      "basePct": 0.059,
+      "curPct": 0.042,
+      "absDelta": -1,
+      "absDeltaPct": -4.8,
+      "excessVsSystem": -35.5,
+      "key": "GVoiceCapture#20301",
+      "identity": "unidentified",
+      "comm": "GVoiceCapture",
+      "tid": 20301
+    },
+    {
+      "baseAbs": 12,
+      "curAbs": 13,
+      "basePct": 0.034,
+      "curPct": 0.028,
+      "absDelta": 1,
+      "absDeltaPct": 8.3,
+      "excessVsSystem": -22.4,
+      "key": "Audio Stream Th#19477",
+      "identity": "unidentified",
+      "comm": "Audio Stream Th",
+      "tid": 19477
+    },
+    {
+      "baseAbs": 67,
+      "curAbs": 67,
+      "basePct": 0.185,
+      "curPct": 0.142,
+      "absDelta": 0,
+      "absDeltaPct": 0.0,
+      "excessVsSystem": -30.7,
+      "key": "AudioTrack#19475",
+      "identity": "audio_callback",
+      "comm": "AudioTrack",
+      "tid": 19475
+    },
+    {
+      "baseAbs": 13,
+      "curAbs": 13,
+      "basePct": 0.037,
+      "curPct": 0.027,
+      "absDelta": 0,
+      "absDeltaPct": 0.0,
+      "excessVsSystem": -30.7,
+      "key": "GThreadManager#19586",
+      "identity": "unidentified",
+      "comm": "GThreadManager",
+      "tid": 19586
+    }
+  ],
+  "playerLoopStages": [
+    {
+      "baseAbs": 2624,
+      "curAbs": 5948,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 3324,
+      "absDeltaPct": 126.7,
+      "excessVsSystem": 96.0,
+      "label": "Update.ScriptRunBehaviourUpdate",
+      "totalPctMain": 32.74
+    },
+    {
+      "baseAbs": 1673,
+      "curAbs": 2730,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 1057,
+      "absDeltaPct": 63.2,
+      "excessVsSystem": 32.5,
+      "label": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+      "totalPctMain": 15.025
+    },
+    {
+      "baseAbs": 450,
+      "curAbs": 289,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -161,
+      "absDeltaPct": -35.8,
+      "excessVsSystem": -66.5,
+      "label": "EarlyUpdate.UpdateTextureStreamingManager",
+      "totalPctMain": 1.59
+    },
+    {
+      "baseAbs": 26,
+      "curAbs": 166,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 140,
+      "absDeltaPct": 538.5,
+      "excessVsSystem": 507.8,
+      "label": "PreLateUpdate.ParticleSystemBeginUpdateAll",
+      "totalPctMain": 0.914
+    },
+    {
+      "baseAbs": 500,
+      "curAbs": 377,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -123,
+      "absDeltaPct": -24.6,
+      "excessVsSystem": -55.3,
+      "label": "PostLateUpdate.PlayerSendFrameComplete",
+      "totalPctMain": 2.076
+    },
+    {
+      "baseAbs": 326,
+      "curAbs": 224,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -102,
+      "absDeltaPct": -31.3,
+      "excessVsSystem": -62.0,
+      "label": "PostLateUpdate.PlayerUpdateCanvases",
+      "totalPctMain": 1.236
+    },
+    {
+      "baseAbs": 45,
+      "curAbs": 137,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 92,
+      "absDeltaPct": 204.4,
+      "excessVsSystem": 173.7,
+      "label": "PreLateUpdate.LegacyAnimationUpdate",
+      "totalPctMain": 0.752
+    },
+    {
+      "baseAbs": 39,
+      "curAbs": 100,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 61,
+      "absDeltaPct": 156.4,
+      "excessVsSystem": 125.7,
+      "label": "PostLateUpdate.UpdateAllRenderers",
+      "totalPctMain": 0.55
+    },
+    {
+      "baseAbs": 172,
+      "curAbs": 120,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -52,
+      "absDeltaPct": -30.2,
+      "excessVsSystem": -60.9,
+      "label": "PostLateUpdate.PlayerEmitCanvasGeometry",
+      "totalPctMain": 0.66
+    },
+    {
+      "baseAbs": 165,
+      "curAbs": 122,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -43,
+      "absDeltaPct": -26.1,
+      "excessVsSystem": -56.8,
+      "label": "PostLateUpdate.FinishFrameRendering",
+      "totalPctMain": 0.672
+    },
+    {
+      "baseAbs": 4,
+      "curAbs": 43,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 39,
+      "absDeltaPct": 975.0,
+      "excessVsSystem": 944.3,
+      "label": "PostLateUpdate.ParticleSystemEndUpdateAll",
+      "totalPctMain": 0.239
+    },
+    {
+      "baseAbs": 61,
+      "curAbs": 64,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 3,
+      "absDeltaPct": 4.9,
+      "excessVsSystem": -25.8,
+      "label": "PreUpdate.SendMouseEvents",
+      "totalPctMain": 0.352
+    }
+  ],
+  "businessModules": [
+    {
+      "baseAbs": 475,
+      "curAbs": 4928,
+      "basePct": 1.314,
+      "curPct": 10.435,
+      "absDelta": 4453,
+      "absDeltaPct": 937.5,
+      "excessVsSystem": 906.8,
+      "id": "ecs_burst",
+      "display": "ECS Burst Job (lib_burst_generated)",
+      "children": []
+    },
+    {
+      "baseAbs": 344,
+      "curAbs": 4738,
+      "basePct": 0.951,
+      "curPct": 10.033,
+      "absDelta": 4394,
+      "absDeltaPct": 1277.3,
+      "excessVsSystem": 1246.6,
+      "id": "wwise",
+      "display": "音频中间件 libAkSoundEngine",
+      "children": []
+    },
+    {
+      "baseAbs": 1303,
+      "curAbs": 0,
+      "basePct": 3.607,
+      "curPct": 0,
+      "absDelta": -1303,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_libxlua.so[+1648e8]",
+      "display": "libxlua.so[+1648e8] 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 34,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -34,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "libxlua.so[+1613ec]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 1024,
+      "basePct": 0,
+      "curPct": 2.168,
+      "absDelta": 1024,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_libxlua.so[+1648e8]",
+      "display": "libxlua.so[+1648e8] 子树（含 4 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 86,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 86,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libxlua.so[+1613ec]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 51,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 51,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+5919be0]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 40,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 40,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libxlua.so[+1613a8]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 31,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 31,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+3ce37d4]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 853,
+      "basePct": 0,
+      "curPct": 1.807,
+      "absDelta": 853,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_libil2cpp.so[+5848750]",
+      "display": "libil2cpp.so[+5848750] 子树（含 5 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 41,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 41,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+5848724]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 39,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 39,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+5ce68e4]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 35,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 35,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+5ce6884]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 676,
+      "basePct": 0,
+      "curPct": 1.432,
+      "absDelta": 676,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_libil2cpp.so[+2c5c030]",
+      "display": "libil2cpp.so[+2c5c030] 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 35,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 35,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+56abe30]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 34,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 34,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+2c5f5c0]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 545,
+      "basePct": 0,
+      "curPct": 1.155,
+      "absDelta": 545,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_libil2cpp.so[+2d3e7bc]",
+      "display": "libil2cpp.so[+2d3e7bc] 子树（含 3 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 357,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 357,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+591dcfc]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 32,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 32,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+22b0fa0]"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 32,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 32,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+22d9a9c]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 516,
+      "curAbs": 0,
+      "basePct": 1.429,
+      "curPct": 0,
+      "absDelta": -516,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_TranscriptScriptableRenderContext::CopyFrom(ScriptableRender",
+      "display": "TranscriptScriptableRenderContext::CopyFrom(ScriptableRenderContext*) 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 151,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -151,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "TranscriptRenderingCommandBuffer::TranscriptRenderingCommandBuffer(MemLabelId const&, RenderingCommandBuffer const&, TranscriptScriptableRenderContext*)"
+        },
+        {
+          "baseAbs": 66,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -66,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "CullResults::GetOrCreateTranscriptRendererScene(TranscriptScriptableRenderContext*) const"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 467,
+      "basePct": 0,
+      "curPct": 0.988,
+      "absDelta": 467,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_TranscriptScriptableRenderContext::CopyFrom(ScriptableRender",
+      "display": "TranscriptScriptableRenderContext::CopyFrom(ScriptableRenderContext*) 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 126,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 126,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "TranscriptRenderingCommandBuffer::TranscriptRenderingCommandBuffer(MemLabelId const&, RenderingCommandBuffer const&, TranscriptScriptableRenderContext*)"
+        },
+        {
+          "baseAbs": 0,
+          "curAbs": 77,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 77,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "CullResults::GetOrCreateTranscriptRendererScene(TranscriptScriptableRenderContext*) const"
+        }
+      ]
+    },
+    {
+      "baseAbs": 369,
+      "curAbs": 0,
+      "basePct": 1.02,
+      "curPct": 0,
+      "absDelta": -369,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_libil2cpp.so[+5982530]",
+      "display": "libil2cpp.so[+5982530] 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 38,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -38,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "libil2cpp.so[+2292300]"
+        },
+        {
+          "baseAbs": 37,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -37,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "libil2cpp.so[+5984f24]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 367,
+      "curAbs": 0,
+      "basePct": 1.015,
+      "curPct": 0,
+      "absDelta": -367,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_TranscriptScriptableRenderContext::CleanUp()",
+      "display": "TranscriptScriptableRenderContext::CleanUp() 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 31,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -31,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "TranscriptRenderingCommandBuffer::CleanupCommandBuffer()"
+        },
+        {
+          "baseAbs": 31,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -31,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "DrawUtil::CleanupDrawMeshTranscriptRenderNode(TranscriptRenderNode&)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 1787,
+      "curAbs": 2020,
+      "basePct": 4.945,
+      "curPct": 4.278,
+      "absDelta": 233,
+      "absDeltaPct": 13.0,
+      "excessVsSystem": -17.7,
+      "id": "auto_render_thread_TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans",
+      "display": "TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(TranscriptCamera*, ShaderPassContext&, TranscriptRenderNodeQueue&, unsigned int, dynamic_array<std::__ndk1::pair<ShaderLab::FastPropertyName, RenderTexture*>, 0ul>*, RenderTexture*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 116,
+          "curAbs": 102,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -14,
+          "absDeltaPct": -12.1,
+          "excessVsSystem": -42.8,
+          "function": "TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(TranscriptCamera*, ShaderPassContext&, TranscriptRenderNodeQueue&, unsigned int, dynamic_array<std::__ndk1::pair<ShaderLab::FastPropertyName, RenderTexture*>, 0ul>*, RenderTexture*)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 5138,
+      "curAbs": 5353,
+      "basePct": 14.219,
+      "curPct": 11.335,
+      "absDelta": 215,
+      "absDeltaPct": 4.2,
+      "excessVsSystem": -26.5,
+      "id": "auto_rhi_thread_GfxDeviceGLES::DrawBuffers(GfxBuffer*, unsigned int, GfxBuff",
+      "display": "GfxDeviceGLES::DrawBuffers(GfxBuffer*, unsigned int, GfxBuffer* const*, unsigned int const*, int, DrawBuffersRange const*, int, VertexDeclaration*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 206,
+          "curAbs": 217,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 11,
+          "absDeltaPct": 5.3,
+          "excessVsSystem": -25.4,
+          "function": "GfxDeviceGLES::DrawBuffers(GfxBuffer*, unsigned int, GfxBuffer* const*, unsigned int const*, int, DrawBuffersRange const*, int, VertexDeclaration*)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 963,
+      "curAbs": 750,
+      "basePct": 2.665,
+      "curPct": 1.588,
+      "absDelta": -213,
+      "absDeltaPct": -22.1,
+      "excessVsSystem": -52.8,
+      "id": "auto_rhi_thread_GfxDeviceGLES::SetShadersThreadable(GpuProgram**, GpuProgram",
+      "display": "GfxDeviceGLES::SetShadersThreadable(GpuProgram**, GpuProgramParameters const**, unsigned char const* const*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 95,
+          "curAbs": 89,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -6,
+          "absDeltaPct": -6.3,
+          "excessVsSystem": -37.0,
+          "function": "GfxDeviceGLES::SetShadersThreadable(GpuProgram**, GpuProgramParameters const**, unsigned char const* const*)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 187,
+      "basePct": 0,
+      "curPct": 0.397,
+      "absDelta": 187,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_render_thread_TranscriptRenderingCommandBuffer::~TranscriptRenderingComman",
+      "display": "TranscriptRenderingCommandBuffer::~TranscriptRenderingCommandBuffer() 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 45,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 45,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "TranscriptRenderingCommandBuffer::CleanupCommandBuffer()"
+        }
+      ]
+    },
+    {
+      "baseAbs": 1391,
+      "curAbs": 1567,
+      "basePct": 3.851,
+      "curPct": 3.317,
+      "absDelta": 176,
+      "absDeltaPct": 12.7,
+      "excessVsSystem": -18.0,
+      "id": "lua_vm_lib",
+      "display": "Lua VM (libxlua)",
+      "children": []
+    },
+    {
+      "baseAbs": 171,
+      "curAbs": 0,
+      "basePct": 0.472,
+      "curPct": 0,
+      "absDelta": -171,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_RendererUpdateManager::UpdateSingleRenderer(Renderer&, Rende",
+      "display": "RendererUpdateManager::UpdateSingleRenderer(Renderer&, RendererScene&) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 171,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -171,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "RendererUpdateManager::UpdateSingleRenderer(Renderer&, RendererScene&)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 165,
+      "curAbs": 0,
+      "basePct": 0.458,
+      "curPct": 0,
+      "absDelta": -165,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_UI::Canvas::EmitWorldGeometry(Camera*, unsigned short&, bool",
+      "display": "UI::Canvas::EmitWorldGeometry(Camera*, unsigned short&, bool) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 32,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -32,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "UI::Canvas::EmitWorldGeometry(Camera*, unsigned short&, bool)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 160,
+      "basePct": 0,
+      "curPct": 0.34,
+      "absDelta": 160,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_MeshScripting::SetSubMesh(Mesh*, int, MeshScripting::SubMesh",
+      "display": "MeshScripting::SetSubMesh(Mesh*, int, MeshScripting::SubMeshDesc const&, MeshUpdateFlags, ScriptingExceptionPtr*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 47,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 47,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "Mesh::UpdateSubMeshVertexRange(int)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 232,
+      "curAbs": 385,
+      "basePct": 0.643,
+      "curPct": 0.816,
+      "absDelta": 153,
+      "absDeltaPct": 65.9,
+      "excessVsSystem": 35.2,
+      "id": "auto_rhi_thread_JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWo",
+      "display": "JobQueue::WaitForJobGroupID(JobGroupID, JobQueue::JobQueueWorkStealMode) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 91,
+          "curAbs": 152,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 61,
+          "absDeltaPct": 67.0,
+          "excessVsSystem": 36.3,
+          "function": "UI::UIGeometryJob(UI::UIGeometryJobData*)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 146,
+      "basePct": 0,
+      "curPct": 0.31,
+      "absDelta": 146,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "auto_main_thread_libil2cpp.so[+2d3e6c4]",
+      "display": "libil2cpp.so[+2d3e6c4] 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 0,
+          "curAbs": 36,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 36,
+          "absDeltaPct": "NEW",
+          "excessVsSystem": "NEW",
+          "function": "libil2cpp.so[+584e944]"
+        }
+      ]
+    },
+    {
+      "baseAbs": 103,
+      "curAbs": 0,
+      "basePct": 0.286,
+      "curPct": 0,
+      "absDelta": -103,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_jni::CheckForExceptionError(_JNIEnv*)",
+      "display": "jni::CheckForExceptionError(_JNIEnv*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 53,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -53,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "art::(anonymous namespace)::CheckJNI::ExceptionCheck(_JNIEnv*) (.llvm.1997360075115295902)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 89,
+      "curAbs": 0,
+      "basePct": 0.247,
+      "curPct": 0,
+      "absDelta": -89,
+      "absDeltaPct": -100.0,
+      "excessVsSystem": -130.7,
+      "id": "auto_render_thread_GameObject::IsActive() const",
+      "display": "GameObject::IsActive() const 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 89,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -89,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "GameObject::IsActive() const"
+        }
+      ]
+    },
+    {
+      "baseAbs": 400,
+      "curAbs": 446,
+      "basePct": 1.108,
+      "curPct": 0.945,
+      "absDelta": 46,
+      "absDeltaPct": 11.5,
+      "excessVsSystem": -19.2,
+      "id": "auto_rhi_thread_ConstantBuffersGLES::UpdateCB(CbKey, void const*, unsigned l",
+      "display": "ConstantBuffersGLES::UpdateCB(CbKey, void const*, unsigned long) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 32,
+          "curAbs": 45,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 13,
+          "absDeltaPct": 40.6,
+          "excessVsSystem": 9.9,
+          "function": "ConstantBuffersGLES::UpdateCB(CbKey, void const*, unsigned long)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 191,
+      "curAbs": 160,
+      "basePct": 0.529,
+      "curPct": 0.338,
+      "absDelta": -31,
+      "absDeltaPct": -16.2,
+      "excessVsSystem": -46.9,
+      "id": "auto_rhi_thread_GfxDeviceGLES::SetShaderPropertiesCopied(ShaderPropertySheet",
+      "display": "GfxDeviceGLES::SetShaderPropertiesCopied(ShaderPropertySheet const&) 子树（含 2 个真热点）",
+      "children": [
+        {
+          "baseAbs": 41,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -41,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "GpuProgramParameters::PrepareOverridingValues(ShaderPropertySheet const&, dynamic_array<unsigned char, 4ul>&) const"
+        },
+        {
+          "baseAbs": 55,
+          "curAbs": 44,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -11,
+          "absDeltaPct": -20.0,
+          "excessVsSystem": -50.7,
+          "function": "void PrepareValueParameters<OverridingParameterPreparer>(dynamic_array<GpuProgramParameters::ValueParameter, 0ul> const&, unsigned int, unsigned int, unsigned int, dynamic_array<unsigned char, 4ul>&, OverridingParameterPreparer const&)"
+        },
+        {
+          "baseAbs": 47,
+          "curAbs": 50,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 3,
+          "absDeltaPct": 6.4,
+          "excessVsSystem": -24.3,
+          "function": "GlslGpuProgramGLES::ApplyGpuProgramGLES(unsigned int, GpuProgramParameters const&, unsigned char const*, bool)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 1746,
+      "curAbs": 1729,
+      "basePct": 4.833,
+      "curPct": 3.661,
+      "absDelta": -17,
+      "absDeltaPct": -1.0,
+      "excessVsSystem": -31.7,
+      "id": "auto_render_thread_ExecuteDrawRenderersCommand(TranscriptDrawRenderersCommand&,",
+      "display": "ExecuteDrawRenderersCommand(TranscriptDrawRenderersCommand&, ShaderPassContext&) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 327,
+          "curAbs": 376,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 49,
+          "absDeltaPct": 15.0,
+          "excessVsSystem": -15.7,
+          "function": "ExecuteDrawRenderersCommand(TranscriptDrawRenderersCommand&, ShaderPassContext&)"
+        }
+      ]
+    },
+    {
+      "baseAbs": 715,
+      "curAbs": 704,
+      "basePct": 1.979,
+      "curPct": 1.49,
+      "absDelta": -11,
+      "absDeltaPct": -1.5,
+      "excessVsSystem": -32.2,
+      "id": "auto_rhi_thread_WindowContextEGL::Present()",
+      "display": "WindowContextEGL::Present() 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 109,
+          "curAbs": 178,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 69,
+          "absDeltaPct": 63.3,
+          "excessVsSystem": 32.6,
+          "function": "BufferManagerGLES::AdvanceFrame()"
+        },
+        {
+          "baseAbs": 40,
+          "curAbs": 0,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": -40,
+          "absDeltaPct": -100.0,
+          "excessVsSystem": -130.7,
+          "function": "!!!0000!ae9df5840a3b187aa9f98544704c1f!272cf717f5!"
+        }
+      ]
+    },
+    {
+      "baseAbs": 84,
+      "curAbs": 90,
+      "basePct": 0.232,
+      "curPct": 0.191,
+      "absDelta": 6,
+      "absDeltaPct": 7.1,
+      "excessVsSystem": -23.6,
+      "id": "auto_render_thread_void InstanceBufferJob<Instancing::DrawAPIArgs>(InstanceBuff",
+      "display": "void InstanceBufferJob<Instancing::DrawAPIArgs>(InstanceBufferJobData<Instancing::DrawAPIArgs>*) 子树（含 1 个真热点）",
+      "children": [
+        {
+          "baseAbs": 53,
+          "curAbs": 60,
+          "basePct": 0,
+          "curPct": 0,
+          "absDelta": 7,
+          "absDeltaPct": 13.2,
+          "excessVsSystem": -17.5,
+          "function": "void InstancingProps::FillInstanceBufferDispatchConstants<Instancing::DrawAPIArgs>(void**, unsigned int, unsigned int, ShaderPropertySheet const&, Instancing::DrawAPIArgs const&) const"
+        }
+      ]
+    }
+  ],
+  "callUpTracing": [
+    {
+      "baseAbs": 1172,
+      "curAbs": 1686,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 514,
+      "absDeltaPct": 43.9,
+      "excessVsSystem": 13.2,
+      "runtime": "__memcpy",
+      "baseTotalGlobalPct": 3.2445,
+      "curTotalGlobalPct": 3.5692,
+      "baseTotalHits": 90,
+      "curTotalHits": 104,
+      "topCallers": [
+        {
+          "callerChain": "ConstantBuffersGLES::UpdateCB(CbKey, void const*, unsigned l < GfxDeviceWorker::RunCommand(ThreadedStreamBuffer&) < GfxDeviceWorker::RunExt(ThreadedStreamBuffer&)",
+          "thread": "rhi_thread",
+          "globalPct": 0.8495,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "!!!0000!e9a0267a4c3f12c4fb16e257d3a26e!272cf717f5! < !!!0000!9c0715a0352375a9ec27cf88ce6933!272cf717f5! < !!!0000!27efe93e728a48e12b9279ac49fad7!272cf717f5!",
+          "thread": "rhi_thread",
+          "globalPct": 0.8475,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "InstancingBatcher::RenderInstancesWithBuffer(TranscriptRende < TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans < TranscriptScriptableRenderContext::ExecuteScriptableRenderLo",
+          "thread": "render_thread",
+          "globalPct": 0.5451,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "Mesh::SetVertexData(void const*, unsigned long, unsigned lon < Mesh_CUSTOM_InternalSetVertexBufferData(ScriptingBackendNati < libil2cpp.so[+583d760]",
+          "thread": "main_thread",
+          "globalPct": 0.32,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "!!!0000!f56be09eb88f86833124f1df42e945!272cf717f5! < !!!0000!6b200851123c7898055fe62ff9f71f!272cf717f5! < !!!0000!77df12deb6a622478efa8fb9929034!272cf717f5!",
+          "thread": "rhi_thread",
+          "globalPct": 0.21,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "libil2cpp.so[+579cf90] < libil2cpp.so[+2f5c540] < libil2cpp.so[+5848750]",
+          "thread": "main_thread",
+          "globalPct": 0.1287,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "GLESGpuProgramApplier::ApplyVector(GpuProgramParameters::Val < GlslGpuProgramGLES::ApplyGpuProgramGLES(unsigned int, GpuPro < GfxDeviceGLES::SetShadersThreadable(GpuProgram**, GpuProgram",
+          "thread": "rhi_thread",
+          "globalPct": 0.098,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "ShaderPropertySheet::SetArrayProperty(ShaderLab::FastPropert < RenderingCommandBuffer::AddDrawMeshInstanced(Mesh*, int, Mat < CommandBuffer_CUSTOM_Internal_DrawMeshInstanced(ScriptingBac",
+          "thread": "main_thread",
+          "globalPct": 0.0697,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "libAkSoundEngine.so[+1c3c7c] < libAkSoundEngine.so[+1c384c] < libAkSoundEngine.so[+1c0b70]",
+          "thread": "wwise_worker",
+          "globalPct": 0.0358,
+          "module": "Wwise"
+        },
+        {
+          "callerChain": "libil2cpp.so[+579cf90] < libil2cpp.so[+5848750] < libil2cpp.so[+5848750]",
+          "thread": "main_thread",
+          "globalPct": 0.0278,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 837,
+      "curAbs": 761,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -76,
+      "absDeltaPct": -9.1,
+      "excessVsSystem": -39.8,
+      "runtime": "MemoryManager::Allocate",
+      "baseTotalGlobalPct": 2.3177,
+      "curTotalGlobalPct": 1.6105,
+      "baseTotalHits": 204,
+      "curTotalHits": 190,
+      "topCallers": [
+        {
+          "callerChain": "GfxDeviceClient::MapConstantBuffers(void**, CbKey const*, un < InstancingBatcher::MapConstantBuffers(GfxDevice&, dynamic_ar < InstancingBatcher::RenderInstancesWithBuffer(TranscriptRende",
+          "thread": "render_thread",
+          "globalPct": 0.1268,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "core::StringStorageDefault<char>::allocate(unsigned long) < core::StringStorageDefault<char>::assign(core::StringStorage < TranscriptRenderingCommandBuffer::TranscriptRenderingCommand",
+          "thread": "main_thread",
+          "globalPct": 0.1058,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "TranscriptScriptableRenderContext::CopyFrom(ScriptableRender < ScriptableRenderContext::Submit() < libil2cpp.so[+2f540b0]",
+          "thread": "main_thread",
+          "globalPct": 0.0618,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "void InstancingBatcher::FillInstanceBufferWithJob<Instancing < InstancingBatcher::RenderInstances(TranscriptRenderNodeQueue < InstancingBatcher::CustomRenderInstances(unsigned int, void ",
+          "thread": "render_thread",
+          "globalPct": 0.0577,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "MemoryManager::Reallocate(void*, unsigned long, unsigned lon < dynamic_array_detail::dynamic_array_data::resize_buffer(unsi < ParticleSystem::SwapBufferJobFunction(ParticleSystemSwapBuff",
+          "thread": "main_thread",
+          "globalPct": 0.0502,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "MemoryManager::Reallocate(void*, unsigned long, unsigned lon < dynamic_array_detail::dynamic_array_data::reserve(unsigned l < PrepareSourceInstanceData(ShaderPropertySheet&, Matrix4x4f c",
+          "thread": "main_thread",
+          "globalPct": 0.0452,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "GfxDeviceClient::MapConstantBuffers(void**, CbKey const*, un < InstancingBatcher::MapConstantBuffers(GfxDevice&, dynamic_ar < InstancingBatcher::CustomRenderInstances(unsigned int, void ",
+          "thread": "render_thread",
+          "globalPct": 0.0409,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "RenderingCommandBuffer::RenderingCommandBuffer(MemLabelId co < ScriptableRenderContext::ExecuteCommandBuffer(RenderingComma < ScriptableRenderContext_CUSTOM_ExecuteCommandBuffer_Internal",
+          "thread": "main_thread",
+          "globalPct": 0.0403,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "ScriptableRenderContext::ExecuteCommandBuffer(RenderingComma < ScriptableRenderContext_CUSTOM_ExecuteCommandBuffer_Internal < libil2cpp.so[+3039f68]",
+          "thread": "main_thread",
+          "globalPct": 0.0382,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "TranscriptRenderingCommandBuffer::TranscriptRenderingCommand < TranscriptScriptableRenderContext::CopyFrom(ScriptableRender < ScriptableRenderContext::Submit()",
+          "thread": "main_thread",
+          "globalPct": 0.0365,
+          "module": "URP / 命令缓冲"
+        }
+      ]
+    },
+    {
+      "baseAbs": 306,
+      "curAbs": 342,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 36,
+      "absDeltaPct": 11.8,
+      "excessVsSystem": -18.9,
+      "runtime": "__ieee754_powf",
+      "baseTotalGlobalPct": 0.8457,
+      "curTotalGlobalPct": 0.7246,
+      "baseTotalHits": 13,
+      "curTotalHits": 9,
+      "topCallers": [
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < JobQueue::Exec(JobInfo*, long long, int) < JobQueue::Steal(JobGroup*, JobInfo*, long long, int, bool)",
+          "thread": "rhi_thread",
+          "globalPct": 0.4896,
+          "module": "UGUI 几何 Job"
+        },
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < JobQueue::Exec(JobInfo*, long long, int) < JobQueue::Steal(JobGroup*, JobInfo*, long long, int, bool)",
+          "thread": "job_worker",
+          "globalPct": 0.1866,
+          "module": "UGUI 几何 Job"
+        },
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-102",
+          "thread": "rhi_thread",
+          "globalPct": 0.0209,
+          "module": "UGUI 几何 Job"
+        },
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-158",
+          "thread": "job_worker",
+          "globalPct": 0.0129,
+          "module": "UGUI 几何 Job"
+        },
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-129",
+          "thread": "job_worker",
+          "globalPct": 0.0076,
+          "module": "UGUI 几何 Job"
+        },
+        {
+          "callerChain": "UI::UIGeometryJob(UI::UIGeometryJobData*) < Thread-135",
+          "thread": "job_worker",
+          "globalPct": 0.007,
+          "module": "UGUI 几何 Job"
+        }
+      ]
+    },
+    {
+      "baseAbs": 216,
+      "curAbs": 186,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -30,
+      "absDeltaPct": -13.9,
+      "excessVsSystem": -44.6,
+      "runtime": "je_free",
+      "baseTotalGlobalPct": 0.5981,
+      "curTotalGlobalPct": 0.3946,
+      "baseTotalHits": 51,
+      "curTotalHits": 51,
+      "topCallers": [
+        {
+          "callerChain": "BufferManagerGLES::AcquireBuffer(unsigned long, DataBufferGL < ConstantBuffersGLES::UpdateBuffers(MonoOrStereoscopicEye, bo < SinglePassStereoSupportExt::BeforeDrawCallStereo()",
+          "thread": "rhi_thread",
+          "globalPct": 0.1734,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "!!!0000!7f33d0bc81c9ba6ce29b813f4019b6!272cf717f5! < GfxDeviceWorker::RunCommand(ThreadedStreamBuffer&) < GfxDeviceWorker::RunExt(ThreadedStreamBuffer&)",
+          "thread": "rhi_thread",
+          "globalPct": 0.0402,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "std::__ndk1::__tree<unsigned long long, std::__ndk1::less<un < TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans < TranscriptScriptableRenderContext::ExecuteScriptableRenderLo",
+          "thread": "render_thread",
+          "globalPct": 0.0168,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "BufferManagerGLES::AcquireBuffer(unsigned long, DataBufferGL < GfxDeviceGLES::BeginBufferWrite(GfxBuffer*, unsigned long, u < DynamicVBO::GetChunk(unsigned int, unsigned int, unsigned in",
+          "thread": "rhi_thread",
+          "globalPct": 0.0147,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "!!!0000!ae9df5840a3b187aa9f98544704c1f!272cf717f5! < !!!0000!d0051afa8fb0bb02a68e169738355f!272cf717f5! < !!!0000!94050ffb92ce9d2eb541a2faeb7ea2!272cf717f5!",
+          "thread": "rhi_thread",
+          "globalPct": 0.0135,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "GfxDeviceWorker::RunCommand(ThreadedStreamBuffer&) < GfxDeviceWorker::RunExt(ThreadedStreamBuffer&) < GfxDeviceWorker::RunGfxDeviceWorker(void*)",
+          "thread": "rhi_thread",
+          "globalPct": 0.011,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "BufferManagerGLES::AcquireBuffer(unsigned long, DataBufferGL < GfxDeviceGLES::UpdateBuffer(GfxBuffer*, void const*, GfxUpda < GfxDeviceWorker::RunCommand(ThreadedStreamBuffer&)",
+          "thread": "rhi_thread",
+          "globalPct": 0.0087,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans < TranscriptScriptableRenderContext::ExecuteScriptableRenderLo < GfxRenderSlaver::RunGfxRenderSlaver(void*)",
+          "thread": "render_thread",
+          "globalPct": 0.0082,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "std::__ndk1::__tree<std::__ndk1::__value_type<void const*, s < std::__ndk1::__tree<std::__ndk1::__value_type<void const*, s < std::__ndk1::__tree<std::__ndk1::__value_type<void const*, s",
+          "thread": "main_thread",
+          "globalPct": 0.008,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "java::lang::String::~String() < UnityChoreograp",
+          "thread": "choreographer",
+          "globalPct": 0.008,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 100,
+      "curAbs": 77,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -23,
+      "absDeltaPct": -23.0,
+      "excessVsSystem": -53.7,
+      "runtime": "tlsf_memalign",
+      "baseTotalGlobalPct": 0.2774,
+      "curTotalGlobalPct": 0.1623,
+      "baseTotalHits": 46,
+      "curTotalHits": 44,
+      "topCallers": [
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < RenderingCommandBuffer::RenderingCommandBuffer(MemLabelId co",
+          "thread": "main_thread",
+          "globalPct": 0.0325,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < ScriptableRenderContext::ExecuteCommandBuffer(RenderingComma",
+          "thread": "main_thread",
+          "globalPct": 0.0231,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "main_thread",
+          "globalPct": 0.0215,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < DynamicHeapAllocator::Reallocate(void*, unsigned long, int) < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "render_thread",
+          "globalPct": 0.0206,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < RenderingCommandBuffer::AddDrawMeshInstanced(Mesh*, int, Mat",
+          "thread": "main_thread",
+          "globalPct": 0.0181,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < BaseRenderer::FlattenBasicData(BaseRenderer const&, Transcri",
+          "thread": "main_thread",
+          "globalPct": 0.0134,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < BaseRenderer::FlattenSharedMaterialData(BaseRenderer const&,",
+          "thread": "main_thread",
+          "globalPct": 0.0106,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < DynamicHeapAllocator::Reallocate(void*, unsigned long, int) < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "main_thread",
+          "globalPct": 0.0081,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "render_thread",
+          "globalPct": 0.0043,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Allocate(unsigned long, int) < DualThreadAllocator<DynamicHeapAllocator>::Reallocate(void*, < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "render_thread",
+          "globalPct": 0.0037,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 218,
+      "curAbs": 241,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 23,
+      "absDeltaPct": 10.6,
+      "excessVsSystem": -20.1,
+      "runtime": "ThreadsafeLinearAllocator::Allocate",
+      "baseTotalGlobalPct": 0.604,
+      "curTotalGlobalPct": 0.5112,
+      "baseTotalHits": 39,
+      "curTotalHits": 62,
+      "topCallers": [
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < GfxDeviceClient::MapConstantBuffers(void**, CbKey const*, un < InstancingBatcher::MapConstantBuffers(GfxDevice&, dynamic_ar",
+          "thread": "render_thread",
+          "globalPct": 0.1211,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < TranscriptScriptableRenderContext::CopyFrom(ScriptableRender < ScriptableRenderContext::Submit()",
+          "thread": "main_thread",
+          "globalPct": 0.0618,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < void InstancingBatcher::FillInstanceBufferWithJob<Instancing < InstancingBatcher::RenderInstances(TranscriptRenderNodeQueue",
+          "thread": "render_thread",
+          "globalPct": 0.0558,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < TranscriptRenderingCommandBuffer::TranscriptRenderingCommand < TranscriptScriptableRenderContext::CopyFrom(ScriptableRender",
+          "thread": "main_thread",
+          "globalPct": 0.0365,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon < dynamic_array_detail::dynamic_array_data::resize_buffer(unsi",
+          "thread": "render_thread",
+          "globalPct": 0.0328,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < TranscriptRenderingCommandBuffer::AcquireRenderTexture(Rende < TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans",
+          "thread": "render_thread",
+          "globalPct": 0.0276,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < libil2cpp.so[+4267684] < libil2cpp.so[+42673d0]",
+          "thread": "main_thread",
+          "globalPct": 0.0178,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < TrackOverflowStackAllocator::Allocate(unsigned long, int) < Unity.Rendering.WriteInstanceDataJob.DoWriteData(Unity.Rende",
+          "thread": "job_worker",
+          "globalPct": 0.0158,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "ThreadsafeLinearAllocator::Reallocate(void*, unsigned long,  < MemoryManager::Reallocate(void*, unsigned long, unsigned lon < dynamic_array_detail::dynamic_array_data::grow(unsigned long",
+          "thread": "main_thread",
+          "globalPct": 0.0157,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "MemoryManager::Allocate(unsigned long, unsigned long, MemLab < InstancingBatcher::RenderInstances(TranscriptRenderNodeQueue < TranscriptBatchRenderer::RenderBatch(BatchInstanceData const",
+          "thread": "render_thread",
+          "globalPct": 0.0156,
+          "module": "RHI / GPU Instancing"
+        }
+      ]
+    },
+    {
+      "baseAbs": 197,
+      "curAbs": 176,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -21,
+      "absDeltaPct": -10.7,
+      "excessVsSystem": -41.4,
+      "runtime": "XXH32",
+      "baseTotalGlobalPct": 0.5449,
+      "curTotalGlobalPct": 0.3723,
+      "baseTotalHits": 14,
+      "curTotalHits": 12,
+      "topCallers": [
+        {
+          "callerChain": "TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans < TranscriptScriptableRenderContext::ExecuteScriptableRenderLo < GfxRenderSlaver::RunGfxRenderSlaver(void*)",
+          "thread": "render_thread",
+          "globalPct": 0.3312,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "ShaderLab::Program::GetMatchingSubProgram(Shader const*, Sha < ShaderLab::ShaderState::ApplyShaderState(unsigned int, Shade < ShaderLab::Pass::ApplyPass(unsigned int, ShaderPropertySheet",
+          "thread": "render_thread",
+          "globalPct": 0.0125,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "ScriptableRenderContext::ExtractAndExecuteRenderPipelineNoCl < RenderManager::RenderCameras(int, void (*)(), void (*)()) < UnityMain",
+          "thread": "main_thread",
+          "globalPct": 0.0104,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "core::hash_set<core::pair<core::basic_string<char, core::Str < profiling::ProfilerManager::GetMarker(core::basic_string<cha < profiling::ProfilerManager::GetOrCreateMarker(unsigned short",
+          "thread": "main_thread",
+          "globalPct": 0.0078,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "ExecuteDrawRenderersCommand(TranscriptDrawRenderersCommand&, < TranscriptScriptableRenderContext::ExecuteScriptableRenderLo < GfxRenderSlaver::RunGfxRenderSlaver(void*)",
+          "thread": "render_thread",
+          "globalPct": 0.006,
+          "module": "URP / 命令缓冲"
+        },
+        {
+          "callerChain": "core::hash_set<core::pair<core::basic_string<char, core::Str < profiling::ProfilerManager::GetMarker(core::basic_string<cha < profiling::ProfilerManager::GetOrCreateMarker(unsigned short",
+          "thread": "render_thread",
+          "globalPct": 0.0044,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 72,
+      "curAbs": 52,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -20,
+      "absDeltaPct": -27.8,
+      "excessVsSystem": -58.5,
+      "runtime": "je_malloc",
+      "baseTotalGlobalPct": 0.199,
+      "curTotalGlobalPct": 0.1102,
+      "baseTotalHits": 31,
+      "curTotalHits": 30,
+      "topCallers": [
+        {
+          "callerChain": "malloc < operator new(unsigned long) < BufferManagerGLES::AdvanceFrame()",
+          "thread": "rhi_thread",
+          "globalPct": 0.0462,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < InstancingBatcher::BuildFrom(GpuProgramParameters const**, u",
+          "thread": "render_thread",
+          "globalPct": 0.0189,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < UI::CanvasManager::AddDirtyRenderer(UI::Canvas*, UI::CanvasR",
+          "thread": "main_thread",
+          "globalPct": 0.0078,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < std::__1::basic_string<char, std::__1::char_traits<char>, st",
+          "thread": "choreographer",
+          "globalPct": 0.0048,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < android::RefBase::RefBase()",
+          "thread": "rhi_thread",
+          "globalPct": 0.0042,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < libGVoice.so[+3dde98] < libGVoice.so[+40621c]",
+          "thread": "unidentified",
+          "globalPct": 0.0041,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < android::TransactionCompletedListener::onTransactionComplete",
+          "thread": "unidentified",
+          "globalPct": 0.003,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < operator new(unsigned long) < std::__1::pair<std::__1::__hash_iterator<std::__1::__hash_no",
+          "thread": "rhi_thread",
+          "globalPct": 0.0026,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < android::SharedBuffer::alloc(unsigned long) < android::VectorImpl::_shrink(unsigned long, unsigned long)",
+          "thread": "rhi_thread",
+          "globalPct": 0.0026,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "malloc < libPxEmbedded.so[+5b548] < libPxEmbedded.so[+12738]",
+          "thread": "unidentified",
+          "globalPct": 0.0026,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 73,
+      "curAbs": 60,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": -13,
+      "absDeltaPct": -17.8,
+      "excessVsSystem": -48.5,
+      "runtime": "BucketAllocator::Allocate",
+      "baseTotalGlobalPct": 0.2028,
+      "curTotalGlobalPct": 0.1278,
+      "baseTotalHits": 42,
+      "curTotalHits": 21,
+      "topCallers": [
+        {
+          "callerChain": "DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < core::StringStorageDefault<char>::allocate(unsigned long)",
+          "thread": "main_thread",
+          "globalPct": 0.075,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "main_thread",
+          "globalPct": 0.0236,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < CanvasBatchIntermediateRenderer::PrepareTranscriptRenderNode",
+          "thread": "main_thread",
+          "globalPct": 0.0135,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "BucketAllocator::Reallocate(void*, unsigned long, int) < DualThreadAllocator<DynamicHeapAllocator>::Reallocate(void*, < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "main_thread",
+          "globalPct": 0.0079,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "BucketAllocator::Reallocate(void*, unsigned long, int) < DualThreadAllocator<DynamicHeapAllocator>::Reallocate(void*, < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "job_worker",
+          "globalPct": 0.0038,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "render_thread",
+          "globalPct": 0.0024,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "job_worker",
+          "globalPct": 0.0016,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 3,
+      "curAbs": 13,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 10,
+      "absDeltaPct": 333.3,
+      "excessVsSystem": 302.6,
+      "runtime": "memmove",
+      "baseTotalGlobalPct": 0.0091,
+      "curTotalGlobalPct": 0.0281,
+      "baseTotalHits": 9,
+      "curTotalHits": 10,
+      "topCallers": [
+        {
+          "callerChain": "libil2cpp.so[+579cfb8] < libil2cpp.so[+2f5c540] < libil2cpp.so[+5848750]",
+          "thread": "main_thread",
+          "globalPct": 0.0052,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "ExecuteJobCopyData(ManagedJobData*, void (*)(void*, void*, v < ForwardJobForEachToManagedDefer(ManagedJobData*, unsigned in < JobQueue::Exec(JobInfo*, long long, int)",
+          "thread": "job_worker",
+          "globalPct": 0.004,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "InstancingProps::NewConstant(ShaderLab::FastPropertyName, un < InstancingBatcher::BuildFrom(GpuProgramParameters const**, u < TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans",
+          "thread": "render_thread",
+          "globalPct": 0.0037,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "libAkSoundEngine.so[+19b5d8] < libAkSoundEngine.so[+19b63c] < libAkSoundEngine.so[+1b98e8]",
+          "thread": "audio_callback",
+          "globalPct": 0.0034,
+          "module": "Wwise"
+        },
+        {
+          "callerChain": "!!!0000!8c9f5a62f5a016bcd3b71c1e0c3a1d!272cf717f5! < !!!0000!f56be09eb88f86833124f1df42e945!272cf717f5! < !!!0000!6b200851123c7898055fe62ff9f71f!272cf717f5!",
+          "thread": "rhi_thread",
+          "globalPct": 0.003,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "!!!0000!e9a0267a4c3f12c4fb16e257d3a26e!272cf717f5! < !!!0000!9c0715a0352375a9ec27cf88ce6933!272cf717f5! < !!!0000!27efe93e728a48e12b9279ac49fad7!272cf717f5!",
+          "thread": "rhi_thread",
+          "globalPct": 0.0025,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "GfxDeviceClient::SetShaderPropertiesCopied(ShaderPropertyShe < InstancingBatcher::RenderInstances(TranscriptRenderNodeQueue < TranscriptRenderingCommandBuffer::ExecuteCommandBuffer(Trans",
+          "thread": "render_thread",
+          "globalPct": 0.0025,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "GfxDeviceClient::SetShaderPropertiesCopied(ShaderPropertyShe < InstancingBatcher::RenderInstances(TranscriptRenderNodeQueue < TranscriptBatchRenderer::RenderBatch(BatchInstanceData const",
+          "thread": "render_thread",
+          "globalPct": 0.002,
+          "module": "RHI / GPU Instancing"
+        },
+        {
+          "callerChain": "libAkSoundEngine.so[+1902e0] < libAkSoundEngine.so[+194d94] < libAkSoundEngine.so[+194f70]",
+          "thread": "wwise_worker",
+          "globalPct": 0.0018,
+          "module": "Wwise"
+        }
+      ]
+    },
+    {
+      "baseAbs": 66,
+      "curAbs": 68,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 2,
+      "absDeltaPct": 3.0,
+      "excessVsSystem": -27.7,
+      "runtime": "tlsf_free",
+      "baseTotalGlobalPct": 0.1831,
+      "curTotalGlobalPct": 0.1442,
+      "baseTotalHits": 7,
+      "curTotalHits": 11,
+      "topCallers": [
+        {
+          "callerChain": "DynamicHeapAllocator::Deallocate(void*) < DualThreadAllocator<DynamicHeapAllocator>::TryDeallocate(voi < MemoryManager::Deallocate(void*, MemLabelId const&, char con",
+          "thread": "main_thread",
+          "globalPct": 0.0639,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Deallocate(void*) < DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < DualThreadAllocator<DynamicHeapAllocator>::Reallocate(void*,",
+          "thread": "main_thread",
+          "globalPct": 0.0453,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Deallocate(void*) < DualThreadAllocator<DynamicHeapAllocator>::Allocate(unsigned < MemoryManager::Allocate(unsigned long, unsigned long, MemLab",
+          "thread": "main_thread",
+          "globalPct": 0.0209,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Deallocate(void*) < DynamicHeapAllocator::Reallocate(void*, unsigned long, int) < MemoryManager::Reallocate(void*, unsigned long, unsigned lon",
+          "thread": "render_thread",
+          "globalPct": 0.0078,
+          "module": "未分类"
+        },
+        {
+          "callerChain": "DynamicHeapAllocator::Deallocate(void*) < DualThreadAllocator<DynamicHeapAllocator>::TryDeallocate(voi < MemoryManager::Deallocate(void*, MemLabelId const&, char con",
+          "thread": "render_thread",
+          "globalPct": 0.0063,
+          "module": "未分类"
+        }
+      ]
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "__ieee754_sqrtf",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "il2cpp::vm::Object::NewAllocSpecific",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "__memset",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "XXH64",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "__ieee754_atan2f",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "tlsf_malloc",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "GC_mark_from",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "il2cpp_alloc",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "GC_push_all",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0,
+      "curPct": 0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "runtime": "GC_end_stubborn_change",
+      "baseTotalGlobalPct": 0,
+      "curTotalGlobalPct": 0,
+      "baseTotalHits": 0,
+      "curTotalHits": 0,
+      "topCallers": []
+    }
+  ],
+  "probes": [
+    {
+      "baseAbs": 45,
+      "curAbs": 137,
+      "basePct": 0.037,
+      "curPct": 0.114,
+      "absDelta": 92,
+      "absDeltaPct": 204.4,
+      "excessVsSystem": 173.7,
+      "id": "probe.anim.legacy",
+      "display": "LegacyAnimationUpdate",
+      "unit": "ms/帧",
+      "thresholds": {
+        "green": 0.6,
+        "yellow": 1.0,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.3",
+      "baseValue": 0.037,
+      "curValue": 0.114
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 2.086,
+      "curPct": 4.219,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.ecs.jobworker.balance",
+      "display": "Job Worker 均衡度",
+      "unit": "%",
+      "thresholds": {
+        "green": 20,
+        "yellow": 30,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.5",
+      "baseValue": 2.086,
+      "curValue": 4.219
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 153,
+      "basePct": 0.0,
+      "curPct": 0.324,
+      "absDelta": 153,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.ecs.mainwait",
+      "display": "主线程 Job 等待",
+      "unit": "%global",
+      "thresholds": {
+        "green": 0.5,
+        "yellow": 2,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.5",
+      "baseValue": 0.0,
+      "curValue": 0.324
+    },
+    {
+      "baseAbs": 30,
+      "curAbs": 209,
+      "basePct": 0.025,
+      "curPct": 0.174,
+      "absDelta": 179,
+      "absDeltaPct": 596.7,
+      "excessVsSystem": 566.0,
+      "id": "probe.fx.particle",
+      "display": "ParticleSystem 合计",
+      "unit": "ms/帧",
+      "thresholds": {
+        "green": 0.6,
+        "yellow": 1.0,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.3",
+      "baseValue": 0.025,
+      "curValue": 0.174
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0.0,
+      "curPct": 0.0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.gc.boehmBackground",
+      "display": "Boehm GC 后台",
+      "unit": "%global",
+      "thresholds": {
+        "green": 1,
+        "yellow": 2,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.11",
+      "baseValue": 0.0,
+      "curValue": 0.0
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 20,
+      "basePct": 0.0,
+      "curPct": 0.043,
+      "absDelta": 20,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.gpu.bound",
+      "display": "GPU bound 主信号",
+      "unit": "%global",
+      "thresholds": {
+        "green": 2,
+        "yellow": 5,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.6",
+      "baseValue": 0.0,
+      "curValue": 0.043
+    },
+    {
+      "baseAbs": 540,
+      "curAbs": 432,
+      "basePct": 5.562,
+      "curPct": 4.309,
+      "absDelta": -108,
+      "absDeltaPct": -20.0,
+      "excessVsSystem": -50.7,
+      "id": "probe.gpu.bound.eglSwap",
+      "display": "eglSwapBuffers（辅助）",
+      "unit": "%rhi",
+      "thresholds": {
+        "green": 10,
+        "yellow": 15,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.7",
+      "baseValue": 5.562,
+      "curValue": 4.309
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0.0,
+      "curPct": 0.0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.lua.mtgc.worker",
+      "display": "Lua GC worker",
+      "unit": "%global",
+      "thresholds": {
+        "green": 1,
+        "yellow": 2,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.9",
+      "baseValue": 0.0,
+      "curValue": 0.0
+    },
+    {
+      "baseAbs": 2,
+      "curAbs": 6,
+      "basePct": 0.005,
+      "curPct": 0.013,
+      "absDelta": 4,
+      "absDeltaPct": 200.0,
+      "excessVsSystem": 169.3,
+      "id": "probe.lua.totalLoad",
+      "display": "Lua 总负载",
+      "unit": "%global",
+      "thresholds": {
+        "green": 8,
+        "yellow": 10,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.1.2",
+      "baseValue": 0.005,
+      "curValue": 0.013
+    },
+    {
+      "baseAbs": 344,
+      "curAbs": 4738,
+      "basePct": 0.951,
+      "curPct": 10.033,
+      "absDelta": 4394,
+      "absDeltaPct": 1277.3,
+      "excessVsSystem": 1246.6,
+      "id": "probe.middleware.wwise",
+      "display": "Wwise 音频中间件",
+      "unit": "%global",
+      "thresholds": {
+        "green": 3,
+        "yellow": 7,
+        "red": 100
+      },
+      "verdict": "red",
+      "knowledgeRef": "v2.1 §4.10",
+      "baseValue": 0.951,
+      "curValue": 10.033
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0.0,
+      "curPct": 0.0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.render.urp.postfx",
+      "display": "URP 后处理",
+      "unit": "%main",
+      "thresholds": {
+        "green": 3,
+        "yellow": 5,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.6",
+      "baseValue": 0.0,
+      "curValue": 0.0
+    },
+    {
+      "baseAbs": 0,
+      "curAbs": 0,
+      "basePct": 0.0,
+      "curPct": 0.0,
+      "absDelta": 0,
+      "absDeltaPct": "NEW",
+      "excessVsSystem": "NEW",
+      "id": "probe.render.urp.shadow",
+      "display": "URP ShadowPass",
+      "unit": "%main",
+      "thresholds": {
+        "green": 5,
+        "yellow": 8,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.6",
+      "baseValue": 0.0,
+      "curValue": 0.0
+    },
+    {
+      "baseAbs": 1530,
+      "curAbs": 1893,
+      "basePct": 15.749,
+      "curPct": 18.893,
+      "absDelta": 363,
+      "absDeltaPct": 23.7,
+      "excessVsSystem": -7.0,
+      "id": "probe.rhi.constUpload",
+      "display": "RHI 常量缓冲上传",
+      "unit": "%rhi",
+      "thresholds": {
+        "green": 25,
+        "yellow": 40,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.7",
+      "baseValue": 15.749,
+      "curValue": 18.893
+    },
+    {
+      "baseAbs": 5138,
+      "curAbs": 5353,
+      "basePct": 52.892,
+      "curPct": 53.44,
+      "absDelta": 215,
+      "absDeltaPct": 4.2,
+      "excessVsSystem": -26.5,
+      "id": "probe.rhi.drawcall",
+      "display": "RHI DrawCall",
+      "unit": "%rhi",
+      "thresholds": {
+        "green": 999,
+        "yellow": 999,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.7",
+      "baseValue": 52.892,
+      "curValue": 53.44
+    },
+    {
+      "baseAbs": 326,
+      "curAbs": 224,
+      "basePct": 0.272,
+      "curPct": 0.187,
+      "absDelta": -102,
+      "absDeltaPct": -31.3,
+      "excessVsSystem": -62.0,
+      "id": "probe.ui.canvas",
+      "display": "PlayerUpdateCanvases",
+      "unit": "ms/帧",
+      "thresholds": {
+        "green": 0.6,
+        "yellow": 1.0,
+        "red": 100
+      },
+      "verdict": "green",
+      "knowledgeRef": "v2.1 §4.4",
+      "baseValue": 0.272,
+      "curValue": 0.187
+    }
+  ]
+}

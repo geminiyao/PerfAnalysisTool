@@ -1,0 +1,106 @@
+# collect-stress-march.yaml — 远征压测-行军 采集用例
+#
+# 1. 进入场景
+# 2. 启动行军压测（AddBattlePressTestScene type=2）
+# 3. 等待压测初始化
+# 4. camera_sweep: 相机切到创建点，enable 控制是否移动
+#
+# 前置条件：游戏已登录、ProfileTestMgr.lua 已扩展 start_stress_test 命令
+#
+# 用法：
+#   python scripts/auto_collector/collect.py --config projects/aoeyz/collect-stress-march.yaml
+#
+# camera_sweep.enable 切换模式：
+#   true  = 相机从 from_grid 移动到 to_grid（移动采集）
+#   false = 相机瞬移到 to_grid 后不动（静止采集）
+
+# === 项目标识 ===
+project:
+  name: aoeyz
+  package: com.tencent.aoeyz
+  activity: com.tencent.aoeyz.MainActivity
+  intentAction: com.aoe.EXTERNAL_PROFILE
+
+# === 设备路径 ===
+device:
+  simpleperfPath: /data/local/tmp/simpleperf
+  pdataDir: /storage/emulated/0/Android/data/com.tencent.aoeyz/files/doc/log/profile_data/
+
+# === 采集工具 ===
+tools:
+  simpleperf:
+    enabled: false
+    ndkDir: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf
+    recordOpts: "-e cpu-clock --call-graph fp --clockid boottime -f 4000"
+    durationPadding: 15
+  perfetto:
+    enabled: false
+    script: g:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts/record_android_trace.py
+    bufferSize: 64mb
+    durationPadding: 15
+    events:
+      - sched
+      - freq
+      - idle
+      - am
+      - wm
+      - gfx
+      - view
+      - binder_driver
+      - hal
+      - dalvik
+      - camera
+      - input
+      - res
+      - memory
+
+# === 场景定义 ===
+scenes:
+  default:
+    label: stress_march
+    scene: StressTestBattleSimpleMode
+
+# === 动作 ===
+# 1. enter_scene: 进入场景
+# 2. stress_test: 启动行军压测（默认参数）
+# 3. wait_duration: 等待压测初始化（5s）
+# 4. camera_sweep: 相机移动到创建点 [1276, 650]
+action:
+  defaultDuration: 10            # 小于 camera_sweep.duration，触发自动扩展到 15s
+  steps:
+    - primitive: enter_scene
+      params:
+        scene: StressTestBattleSimpleMode
+        coord: [540, 1200]
+    - primitive: stress_test
+      params:
+        type: march
+        army_id: 1
+        start_grid: [1276, 650]    # 创建点坐标
+        end_grid: [1330, 650]      # 折返点坐标
+        army_count: 300             # 部队数量
+        radius: 5                   # 随机半径
+    - primitive: wait_duration
+      params:
+        duration: 5                 # 等待压测初始化
+    - primitive: camera_sweep
+      params:
+        duration: 15
+        pattern: move_to_grid
+        enable: true                # true=移动采集（from→to），false=静止采集（瞬移到to不动）
+        from_grid: [1200, 600]    # 起点偏移坐标（enable=true 时使用）
+        to_grid: [1276, 650]       # 创建点坐标
+        rounds: 1                   # 单程 A→B，相机移动
+
+# === 输出配置 ===
+output:
+  baseDir: output/collect
+  webApiBase: http://localhost:3000/api
+
+# === 符号配置 ===
+symbols:
+  libDir: output/maple/symbols
+
+# === Meta 默认值 ===
+meta:
+  project: aoeyz

@@ -1,0 +1,47 @@
+{
+  "rating": "fail",
+  "headline": "对照 60fps（16.67ms）预算整体不合格：当前态中位帧 41.92ms（2.5 倍预算），600 帧全部超预算，帧率从基线 60fps 崩到 22.4fps。主因是主线程脚本回归——GameLauncher.Update 涨 10.5 倍（+11.66ms/帧）、LateUpdate 涨 8.4 倍（+6.04ms/帧），叠加 URP 渲染管线 +5.32ms/帧；19 次相机移动再叠 43ms 尖峰，最差帧 113ms 里有 70ms 是同步 GC。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.92,
+  "observedP99Ms": 95.51,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "script.update.regression",
+    "script.lateupdate.regression",
+    "render.urp.regression"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "queryFrameSummaryMultiState",
+      "args": {},
+      "resultDigest": {
+        "base": {"count": 599, "actualFps": 60, "mean": 16.66, "median": 16.66, "p99": 16.98, "jankCount": 0},
+        "cur": {"count": 600, "actualFps": 22.4, "mean": 44.59, "median": 41.92, "min": 33.48, "p99": 95.51, "max": 113.56, "worstFrameIndex": 519, "jankCount": 10},
+        "deltas": {"mean": "+167.65%", "median": "+151.62%", "p99": "+462.49%", "actualFps": "-62.67%"}
+      }
+    },
+    {
+      "tool": "queryAggCallTreeMultiState",
+      "args": {"thread": "1:Main Thread", "rootMarker": "PlayerLoop", "maxDepth": 4},
+      "resultDigest": {
+        "PlayerLoop": {"baseMsPerFrame": 16.64, "curMsPerFrame": 44.53, "foldChange": 2.676, "delta": 27.891},
+        "Update.ScriptRunBehaviourUpdate": {"baseMsPerFrame": 1.574, "curMsPerFrame": 13.959, "foldChange": 8.868, "delta": 12.385},
+        "GameLauncher.Update": {"baseMsPerFrame": 1.252, "curMsPerFrame": 12.991, "foldChange": 10.376, "delta": 11.739},
+        "PreLateUpdate.ScriptRunBehaviourLateUpdate": {"baseMsPerFrame": 1.192, "curMsPerFrame": 8.213, "foldChange": 6.89, "delta": 7.021},
+        "GameLauncher.LateUpdate": {"baseMsPerFrame": 0.886, "curMsPerFrame": 7.268, "foldChange": 8.203, "delta": 6.382},
+        "PostLateUpdate.FinishFrameRendering": {"baseMsPerFrame": 6.561, "curMsPerFrame": 12.519, "foldChange": 1.908, "delta": 5.958},
+        "URP.Render": {"baseMsPerFrame": 5.892, "curMsPerFrame": 11.212, "foldChange": 1.903, "delta": 5.32}
+      }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 33}, "setB": {"kind": "markerSpike", "markerName": "OnCameraMove", "minSelfMs": 10}},
+      "resultDigest": {"sizeA": 600, "sizeB": 19, "intersection": 19, "pctBinA": 100, "pctAinB": 3.17, "note": "全部 600 帧 >33ms（min 33.48），故 pctAinB 被全慢分母稀释；19 次相机移动 100% 落在慢帧"}
+    },
+    {
+      "tool": "scanMetricOverFrames",
+      "args": {"markerName": "GC.Collect", "thread": "1:Main Thread", "metric": "selfMs"},
+      "resultDigest": {"presentFrames": 3, "max": 70.2, "maxFrameIndex": 519, "burstFrames": [483, 519], "note": "最差帧 519 的 113ms 中 GC.Collect 占 70.2ms"}
+    }
+  ]
+}

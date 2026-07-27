@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.184Z
 source: unity-cpu
 title: "Unity 主线程 PlayerLoop 标准调用树与各阶段职责"
 tags: ["unity","playerloop","调用树","帧生命周期"]
+dataSource: unity
 ---
 
 Unity 主线程每帧按顺序执行 PlayerLoop，标准调用树如下：

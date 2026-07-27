@@ -1,0 +1,25 @@
+{
+  "total": {
+    "start": 1784882185598,
+    "end": 1784883028663
+  },
+  "narrative": {
+    "start": 1784882185624,
+    "end": 1784882967007,
+    "subStages": {
+      "start": 1784882185626,
+      "precheck": 0,
+      "prompt_inject": 130,
+      "cli_resolve": 1,
+      "llm_call": 779937,
+      "artifact_check": 0,
+      "json_parse": 2,
+      "provenance_check": 0,
+      "red_team": 228
+    }
+  },
+  "render": {
+    "start": 1784882967007,
+    "end": 1784883028662
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "rating": "weak",
+  "headline": "中位数 20.75ms 比 60fps 预算(16.67ms)超 25%，约 80% 帧超标；主线程 CPU 受限(非 GPU)，成本摊在 Lua 逻辑(4.7ms)/URP 渲染(4.75ms)/ECS(3.15ms) 等多个子系统长尾上；最差帧 54ms 由相机移动触发 WorldEnvironmentMeshItemMgr 24ms 爆发所致。30fps 基本可达，60fps 未达标。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 20.75,
+  "observedP95Ms": 34.7,
+  "observedP99Ms": 44.5,
+  "observedMaxMs": 54.09,
+  "observedMaxFrameIndex": 143,
+  "pctFramesOverBudget": 80,
+  "primaryDrivers": [
+    "steady-over-budget",
+    "camera-move-mesh-burst",
+    "gc-collect-spike"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "markerName": "PlayerLoop", "thread": "1:Main Thread", "metric": "totalMs" },
+      "resultDigest": {
+        "frameCount": 600,
+        "mean": 22.96,
+        "std": 6.59,
+        "p50": 20.75,
+        "p95": 34.7,
+        "p99": 44.5,
+        "max": 54.09,
+        "maxFrameIndex": 143,
+        "burstFrames": [143, 278, 283, 469, 552, 601, 670],
+        "autocorr": { "bestLag": 2, "coefficient": 0.648 },
+        "pctFramesOverBudgetNote": "p50=20.75>16.67 故firm下限>50%；mean22.96/std6.59/budget16.67→z=-0.95→约17%帧低于预算，故约80%超标；WaitForTargetFPS p50=0.005ms(帧几乎从不提前完成)佐证多数帧compute-bound超标"
+      }
+    },
+    {
+      "tool": "aggregateSubtree",
+      "args": { "topN": 12, "fanoutThreshold": 0.6, "minTotalMsPerFrame": 1.5 },
+      "resultDigest": {
+        "steadyStateBreakdownMsPerFrame": {
+          "URP.RenderSingleCamera": 4.75,
+          "LateBehaviourUpdate": 3.9,
+          "UpdateFunction.Invoke_ECS": 3.15,
+          "MapSignificanceMgr.ProcessTasks": 2.33,
+          "UGUI.Rendering.UpdateBatches": 1.84
+        },
+        "note": "p50 20.75ms 由上述子树 + 0.2-0.4ms 长尾 marker 累加构成，无单一 dominant marker"
+      }
+    },
+    {
+      "tool": "drillDownMarker",
+      "args": { "rootMarker": "CS:AOE.LuaMgr", "thread": "1:Main Thread", "maxDepth": 5 },
+      "resultDigest": {
+        "rootTotalMsPerFrame": 4.7,
+        "children": {
+          "LuaMgr.OnTick&UpdateSchedule": 3.37,
+          "LuaMgr.OnLateUpdateSchedule": 1.17
+        },
+        "note": "LuaMgr 子树 4.70ms/帧是隐藏大頭(self仅0.07)，含 MapSignificanceMgr 2.33 + MapCameraCtrl 0.92"
+      }
+    },
+    {
+      "tool": "getThreadTimeline",
+      "args": { "frameIndex": 143 },
+      "resultDigest": {
+        "mainThreadTopLevelMs": 54.09,
+        "submitThreadWaitForGfxCommandsMs": 47.24,
+        "note": "Submit Thread 47ms 在 WaitForGfxCommandsFromMainThread→主线程是瓶颈，非GPU-bound；Gfx.PresentFrame 仅 1.43ms/帧"
+      }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "frameIndex": 143, "thread": "1:Main Thread", "maxDepth": 7 },
+      "resultDigest": {
+        "msFrame": 54.14,
+        "hotPath": "PlayerLoop→PreLateUpdate.ScriptRunBehaviourLateUpdate(28ms,51.7%)→GameLauncher.LateUpdate→MapManager(24.3ms)→WorldEnvironmentMeshItemMgr(24.0ms,44.3%)",
+        "note": "最差帧由相机移动触发 WorldEnvironmentMeshItemMgr 24ms 爆发"
+      }
+    }
+  ]
+}

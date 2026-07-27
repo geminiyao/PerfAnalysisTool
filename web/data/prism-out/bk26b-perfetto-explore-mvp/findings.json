@@ -1,7 +1,7 @@
 {
   "source": "perfetto",
   "sampleSet": "bk26b-perfetto-triad",
-  "generatedAt": "2026-07-14T06:21:46.448Z",
+  "generatedAt": "2026-07-20T04:01:56.937Z",
   "findings": [
     {
       "id": "f-01",
@@ -12,8 +12,9 @@
         "ev-008-cur-queryFrameTimeline",
         "ev-013-throttle-queryFrameTimeline"
       ],
-      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
-      "boundary": "FrameTimeline unavailable; no jank finding synthesized"
+      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer/playerLoop percentiles may exist but Android jank/GPU busy cannot be classified from FrameTimeline.",
+      "boundary": "FrameTimeline unavailable; no jank finding synthesized",
+      "kind": "boundary"
     },
     {
       "id": "f-02",
@@ -23,11 +24,12 @@
         "ev-005-base-getPerfettoCallTree"
       ],
       "claim": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.",
-      "boundary": "via PlayerLoop anchor fallback"
+      "boundary": "via PlayerLoop anchor fallback",
+      "kind": "boundary"
     },
     {
       "id": "f-03",
-      "title": "throttle CPU freq decline co-directional with UnityMain sched shift (window)",
+      "title": "throttle vs cur sched/freq relative baseline (window)",
       "severity": "warning",
       "evidenceIds": [
         "ev-009-cur-queryCpuFreq",
@@ -36,24 +38,21 @@
         "ev-011-throttle-querySchedState",
         "ev-017-throttle-correlateFrameSchedCpu"
       ],
-      "claim": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
-      "boundary": "window-only correlation; not per-frame"
+      "claim": "throttle 比 cur 降 26.8% / -20.83pp; avgMhz cur=1576.3 → throttle=1324.6 (×0.84); sleepingPct 20.4 → 38.99 (Δ 18.59pp); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+      "boundary": "window-only correlation; not per-frame",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle UnityMain runningPct=56.99",
+        "baselineValue": "cur UnityMain runningPct=77.82",
+        "foldChange": 0.732,
+        "deltaPct": -20.83,
+        "relativeJudgment": "throttle 比 cur 降 26.8% / -20.83pp"
+      },
+      "kind": "sched-relative"
     },
     {
       "id": "f-04",
-      "title": "cur vs throttle atrace slice deltas (PlayerLoop / BehaviourUpdate / FinishFrameRendering)",
-      "severity": "info",
-      "evidenceIds": [
-        "ev-007-cur-queryAtraceSlices",
-        "ev-012-throttle-queryAtraceSlices",
-        "ev-010-cur-getPerfettoCallTree",
-        "ev-015-throttle-getPerfettoCallTree"
-      ],
-      "claim": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
-      "boundary": "atrace aggregates + callTree hotPath; not frame-timeline jank"
-    },
-    {
-      "id": "f-05",
       "title": "correlateFrameSchedCpu is window-granularity only",
       "severity": "info",
       "evidenceIds": [
@@ -61,18 +60,510 @@
         "ev-017-throttle-correlateFrameSchedCpu"
       ],
       "claim": "correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation.",
-      "boundary": "granularity:window; no per-frame correlation claimed"
+      "boundary": "granularity:window; no per-frame correlation claimed",
+      "kind": "boundary"
     },
     {
-      "id": "f-06",
-      "title": "base vs cur UnityMain sched snapshot",
+      "id": "f-05",
+      "title": "base vs cur UnityMain sched relative baseline",
       "severity": "info",
       "evidenceIds": [
         "ev-001-base-querySchedState",
         "ev-006-cur-querySchedState"
       ],
-      "claim": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
-      "boundary": "window sched aggregates; not FrameTimeline jank"
+      "claim": "cur 比 base 降 10.5% / -9.12pp; sleepingPct base=12.04 cur=20.4",
+      "boundary": "window sched aggregates; not FrameTimeline jank",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur UnityMain runningPct=77.82",
+        "baselineValue": "base UnityMain runningPct=86.94",
+        "foldChange": 0.895,
+        "deltaPct": -9.12,
+        "relativeJudgment": "cur 比 base 降 10.5% / -9.12pp"
+      },
+      "kind": "sched-relative"
+    },
+    {
+      "id": "f-06",
+      "title": "top 业务模块: PlayerLoop",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "claim": "PlayerLoop: totalMs=14608.74 totalPct=99.6 count=483 avgMs=30.246; parentChain=UnityMain > PlayerLoop; cur 比 base 涨 27.5% (×1.275)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur PlayerLoop totalMs=14608.74",
+        "baselineValue": "base PlayerLoop totalMs=11458.86",
+        "foldChange": 1.275,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 27.5% (×1.275)"
+      },
+      "kind": "top-business-module"
+    },
+    {
+      "id": "f-07",
+      "title": "top 业务模块: PostLateUpdate.FinishFrameRendering",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "claim": "PostLateUpdate.FinishFrameRendering: totalMs=6311.62 totalPct=43.03 count=483 avgMs=13.068; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering; cur 比 base 涨 34.9% (×1.349)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur PostLateUpdate.FinishFrameRendering totalMs=6311.62",
+        "baselineValue": "base PostLateUpdate.FinishFrameRendering totalMs=4677.17",
+        "foldChange": 1.349,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 34.9% (×1.349)"
+      },
+      "kind": "top-business-module"
+    },
+    {
+      "id": "f-08",
+      "title": "top 业务模块: URP.Render",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "claim": "URP.Render: totalMs=5869.82 totalPct=40.02 count=483 avgMs=12.153; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render; cur 比 base 涨 40.9% (×1.409)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.Render totalMs=5869.82",
+        "baselineValue": "base URP.Render totalMs=4167.28",
+        "foldChange": 1.409,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 40.9% (×1.409)"
+      },
+      "kind": "top-business-module"
+    },
+    {
+      "id": "f-09",
+      "title": "top 业务模块: URP.RenderCameraStack",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "claim": "URP.RenderCameraStack: totalMs=5802.8 totalPct=39.56 count=966 avgMs=6.007; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack; cur 比 base 涨 42.4% (×1.424)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.RenderCameraStack totalMs=5802.8",
+        "baselineValue": "base URP.RenderCameraStack totalMs=4074.3",
+        "foldChange": 1.424,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 42.4% (×1.424)"
+      },
+      "kind": "top-business-module"
+    },
+    {
+      "id": "f-10",
+      "title": "top 业务模块: URP.RenderSingleCamera",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "claim": "URP.RenderSingleCamera: totalMs=5698.7 totalPct=38.85 count=966 avgMs=5.899; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera; cur 比 base 涨 44.9% (×1.449)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.RenderSingleCamera totalMs=5698.7",
+        "baselineValue": "base URP.RenderSingleCamera totalMs=3931.5",
+        "foldChange": 1.449,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 44.9% (×1.449)"
+      },
+      "kind": "top-business-module"
+    },
+    {
+      "id": "f-11",
+      "title": "涨幅最大模块: CS:AOE.Outside.OutSideViewArmyLineMgr",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "claim": "CS:AOE.Outside.OutSideViewArmyLineMgr: baseTotalMs=null curTotalMs=760.94 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=760.94",
+        "baselineValue": "base CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.Outside.OutSideViewArmyLineMgr 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "fold-change-module"
+    },
+    {
+      "id": "f-12",
+      "title": "涨幅最大模块: MapSignificanceMgr.ProcessTasks",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "claim": "MapSignificanceMgr.ProcessTasks: baseTotalMs=null curTotalMs=584.65 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur MapSignificanceMgr.ProcessTasks totalMs=584.65",
+        "baselineValue": "base MapSignificanceMgr.ProcessTasks totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "MapSignificanceMgr.ProcessTasks 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "fold-change-module"
+    },
+    {
+      "id": "f-13",
+      "title": "涨幅最大模块: MapSignificanceMgr.EntityTask",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "claim": "MapSignificanceMgr.EntityTask: baseTotalMs=null curTotalMs=545.61 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur MapSignificanceMgr.EntityTask totalMs=545.61",
+        "baselineValue": "base MapSignificanceMgr.EntityTask totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "MapSignificanceMgr.EntityTask 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "fold-change-module"
+    },
+    {
+      "id": "f-14",
+      "title": "涨幅最大模块: CS:AOE.MeshUIManager",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "claim": "CS:AOE.MeshUIManager: baseTotalMs=null curTotalMs=491.36 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.MeshUIManager totalMs=491.36",
+        "baselineValue": "base CS:AOE.MeshUIManager totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.MeshUIManager 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "fold-change-module"
+    },
+    {
+      "id": "f-15",
+      "title": "涨幅最大模块: CS:AOE.Battle.BattleUIManager",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "claim": "CS:AOE.Battle.BattleUIManager: baseTotalMs=null curTotalMs=349.12 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.Battle.BattleUIManager totalMs=349.12",
+        "baselineValue": "base CS:AOE.Battle.BattleUIManager totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.Battle.BattleUIManager 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "fold-change-module"
+    },
+    {
+      "id": "f-16",
+      "title": "thermal-only 隐性路径: ParticleSystem.EndUpdateAll",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "claim": "ParticleSystem.EndUpdateAll: curTotalMs=null throttleTotalMs=100.88 foldChange=9999; curCount=null throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle ParticleSystem.EndUpdateAll totalMs=100.88",
+        "baselineValue": "cur ParticleSystem.EndUpdateAll totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "ParticleSystem.EndUpdateAll 仅在 throttle 出现 (foldChange=9999 sentinel)"
+      },
+      "kind": "thermal-only-path"
+    },
+    {
+      "id": "f-17",
+      "title": "thermal-only 隐性路径: Semaphore.WaitForSignal",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "claim": "Semaphore.WaitForSignal: curTotalMs=2812.39 throttleTotalMs=7592.75 foldChange=2.7; curCount=483 throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle Semaphore.WaitForSignal totalMs=7592.75",
+        "baselineValue": "cur Semaphore.WaitForSignal totalMs=2812.39",
+        "foldChange": 2.7,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.7 (2812.39→7592.75 ms)"
+      },
+      "kind": "thermal-only-path"
+    },
+    {
+      "id": "f-18",
+      "title": "thermal-only 隐性路径: Gfx.WaitForPresentOnGfxThread",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "claim": "Gfx.WaitForPresentOnGfxThread: curTotalMs=2817.69 throttleTotalMs=7600.06 foldChange=2.697; curCount=483 throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle Gfx.WaitForPresentOnGfxThread totalMs=7600.06",
+        "baselineValue": "cur Gfx.WaitForPresentOnGfxThread totalMs=2817.69",
+        "foldChange": 2.697,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.697 (2817.69→7600.06 ms)"
+      },
+      "kind": "thermal-only-path"
+    },
+    {
+      "id": "f-19",
+      "title": "thermal-only 隐性路径: URP.WaitForPresent",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "claim": "URP.WaitForPresent: curTotalMs=2824.32 throttleTotalMs=7608.52 foldChange=2.694; curCount=2415 throttleCount=2135",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle URP.WaitForPresent totalMs=7608.52",
+        "baselineValue": "cur URP.WaitForPresent totalMs=2824.32",
+        "foldChange": 2.694,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.694 (2824.32→7608.52 ms)"
+      },
+      "kind": "thermal-only-path"
+    },
+    {
+      "id": "f-20",
+      "title": "thermal-only 隐性路径: URP.Submit",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "claim": "URP.Submit: curTotalMs=3162.57 throttleTotalMs=8069.14 foldChange=2.551; curCount=2415 throttleCount=2135",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle URP.Submit totalMs=8069.14",
+        "baselineValue": "cur URP.Submit totalMs=3162.57",
+        "foldChange": 2.551,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.551 (3162.57→8069.14 ms)"
+      },
+      "kind": "thermal-only-path"
+    },
+    {
+      "id": "f-21",
+      "title": "GC 压力最大模块: URP.BeforeRendering",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "claim": "URP.BeforeRendering: count=63050 totalMs=76.34 perFrame=130.54; parentChain=UnityMain>PlayerLoop>PostLateUpdate.FinishFrameRendering>URP.Render>URP.RenderCameraStack>URP.RenderSingleCamera>URP.BeforeRendering; throttle 比 cur perFrame ×0.237 (130.54→31)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur URP.BeforeRendering perFrame=130.54",
+        "baselineValue": "throttle URP.BeforeRendering perFrame=31",
+        "foldChange": 0.237,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.237 (130.54→31)"
+      },
+      "kind": "gc-pressure-module"
+    },
+    {
+      "id": "f-22",
+      "title": "GC 压力最大模块: Inl_OpaquePass",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "claim": "Inl_OpaquePass: count=62565 totalMs=82.409 perFrame=129.53; parentChain=UnityMain>PlayerLoop>PostLateUpdate.FinishFrameRendering>URP.Render>URP.RenderCameraStack>URP.RenderSingleCamera>URP.MainRenderingTransparent>Inl_OpaquePass; throttle 比 cur perFrame ×0.232 (129.53→30)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur Inl_OpaquePass perFrame=129.53",
+        "baselineValue": "throttle Inl_OpaquePass perFrame=30",
+        "foldChange": 0.232,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.232 (129.53→30)"
+      },
+      "kind": "gc-pressure-module"
+    },
+    {
+      "id": "f-23",
+      "title": "GC 压力最大模块: CS:AOE.MeshUIManager",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "claim": "CS:AOE.MeshUIManager: count=29622 totalMs=31.037 perFrame=61.33; parentChain=UnityMain>PlayerLoop>PreLateUpdate.ScriptRunBehaviourLateUpdate>LateBehaviourUpdate>Core.LateUpdate>CS:AOE.MeshUIManager; throttle 比 cur perFrame ×0.034 (61.33→2.11)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur CS:AOE.MeshUIManager perFrame=61.33",
+        "baselineValue": "throttle CS:AOE.MeshUIManager perFrame=2.11",
+        "foldChange": 0.034,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.034 (61.33→2.11)"
+      },
+      "kind": "gc-pressure-module"
+    },
+    {
+      "id": "f-24",
+      "title": "GC 压力最大模块: TimeText.7",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "claim": "TimeText.7: count=11798 totalMs=15.07 perFrame=24.43; parentChain=UnityMain>PlayerLoop>Update.ScriptRunBehaviourUpdate>BehaviourUpdate>Core.Update>CS:AOE.LuaMgr>LuaMgr.OnTick&UpdateSchedule>BattleHeadMgr>BattleHeadMgr.OnUpdate>TimeText.7; throttle 比 cur perFrame ×1.011 (24.43→24.69)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur TimeText.7 perFrame=24.43",
+        "baselineValue": "throttle TimeText.7 perFrame=24.69",
+        "foldChange": 1.011,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×1.011 (24.43→24.69)"
+      },
+      "kind": "gc-pressure-module"
+    },
+    {
+      "id": "f-25",
+      "title": "GC 压力最大模块: BattleHeadMgr.OnUpdate",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "claim": "BattleHeadMgr.OnUpdate: count=10018 totalMs=16.207 perFrame=20.74; parentChain=UnityMain>PlayerLoop>Update.ScriptRunBehaviourUpdate>BehaviourUpdate>Core.Update>CS:AOE.LuaMgr>LuaMgr.OnTick&UpdateSchedule>BattleHeadMgr>BattleHeadMgr.OnUpdate; BattleHeadMgr.OnUpdate cur perFrame=20.74 (throttle 无同名行)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur BattleHeadMgr.OnUpdate perFrame=20.74",
+        "baselineValue": "throttle BattleHeadMgr.OnUpdate perFrame=n/a",
+        "foldChange": null,
+        "deltaPct": null,
+        "relativeJudgment": "BattleHeadMgr.OnUpdate cur perFrame=20.74 (throttle 无同名行)"
+      },
+      "kind": "gc-pressure-module"
+    },
+    {
+      "id": "f-26",
+      "title": "off-CPU byState 归因 (throttle)",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-025-throttle-queryOffCpuAttribution"
+      ],
+      "claim": "throttle totalOffCpuMs=8581, byState: S=7666.5ms(89.34%)/R=564.5ms(6.58%)/R+=238.6ms(2.78%)/D=111.4ms(1.3%) → 主线程 off-CPU 以 state=S 为主 (89.34%)",
+      "boundary": "offCpuAttribution.byState window aggregate",
+      "kind": "offcpu-bystate"
+    },
+    {
+      "id": "f-27",
+      "title": "GPU-bound 因果推理 (wait slice vs sleeping)",
+      "severity": "critical",
+      "evidenceIds": [
+        "ev-025-throttle-queryOffCpuAttribution"
+      ],
+      "claim": "throttle sleepingMs=7666.5 (byState.S.totalMs), maxWaitSlice=URP.WaitForPresent=7608.52ms (nested sum coveragePct=691.53% — use max not sum); effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）; GPU-bound 信号强烈",
+      "boundary": "nested waitSlices may inflate sum coveragePct; judgment uses max(waitSlice.totalMs)/sleepingMs (byState.S.totalMs preferred over sched sleepingPct×totalOffCpuMs)",
+      "causalChain": {
+        "premise": "throttle sleepingMs=7666.5 (byState.S.totalMs), maxWaitSlice=URP.WaitForPresent=7608.52ms (nested sum coveragePct=691.53% — use max not sum)",
+        "inference": "effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）",
+        "conclusion": "GPU-bound 信号强烈",
+        "confidence": "high"
+      },
+      "kind": "gpu-bound-causal"
+    },
+    {
+      "id": "f-28",
+      "title": "PlayerLoop 分位数对比 (cur vs throttle)",
+      "severity": "info",
+      "evidenceIds": [
+        "ev-008-cur-queryFrameTimeline",
+        "ev-013-throttle-queryFrameTimeline"
+      ],
+      "claim": "cur p50=30.15 p95=35.22 fps=33.1 slowFrameRate=11.18 → throttle p50=45.94 p95=55.62 fps=21.4 slowFrameRate=98.83; throttle 比 cur 涨 52.4% (×1.524); slowFrameRate ×8.84",
+      "boundary": "playerLoopPercentiles from provider; not Android FrameTimeline jank",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle playerLoop p50Ms=45.94",
+        "baselineValue": "cur playerLoop p50Ms=30.15",
+        "foldChange": 1.524,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 52.4% (×1.524)"
+      },
+      "kind": "playerloop-percentiles"
+    },
+    {
+      "id": "f-29",
+      "title": "降频形态判定 (三态 clusterSummary)",
+      "severity": "warning",
+      "evidenceIds": [
+        "ev-004-base-queryCpuFreq",
+        "ev-009-cur-queryCpuFreq",
+        "ev-014-throttle-queryCpuFreq"
+      ],
+      "claim": "bigCoreReachPct base=74.9→cur=75.6→throttle=59.2; avgMhz 1729.5→1576.3→1324.6; clusters: base: big.reach=73.7 mid.reach=76.1 small.reach=63.1 | cur: big.reach=77 mid.reach=74.2 small.reach=69.8 | throttle: big.reach=61.4 mid.reach=57 small.reach=67.9; 形态=全集群压频（big/mid/small reach 同向下降）; throttle 比 cur 降 21.7% / -16.4pp",
+      "boundary": "cluster split by CPU index bands; no SoC-name hardcoding",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle bigCoreReachPct=59.2",
+        "baselineValue": "cur bigCoreReachPct=75.6",
+        "foldChange": 0.783,
+        "deltaPct": -16.4,
+        "relativeJudgment": "throttle 比 cur 降 21.7% / -16.4pp"
+      },
+      "kind": "freq-morphology"
     }
   ]
 }

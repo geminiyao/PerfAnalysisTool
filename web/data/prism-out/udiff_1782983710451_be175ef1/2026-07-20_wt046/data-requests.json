@@ -1,0 +1,44 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈（哪个函数/Lua marker 在分配），不是整帧总量",
+    "rationale": "queryFrameCounters 只有整帧 gc_allocated_in_frame；frame 519 的当帧分配仅 8192 字节但发生了 70.2ms 同步 GC，要定位是哪个系统长期累积触发需要到函数级分配来源。同理 MapSignificanceMgr 的 GC alloc count 从 0 涨到 14043，但不知道这些分配具体在 Lua 端哪个函数产生。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+  },
+  {
+    "id": "lua.marker-source",
+    "want": "Lua 端 marker（如 OnCameraMove、MapCameraCtrl、MapSignificanceMgr）的 Lua 函数体源码定位",
+    "rationale": "getSourceForSymbol 对 MapCameraCtrl 返回 not-found（symbol not in codegraph nor map-source），无法看 Lua 实现就给不了具体优化建议。OnCameraMove 在 frame 144 炸 53ms self，但不知道它内部在 Lua 端执行了什么逻辑导致这么慢。",
+    "suspectedAxis": "code",
+    "closestExistingTool": "getSourceForSymbol（只能查 C# codegraph，Lua 端 marker 查不到）"
+  },
+  {
+    "id": "ecs.entity-count",
+    "want": "ECS 实体数量统计（军队/士兵/动画实体的具体数量），按帧或按 SystemGroup",
+    "rationale": "Job.Worker 退化 foldChange ×12.86，MoveChain_SoldierMoveSystem:SoldierMoveJob 从无到 5.154ms/帧，但不知道当前态场景有多少士兵实体在驱动这个 Job。需要实体数量才能判断是'实体量合理但 Job 慢'还是'实体量过多'。",
+    "suspectedAxis": "scale",
+    "closestExistingTool": "queryFrameCounters（有 object_count 但不分 ECS/DOTS 实体）"
+  },
+  {
+    "id": "draw-calls-detail",
+    "want": "DrawCall 数量和按 pass/材质分组的明细",
+    "rationale": "queryFrameCounters 的 draw_calls 字段为 null（此版本采集不到），只有 batches。GPU bound 判定（finding 6）需要 DrawCall 数量来区分是'DrawCall 过多'还是'Shader 复杂/overdraw'。frame 184 的 batches=168 但不知道 DrawCall 多少。",
+    "suspectedAxis": "render",
+    "closestExistingTool": "queryFrameCounters（draw_calls 为 null，只有 batches）"
+  },
+  {
+    "id": "network-msg-payload-size",
+    "want": "网络消息的 payload 大小/实体数量（如 YzEntityMoveLineNtf 携带多少个实体的移动线数据）",
+    "rationale": "YzEntityMoveLineNtf peak 14.9ms @ frame 273，Lua 遍历 msg.fullUpdateLine 处理，但不知道当帧消息体携带了多少个实体。无法判断 14.9ms 是否与消息体大小成正比，还是 FormatWorldPosition_MoveAttr 单次处理就慢。",
+    "suspectedAxis": "network",
+    "closestExistingTool": "无（Profiler Timeline 只记录 marker 耗时，不包含业务层消息 payload 内容）"
+  },
+  {
+    "id": "meshui.subsystem-breakdown",
+    "want": "MeshUIManager 7 个子系统（camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers）各自耗时占比",
+    "rationale": "MeshUIManager 每帧 2.01ms（新出现大头），但 7 个子系统没有独立 Profiler marker，drillDownMarker 只能返回自身作为唯一叶子节点，无法拆解 2.01ms 内部具体分布。已在 capabilities 记录此限制。",
+    "suspectedAxis": "ui",
+    "closestExistingTool": "drillDownMarker（返回自身作为唯一叶子，无法进一步拆解）"
+  }
+]

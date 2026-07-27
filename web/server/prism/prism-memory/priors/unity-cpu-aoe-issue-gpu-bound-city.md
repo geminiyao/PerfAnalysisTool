@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.508Z
 source: unity-cpu
 title: "AOE 已知问题：城内 GPU Bound"
 tags: ["aoe","已知问题","gpu-bound","城内"]
+dataSource: unity
 ---
 
 **触发场景**：城内默认高清画质。

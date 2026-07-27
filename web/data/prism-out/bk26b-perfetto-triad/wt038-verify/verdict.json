@@ -1,0 +1,45 @@
+{
+  "rating": "fail",
+  "headline": "三态从 60fps 退化到 21fps：throttle 态主线程 38.99% 时间在等 GPU（单次等 17.8ms 超过一个 vsync 周期），叠加 SoC 大核频率被压到 59% 降频，业务脚本 Core.Update 稳态占 24% 是第二成本。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 45.94,
+  "observedP99Ms": 66.32,
+  "pctFramesOverBudget": 98.83,
+  "primaryDrivers": [
+    "gpu.bound.wait.slice",
+    "freq.throttle.bigcore",
+    "script.core.update.hotpath"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "base"},
+      "resultDigest": {"playerLoopP50Ms": 16.69, "playerLoopP99Ms": 21.37, "fps": 59.8, "slowFrameRate": 0}
+    },
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "cur"},
+      "resultDigest": {"playerLoopP50Ms": 30.15, "playerLoopP99Ms": 42.54, "fps": 33.1, "slowFrameRate": 11.18}
+    },
+    {
+      "tool": "queryFrameTimeline",
+      "args": {"role": "throttle"},
+      "resultDigest": {"playerLoopP50Ms": 45.94, "playerLoopP99Ms": 66.32, "fps": 21.4, "slowFrameRate": 98.83, "choreographerFps": 60.1, "choreographerSlowFrameRate": 0}
+    },
+    {
+      "tool": "queryOffCpuAttribution",
+      "args": {"role": "throttle", "thread": "UnityMain"},
+      "resultDigest": {"sleepingPct": 38.99, "gfxWaitForPresentAvgMs": 17.799, "gfxWaitForPresentTotalMs": 7600.06, "byStateS_pctOfOffCpu": 89.34, "byStateD_pctOfOffCpu": 1.3}
+    },
+    {
+      "tool": "queryCpuFreq",
+      "args": {"role": "throttle"},
+      "resultDigest": {"bigCoreReachPct": 59.2, "avgMhz": 1324.6, "midClusterReachPct": 57, "midClusterMaxMhz": 2227.2, "midClusterCpuinfoMaxMhz": 2419.2, "throttlingSuspected": true}
+    },
+    {
+      "tool": "queryCallTreeSubtree",
+      "args": {"role": "cur", "pattern": "Core.Update", "minTotalPct": 0.5},
+      "resultDigest": {"coreUpdateTotalPct": 24.11, "coreUpdateAvgMs": 7.32, "luaMgrPct": 12.51, "mapManagerPct": 9.54}
+    }
+  ]
+}

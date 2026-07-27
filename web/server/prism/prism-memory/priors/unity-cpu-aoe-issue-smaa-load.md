@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.698Z
 source: unity-cpu
 title: "AOE 已知问题：SMAA 负载高"
 tags: ["aoe","已知问题","smaa","抗锯齿","gpu"]
+dataSource: unity
 ---
 
 **触发场景**：全场景。

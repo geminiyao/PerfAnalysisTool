@@ -1,0 +1,231 @@
+{
+  "runId": "unity-outside-stressmove",
+  "overview": "这不是单一元凶：相机一动就必卡（19次移动100%命中全场最慢帧），叠加行军线管理、UI渲染两块每帧雷打不动的稳态开销（合计约4.4ms/帧、累计超过2600ms），把帧预算天花板死死压住；再被两次GC同步卡顿（一次直接把单帧拖到113ms，逼近预算的7倍）、Lua多线程GC、网络消息、资源卸载这几个偶发尖峰反复捅刀，最终600帧全部超预算，无一帧达标。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "相机移动必卡",
+      "kind": "高频尖峰",
+      "contribution": "19次相机移动100%命中\">60ms极慢帧\"，占全部27个极慢帧的70%，单次最高吃掉53.41ms（几乎半帧）",
+      "severity": "critical"
+    },
+    {
+      "rank": 2,
+      "problem": "行军线管理每帧稳定2.3ms，全场sumSelfMs最高",
+      "kind": "稳态开销",
+      "contribution": "600帧每帧都出现，累计1381ms，是单个marker里吃掉总时间最多的一项，决定了帧率天花板",
+      "severity": "high"
+    },
+    {
+      "rank": 3,
+      "problem": "MeshUIManager（UI）每帧稳定2.08ms",
+      "kind": "稳态开销",
+      "contribution": "600帧每帧都出现，累计1246ms，是第二大常驻税，但内部子系统分布看不到",
+      "severity": "medium"
+    },
+    {
+      "rank": 4,
+      "problem": "两次GC.Collect同步卡顿（全场最慢帧的元凶）",
+      "kind": "极端偶发尖峰",
+      "contribution": "600帧仅出现2帧，但frame519单帧113.56ms（全场最慢），GC.Collect占其中61.8%；发生频率低所以排在稳态大头之后，但单次冲击是全场之最",
+      "severity": "critical"
+    },
+    {
+      "rank": 5,
+      "problem": "Lua多线程GC（ExecuteMtGc）偶发变慢并拖累主线程等待",
+      "kind": "偶发尖峰（跨线程）",
+      "contribution": "5帧突发，最高21.59ms，且证实会连带主线程WaitGCThread等待（100%重叠），是唯一被验证的跨线程因果链",
+      "severity": "medium"
+    },
+    {
+      "rank": 6,
+      "problem": "网络消息YzEntityMoveLineNtf偶尔炸到14.9ms",
+      "kind": "偶发尖峰",
+      "contribution": "77帧里出现，9帧突发，frame273单帧占比33%，长尾分布(p99是p95的9倍)",
+      "severity": "high"
+    },
+    {
+      "rank": 7,
+      "problem": "资源卸载TryUnloadPending偶尔炸到14.6ms",
+      "kind": "偶发尖峰",
+      "contribution": "6帧突发，均值仅0.11ms，代码逻辑4行极简，贵在批量调用次数而非单次逻辑",
+      "severity": "medium"
+    }
+  ],
+  "ruledOut": [
+    {
+      "name": "URP.RenderGraphSetup（渲染图搭建，2.25ms/帧）",
+      "why": "已下钻到叶子级无法再分摊，且三角形数/批次数全程波动在2倍以内，是当前渲染配置下的正常固定成本，不是bug，不建议从游戏逻辑入手优化"
+    },
+    {
+      "name": "Semaphore.WaitForSignal（主线程sumSelfMs高达1042ms）",
+      "why": "语义是\"等待\"，是Job System调度的正常空闲等待时间而非无效计算；且其maxSelfMs所在帧不在极慢帧名单里，与卡顿无相关性证据，总量大只是因为它几乎每帧都在等一会儿"
+    },
+    {
+      "name": "Gfx.PresentFrame（Submit Thread，均值8.79ms/帧，p95达26ms）",
+      "why": "GPU呈现本身负载确实不小，但correlateFrameSets验证它与CPU侧\">60ms极慢帧\"完全不重叠(intersection=0)，说明是显卡驱动/present管线层面独立的抖动，与本次CPU逐帧脚本卡顿无因果关系，需要用GPU专项工具（RenderDoc/Nsight）另行排查，不纳入本次主因"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "高频尖峰：相机一动就卡，是玩家最直接感知到的顿帧",
+      "intro": "这一项单独列出来，因为它是全场唯一一个和\"真正的卡顿\"几乎绑定关系的marker——不是总量最大，但命中率最恐怖。",
+      "items": [
+        {
+          "findingIds": ["F02"],
+          "title": "相机移动（OnCameraMove）：19次移动，19次全部命中极慢帧",
+          "narrative": "只要玩家动一下相机，当帧几乎必卡：19次相机移动100%落在\">60ms慢帧\"名单里，而这些慢帧里70%都是被它带崩的。最严重的一次（frame144）相机移动这一步单独吃掉53.41ms，占整帧96.47ms的一半以上。调用链是MapCameraCtrl.OnLateUpdate→UpdateCameraPos→InfiniteZoomMgr.OnOutsideCameraMove→PostCameraMoveScale，最终落在OnCameraMove这个marker上；稳态（不移动时）这条链路几乎不产生开销，一旦移动就从0跳到40~53ms，是典型的\"事件触发型一次性重活\"，很可能是无限缩放层级切换时做了整体重建/重算（视野裁剪、实体可见性等），而不是分摊到多帧的小开销。",
+          "callTree": {
+            "rootMarker": "OnCameraMove",
+            "note": "MapCameraCtrl.OnLateUpdate→InfiniteZoomMgr.OnOutsideCameraMove→PostCameraMoveScale→OnCameraMove；OnCameraMove本身因符号歧义未能精确定位到函数体，已如实标注"
+          },
+          "sourceInsight": "定位到InfiniteZoomMgr.OnOutsideCameraMove附近代码（含CanWork/IsSwitchingScene检查），但OnCameraMove/PostCameraMoveScale的具体Lua实现未能精确解析（返回歧义候选），无法给出行级修改点",
+          "recommendations": [
+            "排查相机移动是否每次都触发了全量的视野裁剪/LOD切换/实体可见性重算，改成只处理新进入/离开视野的增量部分",
+            "如果是无限缩放层级切换逻辑，给切换动作加节流或异步分帧处理，避免单帧内做完所有工作",
+            "需要先精确定位OnCameraMove的源码位置才能给出更具体的修改点"
+          ],
+          "severity": "critical"
+        }
+      ]
+    },
+    {
+      "heading": "稳态开销：决定帧率天花板的常驻税",
+      "intro": "这两项每帧都在，合计约4.4ms/帧，600帧下来单独就吃掉2600多毫秒——不靠它们制造尖峰，但它们才是\"为什么每一帧都超预算\"的真正地基。（同档次还有URP渲染管线2.25ms/帧，但已验证是正常固定负载，见已排除）",
+      "items": [
+        {
+          "findingIds": ["F03"],
+          "title": "行军线管理：全场sumSelfMs最高的持续性开销，2.3ms/帧×600帧=1381ms",
+          "narrative": "CS:AOE.Outside.OutSideViewArmyLineMgr不是偶尔卡一下，而是每一帧都稳定花掉2.3ms左右的自身逻辑时间，累计1381ms，是全场所有marker里sumSelfMs最高的一项——比任何一个偶发尖峰的总影响都大。下钻确认这2.3ms里82%以上是自身代码（唯一子节点CalculateVertexJob只占18.75%），source确认OnUpdate方法体里有三个每帧全量foreach遍历。压测场景（stressmove）下并发行军线数量越多，这个开销大概率线性增长。",
+          "callTree": {
+            "rootMarker": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "note": "自身逻辑占82%（selfMsPerFrame 2.30ms / totalMsPerFrame 2.84ms），唯一子节点CalculateVertexJob(Burst)仅占18.75%"
+          },
+          "sourceInsight": "Assets/Scripts/CS/Outside/View/OutSideViewArmyLineMgr.cs第223-297行，OnUpdate里每帧全量foreach(m_targetToEffectDict)/foreach(m_armyPredictDict.Keys)/foreach(m_armyPreviewDict)三个字典遍历，内部还调用GetEntity/SetPos/GetRelation等函数",
+          "recommendations": [
+            "改成脏标记（dirty flag）机制，只在行军线状态真正变化时处理对应effect/预测/预览逻辑，而非每帧无条件全量遍历",
+            "m_targetToEffectDict这个foreach内的GetRelation等结果如果不常变化，可以缓存并仅在相关状态变化时刷新",
+            "建议后续采集补充字典条目数的Counter，确认具体是哪个字典条目量大"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["F05"],
+          "title": "MeshUIManager（UI渲染）：第二大常驻税，2.08ms/帧×600帧=1246ms，但看不到内部分布",
+          "narrative": "UI渲染管理每帧稳定花2.08ms，累计1246ms，是排名第二的稳态大头。但这个marker本身就是叶子级——它内部依次调用的camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers等7个子系统各自没有插CustomSampler，现有数据完全看不到具体是哪个子系统在吃时间，只能看到一个总数。这是数据完整度的局限，不是确认存在的bug：波动不算大（max只是mean的2.3倍），更像持续性UI逐帧刷新成本。",
+          "callTree": {
+            "rootMarker": "CS:AOE.MeshUIManager",
+            "note": "本身已是叶子级，无子节点可展开，2.08ms全部记在自身名下"
+          },
+          "sourceInsight": "Assets/Scripts/CS/MeshUI/MeshUIManager.cs的OnLateUpdate依次调用camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers这7个子系统的更新方法，但这些子调用没有各自独立的Profiler marker，无法进一步归因",
+          "recommendations": [
+            "给这7个子系统各自加CustomSampler.Begin/End，下次采集时才能看到具体哪个子系统占大头",
+            "在没有细粒度数据支撑前，不建议猜测具体优化点，先补采样再决策"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "偶发尖峰：低频但制造顿挫的几个点",
+      "intro": "这几项出现频率都不高（600帧里只占几帧到几十帧），但每次命中都是肉眼可见的顿一下，其中GC同步卡顿是全场单帧冲击最极端的一次，即便频率最低也值得单独点名。",
+      "items": [
+        {
+          "findingIds": ["F01"],
+          "title": "两次同步GC.Collect：全场最慢的两帧（113ms和57ms）都是它干的",
+          "narrative": "整场最卡的一帧（frame519，113.56ms，逼近预算7倍）里，六成多时间（70.2ms）花在一次GC.Collect上——游戏突然愣住70毫秒去清内存，然后才继续跑逻辑。frame483有过一次较轻的版本（GC相关合计约18.84ms，占该帧33%）。两帧的gc_allocated_in_frame都在全程正常偏低水平，说明不是当帧分配暴涨触发，更像引擎按周期/阈值主动触发的一次性大扫除，恰好撞上了这一帧。600帧里只出现2次，不是持续性泄漏，而是GC触发时机没被主动管理。",
+          "callTree": {
+            "rootMarker": "GC.Collect",
+            "note": "frame519热路径：PostLateUpdate→Core.EndOfFrame→CS:AOE.LuaMgr(4.87ms self)→GC.Collect(70.20ms self，占整帧61.8%)，是调用链末端叶子节点"
+          },
+          "sourceInsight": "未能定位到触发GC.Collect的具体业务代码位置（是否为业务显式调用还是Unity自动阈值触发，需要进一步排查）",
+          "recommendations": [
+            "排查是否是业务代码显式调用GC.Collect（如场景切换、资源释放流程），如果是，挪到加载界面/黑屏过场等不影响帧率感知的时机",
+            "如果是Unity自动触发的阈值型GC，调整增量GC的时间片预算，让清理更均匀地摊在多帧",
+            "需要按marker粒度的分配统计才能进一步定位GC前是哪个系统在攒对象"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["F04"],
+          "title": "网络消息YzEntityMoveLineNtf：压测下偶尔炸到14.9ms",
+          "narrative": "服务器推送的实体移动线消息平时很轻（77帧里出现，均值仅0.253ms），但9帧出现明显突发，frame273单帧花了14.9ms，占该帧三分之一以上。p99是p95的9倍，尾部延迟非常长尾，很可能是短时间内多个单位同时改变移动路线，服务器一次性推送了较大批量的更新，压测场景下暴露得更明显。",
+          "callTree": {
+            "rootMarker": "CS:AOE.TServerManager",
+            "note": "调用链CS:AOE.TServerManager→TServer.HandleMessages→YzEntityMoveLineNtf，稳态selfMsPerFrame约0.28ms，9次burst最高14.9ms"
+          },
+          "sourceInsight": "未能获取单次消息的payload大小或实体数量，无法确认是否是包过大或实体数过多导致",
+          "recommendations": [
+            "检查服务器侧是否可以对移动线更新做合并/限流，避免短时间内推送大量独立消息",
+            "客户端处理该消息时，超过一定实体数量可以分帧处理而非一帧内做完"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["F07"],
+          "title": "资源卸载TryUnloadPending：逻辑本身极简，贵在批量调用次数",
+          "narrative": "资源卸载检查平时几乎不花时间（均值0.11ms），但6次突发里最高炸到14.59ms（frame80）。查看真实源码后发现TryUnload方法体只有4行有效代码（CanUnload判断+DoUnload执行），说明贵的不是逻辑复杂度，而是当帧同时触发卸载的资源数量多。6个突发帧跨度覆盖了几乎整个采集时长，是资源加载/卸载队列积压的周期性现象。",
+          "callTree": {
+            "rootMarker": "CS:AOE.ResManager",
+            "note": "调用链CS:AOE.ResManager→LoaderManagerOnFrameEnd→LoaderManagerTickUnload→LoaderManagerTryUnloadPending→TryUnloadPending.TryUnload，末端逻辑仅4行"
+          },
+          "sourceInsight": "Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs第668-677行：internal bool TryUnload(){ if(!CanUnload()) return false; DoUnload(); state=LoaderState.Pooled; return true; }",
+          "recommendations": [
+            "检查LoaderManagerTickUnload是否有单帧卸载数量上限，如果没有，加一个每帧最多处理N个卸载请求的节流",
+            "排查突发帧前后是否有资源集中释放的业务时机（场景切换、大批量对象销毁），考虑延后卸载时机或异步化"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "工作线程与跨线程等待：主线程之外还发生了什么",
+      "intro": "别只盯主线程——Lua的多线程GC会实打实拖累主线程等待；而Job System的等待和GPU的present耗时看起来数字很大，但查证后确认是正常机制或与本次卡顿无关，列出来是为了说明\"查过了、排除了\"，而不是漏看了。",
+      "items": [
+        {
+          "findingIds": ["F08"],
+          "title": "Lua多线程GC变慢，会连带主线程等待",
+          "narrative": "Lua侧的多线程垫圾回收（LuaMtGc.ExecuteMtGc）持续运行，600帧全在，但有5帧明显突发，最高frame194炸到21.59ms。同一批帧里主线程有个专门等这个GC线程的等待点（LuaMtGc.WaitGCThread），且WaitGCThread的2次突发帧100%被ExecuteMtGc的突发帧集合覆盖——说明这是同一件事的两个侧面：Lua GC线程干活变慢，主线程就得等着。突发帧集中在194和343-352这段连续窗口，提示是一段持续几帧的Lua内存压力期，而非孤立事故。",
+          "callTree": {
+            "rootMarker": "LuaMtGc.ExecuteMtGc",
+            "note": "ExecuteMtGc持续运行(presentInFrames=600)，5次burst；其下游WaitGCThread的突发帧100%被ExecuteMtGc突发帧覆盖，证实是因果关系而非两个独立问题"
+          },
+          "sourceInsight": "未定位到具体Lua分配来源，需要进一步排查194和343-352这两个时间窗口前后是否有密集的表/对象创建行为",
+          "recommendations": [
+            "排查这两个时间点前后是否有批量生成AI逻辑对象、批量创建UI节点等密集Lua分配行为",
+            "如果能定位到具体分配来源，考虑把创建工作分帧处理，降低Lua GC需要一次性处理的对象峰值"
+          ],
+          "severity": "medium"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "排查相机移动（OnCameraMove/InfiniteZoomMgr链路）触发的重计算，改增量更新或加节流/异步分帧",
+      "benefit": "19次移动100%命中最慢帧、占极慢帧70%，是玩家最直接感知的卡顿，收益最大且最紧迫"
+    },
+    {
+      "priority": "P0",
+      "action": "行军线OnUpdate三个字典foreach改脏标记机制+缓存GetRelation结果",
+      "benefit": "全场sumSelfMs最高的稳态开销，1381ms累计，是压低天花板的最大单项"
+    },
+    {
+      "priority": "P1",
+      "action": "排查GC.Collect触发源（业务显式调用 or 引擎阈值），调整增量GC时间片预算",
+      "benefit": "两次事件制造了全场最慢的两帧（113ms/57ms），单次冲击极端，虽然频率低但可预期复现"
+    },
+    {
+      "priority": "P1",
+      "action": "MeshUIManager.OnLateUpdate的7个子系统补加CustomSampler，定位具体占大头的子系统",
+      "benefit": "第二大稳态开销1246ms，但当前是黑盒，补采样才能决定下一步优化方向"
+    },
+    {
+      "priority": "P2",
+      "action": "对YzEntityMoveLineNtf网络消息、TryUnloadPending资源卸载、LuaMtGc GC峰值分别加限流/分帧处理",
+      "benefit": "三者都是低频偶发尖峰（6~9帧），单独收益有限，但合并处理可以消除一批压测场景下的顿挫尾巴"
+    }
+  ]
+}

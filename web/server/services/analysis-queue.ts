@@ -8,7 +8,8 @@ import { executeCli, type AnalysisJob } from './cli-executor.js';
 import { extractMetrics } from './metrics-extractor.js';
 import { assetService } from './asset-service.js';
 import { emitProgress } from '../routes/analysis.js';
-import type { CliProvider } from '../../shared/types.js';
+import type { CliProvider, ProgressEvent } from '../../shared/types.js';
+import { runPrismPipeline, type PrismPipelineOptions } from './prism-runner.js';
 
 export interface AnalysisParams {
   targetFps?: number;
@@ -17,11 +18,16 @@ export interface AnalysisParams {
   budgetRatio?: number;
 }
 
+/** 任务类型：'skill' 走 executeCli（旧路径），'prism' 走 runPrismPipeline（三段管线） */
+type TaskType = 'skill' | 'prism';
+
 interface QueueItem {
   sessionId: string;
   cliProvider: CliProvider;
   params?: AnalysisParams;
   addedAt: number;
+  taskType: TaskType;          // 新增：默认 'skill'（向后兼容）
+  prismOpts?: PrismPipelineOptions;  // 新增：taskType='prism' 时必填
 }
 
 interface QueueStatus {
@@ -35,9 +41,18 @@ class AnalysisQueue {
   private running: string | null = null;
   private totalProcessed = 0;
 
-  /** 将分析任务加入队列，返回队列位置 */
-  enqueue(sessionId: string, cliProvider: CliProvider = 'codebuddy', params?: AnalysisParams): number {
-    this.queue.push({ sessionId, cliProvider, params, addedAt: Date.now() });
+  /**
+   * 将分析任务加入队列，返回队列位置。
+   * 向后兼容：未传 taskType 时默认 'skill'。
+   */
+  enqueue(
+    sessionId: string,
+    cliProvider: CliProvider = 'codebuddy',
+    params?: AnalysisParams,
+    taskType: TaskType = 'skill',
+    prismOpts?: PrismPipelineOptions,
+  ): number {
+    this.queue.push({ sessionId, cliProvider, params, addedAt: Date.now(), taskType, prismOpts });
     const position = this.queue.length;
 
     // 如果没有正在运行的任务，立即开始处理
@@ -72,7 +87,11 @@ class AnalysisQueue {
     this.running = item.sessionId;
 
     try {
-      await this.executeJob(item.sessionId, item.cliProvider, item.params);
+      if (item.taskType === 'prism') {
+        await this.executePrismJob(item.sessionId, item.prismOpts!);
+      } else {
+        await this.executeJob(item.sessionId, item.cliProvider, item.params);
+      }
     } catch (err: any) {
       console.error(`Analysis failed for ${item.sessionId}:`, err);
     } finally {
@@ -83,7 +102,7 @@ class AnalysisQueue {
     }
   }
 
-  /** 执行单个分析任务 */
+  /** 执行单个分析任务（skill 路径，原逻辑） */
   private async executeJob(sessionId: string, cliProvider: CliProvider, params?: AnalysisParams): Promise<void> {
     const config = getConfig();
     const db = getDb();
@@ -212,6 +231,125 @@ class AnalysisQueue {
       });
     }
   }
+
+  /** 执行 Prism 三段管线任务（taskType='prism'） */
+  private async executePrismJob(sessionId: string, prismOpts: PrismPipelineOptions): Promise<void> {
+    const db = getDb();
+    const startTime = Date.now();
+
+    // 更新状态为 running
+    await db.update(sessions).set({ status: 'running' }).where(eq(sessions.id, sessionId));
+
+    emitProgress({
+      sessionId,
+      stage: 'preprocessing',
+      progress: 5,
+      message: `Prism 三段管线启动 (source=${prismOpts.source}, runId=${prismOpts.runId})`,
+      timestamp: Date.now(),
+    });
+
+    // 把 Prism onProgress 映射到 SSE ProgressEvent
+    // Prism 三阶段：explore(0-33) / narrative(33-66) / render(66-95)，完成时 100
+    const stageBase: Record<'explore' | 'narrative' | 'render', number> = {
+      explore: 5,
+      narrative: 40,
+      render: 70,
+    };
+    const stageSpan: Record<'explore' | 'narrative' | 'render', number> = {
+      explore: 35,
+      narrative: 30,
+      render: 25,
+    };
+
+    let lastStage: 'explore' | 'narrative' | 'render' = 'explore';
+    let lastProgress = 0;
+    let lastActivityMessage = '';
+
+    const onProgress = (stage: 'explore' | 'narrative' | 'render', progress: number, message: string) => {
+      lastStage = stage;
+      const base = stageBase[stage];
+      const span = stageSpan[stage];
+      // progress=-1 表示纯日志 (不更新进度百分比)
+      if (progress >= 0) {
+        lastProgress = base + Math.floor((progress / 100) * span);
+      }
+      // 记录非心跳消息，供心跳显示当前活动
+      if (!message.includes('⏱ 已运行')) {
+        lastActivityMessage = message;
+      }
+      emitProgress({
+        sessionId,
+        stage: 'analyzing',
+        progress: lastProgress,
+        message: `[Prism/${stage}] ${message}`,
+        timestamp: Date.now(),
+      });
+    };
+
+    // ★ 心跳计时: 每 15 秒推送已用时间 + 当前活动, 防止长时间无反馈
+    const heartbeatTimer = setInterval(() => {
+      const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+      const elapsedStr = elapsedSec >= 60 ? `${Math.floor(elapsedSec / 60)}m${elapsedSec % 60}s` : `${elapsedSec}s`;
+      const activity = lastActivityMessage ? ` | ${lastActivityMessage}` : '';
+      emitProgress({
+        sessionId,
+        stage: 'analyzing',
+        progress: lastProgress,
+        message: `[Prism/${lastStage}] ⏱ 已运行 ${elapsedStr}${activity}`,
+        timestamp: Date.now(),
+      });
+    }, 15000);
+
+    const result = await runPrismPipeline({
+      ...prismOpts,
+      onProgress,
+    });
+
+    clearInterval(heartbeatTimer);
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    if (result.success) {
+      // 注册 Prism 产出物到 assets 表（report.html / findings.json / narrative.json）
+      try {
+        await registerPrismAssets(sessionId, result);
+      } catch (err: any) {
+        console.warn(`[Queue] Failed to register Prism assets: ${err.message}`);
+      }
+
+      await db.update(sessions).set({
+        status: 'completed',
+        completedAt: endTime,
+        duration,
+      }).where(eq(sessions.id, sessionId));
+
+      emitProgress({
+        sessionId,
+        stage: 'completed',
+        progress: 100,
+        message: 'Prism 报告已生成',
+        timestamp: Date.now(),
+        log: `[完成] report.html → ${result.reportHtmlPath}`,
+      });
+    } else {
+      await db.update(sessions).set({
+        status: 'failed',
+        error: (result.error ?? '未知错误').slice(0, 1000),
+        completedAt: endTime,
+        duration,
+      }).where(eq(sessions.id, sessionId));
+
+      emitProgress({
+        sessionId,
+        stage: 'failed',
+        progress: 0,
+        message: result.error || 'Prism 管线失败',
+        timestamp: Date.now(),
+        log: `[错误] ${result.error || '未知错误'}`,
+      });
+    }
+  }
 }
 
 async function registerGeneratedAssets(sessionId: string, outputDir: string) {
@@ -241,6 +379,54 @@ async function registerGeneratedAssets(sessionId: string, outputDir: string) {
       source: 'generated',
       mimeType: item.mimeType,
       metadata: { sessionId, outputDir },
+    });
+    await assetService.linkSessionAsset({
+      sessionId,
+      sessionType: 'profiler',
+      assetId: asset.id,
+      role: item.role,
+    });
+  }
+}
+
+/** 注册 Prism 三段管线产出物到 assets 表（WT-051a 需求 B） */
+async function registerPrismAssets(
+  sessionId: string,
+  result: { reportHtmlPath?: string; findingsPath?: string; narrativePath?: string },
+) {
+  const files = [
+    {
+      fileName: 'report.html',
+      filePath: result.reportHtmlPath,
+      assetType: 'report_html',
+      role: 'report',
+      mimeType: 'text/html',
+    },
+    {
+      fileName: 'findings.json',
+      filePath: result.findingsPath,
+      assetType: 'report_json',
+      role: 'output',
+      mimeType: 'application/json',
+    },
+    {
+      fileName: 'narrative.json',
+      filePath: result.narrativePath,
+      assetType: 'report_json',
+      role: 'output',
+      mimeType: 'application/json',
+    },
+  ];
+
+  for (const item of files) {
+    if (!item.filePath || !fs.existsSync(item.filePath)) continue;
+    const asset = await assetService.registerExistingFile({
+      filePath: item.filePath,
+      fileName: item.fileName,
+      assetType: item.assetType,
+      source: 'generated',
+      mimeType: item.mimeType,
+      metadata: { sessionId, prismPipeline: true },
     });
     await assetService.linkSessionAsset({
       sessionId,

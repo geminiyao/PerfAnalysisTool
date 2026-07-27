@@ -1,83 +1,72 @@
 {
   "source": "perfetto",
   "sampleSet": "bk26b-perfetto-triad",
-  "generatedAt": "2026-07-14T06:52:03.852Z",
-  "overview": "Perfetto triad explore MVP: throttle shows lower avgMhz with co-directional UnityMain running/sleeping shift vs cur (window-level); atrace PlayerLoop/BehaviourUpdate/FinishFrameRendering differ across cur/throttle; Android FrameTimeline absent so jank/GPU busy not judged; base callTree is fallback-sourced.",
+  "generatedAt": "2026-07-15T09:54:10.222Z",
+  "overview": "Perfetto triad explore WT-020: 相对基线判定 + 跨态发现 + 因果推理。UnityMain runningPct 86.94→77.82→56.99; avgMhz 1729.5→1576.3→1324.6; PlayerLoop p50 16.69→30.15→45.94; bigCoreReachPct 74.9→75.6→59.2. 顶级业务热点与 GPU-bound/降频形态见 conclusions；能力边界保留 FrameTimeline/window-only/fallback。",
   "topConclusions": [
     {
       "rank": 1,
-      "problem": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4…",
-      "kind": "CPU + sched (window)",
-      "contribution": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
-      "severity": "warning",
+      "problem": "GPU-bound 因果推理 (wait slice vs sleeping)",
+      "kind": "gpu-bound-causal",
+      "contribution": "throttle 上主线程 Sleeping 中约 99.2% 是等 GPU（Gfx.WaitForPresent），GPU-bound 信号强烈。；因果推理：effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU） → GPU-bound 信号强烈（置信度 high）",
+      "severity": "critical",
       "evidenceIds": [
-        "ev-009-cur-queryCpuFreq",
-        "ev-014-throttle-queryCpuFreq",
-        "ev-006-cur-querySchedState",
-        "ev-011-throttle-querySchedState",
-        "ev-017-throttle-correlateFrameSchedCpu"
+        "ev-025-throttle-queryOffCpuAttribution"
       ],
       "findingIds": [
-        "f-03",
-        "f-05"
+        "f-27"
       ]
     },
     {
       "rank": 2,
-      "problem": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905)…",
-      "kind": "atrace + hotPath",
-      "contribution": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
-      "severity": "info",
+      "problem": "涨幅最大模块: CS:AOE.Outside.OutSideViewArmyLineMgr",
+      "kind": "fold-change-module",
+      "contribution": "CS:AOE.Outside.OutSideViewArmyLineMgr：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。；相对基线解读：CS:AOE.Outside.OutSideViewArmyLineMgr 仅在 cur 出现 (foldChange=9999 sentinel)",
+      "severity": "critical",
       "evidenceIds": [
-        "ev-007-cur-queryAtraceSlices",
-        "ev-012-throttle-queryAtraceSlices",
-        "ev-010-cur-getPerfettoCallTree",
-        "ev-015-throttle-getPerfettoCallTree"
+        "ev-021-delta-querySliceDeltas"
       ],
       "findingIds": [
-        "f-04"
+        "f-11"
       ]
     },
     {
       "rank": 3,
-      "problem": "Android FrameTimeline unavailable across triad",
-      "kind": "boundary / snapshot",
-      "contribution": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
-      "severity": "info",
+      "problem": "涨幅最大模块: MapSignificanceMgr.ProcessTasks",
+      "kind": "fold-change-module",
+      "contribution": "MapSignificanceMgr.ProcessTasks：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。；相对基线解读：MapSignificanceMgr.ProcessTasks 仅在 cur 出现 (foldChange=9999 sentinel)",
+      "severity": "critical",
       "evidenceIds": [
-        "ev-003-base-queryFrameTimeline",
-        "ev-008-cur-queryFrameTimeline",
-        "ev-013-throttle-queryFrameTimeline"
+        "ev-021-delta-querySliceDeltas"
       ],
       "findingIds": [
-        "f-01"
+        "f-12"
       ]
     },
     {
       "rank": 4,
-      "problem": "base callTree available via PlayerLoop anchor fallback",
-      "kind": "boundary / snapshot",
-      "contribution": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots.",
-      "severity": "info",
+      "problem": "涨幅最大模块: MapSignificanceMgr.EntityTask",
+      "kind": "fold-change-module",
+      "contribution": "MapSignificanceMgr.EntityTask：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。；相对基线解读：MapSignificanceMgr.EntityTask 仅在 cur 出现 (foldChange=9999 sentinel)",
+      "severity": "critical",
       "evidenceIds": [
-        "ev-005-base-getPerfettoCallTree"
+        "ev-021-delta-querySliceDeltas"
       ],
       "findingIds": [
-        "f-02"
+        "f-13"
       ]
     },
     {
       "rank": 5,
-      "problem": "base vs cur UnityMain sched snapshot",
-      "kind": "boundary / snapshot",
-      "contribution": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
-      "severity": "info",
+      "problem": "涨幅最大模块: CS:AOE.MeshUIManager",
+      "kind": "fold-change-module",
+      "contribution": "CS:AOE.MeshUIManager：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。；相对基线解读：CS:AOE.MeshUIManager 仅在 cur 出现 (foldChange=9999 sentinel)",
+      "severity": "critical",
       "evidenceIds": [
-        "ev-001-base-querySchedState",
-        "ev-006-cur-querySchedState"
+        "ev-021-delta-querySliceDeltas"
       ],
       "findingIds": [
-        "f-06"
+        "f-14"
       ]
     }
   ],
@@ -86,13 +75,15 @@
       "id": "f-01",
       "title": "Android FrameTimeline unavailable across triad",
       "severity": "info",
-      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer summary may exist but Android jank/GPU busy cannot be classified from this sample set.",
+      "claim": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer/playerLoop percentiles may exist but Android jank/GPU busy cannot be classified from FrameTimeline.",
       "boundary": "FrameTimeline unavailable; no jank finding synthesized",
       "evidenceIds": [
         "ev-003-base-queryFrameTimeline",
         "ev-008-cur-queryFrameTimeline",
         "ev-013-throttle-queryFrameTimeline"
-      ]
+      ],
+      "kind": "boundary",
+      "humanNarrative": "queryFrameTimeline reports androidFrameTimeline.available=false for base/cur/throttle; choreographer/playerLoop percentiles may exist but Android jank/GPU busy cannot be classified from FrameTimeline."
     },
     {
       "id": "f-02",
@@ -102,13 +93,15 @@
       "boundary": "via PlayerLoop anchor fallback",
       "evidenceIds": [
         "ev-005-base-getPerfettoCallTree"
-      ]
+      ],
+      "kind": "boundary",
+      "humanNarrative": "base getPerfettoCallTree returns available=true with PlayerLoop on hotPath, but WT-014 parseNotes show root aggregation was empty and tree was built via PlayerLoop anchor fallback — treat absolute ms as lower-confidence vs cur/throttle native roots."
     },
     {
       "id": "f-03",
-      "title": "throttle CPU freq decline co-directional with UnityMain sched shift (window)",
+      "title": "throttle vs cur sched/freq relative baseline (window)",
       "severity": "warning",
-      "claim": "cur avgMhz=1576.3 → throttle avgMhz=1324.6 (down=true); UnityMain runningPct 77.82 → 56.99 (down=true); sleepingPct 20.4 → 38.99 (up=true); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
+      "claim": "throttle 比 cur 降 26.8% / -20.83pp; avgMhz cur=1576.3 → throttle=1324.6 (×0.84); sleepingPct 20.4 → 38.99 (Δ 18.59pp); throttle throttlingLevel=suspected suspected=true. Co-direction is window-level only (correlateFrameSchedCpu granularity=window).",
       "boundary": "window-only correlation; not per-frame",
       "evidenceIds": [
         "ev-009-cur-queryCpuFreq",
@@ -116,23 +109,22 @@
         "ev-006-cur-querySchedState",
         "ev-011-throttle-querySchedState",
         "ev-017-throttle-correlateFrameSchedCpu"
-      ]
+      ],
+      "kind": "sched-relative",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle UnityMain runningPct=56.99",
+        "baselineValue": "cur UnityMain runningPct=77.82",
+        "foldChange": 0.732,
+        "deltaPct": -20.83,
+        "relativeJudgment": "throttle 比 cur 降 26.8% / -20.83pp"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 降 26.8% / -20.83pp（throttle vs cur；throttle UnityMain runningPct=56.99 / cur UnityMain runningPct=77.82）",
+      "humanNarrative": "cur → throttle：throttle 比 cur 降 26.8% / -20.83pp。"
     },
     {
       "id": "f-04",
-      "title": "cur vs throttle atrace slice deltas (PlayerLoop / BehaviourUpdate / FinishFrameRendering)",
-      "severity": "info",
-      "claim": "PlayerLoop: cur(count=484,avgMs=30.183) vs throttle(count=428,avgMs=46.567); BehaviourUpdate: cur(count=484,avgMs=7.905) vs throttle(count=428,avgMs=8.804); FinishFrameRendering(hotPath): cur(totalMs=6311.62,totalPct=43.03) vs throttle(totalMs=11117.55,totalPct=55.71)",
-      "boundary": "atrace aggregates + callTree hotPath; not frame-timeline jank",
-      "evidenceIds": [
-        "ev-007-cur-queryAtraceSlices",
-        "ev-012-throttle-queryAtraceSlices",
-        "ev-010-cur-getPerfettoCallTree",
-        "ev-015-throttle-getPerfettoCallTree"
-      ]
-    },
-    {
-      "id": "f-05",
       "title": "correlateFrameSchedCpu is window-granularity only",
       "severity": "info",
       "claim": "correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation.",
@@ -140,18 +132,560 @@
       "evidenceIds": [
         "ev-016-cur-correlateFrameSchedCpu",
         "ev-017-throttle-correlateFrameSchedCpu"
-      ]
+      ],
+      "kind": "boundary",
+      "humanNarrative": "correlateFrameSchedCpu on cur/throttle reports granularity=window; must not claim per-frame frame↔sched↔cpu correlation."
     },
     {
-      "id": "f-06",
-      "title": "base vs cur UnityMain sched snapshot",
+      "id": "f-05",
+      "title": "base vs cur UnityMain sched relative baseline",
       "severity": "info",
-      "claim": "UnityMain runningPct base=86.94 cur=77.82; sleepingPct base=12.04 cur=20.4",
+      "claim": "cur 比 base 降 10.5% / -9.12pp; sleepingPct base=12.04 cur=20.4",
       "boundary": "window sched aggregates; not FrameTimeline jank",
       "evidenceIds": [
         "ev-001-base-querySchedState",
         "ev-006-cur-querySchedState"
-      ]
+      ],
+      "kind": "sched-relative",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur UnityMain runningPct=77.82",
+        "baselineValue": "base UnityMain runningPct=86.94",
+        "foldChange": 0.895,
+        "deltaPct": -9.12,
+        "relativeJudgment": "cur 比 base 降 10.5% / -9.12pp"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 降 10.5% / -9.12pp（cur vs base；cur UnityMain runningPct=77.82 / base UnityMain runningPct=86.94）",
+      "humanNarrative": "base → cur：cur 比 base 降 10.5% / -9.12pp。"
+    },
+    {
+      "id": "f-06",
+      "title": "top 业务模块: PlayerLoop",
+      "severity": "info",
+      "claim": "PlayerLoop: totalMs=14608.74 totalPct=99.6 count=483 avgMs=30.246; parentChain=UnityMain > PlayerLoop; cur 比 base 涨 27.5% (×1.275)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "kind": "top-business-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur PlayerLoop totalMs=14608.74",
+        "baselineValue": "base PlayerLoop totalMs=11458.86",
+        "foldChange": 1.275,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 27.5% (×1.275)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 涨 27.5% (×1.275)（cur vs base；cur PlayerLoop totalMs=14608.74 / base PlayerLoop totalMs=11458.86）",
+      "humanNarrative": "PlayerLoop：base → cur 涨 ×1.27（callTree 子树排名靠前）。"
+    },
+    {
+      "id": "f-07",
+      "title": "top 业务模块: PostLateUpdate.FinishFrameRendering",
+      "severity": "info",
+      "claim": "PostLateUpdate.FinishFrameRendering: totalMs=6311.62 totalPct=43.03 count=483 avgMs=13.068; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering; cur 比 base 涨 34.9% (×1.349)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "kind": "top-business-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur PostLateUpdate.FinishFrameRendering totalMs=6311.62",
+        "baselineValue": "base PostLateUpdate.FinishFrameRendering totalMs=4677.17",
+        "foldChange": 1.349,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 34.9% (×1.349)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 涨 34.9% (×1.349)（cur vs base；cur PostLateUpdate.FinishFrameRendering totalMs=6311.62 / base PostLateUpdate.FinishFrameRendering totalMs=4677.17）",
+      "humanNarrative": "PostLateUpdate.FinishFrameRendering：base → cur 涨 ×1.35（callTree 子树排名靠前）。"
+    },
+    {
+      "id": "f-08",
+      "title": "top 业务模块: URP.Render",
+      "severity": "info",
+      "claim": "URP.Render: totalMs=5869.82 totalPct=40.02 count=483 avgMs=12.153; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render; cur 比 base 涨 40.9% (×1.409)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "kind": "top-business-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.Render totalMs=5869.82",
+        "baselineValue": "base URP.Render totalMs=4167.28",
+        "foldChange": 1.409,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 40.9% (×1.409)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 涨 40.9% (×1.409)（cur vs base；cur URP.Render totalMs=5869.82 / base URP.Render totalMs=4167.28）",
+      "humanNarrative": "URP.Render：base → cur 涨 ×1.41（callTree 子树排名靠前）。"
+    },
+    {
+      "id": "f-09",
+      "title": "top 业务模块: URP.RenderCameraStack",
+      "severity": "info",
+      "claim": "URP.RenderCameraStack: totalMs=5802.8 totalPct=39.56 count=966 avgMs=6.007; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack; cur 比 base 涨 42.4% (×1.424)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "kind": "top-business-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.RenderCameraStack totalMs=5802.8",
+        "baselineValue": "base URP.RenderCameraStack totalMs=4074.3",
+        "foldChange": 1.424,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 42.4% (×1.424)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 涨 42.4% (×1.424)（cur vs base；cur URP.RenderCameraStack totalMs=5802.8 / base URP.RenderCameraStack totalMs=4074.3）",
+      "humanNarrative": "URP.RenderCameraStack：base → cur 涨 ×1.42（callTree 子树排名靠前）。"
+    },
+    {
+      "id": "f-10",
+      "title": "top 业务模块: URP.RenderSingleCamera",
+      "severity": "info",
+      "claim": "URP.RenderSingleCamera: totalMs=5698.7 totalPct=38.85 count=966 avgMs=5.899; parentChain=UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera; cur 比 base 涨 44.9% (×1.449)",
+      "boundary": "callTreeSubtree ranking by totalMs; no hardcoded module list",
+      "evidenceIds": [
+        "ev-019-cur-queryCallTreeSubtree",
+        "ev-018-base-queryCallTreeSubtree"
+      ],
+      "kind": "top-business-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur URP.RenderSingleCamera totalMs=5698.7",
+        "baselineValue": "base URP.RenderSingleCamera totalMs=3931.5",
+        "foldChange": 1.449,
+        "deltaPct": null,
+        "relativeJudgment": "cur 比 base 涨 44.9% (×1.449)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：cur 比 base 涨 44.9% (×1.449)（cur vs base；cur URP.RenderSingleCamera totalMs=5698.7 / base URP.RenderSingleCamera totalMs=3931.5）",
+      "humanNarrative": "URP.RenderSingleCamera：base → cur 涨 ×1.45（callTree 子树排名靠前）。"
+    },
+    {
+      "id": "f-11",
+      "title": "涨幅最大模块: CS:AOE.Outside.OutSideViewArmyLineMgr",
+      "severity": "critical",
+      "claim": "CS:AOE.Outside.OutSideViewArmyLineMgr: baseTotalMs=null curTotalMs=760.94 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "kind": "fold-change-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=760.94",
+        "baselineValue": "base CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.Outside.OutSideViewArmyLineMgr 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：CS:AOE.Outside.OutSideViewArmyLineMgr 仅在 cur 出现 (foldChange=9999 sentinel)（cur vs base；cur CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=760.94 / base CS:AOE.Outside.OutSideViewArmyLineMgr totalMs=1）",
+      "humanNarrative": "CS:AOE.Outside.OutSideViewArmyLineMgr：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。"
+    },
+    {
+      "id": "f-12",
+      "title": "涨幅最大模块: MapSignificanceMgr.ProcessTasks",
+      "severity": "critical",
+      "claim": "MapSignificanceMgr.ProcessTasks: baseTotalMs=null curTotalMs=584.65 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "kind": "fold-change-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur MapSignificanceMgr.ProcessTasks totalMs=584.65",
+        "baselineValue": "base MapSignificanceMgr.ProcessTasks totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "MapSignificanceMgr.ProcessTasks 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：MapSignificanceMgr.ProcessTasks 仅在 cur 出现 (foldChange=9999 sentinel)（cur vs base；cur MapSignificanceMgr.ProcessTasks totalMs=584.65 / base MapSignificanceMgr.ProcessTasks totalMs=1）",
+      "humanNarrative": "MapSignificanceMgr.ProcessTasks：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。"
+    },
+    {
+      "id": "f-13",
+      "title": "涨幅最大模块: MapSignificanceMgr.EntityTask",
+      "severity": "critical",
+      "claim": "MapSignificanceMgr.EntityTask: baseTotalMs=null curTotalMs=545.61 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "kind": "fold-change-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur MapSignificanceMgr.EntityTask totalMs=545.61",
+        "baselineValue": "base MapSignificanceMgr.EntityTask totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "MapSignificanceMgr.EntityTask 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：MapSignificanceMgr.EntityTask 仅在 cur 出现 (foldChange=9999 sentinel)（cur vs base；cur MapSignificanceMgr.EntityTask totalMs=545.61 / base MapSignificanceMgr.EntityTask totalMs=1）",
+      "humanNarrative": "MapSignificanceMgr.EntityTask：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。"
+    },
+    {
+      "id": "f-14",
+      "title": "涨幅最大模块: CS:AOE.MeshUIManager",
+      "severity": "critical",
+      "claim": "CS:AOE.MeshUIManager: baseTotalMs=null curTotalMs=491.36 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "kind": "fold-change-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.MeshUIManager totalMs=491.36",
+        "baselineValue": "base CS:AOE.MeshUIManager totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.MeshUIManager 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：CS:AOE.MeshUIManager 仅在 cur 出现 (foldChange=9999 sentinel)（cur vs base；cur CS:AOE.MeshUIManager totalMs=491.36 / base CS:AOE.MeshUIManager totalMs=1）",
+      "humanNarrative": "CS:AOE.MeshUIManager：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。"
+    },
+    {
+      "id": "f-15",
+      "title": "涨幅最大模块: CS:AOE.Battle.BattleUIManager",
+      "severity": "critical",
+      "claim": "CS:AOE.Battle.BattleUIManager: baseTotalMs=null curTotalMs=349.12 foldChange=9999; baseCount=null curCount=483 avgMsChange=null",
+      "boundary": "querySliceDeltas foldChange ranking; relative threshold ≥2×",
+      "evidenceIds": [
+        "ev-021-delta-querySliceDeltas"
+      ],
+      "kind": "fold-change-module",
+      "relativeBaseline": {
+        "baselineRole": "base",
+        "compareRole": "cur",
+        "absoluteValue": "cur CS:AOE.Battle.BattleUIManager totalMs=349.12",
+        "baselineValue": "base CS:AOE.Battle.BattleUIManager totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "CS:AOE.Battle.BattleUIManager 仅在 cur 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：CS:AOE.Battle.BattleUIManager 仅在 cur 出现 (foldChange=9999 sentinel)（cur vs base；cur CS:AOE.Battle.BattleUIManager totalMs=349.12 / base CS:AOE.Battle.BattleUIManager totalMs=1）",
+      "humanNarrative": "CS:AOE.Battle.BattleUIManager：仅在 cur 出现（base 无此节点），是 cur 阶段新增的消耗路径。"
+    },
+    {
+      "id": "f-16",
+      "title": "thermal-only 隐性路径: ParticleSystem.EndUpdateAll",
+      "severity": "warning",
+      "claim": "ParticleSystem.EndUpdateAll: curTotalMs=null throttleTotalMs=100.88 foldChange=9999; curCount=null throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "kind": "thermal-only-path",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle ParticleSystem.EndUpdateAll totalMs=100.88",
+        "baselineValue": "cur ParticleSystem.EndUpdateAll totalMs=1",
+        "foldChange": 9999,
+        "deltaPct": null,
+        "relativeJudgment": "ParticleSystem.EndUpdateAll 仅在 throttle 出现 (foldChange=9999 sentinel)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：ParticleSystem.EndUpdateAll 仅在 throttle 出现 (foldChange=9999 sentinel)（throttle vs cur；throttle ParticleSystem.EndUpdateAll totalMs=100.88 / cur ParticleSystem.EndUpdateAll totalMs=1）",
+      "humanNarrative": "ParticleSystem.EndUpdateAll：仅在 throttle 出现（cur 无此节点），是降频阶段才暴露的隐性路径。"
+    },
+    {
+      "id": "f-17",
+      "title": "thermal-only 隐性路径: Semaphore.WaitForSignal",
+      "severity": "info",
+      "claim": "Semaphore.WaitForSignal: curTotalMs=2812.39 throttleTotalMs=7592.75 foldChange=2.7; curCount=483 throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "kind": "thermal-only-path",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle Semaphore.WaitForSignal totalMs=7592.75",
+        "baselineValue": "cur Semaphore.WaitForSignal totalMs=2812.39",
+        "foldChange": 2.7,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.7 (2812.39→7592.75 ms)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 涨 ×2.7 (2812.39→7592.75 ms)（throttle vs cur；throttle Semaphore.WaitForSignal totalMs=7592.75 / cur Semaphore.WaitForSignal totalMs=2812.39）",
+      "humanNarrative": "Semaphore.WaitForSignal：cur → throttle 涨 ×2.70，是降频阶段才显著放大的路径。"
+    },
+    {
+      "id": "f-18",
+      "title": "thermal-only 隐性路径: Gfx.WaitForPresentOnGfxThread",
+      "severity": "info",
+      "claim": "Gfx.WaitForPresentOnGfxThread: curTotalMs=2817.69 throttleTotalMs=7600.06 foldChange=2.697; curCount=483 throttleCount=427",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "kind": "thermal-only-path",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle Gfx.WaitForPresentOnGfxThread totalMs=7600.06",
+        "baselineValue": "cur Gfx.WaitForPresentOnGfxThread totalMs=2817.69",
+        "foldChange": 2.697,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.697 (2817.69→7600.06 ms)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 涨 ×2.697 (2817.69→7600.06 ms)（throttle vs cur；throttle Gfx.WaitForPresentOnGfxThread totalMs=7600.06 / cur Gfx.WaitForPresentOnGfxThread totalMs=2817.69）",
+      "humanNarrative": "Gfx.WaitForPresentOnGfxThread：cur → throttle 涨 ×2.70，是降频阶段才显著放大的路径。"
+    },
+    {
+      "id": "f-19",
+      "title": "thermal-only 隐性路径: URP.WaitForPresent",
+      "severity": "info",
+      "claim": "URP.WaitForPresent: curTotalMs=2824.32 throttleTotalMs=7608.52 foldChange=2.694; curCount=2415 throttleCount=2135",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "kind": "thermal-only-path",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle URP.WaitForPresent totalMs=7608.52",
+        "baselineValue": "cur URP.WaitForPresent totalMs=2824.32",
+        "foldChange": 2.694,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.694 (2824.32→7608.52 ms)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 涨 ×2.694 (2824.32→7608.52 ms)（throttle vs cur；throttle URP.WaitForPresent totalMs=7608.52 / cur URP.WaitForPresent totalMs=2824.32）",
+      "humanNarrative": "URP.WaitForPresent：cur → throttle 涨 ×2.69，是降频阶段才显著放大的路径。"
+    },
+    {
+      "id": "f-20",
+      "title": "thermal-only 隐性路径: URP.Submit",
+      "severity": "info",
+      "claim": "URP.Submit: curTotalMs=3162.57 throttleTotalMs=8069.14 foldChange=2.551; curCount=2415 throttleCount=2135",
+      "boundary": "querySliceDeltas cur→throttle; foldChange≥2 or sentinel 9999",
+      "evidenceIds": [
+        "ev-022-delta-querySliceDeltas"
+      ],
+      "kind": "thermal-only-path",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle URP.Submit totalMs=8069.14",
+        "baselineValue": "cur URP.Submit totalMs=3162.57",
+        "foldChange": 2.551,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 ×2.551 (3162.57→8069.14 ms)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 涨 ×2.551 (3162.57→8069.14 ms)（throttle vs cur；throttle URP.Submit totalMs=8069.14 / cur URP.Submit totalMs=3162.57）",
+      "humanNarrative": "URP.Submit：cur → throttle 涨 ×2.55，是降频阶段才显著放大的路径。"
+    },
+    {
+      "id": "f-21",
+      "title": "GC 压力最大模块: URP.BeforeRendering",
+      "severity": "warning",
+      "claim": "URP.BeforeRendering: count=63050 totalMs=76.34 perFrame=130.54; parentChain=UnityMain>PlayerLoop>PostLateUpdate.FinishFrameRendering>URP.Render>URP.RenderCameraStack>URP.RenderSingleCamera>URP.BeforeRendering; throttle 比 cur perFrame ×0.237 (130.54→31)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "kind": "gc-pressure-module",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur URP.BeforeRendering perFrame=130.54",
+        "baselineValue": "throttle URP.BeforeRendering perFrame=31",
+        "foldChange": 0.237,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.237 (130.54→31)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur perFrame ×0.237 (130.54→31)（throttle vs cur；cur URP.BeforeRendering perFrame=130.54 / throttle URP.BeforeRendering perFrame=31）",
+      "humanNarrative": "URP.BeforeRendering：GC.Alloc 130.54 次/帧，是 GC 压力主要来源之一（perfetto 独家业务子树归因）。"
+    },
+    {
+      "id": "f-22",
+      "title": "GC 压力最大模块: Inl_OpaquePass",
+      "severity": "warning",
+      "claim": "Inl_OpaquePass: count=62565 totalMs=82.409 perFrame=129.53; parentChain=UnityMain>PlayerLoop>PostLateUpdate.FinishFrameRendering>URP.Render>URP.RenderCameraStack>URP.RenderSingleCamera>URP.MainRenderingTransparent>Inl_OpaquePass; throttle 比 cur perFrame ×0.232 (129.53→30)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "kind": "gc-pressure-module",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur Inl_OpaquePass perFrame=129.53",
+        "baselineValue": "throttle Inl_OpaquePass perFrame=30",
+        "foldChange": 0.232,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.232 (129.53→30)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur perFrame ×0.232 (129.53→30)（throttle vs cur；cur Inl_OpaquePass perFrame=129.53 / throttle Inl_OpaquePass perFrame=30）",
+      "humanNarrative": "Inl_OpaquePass：GC.Alloc 129.53 次/帧，是 GC 压力主要来源之一（perfetto 独家业务子树归因）。"
+    },
+    {
+      "id": "f-23",
+      "title": "GC 压力最大模块: CS:AOE.MeshUIManager",
+      "severity": "warning",
+      "claim": "CS:AOE.MeshUIManager: count=29622 totalMs=31.037 perFrame=61.33; parentChain=UnityMain>PlayerLoop>PreLateUpdate.ScriptRunBehaviourLateUpdate>LateBehaviourUpdate>Core.LateUpdate>CS:AOE.MeshUIManager; throttle 比 cur perFrame ×0.034 (61.33→2.11)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "kind": "gc-pressure-module",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur CS:AOE.MeshUIManager perFrame=61.33",
+        "baselineValue": "throttle CS:AOE.MeshUIManager perFrame=2.11",
+        "foldChange": 0.034,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×0.034 (61.33→2.11)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur perFrame ×0.034 (61.33→2.11)（throttle vs cur；cur CS:AOE.MeshUIManager perFrame=61.33 / throttle CS:AOE.MeshUIManager perFrame=2.11）",
+      "humanNarrative": "CS:AOE.MeshUIManager：GC.Alloc 61.33 次/帧，是 GC 压力主要来源之一（perfetto 独家业务子树归因）。"
+    },
+    {
+      "id": "f-24",
+      "title": "GC 压力最大模块: TimeText.7",
+      "severity": "warning",
+      "claim": "TimeText.7: count=11798 totalMs=15.07 perFrame=24.43; parentChain=UnityMain>PlayerLoop>Update.ScriptRunBehaviourUpdate>BehaviourUpdate>Core.Update>CS:AOE.LuaMgr>LuaMgr.OnTick&UpdateSchedule>BattleHeadMgr>BattleHeadMgr.OnUpdate>TimeText.7; throttle 比 cur perFrame ×1.011 (24.43→24.69)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "kind": "gc-pressure-module",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur TimeText.7 perFrame=24.43",
+        "baselineValue": "throttle TimeText.7 perFrame=24.69",
+        "foldChange": 1.011,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur perFrame ×1.011 (24.43→24.69)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur perFrame ×1.011 (24.43→24.69)（throttle vs cur；cur TimeText.7 perFrame=24.43 / throttle TimeText.7 perFrame=24.69）",
+      "humanNarrative": "TimeText.7：GC.Alloc 24.43 次/帧，是 GC 压力主要来源之一（perfetto 独家业务子树归因）。"
+    },
+    {
+      "id": "f-25",
+      "title": "GC 压力最大模块: BattleHeadMgr.OnUpdate",
+      "severity": "warning",
+      "claim": "BattleHeadMgr.OnUpdate: count=10018 totalMs=16.207 perFrame=20.74; parentChain=UnityMain>PlayerLoop>Update.ScriptRunBehaviourUpdate>BehaviourUpdate>Core.Update>CS:AOE.LuaMgr>LuaMgr.OnTick&UpdateSchedule>BattleHeadMgr>BattleHeadMgr.OnUpdate; BattleHeadMgr.OnUpdate cur perFrame=20.74 (throttle 无同名行)",
+      "boundary": "queryGcAllocByModule ranking by perFrame; no hardcoded module list",
+      "evidenceIds": [
+        "ev-023-cur-queryGcAllocByModule",
+        "ev-024-throttle-queryGcAllocByModule"
+      ],
+      "kind": "gc-pressure-module",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "cur BattleHeadMgr.OnUpdate perFrame=20.74",
+        "baselineValue": "throttle BattleHeadMgr.OnUpdate perFrame=n/a",
+        "foldChange": null,
+        "deltaPct": null,
+        "relativeJudgment": "BattleHeadMgr.OnUpdate cur perFrame=20.74 (throttle 无同名行)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：BattleHeadMgr.OnUpdate cur perFrame=20.74 (throttle 无同名行)（throttle vs cur；cur BattleHeadMgr.OnUpdate perFrame=20.74 / throttle BattleHeadMgr.OnUpdate perFrame=n/a）",
+      "humanNarrative": "BattleHeadMgr.OnUpdate：GC.Alloc 20.74 次/帧，是 GC 压力主要来源之一（perfetto 独家业务子树归因）。"
+    },
+    {
+      "id": "f-26",
+      "title": "off-CPU byState 归因 (throttle)",
+      "severity": "info",
+      "claim": "throttle totalOffCpuMs=8581, byState: S=7666.5ms(89.34%)/R=564.5ms(6.58%)/R+=238.6ms(2.78%)/D=111.4ms(1.3%) → 主线程 off-CPU 以 state=S 为主 (89.34%)",
+      "boundary": "offCpuAttribution.byState window aggregate",
+      "evidenceIds": [
+        "ev-025-throttle-queryOffCpuAttribution"
+      ],
+      "kind": "offcpu-bystate",
+      "humanNarrative": "throttle 主线程 off-CPU 中 S（Sleeping）占 89.3%，即\"等\"绝大多数是主动睡（等事件），不是被抢占或等磁盘。"
+    },
+    {
+      "id": "f-27",
+      "title": "GPU-bound 因果推理 (wait slice vs sleeping)",
+      "severity": "critical",
+      "claim": "throttle sleepingMs=7666.5 (byState.S.totalMs), maxWaitSlice=URP.WaitForPresent=7608.52ms (nested sum coveragePct=691.53% — use max not sum); effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）; GPU-bound 信号强烈",
+      "boundary": "nested waitSlices may inflate sum coveragePct; judgment uses max(waitSlice.totalMs)/sleepingMs (byState.S.totalMs preferred over sched sleepingPct×totalOffCpuMs)",
+      "evidenceIds": [
+        "ev-025-throttle-queryOffCpuAttribution"
+      ],
+      "kind": "gpu-bound-causal",
+      "causalChain": {
+        "premise": "throttle sleepingMs=7666.5 (byState.S.totalMs), maxWaitSlice=URP.WaitForPresent=7608.52ms (nested sum coveragePct=691.53% — use max not sum)",
+        "inference": "effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）",
+        "conclusion": "GPU-bound 信号强烈",
+        "confidence": "high"
+      },
+      "causalNarrative": "因果链：前提「throttle sleepingMs=7666.5 (byState.S.totalMs), maxWaitSlice=URP.WaitForPresent=7608.52ms (nested sum coveragePct=691.53% — use max not sum)」→ 推理「effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）」→ 结论「GPU-bound 信号强烈」（high）",
+      "humanNarrative": "throttle 上主线程 Sleeping 中约 99.2% 是等 GPU（Gfx.WaitForPresent），GPU-bound 信号强烈。"
+    },
+    {
+      "id": "f-28",
+      "title": "PlayerLoop 分位数对比 (cur vs throttle)",
+      "severity": "info",
+      "claim": "cur p50=30.15 p95=35.22 fps=33.1 slowFrameRate=11.18 → throttle p50=45.94 p95=55.62 fps=21.4 slowFrameRate=98.83; throttle 比 cur 涨 52.4% (×1.524); slowFrameRate ×8.84",
+      "boundary": "playerLoopPercentiles from provider; not Android FrameTimeline jank",
+      "evidenceIds": [
+        "ev-008-cur-queryFrameTimeline",
+        "ev-013-throttle-queryFrameTimeline"
+      ],
+      "kind": "playerloop-percentiles",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle playerLoop p50Ms=45.94",
+        "baselineValue": "cur playerLoop p50Ms=30.15",
+        "foldChange": 1.524,
+        "deltaPct": null,
+        "relativeJudgment": "throttle 比 cur 涨 52.4% (×1.524)"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 涨 52.4% (×1.524)（throttle vs cur；throttle playerLoop p50Ms=45.94 / cur playerLoop p50Ms=30.15）",
+      "humanNarrative": "PlayerLoop p50=30.15ms / fps=33.1 / 慢帧率=11.18%（cur → throttle 持续匀慢型，非偶发尖峰）。"
+    },
+    {
+      "id": "f-29",
+      "title": "降频形态判定 (三态 clusterSummary)",
+      "severity": "warning",
+      "claim": "bigCoreReachPct base=74.9→cur=75.6→throttle=59.2; avgMhz 1729.5→1576.3→1324.6; clusters: base: big.reach=73.7 mid.reach=76.1 small.reach=63.1 | cur: big.reach=77 mid.reach=74.2 small.reach=69.8 | throttle: big.reach=61.4 mid.reach=57 small.reach=67.9; 形态=全集群压频（big/mid/small reach 同向下降）; throttle 比 cur 降 21.7% / -16.4pp",
+      "boundary": "cluster split by CPU index bands; no SoC-name hardcoding",
+      "evidenceIds": [
+        "ev-004-base-queryCpuFreq",
+        "ev-009-cur-queryCpuFreq",
+        "ev-014-throttle-queryCpuFreq"
+      ],
+      "kind": "freq-morphology",
+      "relativeBaseline": {
+        "baselineRole": "cur",
+        "compareRole": "throttle",
+        "absoluteValue": "throttle bigCoreReachPct=59.2",
+        "baselineValue": "cur bigCoreReachPct=75.6",
+        "foldChange": 0.783,
+        "deltaPct": -16.4,
+        "relativeJudgment": "throttle 比 cur 降 21.7% / -16.4pp"
+      },
+      "relativeBaselineNarrative": "相对基线判定：throttle 比 cur 降 21.7% / -16.4pp（throttle vs cur；throttle bigCoreReachPct=59.2 / cur bigCoreReachPct=75.6）",
+      "humanNarrative": "三态降频形态=全集群压频（big/mid/small reach 同向下降）：throttle 大核 reach 跌到 59.2%（cur 75.6% → throttle 59.2%），全集群 reach 同向下降，是降频生效硬证。"
     }
   ],
   "evidenceSummary": [
@@ -166,14 +700,14 @@
       "id": "ev-002-base-queryAtraceSlices",
       "tool": "queryAtraceSlices",
       "role": "base",
-      "summary": "base PlayerLoop count=684 avgMs=16.621 totalMs=11368.46; BehaviourUpdate count=684; FinishFrameRendering count=n/a",
+      "summary": "base atrace topByTotalMs[0]=PlayerLoop totalMs=11368.46 avgMs=16.621; topN=5",
       "runId": "bk26b-perfetto-base"
     },
     {
       "id": "ev-003-base-queryFrameTimeline",
       "tool": "queryFrameTimeline",
       "role": "base",
-      "summary": "base FrameTimeline available=false; choreographer available=true",
+      "summary": "base FrameTimeline available=false; choreographer available=true; playerLoop p50=16.69 fps=59.8 slowFrameRate=0",
       "runId": "bk26b-perfetto-base"
     },
     {
@@ -201,14 +735,14 @@
       "id": "ev-007-cur-queryAtraceSlices",
       "tool": "queryAtraceSlices",
       "role": "cur",
-      "summary": "cur PlayerLoop count=484 avgMs=30.183 totalMs=14608.74; BehaviourUpdate count=484; FinishFrameRendering count=n/a",
+      "summary": "cur atrace topByTotalMs[0]=PlayerLoop totalMs=14608.74 avgMs=30.183; topN=6",
       "runId": "bk26b-perfetto-cur"
     },
     {
       "id": "ev-008-cur-queryFrameTimeline",
       "tool": "queryFrameTimeline",
       "role": "cur",
-      "summary": "cur FrameTimeline available=false; choreographer available=true",
+      "summary": "cur FrameTimeline available=false; choreographer available=true; playerLoop p50=30.15 fps=33.1 slowFrameRate=11.18",
       "runId": "bk26b-perfetto-cur"
     },
     {
@@ -236,14 +770,14 @@
       "id": "ev-012-throttle-queryAtraceSlices",
       "tool": "queryAtraceSlices",
       "role": "throttle",
-      "summary": "throttle PlayerLoop count=428 avgMs=46.567 totalMs=19930.73; BehaviourUpdate count=428; FinishFrameRendering count=n/a",
+      "summary": "throttle atrace topByTotalMs[0]=PlayerLoop totalMs=19930.73 avgMs=46.567; topN=6",
       "runId": "bk26b-perfetto-throttle"
     },
     {
       "id": "ev-013-throttle-queryFrameTimeline",
       "tool": "queryFrameTimeline",
       "role": "throttle",
-      "summary": "throttle FrameTimeline available=false; choreographer available=true",
+      "summary": "throttle FrameTimeline available=false; choreographer available=true; playerLoop p50=45.94 fps=21.4 slowFrameRate=98.83",
       "runId": "bk26b-perfetto-throttle"
     },
     {
@@ -273,12 +807,146 @@
       "role": "throttle",
       "summary": "throttle correlate granularity=window signals=[UnityMain runningPct=56.99; UnityMain runnablePct=2.83; cpuFreqAvgMhz=1324.6; bigCoreReachPct=59.2; throttling suspected]",
       "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-018-base-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "base",
+      "summary": "base callTreeSubtree available=true totalNodes=94 top=PlayerLoop totalMs=11458.86",
+      "runId": "bk26b-perfetto-base"
+    },
+    {
+      "id": "ev-019-cur-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "cur",
+      "summary": "cur callTreeSubtree available=true totalNodes=97 top=PlayerLoop totalMs=14608.74",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-020-throttle-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "throttle",
+      "summary": "throttle callTreeSubtree available=true totalNodes=84 top=PlayerLoop totalMs=19930.73",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-021-delta-querySliceDeltas",
+      "tool": "querySliceDeltas",
+      "role": "delta",
+      "summary": "base→cur sliceDeltas available=true rows=10 top=CS:AOE.Outside.OutSideViewArmyLineMgr foldChange=9999",
+      "runId": "bk26b-perfetto-delta-base-vs-cur"
+    },
+    {
+      "id": "ev-022-delta-querySliceDeltas",
+      "tool": "querySliceDeltas",
+      "role": "delta",
+      "summary": "cur→throttle sliceDeltas available=true rows=6 top=ParticleSystem.EndUpdateAll foldChange=9999",
+      "runId": "bk26b-perfetto-delta-cur-vs-throttle"
+    },
+    {
+      "id": "ev-023-cur-queryGcAllocByModule",
+      "tool": "queryGcAllocByModule",
+      "role": "cur",
+      "summary": "cur gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=130.54",
+      "runId": "bk26b-perfetto-cur"
+    },
+    {
+      "id": "ev-024-throttle-queryGcAllocByModule",
+      "tool": "queryGcAllocByModule",
+      "role": "throttle",
+      "summary": "throttle gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=31",
+      "runId": "bk26b-perfetto-throttle"
+    },
+    {
+      "id": "ev-025-throttle-queryOffCpuAttribution",
+      "tool": "queryOffCpuAttribution",
+      "role": "throttle",
+      "summary": "throttle offCpu totalOffCpuMs=8581 sleepingMs=7666.5 topState=S(89.34%) topWait=URP.WaitForPresent(7608.52ms) coveragePct=691.53",
+      "runId": "bk26b-perfetto-throttle"
     }
   ],
   "capabilityBoundaries": [
     "FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy",
     "base callTree via PlayerLoop anchor fallback — lower confidence absolute ms",
     "correlateFrameSchedCpu is window-only — no per-frame claim"
+  ],
+  "triadTrend": "UnityMain runningPct 86.94→77.82→56.99; avgMhz 1729.5→1576.3→1324.6; PlayerLoop p50 16.69→30.15→45.94; bigCoreReachPct 74.9→75.6→59.2",
+  "topBusinessHotspot": "PlayerLoop: totalMs=14608.74 totalPct=99.6 count=483 avgMs=30.246; parentChain=UnityMain > PlayerLoop; cur 比 base 涨 27.5% (×1.275)",
+  "gpuBoundJudgment": "GPU-bound 信号强烈 (effectiveCoveragePct≈99.24% (maxWait/sleepingMs) → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）)",
+  "freqMorphologyJudgment": "bigCoreReachPct base=74.9→cur=75.6→throttle=59.2; avgMhz 1729.5→1576.3→1324.6; clusters: base: big.reach=73.7 mid.reach=76.1 small.reach=63.1 | cur: big.reach=77 mid.reach=74.2 small.reach=69.8 | throttle: big.reach=61.4 mid.reach=57 small.reach=67.9; 形态=全集群压频（big/mid/small reach 同向下降）; throttle 比 cur 降 21.7% / -16.4pp",
+  "roiOptimizations": [
+    {
+      "rank": 1,
+      "direction": "涨幅最大模块 CS:AOE.Outside.OutSideViewArmyLineMgr：base → cur 新增，建议单次任务削峰 / 增量化 / 分帧",
+      "rationale": "base → cur：仅在 cur 出现（base 无此节点）",
+      "severity": "critical",
+      "findingIds": [
+        "f-11"
+      ]
+    },
+    {
+      "rank": 2,
+      "direction": "涨幅最大模块 MapSignificanceMgr.ProcessTasks：base → cur 新增，建议单次任务削峰 / 增量化 / 分帧",
+      "rationale": "base → cur：仅在 cur 出现（base 无此节点）",
+      "severity": "critical",
+      "findingIds": [
+        "f-12"
+      ]
+    },
+    {
+      "rank": 3,
+      "direction": "涨幅最大模块 MapSignificanceMgr.EntityTask：base → cur 新增，建议单次任务削峰 / 增量化 / 分帧",
+      "rationale": "base → cur：仅在 cur 出现（base 无此节点）",
+      "severity": "critical",
+      "findingIds": [
+        "f-13"
+      ]
+    },
+    {
+      "rank": 4,
+      "direction": "GPU-bound 信号强烈：主线程睡的时候接近 100% 在等 GPU，建议降分辨率 / 简化阴影 / MeshUI 顶点数评估 / drawcall 削减",
+      "rationale": "主线程睡的时候约 99.24% 在等该 wait slice → 主线程睡的时候接近 100% 在等该 wait slice（多为 Present/GPU）",
+      "severity": "critical",
+      "findingIds": [
+        "f-27"
+      ]
+    },
+    {
+      "rank": 5,
+      "direction": "thermal-only 隐性路径 ParticleSystem.EndUpdateAll：仅 throttle 出现，建议 thermal 路径专项排查",
+      "rationale": "仅在 throttle 出现（cur 无此节点）",
+      "severity": "warning",
+      "findingIds": [
+        "f-16"
+      ]
+    },
+    {
+      "rank": 6,
+      "direction": "降频形态=全集群压频（big/mid/small reach 同向下降）：建议温控策略评估 / 业务降级 / 场景级温度感知",
+      "rationale": "cur → throttle 降 ×0.78",
+      "severity": "warning",
+      "findingIds": [
+        "f-29"
+      ]
+    },
+    {
+      "rank": 7,
+      "direction": "GC 压力最大模块 URP.BeforeRendering：130.54 次/帧，建议对象池 / 减少分配 / 字符串池化",
+      "rationale": "cur → throttle 降 ×0.24",
+      "severity": "warning",
+      "findingIds": [
+        "f-21"
+      ]
+    },
+    {
+      "rank": 8,
+      "direction": "GC 压力最大模块 Inl_OpaquePass：129.53 次/帧，建议对象池 / 减少分配 / 字符串池化",
+      "rationale": "cur → throttle 降 ×0.23",
+      "severity": "warning",
+      "findingIds": [
+        "f-22"
+      ]
+    }
   ],
   "triadComparison": {
     "sched": {
@@ -300,21 +968,21 @@
     },
     "atrace": {
       "base": {
-        "playerLoopAvgMs": 16.621,
-        "playerLoopCount": 684,
-        "behaviourAvgMs": 2.133,
+        "playerLoopAvgMs": null,
+        "playerLoopCount": null,
+        "behaviourAvgMs": null,
         "evidenceId": "ev-002-base-queryAtraceSlices"
       },
       "cur": {
-        "playerLoopAvgMs": 30.183,
-        "playerLoopCount": 484,
-        "behaviourAvgMs": 7.905,
+        "playerLoopAvgMs": null,
+        "playerLoopCount": null,
+        "behaviourAvgMs": null,
         "evidenceId": "ev-007-cur-queryAtraceSlices"
       },
       "throttle": {
-        "playerLoopAvgMs": 46.567,
-        "playerLoopCount": 428,
-        "behaviourAvgMs": 8.804,
+        "playerLoopAvgMs": null,
+        "playerLoopCount": null,
+        "behaviourAvgMs": null,
         "evidenceId": "ev-012-throttle-queryAtraceSlices"
       }
     },
@@ -360,7 +1028,7 @@
     "base": {
       "available": true,
       "viaPlayerLoopAnchorFallback": true,
-      "note": "via PlayerLoop anchor fallback — absolute ms lower-confidence vs cur/throttle native roots",
+      "note": "经 PlayerLoop 锚点 fallback — 绝对 ms 相对 cur/throttle 原生根置信度较低",
       "hotPath": [
         {
           "name": "UnityMain",
@@ -402,7 +1070,7 @@
     "cur": {
       "available": true,
       "viaPlayerLoopAnchorFallback": false,
-      "note": "native callTree root",
+      "note": "原生 callTree 根",
       "hotPath": [
         {
           "name": "UnityMain",
@@ -444,7 +1112,7 @@
     "throttle": {
       "available": true,
       "viaPlayerLoopAnchorFallback": false,
-      "note": "native callTree root",
+      "note": "原生 callTree 根",
       "hotPath": [
         {
           "name": "UnityMain",
@@ -484,10 +1152,2223 @@
       "evidenceId": "ev-015-throttle-getPerfettoCallTree"
     }
   },
+  "multiThreadMacro": {
+    "threads": [
+      {
+        "name": "UnityMain",
+        "commKey": "UnityMain",
+        "base": {
+          "runningPct": 86.94,
+          "sleepingPct": 12.04,
+          "runnablePct": 0.97
+        },
+        "cur": {
+          "runningPct": 77.82,
+          "sleepingPct": 20.4,
+          "runnablePct": 1.62
+        },
+        "throttle": {
+          "runningPct": 56.99,
+          "sleepingPct": 38.99,
+          "runnablePct": 2.83
+        },
+        "note": "Run 86.9→77.8→57.0 单调下降 / Sleep 12.0→20.4→39.0 单调上升 → 越来越闲"
+      },
+      {
+        "name": "UnityGfxRenderS",
+        "commKey": "UnityGfxRenderS",
+        "base": {
+          "runningPct": 25.98,
+          "sleepingPct": 70.32,
+          "runnablePct": 3.53
+        },
+        "cur": {
+          "runningPct": 22.3,
+          "sleepingPct": 73.64,
+          "runnablePct": 3.7
+        },
+        "throttle": {
+          "runningPct": 16.71,
+          "sleepingPct": 79.85,
+          "runnablePct": 3.11
+        },
+        "note": "Run 26.0→22.3→16.7 单调下降 / Sleep 70.3→73.6→79.8 单调上升 → 越来越闲"
+      },
+      {
+        "name": "AAudio_1",
+        "commKey": "AAudio_1",
+        "throttle": {
+          "runningPct": 3.84,
+          "sleepingPct": 94.59,
+          "runnablePct": 1.57
+        },
+        "note": "Sleep 94.6% — 长期等待态，非瓶颈"
+      },
+      {
+        "name": "AudioTrack",
+        "commKey": "AudioTrack",
+        "throttle": {
+          "runningPct": 0.42,
+          "sleepingPct": 99.11,
+          "runnablePct": 0.46
+        },
+        "note": "Sleep 99.1% — 长期等待态，非瓶颈"
+      },
+      {
+        "name": "Audio Mixer Thr",
+        "commKey": "Audio Mixer Thr",
+        "base": {
+          "runningPct": 0.28,
+          "sleepingPct": 99.29,
+          "runnablePct": 0.43
+        },
+        "cur": {
+          "runningPct": 0.31,
+          "sleepingPct": 99.3,
+          "runnablePct": 0.39
+        },
+        "throttle": {
+          "runningPct": 0.37,
+          "sleepingPct": 99.38,
+          "runnablePct": 0.25
+        },
+        "note": "Sleep 99.4% — 长期等待态，非瓶颈"
+      },
+      {
+        "name": "Audio Stream Th",
+        "commKey": "Audio Stream Th",
+        "base": {
+          "runningPct": 0.17,
+          "sleepingPct": 99.19,
+          "runnablePct": 0.63
+        },
+        "cur": {
+          "runningPct": 0.19,
+          "sleepingPct": 99.4,
+          "runnablePct": 0.4
+        },
+        "throttle": {
+          "runningPct": 0.23,
+          "sleepingPct": 99.49,
+          "runnablePct": 0.27
+        },
+        "note": "Sleep 99.5% — 长期等待态，非瓶颈"
+      },
+      {
+        "name": "GVoiceRender",
+        "commKey": "GVoiceRender",
+        "throttle": {
+          "runningPct": 0.2,
+          "sleepingPct": 99.62,
+          "runnablePct": 0.18
+        },
+        "note": "Sleep 99.6% — 长期等待态，非瓶颈"
+      },
+      {
+        "name": "AsyncWorker",
+        "commKey": "AsyncWorker",
+        "throttle": {
+          "runningPct": 0.05,
+          "sleepingPct": 99.88,
+          "runnablePct": 0.07
+        },
+        "note": "Sleep 99.9% — 长期等待态，非瓶颈"
+      }
+    ],
+    "note": "线程通用名按 threadsSched key 动态识别；三态对照（base/cur/throttle）；一句话定位基于演化趋势（单调下降/上升），不硬编码业务名清单。"
+  },
+  "callTreeDrilldown": {
+    "base": {
+      "available": true,
+      "tree": [
+        {
+          "name": "UnityMain",
+          "depth": 0,
+          "totalPct": 100,
+          "children": [
+            {
+              "name": "PlayerLoop",
+              "depth": 1,
+              "totalMs": 11458.86,
+              "totalPct": 100.25,
+              "count": 684,
+              "layer": "engine",
+              "perFrameMs": 16.851264705882354,
+              "children": [
+                {
+                  "name": "PostLateUpdate.FinishFrameRendering",
+                  "depth": 2,
+                  "totalMs": 4677.17,
+                  "totalPct": 40.92,
+                  "count": 680,
+                  "layer": "business",
+                  "perFrameMs": 6.8781911764705885,
+                  "children": [
+                    {
+                      "name": "URP.Render",
+                      "depth": 3,
+                      "totalMs": 4167.28,
+                      "totalPct": 36.46,
+                      "count": 680,
+                      "layer": "engine",
+                      "perFrameMs": 6.128352941176471,
+                      "children": [
+                        {
+                          "name": "URP.RenderCameraStack",
+                          "depth": 4,
+                          "totalMs": 4074.3,
+                          "totalPct": 35.64,
+                          "count": 1360,
+                          "layer": "engine",
+                          "perFrameMs": 5.991617647058824,
+                          "children": [
+                            {
+                              "name": "URP.RenderSingleCamera",
+                              "depth": 5,
+                              "totalMs": 3931.5,
+                              "totalPct": 34.4,
+                              "count": 1360,
+                              "layer": "engine",
+                              "perFrameMs": 5.781617647058823,
+                              "children": [
+                                {
+                                  "name": "URP.MainRenderingTransparent",
+                                  "depth": 6,
+                                  "totalMs": 1163.75,
+                                  "totalPct": 10.18,
+                                  "count": 1360,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.7113970588235294,
+                                  "children": [
+                                    {
+                                      "name": "Inl_OpaquePass",
+                                      "depth": 7,
+                                      "totalMs": 553.26,
+                                      "totalPct": 4.84,
+                                      "count": 680,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.8136176470588236,
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.AfterRendering",
+                                  "depth": 6,
+                                  "totalMs": 1144.98,
+                                  "totalPct": 10.02,
+                                  "count": 1360,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.6837941176470588,
+                                  "children": [
+                                    {
+                                      "name": "URP.Submit",
+                                      "depth": 7,
+                                      "totalMs": 974.6,
+                                      "totalPct": 8.53,
+                                      "count": 3400,
+                                      "layer": "engine",
+                                      "perFrameMs": 1.4332352941176472,
+                                      "children": [
+                                        {
+                                          "name": "URP.WaitForPresent",
+                                          "depth": 8,
+                                          "totalMs": 624.35,
+                                          "totalPct": 5.46,
+                                          "count": 3400,
+                                          "layer": "runtime",
+                                          "perFrameMs": 0.9181617647058824,
+                                          "children": []
+                                        },
+                                        {
+                                          "name": "URP.MakeTranscriptRenderContext",
+                                          "depth": 8,
+                                          "totalMs": 267.18,
+                                          "totalPct": 2.34,
+                                          "count": 3400,
+                                          "layer": "engine",
+                                          "perFrameMs": 0.39291176470588235,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.BeforeRendering",
+                                  "depth": 6,
+                                  "totalMs": 743.4,
+                                  "totalPct": 6.5,
+                                  "count": 1360,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.093235294117647,
+                                  "children": []
+                                },
+                                {
+                                  "name": "URP.RendererSetup",
+                                  "depth": 6,
+                                  "totalMs": 508.5,
+                                  "totalPct": 4.45,
+                                  "count": 1360,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.7477941176470588,
+                                  "children": [
+                                    {
+                                      "name": "URP.RenderGraphSetup",
+                                      "depth": 7,
+                                      "totalMs": 490.02,
+                                      "totalPct": 4.29,
+                                      "count": 1360,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.7206176470588235,
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Update.ScriptRunBehaviourUpdate",
+                  "depth": 2,
+                  "totalMs": 1462.3,
+                  "totalPct": 12.79,
+                  "count": 684,
+                  "layer": "business",
+                  "perFrameMs": 2.150441176470588,
+                  "children": [
+                    {
+                      "name": "BehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 1459.12,
+                      "totalPct": 12.77,
+                      "count": 684,
+                      "layer": "business",
+                      "perFrameMs": 2.145764705882353,
+                      "children": [
+                        {
+                          "name": "Core.Update",
+                          "depth": 4,
+                          "totalMs": 1177.27,
+                          "totalPct": 10.3,
+                          "count": 684,
+                          "layer": "business",
+                          "perFrameMs": 1.731279411764706,
+                          "children": [
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 678.1,
+                              "totalPct": 5.93,
+                              "count": 684,
+                              "layer": "business",
+                              "perFrameMs": 0.9972058823529412,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnTick&UpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 647.43,
+                                  "totalPct": 5.66,
+                                  "count": 684,
+                                  "layer": "business",
+                                  "perFrameMs": 0.9521029411764705,
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 298.04,
+                              "totalPct": 2.61,
+                              "count": 684,
+                              "layer": "engine",
+                              "perFrameMs": 0.43829411764705883,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                  "depth": 2,
+                  "totalMs": 1103.48,
+                  "totalPct": 9.65,
+                  "count": 683,
+                  "layer": "business",
+                  "perFrameMs": 1.6227647058823529,
+                  "children": [
+                    {
+                      "name": "LateBehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 1100.97,
+                      "totalPct": 9.63,
+                      "count": 683,
+                      "layer": "business",
+                      "perFrameMs": 1.6190735294117649,
+                      "children": [
+                        {
+                          "name": "Core.LateUpdate",
+                          "depth": 4,
+                          "totalMs": 695.12,
+                          "totalPct": 6.08,
+                          "count": 683,
+                          "layer": "business",
+                          "perFrameMs": 1.0222352941176471,
+                          "children": [
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 343.64,
+                              "totalPct": 3.01,
+                              "count": 683,
+                              "layer": "engine",
+                              "perFrameMs": 0.5053529411764706,
+                              "children": []
+                            },
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 251.6,
+                              "totalPct": 2.2,
+                              "count": 683,
+                              "layer": "business",
+                              "perFrameMs": 0.37,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnLateUpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 224.73,
+                                  "totalPct": 1.97,
+                                  "count": 683,
+                                  "layer": "business",
+                                  "perFrameMs": 0.33048529411764704,
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Initialization.PlayerUpdateTime",
+                  "depth": 2,
+                  "totalMs": 714.75,
+                  "totalPct": 6.25,
+                  "count": 680,
+                  "layer": "business",
+                  "perFrameMs": 1.0511029411764705,
+                  "children": [
+                    {
+                      "name": "WaitForTargetFPS",
+                      "depth": 3,
+                      "totalMs": 700.69,
+                      "totalPct": 6.13,
+                      "count": 680,
+                      "layer": "runtime",
+                      "perFrameMs": 1.0304264705882353,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerUpdateCanvases",
+                  "depth": 2,
+                  "totalMs": 636.43,
+                  "totalPct": 5.57,
+                  "count": 682,
+                  "layer": "business",
+                  "perFrameMs": 0.9359264705882352,
+                  "children": [
+                    {
+                      "name": "UIEvents.WillRenderCanvases",
+                      "depth": 3,
+                      "totalMs": 633.09,
+                      "totalPct": 5.54,
+                      "count": 682,
+                      "layer": "engine",
+                      "perFrameMs": 0.931014705882353,
+                      "children": [
+                        {
+                          "name": "UGUI.Rendering.UpdateBatches",
+                          "depth": 4,
+                          "totalMs": 631.53,
+                          "totalPct": 5.53,
+                          "count": 682,
+                          "layer": "business",
+                          "perFrameMs": 0.9287205882352941,
+                          "children": [
+                            {
+                              "name": "Canvas.UpdateDirtyRenderers",
+                              "depth": 5,
+                              "totalMs": 170.27,
+                              "totalPct": 1.49,
+                              "count": 25234,
+                              "layer": "business",
+                              "perFrameMs": 0.2503970588235294,
+                              "children": []
+                            },
+                            {
+                              "name": "Render",
+                              "depth": 5,
+                              "totalMs": 167.98,
+                              "totalPct": 1.47,
+                              "count": 682,
+                              "layer": "engine",
+                              "perFrameMs": 0.24702941176470586,
+                              "children": [
+                                {
+                                  "name": "ClipperRegistry.Cull",
+                                  "depth": 6,
+                                  "totalMs": 156.64,
+                                  "totalPct": 1.37,
+                                  "count": 682,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.23035294117647057,
+                                  "children": [
+                                    {
+                                      "name": "CanvasRenderer.UpdateChangedTransforms",
+                                      "depth": 7,
+                                      "totalMs": 117.79,
+                                      "totalPct": 1.03,
+                                      "count": 19096,
+                                      "layer": "business",
+                                      "perFrameMs": 0.17322058823529413,
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "SimulationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 537.16,
+                  "totalPct": 4.7,
+                  "count": 684,
+                  "layer": "engine",
+                  "perFrameMs": 0.7899411764705881,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.SimulationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 533.31,
+                      "totalPct": 4.67,
+                      "count": 684,
+                      "layer": "engine",
+                      "perFrameMs": 0.7842794117647058,
+                      "children": [
+                        {
+                          "name": "Default World AOE.DOTS.ArmyGroup",
+                          "depth": 4,
+                          "totalMs": 178.99,
+                          "totalPct": 1.57,
+                          "count": 684,
+                          "layer": "engine",
+                          "perFrameMs": 0.26322058823529415,
+                          "children": [
+                            {
+                              "name": "Default World AOE.DOTS.ArmyUpdateGroup",
+                              "depth": 5,
+                              "totalMs": 116.43,
+                              "totalPct": 1.02,
+                              "count": 684,
+                              "layer": "business",
+                              "perFrameMs": 0.17122058823529412,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "InitializationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 347.82,
+                  "totalPct": 3.04,
+                  "count": 680,
+                  "layer": "engine",
+                  "perFrameMs": 0.5115,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.InitializationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 343.46,
+                      "totalPct": 3,
+                      "count": 680,
+                      "layer": "engine",
+                      "perFrameMs": 0.5050882352941176,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerSendFrameComplete",
+                  "depth": 2,
+                  "totalMs": 335.97,
+                  "totalPct": 2.94,
+                  "count": 680,
+                  "layer": "business",
+                  "perFrameMs": 0.49407352941176474,
+                  "children": [
+                    {
+                      "name": "PlayerEndOfFrame",
+                      "depth": 3,
+                      "totalMs": 334.23,
+                      "totalPct": 2.92,
+                      "count": 680,
+                      "layer": "engine",
+                      "perFrameMs": 0.49151470588235296,
+                      "children": [
+                        {
+                          "name": "CoroutinesDelayedCalls",
+                          "depth": 4,
+                          "totalMs": 329.73,
+                          "totalPct": 2.88,
+                          "count": 680,
+                          "layer": "business",
+                          "perFrameMs": 0.48489705882352946,
+                          "children": [
+                            {
+                              "name": "Core.EndOfFrame",
+                              "depth": 5,
+                              "totalMs": 194.55,
+                              "totalPct": 1.7,
+                              "count": 680,
+                              "layer": "engine",
+                              "perFrameMs": 0.2861029411764706,
+                              "children": []
+                            },
+                            {
+                              "name": "Core.PostEndOfFrame",
+                              "depth": 5,
+                              "totalMs": 123.27,
+                              "totalPct": 1.08,
+                              "count": 680,
+                              "layer": "engine",
+                              "perFrameMs": 0.18127941176470588,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PresentationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 200.98,
+                  "totalPct": 1.76,
+                  "count": 683,
+                  "layer": "runtime",
+                  "perFrameMs": 0.29555882352941176,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.PresentationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 197.72,
+                      "totalPct": 1.73,
+                      "count": 683,
+                      "layer": "runtime",
+                      "perFrameMs": 0.2907647058823529,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "EarlyUpdate.UpdateTextureStreamingManager",
+                  "depth": 2,
+                  "totalMs": 196.53,
+                  "totalPct": 1.72,
+                  "count": 684,
+                  "layer": "business",
+                  "perFrameMs": 0.28901470588235295,
+                  "children": [
+                    {
+                      "name": "TextureStreamingManager.Update",
+                      "depth": 3,
+                      "totalMs": 194.14,
+                      "totalPct": 1.7,
+                      "count": 684,
+                      "layer": "business",
+                      "perFrameMs": 0.2855,
+                      "children": [
+                        {
+                          "name": "TextureStreamingManager.UpdateRenderers",
+                          "depth": 4,
+                          "totalMs": 181.11,
+                          "totalPct": 1.58,
+                          "count": 684,
+                          "layer": "business",
+                          "perFrameMs": 0.26633823529411765,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "EarlyUpdate.PollPlayerConnection",
+                  "depth": 2,
+                  "totalMs": 145.21,
+                  "totalPct": 1.27,
+                  "count": 680,
+                  "layer": "business",
+                  "perFrameMs": 0.21354411764705883,
+                  "children": [
+                    {
+                      "name": "PlayerConnection.Poll",
+                      "depth": 3,
+                      "totalMs": 142.58,
+                      "totalPct": 1.25,
+                      "count": 680,
+                      "layer": "engine",
+                      "perFrameMs": 0.20967647058823533,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerEmitCanvasGeometry",
+                  "depth": 2,
+                  "totalMs": 119.58,
+                  "totalPct": 1.05,
+                  "count": 682,
+                  "layer": "business",
+                  "perFrameMs": 0.17585294117647057,
+                  "children": [
+                    {
+                      "name": "UIEvents.CanvasmanagerEmitOnScreenGeometry",
+                      "depth": 3,
+                      "totalMs": 114.94,
+                      "totalPct": 1.01,
+                      "count": 682,
+                      "layer": "engine",
+                      "perFrameMs": 0.16902941176470587,
+                      "children": [
+                        {
+                          "name": "UGUI.Rendering.EmitWorldScreenspaceCameraGeometry",
+                          "depth": 4,
+                          "totalMs": 113.86,
+                          "totalPct": 1,
+                          "count": 682,
+                          "layer": "engine",
+                          "perFrameMs": 0.16744117647058823,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "playerLoopFrameCount": 680,
+      "note": "主树=UnityMain；perFrameMs = totalMs / PlayerLoop 帧数(680)"
+    },
+    "cur": {
+      "available": true,
+      "tree": [
+        {
+          "name": "UnityMain",
+          "depth": 0,
+          "totalPct": 100,
+          "children": [
+            {
+              "name": "PlayerLoop",
+              "depth": 1,
+              "totalMs": 14608.74,
+              "totalPct": 99.6,
+              "count": 483,
+              "layer": "engine",
+              "perFrameMs": 30.24583850931677,
+              "children": [
+                {
+                  "name": "PostLateUpdate.FinishFrameRendering",
+                  "depth": 2,
+                  "totalMs": 6311.62,
+                  "totalPct": 43.03,
+                  "count": 483,
+                  "layer": "business",
+                  "perFrameMs": 13.067536231884057,
+                  "children": [
+                    {
+                      "name": "URP.Render",
+                      "depth": 3,
+                      "totalMs": 5869.82,
+                      "totalPct": 40.02,
+                      "count": 483,
+                      "layer": "engine",
+                      "perFrameMs": 12.152836438923394,
+                      "children": [
+                        {
+                          "name": "URP.RenderCameraStack",
+                          "depth": 4,
+                          "totalMs": 5802.8,
+                          "totalPct": 39.56,
+                          "count": 966,
+                          "layer": "engine",
+                          "perFrameMs": 12.01407867494824,
+                          "children": [
+                            {
+                              "name": "URP.RenderSingleCamera",
+                              "depth": 5,
+                              "totalMs": 5698.7,
+                              "totalPct": 38.85,
+                              "count": 966,
+                              "layer": "engine",
+                              "perFrameMs": 11.79855072463768,
+                              "children": [
+                                {
+                                  "name": "URP.AfterRendering",
+                                  "depth": 6,
+                                  "totalMs": 3300.05,
+                                  "totalPct": 22.5,
+                                  "count": 966,
+                                  "layer": "engine",
+                                  "perFrameMs": 6.8324016563147,
+                                  "children": [
+                                    {
+                                      "name": "URP.Submit",
+                                      "depth": 7,
+                                      "totalMs": 3162.57,
+                                      "totalPct": 21.56,
+                                      "count": 2415,
+                                      "layer": "engine",
+                                      "perFrameMs": 6.54776397515528,
+                                      "children": [
+                                        {
+                                          "name": "URP.WaitForPresent",
+                                          "depth": 8,
+                                          "totalMs": 2824.32,
+                                          "totalPct": 19.25,
+                                          "count": 2415,
+                                          "layer": "runtime",
+                                          "perFrameMs": 5.847453416149069,
+                                          "children": []
+                                        },
+                                        {
+                                          "name": "URP.MakeTranscriptRenderContext",
+                                          "depth": 8,
+                                          "totalMs": 259.53,
+                                          "totalPct": 1.77,
+                                          "count": 2415,
+                                          "layer": "engine",
+                                          "perFrameMs": 0.5373291925465838,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.BeforeRendering",
+                                  "depth": 6,
+                                  "totalMs": 892.03,
+                                  "totalPct": 6.08,
+                                  "count": 966,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.8468530020703933,
+                                  "children": [
+                                    {
+                                      "name": "CullScriptable",
+                                      "depth": 7,
+                                      "totalMs": 217.43,
+                                      "totalPct": 1.48,
+                                      "count": 966,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.4501656314699793,
+                                      "children": [
+                                        {
+                                          "name": "SceneCulling",
+                                          "depth": 8,
+                                          "totalMs": 153.64,
+                                          "totalPct": 1.05,
+                                          "count": 966,
+                                          "layer": "engine",
+                                          "perFrameMs": 0.31809523809523804,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.MainRenderingTransparent",
+                                  "depth": 6,
+                                  "totalMs": 870.56,
+                                  "totalPct": 5.94,
+                                  "count": 966,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.8024016563146996,
+                                  "children": [
+                                    {
+                                      "name": "Inl_OpaquePass",
+                                      "depth": 7,
+                                      "totalMs": 397.11,
+                                      "totalPct": 2.71,
+                                      "count": 483,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.8221739130434783,
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.RendererSetup",
+                                  "depth": 6,
+                                  "totalMs": 357.23,
+                                  "totalPct": 2.44,
+                                  "count": 966,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.7396066252587992,
+                                  "children": [
+                                    {
+                                      "name": "URP.RenderGraphSetup",
+                                      "depth": 7,
+                                      "totalMs": 343.07,
+                                      "totalPct": 2.34,
+                                      "count": 966,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.7102898550724638,
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Update.ScriptRunBehaviourUpdate",
+                  "depth": 2,
+                  "totalMs": 3822.98,
+                  "totalPct": 26.06,
+                  "count": 483,
+                  "layer": "business",
+                  "perFrameMs": 7.915072463768116,
+                  "children": [
+                    {
+                      "name": "BehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 3820.16,
+                      "totalPct": 26.04,
+                      "count": 483,
+                      "layer": "business",
+                      "perFrameMs": 7.909233954451345,
+                      "children": [
+                        {
+                          "name": "Core.Update",
+                          "depth": 4,
+                          "totalMs": 3536.78,
+                          "totalPct": 24.11,
+                          "count": 483,
+                          "layer": "business",
+                          "perFrameMs": 7.322525879917185,
+                          "children": [
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 1835.28,
+                              "totalPct": 12.51,
+                              "count": 483,
+                              "layer": "business",
+                              "perFrameMs": 3.799751552795031,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnTick&UpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 1809.52,
+                                  "totalPct": 12.34,
+                                  "count": 483,
+                                  "layer": "business",
+                                  "perFrameMs": 3.7464182194616975,
+                                  "children": [
+                                    {
+                                      "name": "BattleHeadMgr",
+                                      "depth": 7,
+                                      "totalMs": 730.85,
+                                      "totalPct": 4.98,
+                                      "count": 483,
+                                      "layer": "engine",
+                                      "perFrameMs": 1.5131469979296066,
+                                      "children": [
+                                        {
+                                          "name": "BattleHeadMgr.OnUpdate",
+                                          "depth": 8,
+                                          "totalMs": 722.34,
+                                          "totalPct": 4.92,
+                                          "count": 483,
+                                          "layer": "business",
+                                          "perFrameMs": 1.495527950310559,
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "MapSignificanceMgr",
+                                      "depth": 7,
+                                      "totalMs": 626.58,
+                                      "totalPct": 4.27,
+                                      "count": 483,
+                                      "layer": "engine",
+                                      "perFrameMs": 1.2972670807453417,
+                                      "children": [
+                                        {
+                                          "name": "MapSignificanceMgr.sampler_OnUpdate",
+                                          "depth": 8,
+                                          "totalMs": 622.69,
+                                          "totalPct": 4.25,
+                                          "count": 483,
+                                          "layer": "business",
+                                          "perFrameMs": 1.2892132505175984,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 1399.39,
+                              "totalPct": 9.54,
+                              "count": 483,
+                              "layer": "engine",
+                              "perFrameMs": 2.897287784679089,
+                              "children": [
+                                {
+                                  "name": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+                                  "depth": 6,
+                                  "totalMs": 760.94,
+                                  "totalPct": 5.19,
+                                  "count": 483,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.5754451345755696,
+                                  "children": [
+                                    {
+                                      "name": "OutsideLineCtrl:CalculateVertexJob (Burst)",
+                                      "depth": 7,
+                                      "totalMs": 206.86,
+                                      "totalPct": 1.41,
+                                      "count": 57820,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.42828157349896484,
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "CS:AOE.Battle.BattleUIManager",
+                                  "depth": 6,
+                                  "totalMs": 349.12,
+                                  "totalPct": 2.38,
+                                  "count": 483,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.722815734989648,
+                                  "children": [
+                                    {
+                                      "name": "*** BattleUIUpdate ***",
+                                      "depth": 7,
+                                      "totalMs": 345.07,
+                                      "totalPct": 2.35,
+                                      "count": 483,
+                                      "layer": "business",
+                                      "perFrameMs": 0.7144306418219462,
+                                      "children": [
+                                        {
+                                          "name": "MUI_UpdateUIPos",
+                                          "depth": 8,
+                                          "totalMs": 294.28,
+                                          "totalPct": 2.01,
+                                          "count": 483,
+                                          "layer": "business",
+                                          "perFrameMs": 0.6092753623188405,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "CS:AOE.TServerManager",
+                              "depth": 5,
+                              "totalMs": 147.3,
+                              "totalPct": 1,
+                              "count": 483,
+                              "layer": "engine",
+                              "perFrameMs": 0.3049689440993789,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                  "depth": 2,
+                  "totalMs": 1386.65,
+                  "totalPct": 9.45,
+                  "count": 483,
+                  "layer": "business",
+                  "perFrameMs": 2.8709109730848863,
+                  "children": [
+                    {
+                      "name": "LateBehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 1384.73,
+                      "totalPct": 9.44,
+                      "count": 483,
+                      "layer": "business",
+                      "perFrameMs": 2.866935817805383,
+                      "children": [
+                        {
+                          "name": "Core.LateUpdate",
+                          "depth": 4,
+                          "totalMs": 1024.8,
+                          "totalPct": 6.99,
+                          "count": 483,
+                          "layer": "business",
+                          "perFrameMs": 2.1217391304347823,
+                          "children": [
+                            {
+                              "name": "CS:AOE.MeshUIManager",
+                              "depth": 5,
+                              "totalMs": 491.36,
+                              "totalPct": 3.35,
+                              "count": 483,
+                              "layer": "engine",
+                              "perFrameMs": 1.0173084886128365,
+                              "children": []
+                            },
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 245.2,
+                              "totalPct": 1.67,
+                              "count": 483,
+                              "layer": "engine",
+                              "perFrameMs": 0.5076604554865424,
+                              "children": []
+                            },
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 211.8,
+                              "totalPct": 1.44,
+                              "count": 483,
+                              "layer": "business",
+                              "perFrameMs": 0.43850931677018634,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnLateUpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 186.81,
+                                  "totalPct": 1.27,
+                                  "count": 483,
+                                  "layer": "business",
+                                  "perFrameMs": 0.3867701863354037,
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerUpdateCanvases",
+                  "depth": 2,
+                  "totalMs": 453.3,
+                  "totalPct": 3.09,
+                  "count": 483,
+                  "layer": "business",
+                  "perFrameMs": 0.9385093167701863,
+                  "children": [
+                    {
+                      "name": "UIEvents.WillRenderCanvases",
+                      "depth": 3,
+                      "totalMs": 450.72,
+                      "totalPct": 3.07,
+                      "count": 483,
+                      "layer": "engine",
+                      "perFrameMs": 0.9331677018633541,
+                      "children": [
+                        {
+                          "name": "UGUI.Rendering.UpdateBatches",
+                          "depth": 4,
+                          "totalMs": 449.68,
+                          "totalPct": 3.07,
+                          "count": 483,
+                          "layer": "business",
+                          "perFrameMs": 0.9310144927536232,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "SimulationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 403.85,
+                  "totalPct": 2.75,
+                  "count": 483,
+                  "layer": "engine",
+                  "perFrameMs": 0.836128364389234,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.SimulationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 400.58,
+                      "totalPct": 2.73,
+                      "count": 483,
+                      "layer": "engine",
+                      "perFrameMs": 0.8293581780538302,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerSendFrameComplete",
+                  "depth": 2,
+                  "totalMs": 338.17,
+                  "totalPct": 2.31,
+                  "count": 483,
+                  "layer": "business",
+                  "perFrameMs": 0.7001449275362319,
+                  "children": [
+                    {
+                      "name": "PlayerEndOfFrame",
+                      "depth": 3,
+                      "totalMs": 336.67,
+                      "totalPct": 2.3,
+                      "count": 483,
+                      "layer": "engine",
+                      "perFrameMs": 0.6970393374741202,
+                      "children": [
+                        {
+                          "name": "CoroutinesDelayedCalls",
+                          "depth": 4,
+                          "totalMs": 332.97,
+                          "totalPct": 2.27,
+                          "count": 483,
+                          "layer": "business",
+                          "perFrameMs": 0.6893788819875777,
+                          "children": [
+                            {
+                              "name": "Core.EndOfFrame",
+                              "depth": 5,
+                              "totalMs": 212.9,
+                              "totalPct": 1.45,
+                              "count": 483,
+                              "layer": "engine",
+                              "perFrameMs": 0.44078674948240165,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "InitializationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 310.8,
+                  "totalPct": 2.12,
+                  "count": 483,
+                  "layer": "engine",
+                  "perFrameMs": 0.6434782608695653,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.InitializationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 307.01,
+                      "totalPct": 2.09,
+                      "count": 483,
+                      "layer": "engine",
+                      "perFrameMs": 0.6356314699792961,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PresentationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 153.59,
+                  "totalPct": 1.05,
+                  "count": 483,
+                  "layer": "runtime",
+                  "perFrameMs": 0.31799171842650104,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.PresentationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 151.05,
+                      "totalPct": 1.03,
+                      "count": 483,
+                      "layer": "runtime",
+                      "perFrameMs": 0.3127329192546584,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "playerLoopFrameCount": 483,
+      "note": "主树=UnityMain；perFrameMs = totalMs / PlayerLoop 帧数(483)"
+    },
+    "throttle": {
+      "available": true,
+      "tree": [
+        {
+          "name": "UnityMain",
+          "depth": 0,
+          "totalPct": 100,
+          "children": [
+            {
+              "name": "PlayerLoop",
+              "depth": 1,
+              "totalMs": 19930.73,
+              "totalPct": 99.87,
+              "count": 427,
+              "layer": "engine",
+              "perFrameMs": 46.67618266978923,
+              "children": [
+                {
+                  "name": "PostLateUpdate.FinishFrameRendering",
+                  "depth": 2,
+                  "totalMs": 11117.55,
+                  "totalPct": 55.71,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 26.036416861826694,
+                  "children": [
+                    {
+                      "name": "URP.Render",
+                      "depth": 3,
+                      "totalMs": 10650.6,
+                      "totalPct": 53.37,
+                      "count": 427,
+                      "layer": "engine",
+                      "perFrameMs": 24.942857142857143,
+                      "children": [
+                        {
+                          "name": "URP.RenderCameraStack",
+                          "depth": 4,
+                          "totalMs": 10557.52,
+                          "totalPct": 52.9,
+                          "count": 854,
+                          "layer": "engine",
+                          "perFrameMs": 24.724871194379393,
+                          "children": [
+                            {
+                              "name": "URP.RenderSingleCamera",
+                              "depth": 5,
+                              "totalMs": 10425.68,
+                              "totalPct": 52.24,
+                              "count": 854,
+                              "layer": "engine",
+                              "perFrameMs": 24.416112412177988,
+                              "children": [
+                                {
+                                  "name": "URP.AfterRendering",
+                                  "depth": 6,
+                                  "totalMs": 8253.95,
+                                  "totalPct": 41.36,
+                                  "count": 854,
+                                  "layer": "engine",
+                                  "perFrameMs": 19.33009367681499,
+                                  "children": [
+                                    {
+                                      "name": "URP.Submit",
+                                      "depth": 7,
+                                      "totalMs": 8069.14,
+                                      "totalPct": 40.43,
+                                      "count": 2135,
+                                      "layer": "engine",
+                                      "perFrameMs": 18.89728337236534,
+                                      "children": [
+                                        {
+                                          "name": "URP.WaitForPresent",
+                                          "depth": 8,
+                                          "totalMs": 7608.52,
+                                          "totalPct": 38.12,
+                                          "count": 2135,
+                                          "layer": "runtime",
+                                          "perFrameMs": 17.81854800936768,
+                                          "children": []
+                                        },
+                                        {
+                                          "name": "URP.MakeTranscriptRenderContext",
+                                          "depth": 8,
+                                          "totalMs": 346.28,
+                                          "totalPct": 1.74,
+                                          "count": 2135,
+                                          "layer": "engine",
+                                          "perFrameMs": 0.81096018735363,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.BeforeRendering",
+                                  "depth": 6,
+                                  "totalMs": 742.31,
+                                  "totalPct": 3.72,
+                                  "count": 854,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.738430913348946,
+                                  "children": [
+                                    {
+                                      "name": "CullScriptable",
+                                      "depth": 7,
+                                      "totalMs": 247.14,
+                                      "totalPct": 1.24,
+                                      "count": 854,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.5787822014051522,
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "URP.MainRenderingTransparent",
+                                  "depth": 6,
+                                  "totalMs": 727.42,
+                                  "totalPct": 3.64,
+                                  "count": 854,
+                                  "layer": "engine",
+                                  "perFrameMs": 1.703559718969555,
+                                  "children": []
+                                },
+                                {
+                                  "name": "URP.RendererSetup",
+                                  "depth": 6,
+                                  "totalMs": 398.49,
+                                  "totalPct": 2,
+                                  "count": 854,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.9332318501170961,
+                                  "children": [
+                                    {
+                                      "name": "URP.RenderGraphSetup",
+                                      "depth": 7,
+                                      "totalMs": 381.9,
+                                      "totalPct": 1.91,
+                                      "count": 854,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.8943793911007025,
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Update.ScriptRunBehaviourUpdate",
+                  "depth": 2,
+                  "totalMs": 3771.08,
+                  "totalPct": 18.9,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 8.831569086651054,
+                  "children": [
+                    {
+                      "name": "BehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 3767.99,
+                      "totalPct": 18.88,
+                      "count": 427,
+                      "layer": "business",
+                      "perFrameMs": 8.824332552693209,
+                      "children": [
+                        {
+                          "name": "Core.Update",
+                          "depth": 4,
+                          "totalMs": 3435.54,
+                          "totalPct": 17.21,
+                          "count": 427,
+                          "layer": "business",
+                          "perFrameMs": 8.04576112412178,
+                          "children": [
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 1703.01,
+                              "totalPct": 8.53,
+                              "count": 427,
+                              "layer": "engine",
+                              "perFrameMs": 3.988313817330211,
+                              "children": [
+                                {
+                                  "name": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+                                  "depth": 6,
+                                  "totalMs": 1041.67,
+                                  "totalPct": 5.22,
+                                  "count": 427,
+                                  "layer": "engine",
+                                  "perFrameMs": 2.4395081967213117,
+                                  "children": [
+                                    {
+                                      "name": "OutsideLineCtrl:CalculateVertexJob (Burst)",
+                                      "depth": 7,
+                                      "totalMs": 260.6,
+                                      "totalPct": 1.31,
+                                      "count": 51240,
+                                      "layer": "engine",
+                                      "perFrameMs": 0.610304449648712,
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "CS:AOE.Battle.BattleUIManager",
+                                  "depth": 6,
+                                  "totalMs": 354.12,
+                                  "totalPct": 1.77,
+                                  "count": 427,
+                                  "layer": "engine",
+                                  "perFrameMs": 0.8293208430913349,
+                                  "children": [
+                                    {
+                                      "name": "*** BattleUIUpdate ***",
+                                      "depth": 7,
+                                      "totalMs": 349.79,
+                                      "totalPct": 1.75,
+                                      "count": 427,
+                                      "layer": "business",
+                                      "perFrameMs": 0.8191803278688525,
+                                      "children": [
+                                        {
+                                          "name": "MUI_UpdateUIPos",
+                                          "depth": 8,
+                                          "totalMs": 321.2,
+                                          "totalPct": 1.61,
+                                          "count": 427,
+                                          "layer": "business",
+                                          "perFrameMs": 0.7522248243559718,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 1483.21,
+                              "totalPct": 7.43,
+                              "count": 427,
+                              "layer": "business",
+                              "perFrameMs": 3.4735597189695553,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnTick&UpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 1454.45,
+                                  "totalPct": 7.29,
+                                  "count": 427,
+                                  "layer": "business",
+                                  "perFrameMs": 3.4062060889929744,
+                                  "children": [
+                                    {
+                                      "name": "BattleHeadMgr",
+                                      "depth": 7,
+                                      "totalMs": 470.78,
+                                      "totalPct": 2.36,
+                                      "count": 427,
+                                      "layer": "engine",
+                                      "perFrameMs": 1.1025292740046837,
+                                      "children": [
+                                        {
+                                          "name": "BattleHeadMgr.OnUpdate",
+                                          "depth": 8,
+                                          "totalMs": 462.69,
+                                          "totalPct": 2.32,
+                                          "count": 427,
+                                          "layer": "business",
+                                          "perFrameMs": 1.083583138173302,
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "name": "MapSignificanceMgr",
+                                      "depth": 7,
+                                      "totalMs": 455.59,
+                                      "totalPct": 2.28,
+                                      "count": 427,
+                                      "layer": "engine",
+                                      "perFrameMs": 1.0669555035128806,
+                                      "children": [
+                                        {
+                                          "name": "MapSignificanceMgr.sampler_OnUpdate",
+                                          "depth": 8,
+                                          "totalMs": 451.28,
+                                          "totalPct": 2.26,
+                                          "count": 427,
+                                          "layer": "business",
+                                          "perFrameMs": 1.0568618266978922,
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+                  "depth": 2,
+                  "totalMs": 1276.24,
+                  "totalPct": 6.39,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 2.9888524590163934,
+                  "children": [
+                    {
+                      "name": "LateBehaviourUpdate",
+                      "depth": 3,
+                      "totalMs": 1274.19,
+                      "totalPct": 6.38,
+                      "count": 427,
+                      "layer": "business",
+                      "perFrameMs": 2.9840515222482438,
+                      "children": [
+                        {
+                          "name": "Core.LateUpdate",
+                          "depth": 4,
+                          "totalMs": 996.81,
+                          "totalPct": 4.99,
+                          "count": 427,
+                          "layer": "business",
+                          "perFrameMs": 2.3344496487119435,
+                          "children": [
+                            {
+                              "name": "CS:AOE.MeshUIManager",
+                              "depth": 5,
+                              "totalMs": 338.35,
+                              "totalPct": 1.7,
+                              "count": 427,
+                              "layer": "engine",
+                              "perFrameMs": 0.7923887587822015,
+                              "children": []
+                            },
+                            {
+                              "name": "CS:AOE.Outside.MapManager",
+                              "depth": 5,
+                              "totalMs": 302.99,
+                              "totalPct": 1.52,
+                              "count": 427,
+                              "layer": "engine",
+                              "perFrameMs": 0.7095784543325527,
+                              "children": []
+                            },
+                            {
+                              "name": "CS:AOE.LuaMgr",
+                              "depth": 5,
+                              "totalMs": 257.55,
+                              "totalPct": 1.29,
+                              "count": 427,
+                              "layer": "business",
+                              "perFrameMs": 0.6031615925058549,
+                              "children": [
+                                {
+                                  "name": "LuaMgr.OnLateUpdateSchedule",
+                                  "depth": 6,
+                                  "totalMs": 228.1,
+                                  "totalPct": 1.14,
+                                  "count": 427,
+                                  "layer": "business",
+                                  "perFrameMs": 0.534192037470726,
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerUpdateCanvases",
+                  "depth": 2,
+                  "totalMs": 487.51,
+                  "totalPct": 2.44,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 1.1417096018735362,
+                  "children": [
+                    {
+                      "name": "UIEvents.WillRenderCanvases",
+                      "depth": 3,
+                      "totalMs": 484.61,
+                      "totalPct": 2.43,
+                      "count": 427,
+                      "layer": "engine",
+                      "perFrameMs": 1.1349180327868853,
+                      "children": [
+                        {
+                          "name": "UGUI.Rendering.UpdateBatches",
+                          "depth": 4,
+                          "totalMs": 483.43,
+                          "totalPct": 2.42,
+                          "count": 427,
+                          "layer": "business",
+                          "perFrameMs": 1.1321545667447308,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "SimulationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 455.74,
+                  "totalPct": 2.28,
+                  "count": 427,
+                  "layer": "engine",
+                  "perFrameMs": 1.0673067915690866,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.SimulationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 452.21,
+                      "totalPct": 2.27,
+                      "count": 427,
+                      "layer": "engine",
+                      "perFrameMs": 1.05903981264637,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "PostLateUpdate.PlayerSendFrameComplete",
+                  "depth": 2,
+                  "totalMs": 419.93,
+                  "totalPct": 2.1,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 0.9834426229508196,
+                  "children": [
+                    {
+                      "name": "PlayerEndOfFrame",
+                      "depth": 3,
+                      "totalMs": 417.66,
+                      "totalPct": 2.09,
+                      "count": 427,
+                      "layer": "engine",
+                      "perFrameMs": 0.9781264637002343,
+                      "children": [
+                        {
+                          "name": "CoroutinesDelayedCalls",
+                          "depth": 4,
+                          "totalMs": 412.76,
+                          "totalPct": 2.07,
+                          "count": 427,
+                          "layer": "business",
+                          "perFrameMs": 0.9666510538641686,
+                          "children": [
+                            {
+                              "name": "Core.EndOfFrame",
+                              "depth": 5,
+                              "totalMs": 239.63,
+                              "totalPct": 1.2,
+                              "count": 427,
+                              "layer": "engine",
+                              "perFrameMs": 0.5611943793911007,
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "InitializationSystemGroup",
+                  "depth": 2,
+                  "totalMs": 412.17,
+                  "totalPct": 2.07,
+                  "count": 427,
+                  "layer": "engine",
+                  "perFrameMs": 0.9652693208430914,
+                  "children": [
+                    {
+                      "name": "Default World Unity.Entities.InitializationSystemGroup",
+                      "depth": 3,
+                      "totalMs": 407.67,
+                      "totalPct": 2.04,
+                      "count": 427,
+                      "layer": "engine",
+                      "perFrameMs": 0.9547306791569087,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "name": "EarlyUpdate.UpdateTextureStreamingManager",
+                  "depth": 2,
+                  "totalMs": 218.13,
+                  "totalPct": 1.09,
+                  "count": 427,
+                  "layer": "business",
+                  "perFrameMs": 0.5108430913348946,
+                  "children": [
+                    {
+                      "name": "TextureStreamingManager.Update",
+                      "depth": 3,
+                      "totalMs": 215.48,
+                      "totalPct": 1.08,
+                      "count": 427,
+                      "layer": "business",
+                      "perFrameMs": 0.5046370023419203,
+                      "children": [
+                        {
+                          "name": "TextureStreamingManager.UpdateRenderers",
+                          "depth": 4,
+                          "totalMs": 198.78,
+                          "totalPct": 1,
+                          "count": 427,
+                          "layer": "business",
+                          "perFrameMs": 0.4655269320843091,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "playerLoopFrameCount": 427,
+      "note": "主树=UnityMain；perFrameMs = totalMs / PlayerLoop 帧数(427)"
+    }
+  },
+  "offCpuAttribution": {
+    "byState": [
+      {
+        "state": "S",
+        "base": {
+          "totalMs": 1351.3,
+          "pctOfOffCpu": 90.57
+        },
+        "cur": {
+          "totalMs": 2911.7,
+          "pctOfOffCpu": 89.54
+        },
+        "throttle": {
+          "totalMs": 7666.5,
+          "pctOfOffCpu": 89.34
+        }
+      },
+      {
+        "state": "R",
+        "base": {
+          "totalMs": 111.1,
+          "pctOfOffCpu": 7.45
+        },
+        "cur": {
+          "totalMs": 237.5,
+          "pctOfOffCpu": 7.3
+        },
+        "throttle": {
+          "totalMs": 564.5,
+          "pctOfOffCpu": 6.58
+        }
+      },
+      {
+        "state": "R+",
+        "base": {
+          "totalMs": 6.2,
+          "pctOfOffCpu": 0.42
+        },
+        "cur": {
+          "totalMs": 23.4,
+          "pctOfOffCpu": 0.72
+        },
+        "throttle": {
+          "totalMs": 238.6,
+          "pctOfOffCpu": 2.78
+        }
+      },
+      {
+        "state": "D",
+        "base": {
+          "totalMs": 23.4,
+          "pctOfOffCpu": 1.57
+        },
+        "cur": {
+          "totalMs": 79.1,
+          "pctOfOffCpu": 2.43
+        },
+        "throttle": {
+          "totalMs": 111.4,
+          "pctOfOffCpu": 1.3
+        }
+      }
+    ],
+    "waitSliceOverlap": {
+      "base": {
+        "sleepingMs": 1351.3,
+        "maxWaitSlice": "URP.WaitForPresent",
+        "maxWaitMs": 624.35,
+        "coveragePct": 46.20365573891808
+      },
+      "cur": {
+        "sleepingMs": 2911.7,
+        "maxWaitSlice": "URP.WaitForPresent",
+        "maxWaitMs": 2824.32,
+        "coveragePct": 96.99900401827112
+      },
+      "throttle": {
+        "sleepingMs": 7666.5,
+        "maxWaitSlice": "Gfx.WaitForPresentOnGfxThread",
+        "maxWaitMs": 7600.06,
+        "coveragePct": 99.1333724646188
+      }
+    },
+    "asciiStateDistribution": "主线程状态分布对比（归一化为整 trace 窗口）\n\nbase       █████████████████████████████░░░░  Run 86.94% / Sleep 12.04% / Runn 0.97%\n           ↑ base 形态：低 Sleep，CPU-bound 健康态\ncur        ██████████████████████████░░░░░░░  Run 77.82% / Sleep 20.40% / Runn 1.62%\n           ↑ cur 比 base Sleep 多 8.36pp\nthrottle   ███████████████████░░░░░░░░░░░░░  Run 56.99% / Sleep 38.99% / Runn 2.83%\n           ↑ throttle 比 cur Sleep 多 18.59pp（半睡型）",
+    "asciiCausalChain": "throttle 主线程一帧的等待因果链：\n\n  主线程发起 PostLateUpdate.FinishFrameRendering\n    → Gfx.WaitForPresentOnGfxThread\n    │\n    ├─ 状态切换为 Sleep (S, sched off-CPU 主态)\n    │\n    └─ 等 swapchain Present 信号 (Gfx.WaitForPresentOnGfxThread 累计 7600ms)\n            │\n            └─ 信号源 = GPU 完成上一帧 swapchain present\n                    │\n                    └─ 真因双重叠加：\n                        (1) GPU 处理一帧本身要 ~Nms（无 GPU busy counter，量化不到）\n                        (2) swapchain 排队 — 前一帧没 present 完，下一帧得排队等\n\n证据链一致性检查（多信号同向）：\n- 主线程 Sleep 38.99% ≈ Gfx.WaitForPresentOnGfxThread 7600ms (重合 99.1%) ✅\n- 主线程 Run 86.94% → 77.82% → 56.99% (单调下降) ✅\n- Render Run 25.98% → 22.30% → 16.71% (同步变闲) ✅\n- bigCoreReach 59.2% (严重低频) → CPU 算得也慢，加重 swapchain 排队 ✅\n\n排除项（数据排除的瓶颈方向）：\n- ❌ binder IPC 阻塞 → 主线程 binder 累计 < 0.05% trace\n- ❌ ECS Worker 阻塞 → 4 条 Worker 偏差 < 1pp（健康）\n- ❌ Lua GC spike → LuaMtGC Sleep ≥97%",
+    "note": "byState 三态对照 + wait slice 重叠法（atrace wait slice vs sched Sleeping）；byReason 因 sched_blocked_reason ftrace 缺失不可用，用 wait slice 重叠旁路。"
+  },
+  "freqMatrix": {
+    "perCpu": [
+      {
+        "cpu": 0,
+        "avgMhz": 1225,
+        "maxMhz": 1804.8,
+        "cpuinfoMaxMhz": 1804.8,
+        "reachVsCpuinfoPct": 67.9,
+        "reachPct": 67.9
+      },
+      {
+        "cpu": 1,
+        "avgMhz": 1225,
+        "maxMhz": 1804.8,
+        "cpuinfoMaxMhz": 1804.8,
+        "reachVsCpuinfoPct": 67.9,
+        "reachPct": 67.9
+      },
+      {
+        "cpu": 2,
+        "avgMhz": 1225,
+        "maxMhz": 1804.8,
+        "cpuinfoMaxMhz": 1804.8,
+        "reachVsCpuinfoPct": 67.9,
+        "reachPct": 67.9
+      },
+      {
+        "cpu": 3,
+        "avgMhz": 1225,
+        "maxMhz": 1804.8,
+        "cpuinfoMaxMhz": 1804.8,
+        "reachVsCpuinfoPct": 67.9,
+        "reachPct": 67.9
+      },
+      {
+        "cpu": 4,
+        "avgMhz": 1268.6,
+        "maxMhz": 2227.2,
+        "cpuinfoMaxMhz": 2419.2,
+        "reachVsCpuinfoPct": 52.4,
+        "reachPct": 57
+      },
+      {
+        "cpu": 5,
+        "avgMhz": 1268.6,
+        "maxMhz": 2227.2,
+        "cpuinfoMaxMhz": 2419.2,
+        "reachVsCpuinfoPct": 52.4,
+        "reachPct": 57
+      },
+      {
+        "cpu": 6,
+        "avgMhz": 1268.6,
+        "maxMhz": 2227.2,
+        "cpuinfoMaxMhz": 2419.2,
+        "reachVsCpuinfoPct": 52.4,
+        "reachPct": 57
+      },
+      {
+        "cpu": 7,
+        "avgMhz": 1744,
+        "maxMhz": 2841.6,
+        "cpuinfoMaxMhz": 2841.6,
+        "reachVsCpuinfoPct": 61.4,
+        "reachPct": 61.4
+      }
+    ],
+    "triad": {
+      "base": {
+        "bigCoreReachPct": 74.9,
+        "avgMhz": 1729.5,
+        "thermalDeltaC": 11.7,
+        "thermalAfterC": 77.3,
+        "level": "suspected"
+      },
+      "cur": {
+        "bigCoreReachPct": 75.6,
+        "avgMhz": 1576.3,
+        "thermalDeltaC": -0.8,
+        "thermalAfterC": 79,
+        "level": "none"
+      },
+      "throttle": {
+        "bigCoreReachPct": 59.2,
+        "avgMhz": 1324.6,
+        "thermalDeltaC": 1.1,
+        "thermalAfterC": 76.7,
+        "level": "suspected"
+      }
+    },
+    "asciiMorphology": "三态降频形态对比：\n\nbase      :\n  特征: 温度 65.6 → 77.3°C (Δ +11.7°C)\n        bigReach 74.9% / avgMhz 1729.5 / UnityMain Run 86.94%\n  形态: \"凉机起步进热保护（Δ +11.7°C）\"\n\ncur       :\n  特征: 温度 79.8 → 79.0°C (Δ -0.8°C)\n        bigReach 75.6% / avgMhz 1576.3 / UnityMain Run 77.82%\n  形态: \"reach 持平 (+0.7pp)\"\n\nthrottle  :\n  特征: 温度 75.6 → 76.7°C (Δ +1.1°C)\n        bigReach 59.2% / avgMhz 1324.6 / UnityMain Run 56.99%\n  形态: \"重度降频，reach 暴跌 16.4pp\"",
+    "matrix": [
+      {
+        "dimension": "confirmed: sysfs scaling_max_freq < cpuinfo_max_freq",
+        "requirement": "sysfs root",
+        "base": "❌ 物理不可达（华为锁）",
+        "cur": "❌",
+        "throttle": "❌"
+      },
+      {
+        "dimension": "confirmed: cpu7 sched 完全归零（集群下线）",
+        "requirement": "跨次时序",
+        "base": "❌ cpu7 仍参与 sched",
+        "cur": "❌",
+        "throttle": "❌"
+      },
+      {
+        "dimension": "likely: bigReach% 持续下降 + 温度 Δ°C 或采后 ≥75°C",
+        "requirement": "cpufreq + 温度旁路",
+        "base": "✅ Δ 11.7°C / 采后 77.3°C",
+        "cur": "✅ 起点 79.8°C / 采后 79.0°C",
+        "throttle": "✅ 采后 76.7°C"
+      },
+      {
+        "dimension": "likely: 大核 reach% 严重低频",
+        "requirement": "cpufreq counter",
+        "base": "❌ (74.9%)",
+        "cur": "❌ (75.6%)",
+        "throttle": "✅ 59.2%"
+      },
+      {
+        "dimension": "suspected: bigReach% < 80% 且 Run ≥ 80%",
+        "requirement": "cpufreq counter",
+        "base": "✅ (74.9% + Run 86.9%)",
+        "cur": "❌",
+        "throttle": "❌"
+      }
+    ],
+    "note": "降频判定用 confirmed/likely/suspected 三档；阈值用相对倍数（reach<65% 严重低频 / reach<80%+Run≥80% 背离）+ 温度旁路（Δ≥5°C 或采后≥75°C），不硬编码 SoC 名。"
+  },
+  "redlineMatrix": {
+    "rows": [
+      {
+        "rank": 1,
+        "module": "URP.Render",
+        "curPerFrameMs": 12.152836438923394,
+        "throttlePerFrameMs": 24.942857142857143,
+        "basePerFrameMs": 6.128352941176471,
+        "foldChangeCurVsBase": 1.9830510017248442,
+        "foldChangeThrottleVsCur": 2.052430909295345,
+        "redlineType": "🔴 throttle 涨幅显著 (×2.05)",
+        "childHotspot": "URP.RenderCameraStack",
+        "findingId": "f-08",
+        "mergedChildren": [
+          "URP.RenderCameraStack",
+          "URP.RenderSingleCamera",
+          "URP.AfterRendering",
+          "URP.Submit",
+          "URP.WaitForPresent",
+          "URP.BeforeRendering"
+        ]
+      },
+      {
+        "rank": 2,
+        "module": "Core.Update",
+        "curPerFrameMs": 7.322525879917185,
+        "throttlePerFrameMs": 8.04576112412178,
+        "basePerFrameMs": 1.731279411764706,
+        "foldChangeCurVsBase": 4.229545982097298,
+        "foldChangeThrottleVsCur": 1.098768547365349,
+        "redlineType": "🔴 cur 涨幅显著 (×4.23)",
+        "childHotspot": "CS:AOE.LuaMgr",
+        "mergedChildren": [
+          "CS:AOE.LuaMgr",
+          "LuaMgr.OnTick&UpdateSchedule",
+          "CS:AOE.Outside.MapManager"
+        ]
+      },
+      {
+        "rank": 3,
+        "module": "Core.LateUpdate",
+        "curPerFrameMs": 2.1217391304347823,
+        "throttlePerFrameMs": 2.3344496487119435,
+        "basePerFrameMs": 1.0222352941176471,
+        "foldChangeCurVsBase": 2.075587824685884,
+        "foldChangeThrottleVsCur": 1.1002529082043997,
+        "redlineType": "🔴 cur 涨幅显著 (×2.08)",
+        "childHotspot": "CS:AOE.MeshUIManager"
+      }
+    ],
+    "note": "红线矩阵按 cur perFrameMs 降序取 top 候选，再做子树归并（DR-41 规则 2：parentChain 包含关系，child 不单独成行）；红线判定用相对倍数（涨幅 ≥2× 显著 / perFrame ≥1.0ms 临近），不硬编码业务名清单或绝对阈值。"
+  },
+  "gpuBoundMatrix": {
+    "rows": [
+      {
+        "signal": "GPU busy/freq counter",
+        "directEvidence": "—",
+        "indirectEvidence": "设备物理不可达（骁龙非 root）",
+        "judgment": "❌ \"GPU 满载\"硬证给不出"
+      },
+      {
+        "signal": "主线程 Sleeping ≈ Gfx.WaitForPresent",
+        "directEvidence": "cur 重合 97.0% / throttle 重合 99.1%",
+        "indirectEvidence": "双重验证（Sleep vs wait slice 重叠）",
+        "judgment": "🔴 强信号"
+      },
+      {
+        "signal": "Render / RHI 都越来越闲",
+        "directEvidence": "Render Run 26.0 → 22.3 → 16.7% (单调下降)",
+        "indirectEvidence": "三条线程 run% 全单调下降",
+        "judgment": "🔴 CPU 链路不是瓶颈"
+      },
+      {
+        "signal": "Choreographer 维持 60Hz 节拍",
+        "directEvidence": "Choreographer 60.1 / 60.0 / 60.1 Hz",
+        "indirectEvidence": "显示链路正常",
+        "judgment": "🔴 业务跨周期掉帧，不是 SF 问题"
+      },
+      {
+        "signal": "主线程 binder 占比",
+        "directEvidence": "11/15/20 次，avg 0.248/0.253/0.322ms",
+        "indirectEvidence": "远低于 0.05% trace",
+        "judgment": "排除 IPC 阻塞"
+      }
+    ],
+    "conclusion": "GPU-bound 信号强烈",
+    "note": "GPU-bound 判定用多信号同向验证（Sleep≈wait / Render+RHI 变闲 / Choreographer 稳 / binder 低）；不硬编码 GPU 满载绝对阈值。"
+  },
+  "topConclusionBlocks": [
+    {
+      "rank": 1,
+      "tag": "①",
+      "severity": "critical",
+      "oneLiner": "主线程瓶颈形态：从 base 的\"几乎全程在算\"演化到 throttle 的\"半睡型\"——核心增量是等 GPU，不是等锁/binder。",
+      "asciiChart": "主线程 Running / Sleeping（三态对比）:\n  base       █████████████████░░░  Run 86.9% / Sleep 12.0%\n  cur        ████████████████░░░░  Run 77.8% / Sleep 20.4%\n  throttle   ███████████░░░░░░░░░  Run 57.0% / Sleep 39.0%\n\n主线程 Sleeping 中等 GPU 占比（wait slice 重叠法）:\n  base       █████████░░░░░░░░░░░  46.2%\n  cur        ███████████████████░  97.0%\n  throttle   ████████████████████  99.1%",
+      "keyNumbers": [
+        "throttle 单帧平均等 GPU 17.80ms（已超 60Hz vsync 周期 16.66ms → swapchain 撑爆）。",
+        "Sleep 增量 27.0pp 中约 99% 来自等 GPU。"
+      ],
+      "seeAlso": "详见 §3",
+      "findingIds": [
+        "f-27"
+      ]
+    },
+    {
+      "rank": 2,
+      "tag": "②",
+      "severity": "critical",
+      "oneLiner": "业务侧主入口涨幅集中在 3 条独立子树（CS:AOE.Outside.OutSideViewArmyLineMgr / MapSignificanceMgr.ProcessTasks / MapSignificanceMgr.EntityTask），与压测高负载强相关。",
+      "asciiChart": "业务侧主入口涨幅（三态对比，按贡献降序）:\n\nCS:AOE.Outside.OutSideViewArmyLineMgr ms/帧:\n  base       ░░░░░░░░░░░░░░░░░░░░  0.00 ms ← base 无此节点或近零\n  cur        █████████████░░░░░░░  1.58 ms ← cur 新增\n  throttle   ████████████████████  2.44 ms\n\nMapSignificanceMgr.ProcessTasks ms/帧:\n  base       ░░░░░░░░░░░░░░░░░░░░  0.00 ms ← base 无此节点或近零\n  cur        ░░░░░░░░░░░░░░░░░░░░  0.00 ms ← cur 新增\n  throttle   ░░░░░░░░░░░░░░░░░░░░  0.00 ms\n\nMapSignificanceMgr.EntityTask ms/帧:\n  base       ░░░░░░░░░░░░░░░░░░░░  0.00 ms ← base 无此节点或近零\n  cur        ░░░░░░░░░░░░░░░░░░░░  0.00 ms ← cur 新增\n  throttle   ░░░░░░░░░░░░░░░░░░░░  0.00 ms",
+      "keyNumbers": [
+        "CS:AOE.Outside.OutSideViewArmyLineMgr：仅在 cur 出现（base 无此节点），新增路径（base 0.00 / cur 1.58 / throttle 2.44 ms/帧）",
+        "MapSignificanceMgr.ProcessTasks：仅在 cur 出现（base 无此节点），新增路径（base 0.00 / cur 0.00 / throttle 0.00 ms/帧）",
+        "MapSignificanceMgr.EntityTask：仅在 cur 出现（base 无此节点），新增路径（base 0.00 / cur 0.00 / throttle 0.00 ms/帧）"
+      ],
+      "seeAlso": "详见 §5",
+      "findingIds": [
+        "f-11",
+        "f-12",
+        "f-13"
+      ]
+    },
+    {
+      "rank": 3,
+      "tag": "③",
+      "severity": "warning",
+      "oneLiner": "三份样本均触发降频 likely 档；throttle 形态最完整（reach 暴跌 + 持续高温）。",
+      "asciiChart": "bigCoreReach%（三态对比）:\n  base       ███████████████░░░░░  74.9%\n  cur        ███████████████░░░░░  75.6%\n  throttle   ████████████░░░░░░░░  59.2% ← 严重低频\n\n温度（soc_thermal 起→终）:\n  base       65.6 → 77.3°C (Δ +11.7°C)\n  cur        79.8 → 79.0°C\n  throttle   75.6 → 76.7°C",
+      "keyNumbers": [
+        "throttle 大核 reach 跌到 59.2%（cur 75.6% → throttle 59.2%，Δ -16.4pp）。",
+        "采后温度 76.7°C 已进热保护阈值区（≥75°C）。"
+      ],
+      "seeAlso": "详见 §4",
+      "findingIds": [
+        "f-29"
+      ]
+    }
+  ],
+  "asciiVisuals": {
+    "stateDistribution": "主线程状态分布对比（归一化为整 trace 窗口）\n\nbase       █████████████████████████████░░░░  Run 86.94% / Sleep 12.04% / Runn 0.97%\n           ↑ base 形态：低 Sleep，CPU-bound 健康态\ncur        ██████████████████████████░░░░░░░  Run 77.82% / Sleep 20.40% / Runn 1.62%\n           ↑ cur 比 base Sleep 多 8.36pp\nthrottle   ███████████████████░░░░░░░░░░░░░  Run 56.99% / Sleep 38.99% / Runn 2.83%\n           ↑ throttle 比 cur Sleep 多 18.59pp（半睡型）",
+    "causalChain": "throttle 主线程一帧的等待因果链：\n\n  主线程发起 PostLateUpdate.FinishFrameRendering\n    → Gfx.WaitForPresentOnGfxThread\n    │\n    ├─ 状态切换为 Sleep (S, sched off-CPU 主态)\n    │\n    └─ 等 swapchain Present 信号 (Gfx.WaitForPresentOnGfxThread 累计 7600ms)\n            │\n            └─ 信号源 = GPU 完成上一帧 swapchain present\n                    │\n                    └─ 真因双重叠加：\n                        (1) GPU 处理一帧本身要 ~Nms（无 GPU busy counter，量化不到）\n                        (2) swapchain 排队 — 前一帧没 present 完，下一帧得排队等\n\n证据链一致性检查（多信号同向）：\n- 主线程 Sleep 38.99% ≈ Gfx.WaitForPresentOnGfxThread 7600ms (重合 99.1%) ✅\n- 主线程 Run 86.94% → 77.82% → 56.99% (单调下降) ✅\n- Render Run 25.98% → 22.30% → 16.71% (同步变闲) ✅\n- bigCoreReach 59.2% (严重低频) → CPU 算得也慢，加重 swapchain 排队 ✅\n\n排除项（数据排除的瓶颈方向）：\n- ❌ binder IPC 阻塞 → 主线程 binder 累计 < 0.05% trace\n- ❌ ECS Worker 阻塞 → 4 条 Worker 偏差 < 1pp（健康）\n- ❌ Lua GC spike → LuaMtGC Sleep ≥97%",
+    "freqMorphology": "三态降频形态对比：\n\nbase      :\n  特征: 温度 65.6 → 77.3°C (Δ +11.7°C)\n        bigReach 74.9% / avgMhz 1729.5 / UnityMain Run 86.94%\n  形态: \"凉机起步进热保护（Δ +11.7°C）\"\n\ncur       :\n  特征: 温度 79.8 → 79.0°C (Δ -0.8°C)\n        bigReach 75.6% / avgMhz 1576.3 / UnityMain Run 77.82%\n  形态: \"reach 持平 (+0.7pp)\"\n\nthrottle  :\n  特征: 温度 75.6 → 76.7°C (Δ +1.1°C)\n        bigReach 59.2% / avgMhz 1324.6 / UnityMain Run 56.99%\n  形态: \"重度降频，reach 暴跌 16.4pp\""
+  },
   "inputProvenance": {
     "exploreDir": "web/data/prism-out/bk26b-perfetto-explore-mvp",
-    "ledgerGeneratedAt": "2026-07-14T06:21:46.448Z",
-    "findingsGeneratedAt": "2026-07-14T06:21:46.448Z",
-    "verdictGeneratedAt": "2026-07-14T06:21:46.450Z"
+    "triadDir": "web/data/prism-out/bk26b-perfetto-triad",
+    "ledgerGeneratedAt": "2026-07-15T09:54:10.180Z",
+    "findingsGeneratedAt": "2026-07-15T09:54:10.180Z",
+    "verdictGeneratedAt": "2026-07-15T09:54:10.180Z"
   }
 }

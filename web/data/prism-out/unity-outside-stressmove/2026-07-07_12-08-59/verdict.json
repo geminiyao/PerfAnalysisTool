@@ -1,0 +1,59 @@
+{
+  "rating": "fail",
+  "headline": "600帧全部超出16.67ms(60fps)预算，中位数41.90ms(2.51倍预算)。根因分两层：①持续性基线成本(Core.Update脚本Update树12.88ms/帧 + URP渲染管线10.64ms/帧，合计约23.5ms/帧，遍布全部600帧)是造成\"每一帧都慢\"的主因；②在此基础上叠加了两类严重程度不同的尖峰——相机移动处理(OnCameraMove，19帧命中，累计819.69ms，单帧最高53.41ms)是全程尖峰中绝对耗时贡献最大的一类，而阻塞式GC.Collect(仅2帧命中，但单帧最高达70.20ms、占该帧61.82%)是单帧最糟糕的极端个案。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.90,
+  "observedP95Ms": 59.31,
+  "observedP99Ms": 95.45,
+  "observedMaxMs": 113.29,
+  "observedMaxFrameIndex": 519,
+  "pctFramesOverBudget": 100,
+  "pctFramesOver2xBudget": 100,
+  "primaryDrivers": [
+    {
+      "driver": "持续性基线成本（脚本Update树 + URP渲染管线，无单点热点的“摊薄型”成本）",
+      "impact": "aggregateSubtree显示Core.Update子树12.879ms/帧（LuaMgr 6.822ms + MapManager 4.837ms + TServerManager 0.924ms，maxChildRatio仅0.53）与URP.RenderSingleCamera子树10.64ms/帧（4个子阶段均<3ms，maxChildRatio仅0.28）合计约23.5ms/帧，覆盖全部600帧、无一遗漏，是唯一能解释“为什么中位数帧(41.9ms)本身就已经是预算2.5倍”的成分——按绝对总量计算约14100ms，是全部候选驱动因素里量级最大的一个。",
+      "evidenceRefs": ["aggregateSubtree(Core.Update)", "aggregateSubtree(URP.RenderSingleCamera)", "getFrameCallTree(frame100，非爆发帧交叉验证)"]
+    },
+    {
+      "driver": "相机移动处理尖峰（OnCameraMove / MapCameraCtrl.UpdateCameraPos / InfiniteZoomMgr.PostCameraMoveScale）",
+      "impact": "仅命中19/600帧，但sumSelfMs=819.69ms，是全部尖峰类问题里绝对总耗时最大的一个（比GC.Collect的85.53ms总和高约9.6倍）；单帧峰值53.41ms(frame144)，占该帧58.38%。correlateFrameSets验证：100%的OnCameraMove尖峰帧都落在慢帧集合内（pctBinA=100%），且该场景本身即“stressmove”相机压力测试，与场景设计目标直接相关。",
+      "evidenceRefs": ["queryMarkers(OnCameraMove)", "scanMetricOverFrames(OnCameraMove)", "getFrameCallTree(144)", "correlateFrameSets(slowFrames vs OnCameraMove spike)"]
+    },
+    {
+      "driver": "阻塞式GC.Collect单帧尖峰",
+      "impact": "仅命中2/600帧(483, 519)，总耗时85.53ms(全场景占比<0.5%)，但frame519单帧内占比高达61.82%(70.20ms)，是全程最慢单帧(113.29ms)的最大单一贡献者。已用queryFrameCounters验证frame519及相邻帧gc_allocated_in_frame均为8-15KB量级(正常范围)，排除了“分配触发GC”的可能，指向一次与瞬时内存压力无关的主动/计划性全量回收。",
+      "evidenceRefs": ["scanMetricOverFrames(GC.Collect)", "getFrameCallTree(519)", "getFrameCallTree(483)", "queryFrameCounters(frames 517-521)"]
+    },
+    {
+      "driver": "增量GC周期性堆积(GarbageCollector.CollectIncremental)",
+      "impact": "presentFrames=600（几乎每帧都有极小基线成本），但存在一个异常密集的20帧连续爆发窗口(frames 462-481)，自相关系数在lag=2时达0.68，且紧邻frame483的GC.Collect尖峰之前——提示这是一次持续的增量GC压力堆积，而非孤立事件。",
+      "evidenceRefs": ["scanMetricOverFrames(GarbageCollector.CollectIncremental)"]
+    },
+    {
+      "driver": "网络消息批量到达尖峰(TServer.HandleMessages / YzEntityMoveLineNtf)",
+      "impact": "YzEntityMoveLineNtf仅在77/600帧出现（网络事件驱动），其中9帧构成尖峰，最高14.90ms(selfMs)/16.97ms(TServer.HandleMessages totalMs @frame273，占该帧比例较高)。correlateFrameSets验证：该marker的每一次尖峰都精确对应TServer.HandleMessages自身的尖峰(pctBinA=100%)，且在frame273内单帧同一marker重复出现多次，证实是消息批量到达导致的处理堆积，而非单一慢调用。",
+      "evidenceRefs": ["scanMetricOverFrames(YzEntityMoveLineNtf)", "scanMetricOverFrames(TServer.HandleMessages)", "correlateFrameSets(TServer.HandleMessages spike vs YzEntityMoveLineNtf spike)", "getFrameCallTree(273, 326)"]
+    }
+  ],
+  "verdictEvidence": [
+    {
+      "statement": "p50=41.90ms，相对16.67ms预算已是2.51倍；p99=95.45ms，max=113.29ms@frame519",
+      "tool": "scanMetricOverFrames",
+      "args": {"runId": "unity-outside-stressmove", "thread": "1:Main Thread", "markerName": "PlayerLoop", "metric": "totalMs"},
+      "resultDigest": "frameCount=600, presentFrames=600, mean=44.53, p50=41.90, p95=59.31, p99=95.45, max=113.29@frame519, burstFramesTotal=20"
+    },
+    {
+      "statement": "600/600帧超过16.67ms预算（100%），且600/600帧超过33.34ms（2倍预算），说明这不是偶发慢帧而是全程性能不达标",
+      "tool": "correlateFrameSets",
+      "args": {"setA": {"kind": "slowFrames", "thresholdMs": 16.67}, "setB": {"kind": "slowFrames", "thresholdMs": 33.34}},
+      "resultDigest": "sizeA=600, sizeB=600, intersection=600（全部600帧同时超出1倍与2倍预算）"
+    },
+    {
+      "statement": "阈值口径校验：用p50(41.9ms)本身作为阈值重新查询slowFrames，得到约50%的命中率，证明工具口径正确、不存在计数错误",
+      "tool": "scanMetricOverFrames / correlateFrameSets",
+      "args": {"runId": "unity-outside-stressmove", "thresholdMs": 41.9},
+      "resultDigest": "sizeA≈302/600（约50%），符合p50定义下的预期比例"
+    }
+  ]
+}

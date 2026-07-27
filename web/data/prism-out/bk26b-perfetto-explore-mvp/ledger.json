@@ -1,8 +1,8 @@
 {
   "source": "perfetto",
   "sampleSet": "bk26b-perfetto-triad",
-  "generatedAt": "2026-07-14T06:21:46.448Z",
-  "evidenceCount": 17,
+  "generatedAt": "2026-07-20T04:01:56.937Z",
+  "evidenceCount": 25,
   "evidence": [
     {
       "id": "ev-001-base-querySchedState",
@@ -57,28 +57,45 @@
         "source": "perfetto",
         "role": "base"
       },
-      "summary": "base PlayerLoop count=684 avgMs=16.621 totalMs=11368.46; BehaviourUpdate count=684; FinishFrameRendering count=n/a",
+      "summary": "base atrace topByTotalMs[0]=PlayerLoop totalMs=11368.46 avgMs=16.621; topN=5",
       "dataRefs": [
         "bk26b-perfetto-triad/base/perfetto-profile.json"
       ],
       "facts": {
         "available": true,
         "totalSlices": 5,
-        "slices": {
-          "PlayerLoop": {
+        "topByTotalMs": [
+          {
             "name": "PlayerLoop",
             "count": 684,
             "avgMs": 16.621,
             "totalMs": 11368.46
           },
-          "BehaviourUpdate": {
+          {
             "name": "BehaviourUpdate",
             "count": 684,
             "avgMs": 2.133,
             "totalMs": 1459.12
           },
-          "FinishFrameRendering": null
-        }
+          {
+            "name": "WaitForTargetFPS",
+            "count": 683,
+            "avgMs": 1.035,
+            "totalMs": 706.84
+          },
+          {
+            "name": "Coroutines",
+            "count": 3116,
+            "avgMs": 0.109,
+            "totalMs": 339.57
+          },
+          {
+            "name": "Camera.Render",
+            "count": 1364,
+            "avgMs": 0.001,
+            "totalMs": 1.66
+          }
+        ]
       }
     },
     {
@@ -97,14 +114,23 @@
         "source": "perfetto",
         "role": "base"
       },
-      "summary": "base FrameTimeline available=false; choreographer available=true",
+      "summary": "base FrameTimeline available=false; choreographer available=true; playerLoop p50=16.69 fps=59.8 slowFrameRate=0",
       "dataRefs": [
         "bk26b-perfetto-triad/base/perfetto-profile.json"
       ],
       "facts": {
         "androidFrameTimelineAvailable": false,
         "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
-        "choreographerAvailable": true
+        "choreographerAvailable": true,
+        "playerLoopPercentiles": {
+          "available": true,
+          "p50Ms": 16.69,
+          "p95Ms": 18.68,
+          "p99Ms": 21.37,
+          "fps": 59.8,
+          "slowFrameRate": 0,
+          "count": 680
+        }
       }
     },
     {
@@ -133,7 +159,24 @@
         "bigCoreReachPct": 74.9,
         "throttlingLevel": "suspected",
         "throttlingSuspected": true,
-        "cpuThrottled": true
+        "cpuThrottled": true,
+        "clusterSummary": {
+          "small": {
+            "cpuCount": 4,
+            "avgReachPct": 63.1,
+            "avgMhz": 1138.3
+          },
+          "mid": {
+            "cpuCount": 3,
+            "avgReachPct": 76.1,
+            "avgMhz": 1841.6
+          },
+          "big": {
+            "cpuCount": 1,
+            "avgReachPct": 73.7,
+            "avgMhz": 2093.2
+          }
+        }
       }
     },
     {
@@ -254,28 +297,51 @@
         "source": "perfetto",
         "role": "cur"
       },
-      "summary": "cur PlayerLoop count=484 avgMs=30.183 totalMs=14608.74; BehaviourUpdate count=484; FinishFrameRendering count=n/a",
+      "summary": "cur atrace topByTotalMs[0]=PlayerLoop totalMs=14608.74 avgMs=30.183; topN=6",
       "dataRefs": [
         "bk26b-perfetto-triad/cur/perfetto-profile.json"
       ],
       "facts": {
         "available": true,
         "totalSlices": 6,
-        "slices": {
-          "PlayerLoop": {
+        "topByTotalMs": [
+          {
             "name": "PlayerLoop",
             "count": 484,
             "avgMs": 30.183,
             "totalMs": 14608.74
           },
-          "BehaviourUpdate": {
+          {
             "name": "BehaviourUpdate",
             "count": 484,
             "avgMs": 7.905,
             "totalMs": 3826.16
           },
-          "FinishFrameRendering": null
-        }
+          {
+            "name": "Coroutines",
+            "count": 2427,
+            "avgMs": 0.141,
+            "totalMs": 342.64
+          },
+          {
+            "name": "GC.Collect",
+            "count": 3,
+            "avgMs": 18.066,
+            "totalMs": 54.2
+          },
+          {
+            "name": "WaitForTargetFPS",
+            "count": 485,
+            "avgMs": 0.029,
+            "totalMs": 14.04
+          },
+          {
+            "name": "Camera.Render",
+            "count": 970,
+            "avgMs": 0.001,
+            "totalMs": 1.2
+          }
+        ]
       }
     },
     {
@@ -294,14 +360,23 @@
         "source": "perfetto",
         "role": "cur"
       },
-      "summary": "cur FrameTimeline available=false; choreographer available=true",
+      "summary": "cur FrameTimeline available=false; choreographer available=true; playerLoop p50=30.15 fps=33.1 slowFrameRate=11.18",
       "dataRefs": [
         "bk26b-perfetto-triad/cur/perfetto-profile.json"
       ],
       "facts": {
         "androidFrameTimelineAvailable": false,
         "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
-        "choreographerAvailable": true
+        "choreographerAvailable": true,
+        "playerLoopPercentiles": {
+          "available": true,
+          "p50Ms": 30.15,
+          "p95Ms": 35.22,
+          "p99Ms": 42.54,
+          "fps": 33.1,
+          "slowFrameRate": 11.18,
+          "count": 483
+        }
       }
     },
     {
@@ -329,7 +404,24 @@
         "avgMhz": 1576.3,
         "bigCoreReachPct": 75.6,
         "throttlingLevel": "none",
-        "throttlingSuspected": false
+        "throttlingSuspected": false,
+        "clusterSummary": {
+          "small": {
+            "cpuCount": 4,
+            "avgReachPct": 69.8,
+            "avgMhz": 1260
+          },
+          "mid": {
+            "cpuCount": 3,
+            "avgReachPct": 74.2,
+            "avgMhz": 1737.6
+          },
+          "big": {
+            "cpuCount": 1,
+            "avgReachPct": 77,
+            "avgMhz": 2187.6
+          }
+        }
       }
     },
     {
@@ -450,28 +542,51 @@
         "source": "perfetto",
         "role": "throttle"
       },
-      "summary": "throttle PlayerLoop count=428 avgMs=46.567 totalMs=19930.73; BehaviourUpdate count=428; FinishFrameRendering count=n/a",
+      "summary": "throttle atrace topByTotalMs[0]=PlayerLoop totalMs=19930.73 avgMs=46.567; topN=6",
       "dataRefs": [
         "bk26b-perfetto-triad/throttle/perfetto-profile.json"
       ],
       "facts": {
         "available": true,
         "totalSlices": 6,
-        "slices": {
-          "PlayerLoop": {
+        "topByTotalMs": [
+          {
             "name": "PlayerLoop",
             "count": 428,
             "avgMs": 46.567,
             "totalMs": 19930.73
           },
-          "BehaviourUpdate": {
+          {
             "name": "BehaviourUpdate",
             "count": 428,
             "avgMs": 8.804,
             "totalMs": 3767.99
           },
-          "FinishFrameRendering": null
-        }
+          {
+            "name": "Coroutines",
+            "count": 2376,
+            "avgMs": 0.177,
+            "totalMs": 421.7
+          },
+          {
+            "name": "GC.Collect",
+            "count": 1,
+            "avgMs": 32.907,
+            "totalMs": 32.91
+          },
+          {
+            "name": "WaitForTargetFPS",
+            "count": 428,
+            "avgMs": 0.029,
+            "totalMs": 12.39
+          },
+          {
+            "name": "Camera.Render",
+            "count": 854,
+            "avgMs": 0.002,
+            "totalMs": 1.39
+          }
+        ]
       }
     },
     {
@@ -490,14 +605,23 @@
         "source": "perfetto",
         "role": "throttle"
       },
-      "summary": "throttle FrameTimeline available=false; choreographer available=true",
+      "summary": "throttle FrameTimeline available=false; choreographer available=true; playerLoop p50=45.94 fps=21.4 slowFrameRate=98.83",
       "dataRefs": [
         "bk26b-perfetto-triad/throttle/perfetto-profile.json"
       ],
       "facts": {
         "androidFrameTimelineAvailable": false,
         "androidFrameTimelineReason": "Android FrameTimeline data is not present in perfetto-profile.json or summary; no jank classification synthesized.",
-        "choreographerAvailable": true
+        "choreographerAvailable": true,
+        "playerLoopPercentiles": {
+          "available": true,
+          "p50Ms": 45.94,
+          "p95Ms": 55.62,
+          "p99Ms": 66.32,
+          "fps": 21.4,
+          "slowFrameRate": 98.83,
+          "count": 427
+        }
       }
     },
     {
@@ -526,7 +650,24 @@
         "bigCoreReachPct": 59.2,
         "throttlingLevel": "suspected",
         "throttlingSuspected": true,
-        "cpuThrottled": true
+        "cpuThrottled": true,
+        "clusterSummary": {
+          "small": {
+            "cpuCount": 4,
+            "avgReachPct": 67.9,
+            "avgMhz": 1225
+          },
+          "mid": {
+            "cpuCount": 3,
+            "avgReachPct": 57,
+            "avgMhz": 1268.6
+          },
+          "big": {
+            "cpuCount": 1,
+            "avgReachPct": 61.4,
+            "avgMhz": 1744
+          }
+        }
       }
     },
     {
@@ -683,6 +824,1343 @@
           "sleepingPct": 38.99
         },
         "note": "WT-013 MVP reports window-level correlation only; no per-frame sched/cpu correlation is claimed."
+      }
+    },
+    {
+      "id": "ev-018-base-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "base",
+      "args": {
+        "role": "base",
+        "topN": 20,
+        "minTotalPct": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-base",
+        "tool": "queryCallTreeSubtree",
+        "args": {
+          "role": "base",
+          "topN": 20,
+          "minTotalPct": 0
+        },
+        "source": "perfetto",
+        "role": "base"
+      },
+      "summary": "base callTreeSubtree available=true totalNodes=94 top=PlayerLoop totalMs=11458.86",
+      "dataRefs": [
+        "bk26b-perfetto-triad/base/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalNodes": 94,
+        "rows": [
+          {
+            "name": "PlayerLoop",
+            "totalMs": 11458.86,
+            "totalPct": 100.25,
+            "count": 684,
+            "avgMs": 16.753,
+            "parentChain": "UnityMain > PlayerLoop",
+            "layer": "engine"
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 4677.17,
+            "totalPct": 40.92,
+            "count": 680,
+            "avgMs": 6.878,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering",
+            "layer": "business"
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 4167.28,
+            "totalPct": 36.46,
+            "count": 680,
+            "avgMs": 6.128,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 4074.3,
+            "totalPct": 35.64,
+            "count": 1360,
+            "avgMs": 2.996,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 3931.5,
+            "totalPct": 34.4,
+            "count": 1360,
+            "avgMs": 2.891,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera",
+            "layer": "engine"
+          },
+          {
+            "name": "Update.ScriptRunBehaviourUpdate",
+            "totalMs": 1462.3,
+            "totalPct": 12.79,
+            "count": 684,
+            "avgMs": 2.138,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "BehaviourUpdate",
+            "totalMs": 1459.12,
+            "totalPct": 12.77,
+            "count": 684,
+            "avgMs": 2.133,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "Core.Update",
+            "totalMs": 1177.27,
+            "totalPct": 10.3,
+            "count": 684,
+            "avgMs": 1.721,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update",
+            "layer": "business"
+          },
+          {
+            "name": "URP.MainRenderingTransparent",
+            "totalMs": 1163.75,
+            "totalPct": 10.18,
+            "count": 1360,
+            "avgMs": 0.856,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.MainRenderingTransparent",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.AfterRendering",
+            "totalMs": 1144.98,
+            "totalPct": 10.02,
+            "count": 1360,
+            "avgMs": 0.842,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering",
+            "layer": "engine"
+          },
+          {
+            "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "totalMs": 1103.48,
+            "totalPct": 9.65,
+            "count": 683,
+            "avgMs": 1.616,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "LateBehaviourUpdate",
+            "totalMs": 1100.97,
+            "totalPct": 9.63,
+            "count": 683,
+            "avgMs": 1.612,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "URP.Submit",
+            "totalMs": 974.6,
+            "totalPct": 8.53,
+            "count": 3400,
+            "avgMs": 0.287,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.BeforeRendering",
+            "totalMs": 743.4,
+            "totalPct": 6.5,
+            "count": 1360,
+            "avgMs": 0.547,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.BeforeRendering",
+            "layer": "engine"
+          },
+          {
+            "name": "Initialization.PlayerUpdateTime",
+            "totalMs": 714.75,
+            "totalPct": 6.25,
+            "count": 680,
+            "avgMs": 1.051,
+            "parentChain": "UnityMain > PlayerLoop > Initialization.PlayerUpdateTime",
+            "layer": "business"
+          },
+          {
+            "name": "WaitForTargetFPS",
+            "totalMs": 700.69,
+            "totalPct": 6.13,
+            "count": 680,
+            "avgMs": 1.03,
+            "parentChain": "UnityMain > PlayerLoop > Initialization.PlayerUpdateTime > WaitForTargetFPS",
+            "layer": "runtime"
+          },
+          {
+            "name": "Core.LateUpdate",
+            "totalMs": 695.12,
+            "totalPct": 6.08,
+            "count": 683,
+            "avgMs": 1.018,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate > Core.LateUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "CS:AOE.LuaMgr",
+            "totalMs": 678.1,
+            "totalPct": 5.93,
+            "count": 684,
+            "avgMs": 0.991,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr",
+            "layer": "business"
+          },
+          {
+            "name": "LuaMgr.OnTick&UpdateSchedule",
+            "totalMs": 647.43,
+            "totalPct": 5.66,
+            "count": 684,
+            "avgMs": 0.947,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule",
+            "layer": "business"
+          },
+          {
+            "name": "PostLateUpdate.PlayerUpdateCanvases",
+            "totalMs": 636.43,
+            "totalPct": 5.57,
+            "count": 682,
+            "avgMs": 0.933,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.PlayerUpdateCanvases",
+            "layer": "business"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-019-cur-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "topN": 20,
+        "minTotalPct": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "queryCallTreeSubtree",
+        "args": {
+          "role": "cur",
+          "topN": 20,
+          "minTotalPct": 0
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur callTreeSubtree available=true totalNodes=97 top=PlayerLoop totalMs=14608.74",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalNodes": 97,
+        "rows": [
+          {
+            "name": "PlayerLoop",
+            "totalMs": 14608.74,
+            "totalPct": 99.6,
+            "count": 483,
+            "avgMs": 30.246,
+            "parentChain": "UnityMain > PlayerLoop",
+            "layer": "engine"
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 6311.62,
+            "totalPct": 43.03,
+            "count": 483,
+            "avgMs": 13.068,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering",
+            "layer": "business"
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 5869.82,
+            "totalPct": 40.02,
+            "count": 483,
+            "avgMs": 12.153,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 5802.8,
+            "totalPct": 39.56,
+            "count": 966,
+            "avgMs": 6.007,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 5698.7,
+            "totalPct": 38.85,
+            "count": 966,
+            "avgMs": 5.899,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera",
+            "layer": "engine"
+          },
+          {
+            "name": "Update.ScriptRunBehaviourUpdate",
+            "totalMs": 3822.98,
+            "totalPct": 26.06,
+            "count": 483,
+            "avgMs": 7.915,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "BehaviourUpdate",
+            "totalMs": 3820.16,
+            "totalPct": 26.04,
+            "count": 483,
+            "avgMs": 7.909,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "Core.Update",
+            "totalMs": 3536.78,
+            "totalPct": 24.11,
+            "count": 483,
+            "avgMs": 7.323,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update",
+            "layer": "business"
+          },
+          {
+            "name": "URP.AfterRendering",
+            "totalMs": 3300.05,
+            "totalPct": 22.5,
+            "count": 966,
+            "avgMs": 3.416,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.Submit",
+            "totalMs": 3162.57,
+            "totalPct": 21.56,
+            "count": 2415,
+            "avgMs": 1.31,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.WaitForPresent",
+            "totalMs": 2824.32,
+            "totalPct": 19.25,
+            "count": 2415,
+            "avgMs": 1.169,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent",
+            "layer": "runtime"
+          },
+          {
+            "name": "Gfx.WaitForPresentOnGfxThread",
+            "totalMs": 2817.69,
+            "totalPct": 19.21,
+            "count": 483,
+            "avgMs": 5.834,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread",
+            "layer": "engine"
+          },
+          {
+            "name": "Semaphore.WaitForSignal",
+            "totalMs": 2812.39,
+            "totalPct": 19.17,
+            "count": 483,
+            "avgMs": 5.823,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread > Semaphore.WaitForSignal",
+            "layer": "runtime"
+          },
+          {
+            "name": "CS:AOE.LuaMgr",
+            "totalMs": 1835.28,
+            "totalPct": 12.51,
+            "count": 483,
+            "avgMs": 3.8,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr",
+            "layer": "business"
+          },
+          {
+            "name": "LuaMgr.OnTick&UpdateSchedule",
+            "totalMs": 1809.52,
+            "totalPct": 12.34,
+            "count": 483,
+            "avgMs": 3.746,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule",
+            "layer": "business"
+          },
+          {
+            "name": "CS:AOE.Outside.MapManager",
+            "totalMs": 1399.39,
+            "totalPct": 9.54,
+            "count": 483,
+            "avgMs": 2.897,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.Outside.MapManager",
+            "layer": "engine"
+          },
+          {
+            "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "totalMs": 1386.65,
+            "totalPct": 9.45,
+            "count": 483,
+            "avgMs": 2.871,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "LateBehaviourUpdate",
+            "totalMs": 1384.73,
+            "totalPct": 9.44,
+            "count": 483,
+            "avgMs": 2.867,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "Core.LateUpdate",
+            "totalMs": 1024.8,
+            "totalPct": 6.99,
+            "count": 483,
+            "avgMs": 2.122,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate > Core.LateUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "URP.BeforeRendering",
+            "totalMs": 892.03,
+            "totalPct": 6.08,
+            "count": 966,
+            "avgMs": 0.923,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.BeforeRendering",
+            "layer": "engine"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-020-throttle-queryCallTreeSubtree",
+      "tool": "queryCallTreeSubtree",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "topN": 20,
+        "minTotalPct": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryCallTreeSubtree",
+        "args": {
+          "role": "throttle",
+          "topN": 20,
+          "minTotalPct": 0
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle callTreeSubtree available=true totalNodes=84 top=PlayerLoop totalMs=19930.73",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "totalNodes": 84,
+        "rows": [
+          {
+            "name": "PlayerLoop",
+            "totalMs": 19930.73,
+            "totalPct": 99.87,
+            "count": 427,
+            "avgMs": 46.676,
+            "parentChain": "UnityMain > PlayerLoop",
+            "layer": "engine"
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "totalMs": 11117.55,
+            "totalPct": 55.71,
+            "count": 427,
+            "avgMs": 26.036,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering",
+            "layer": "business"
+          },
+          {
+            "name": "URP.Render",
+            "totalMs": 10650.6,
+            "totalPct": 53.37,
+            "count": 427,
+            "avgMs": 24.943,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderCameraStack",
+            "totalMs": 10557.52,
+            "totalPct": 52.9,
+            "count": 854,
+            "avgMs": 12.362,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.RenderSingleCamera",
+            "totalMs": 10425.68,
+            "totalPct": 52.24,
+            "count": 854,
+            "avgMs": 12.208,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.AfterRendering",
+            "totalMs": 8253.95,
+            "totalPct": 41.36,
+            "count": 854,
+            "avgMs": 9.665,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.Submit",
+            "totalMs": 8069.14,
+            "totalPct": 40.43,
+            "count": 2135,
+            "avgMs": 3.779,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit",
+            "layer": "engine"
+          },
+          {
+            "name": "URP.WaitForPresent",
+            "totalMs": 7608.52,
+            "totalPct": 38.12,
+            "count": 2135,
+            "avgMs": 3.564,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent",
+            "layer": "runtime"
+          },
+          {
+            "name": "Gfx.WaitForPresentOnGfxThread",
+            "totalMs": 7600.06,
+            "totalPct": 38.08,
+            "count": 427,
+            "avgMs": 17.799,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread",
+            "layer": "engine"
+          },
+          {
+            "name": "Semaphore.WaitForSignal",
+            "totalMs": 7592.75,
+            "totalPct": 38.04,
+            "count": 427,
+            "avgMs": 17.782,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread > Semaphore.WaitForSignal",
+            "layer": "runtime"
+          },
+          {
+            "name": "Update.ScriptRunBehaviourUpdate",
+            "totalMs": 3771.08,
+            "totalPct": 18.9,
+            "count": 427,
+            "avgMs": 8.832,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "BehaviourUpdate",
+            "totalMs": 3767.99,
+            "totalPct": 18.88,
+            "count": 427,
+            "avgMs": 8.824,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "Core.Update",
+            "totalMs": 3435.54,
+            "totalPct": 17.21,
+            "count": 427,
+            "avgMs": 8.046,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update",
+            "layer": "business"
+          },
+          {
+            "name": "CS:AOE.Outside.MapManager",
+            "totalMs": 1703.01,
+            "totalPct": 8.53,
+            "count": 427,
+            "avgMs": 3.988,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.Outside.MapManager",
+            "layer": "engine"
+          },
+          {
+            "name": "CS:AOE.LuaMgr",
+            "totalMs": 1483.21,
+            "totalPct": 7.43,
+            "count": 427,
+            "avgMs": 3.474,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr",
+            "layer": "business"
+          },
+          {
+            "name": "LuaMgr.OnTick&UpdateSchedule",
+            "totalMs": 1454.45,
+            "totalPct": 7.29,
+            "count": 427,
+            "avgMs": 3.406,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule",
+            "layer": "business"
+          },
+          {
+            "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "totalMs": 1276.24,
+            "totalPct": 6.39,
+            "count": 427,
+            "avgMs": 2.989,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "LateBehaviourUpdate",
+            "totalMs": 1274.19,
+            "totalPct": 6.38,
+            "count": 427,
+            "avgMs": 2.984,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate",
+            "layer": "business"
+          },
+          {
+            "name": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "totalMs": 1041.67,
+            "totalPct": 5.22,
+            "count": 427,
+            "avgMs": 2.44,
+            "parentChain": "UnityMain > PlayerLoop > Update.ScriptRunBehaviourUpdate > BehaviourUpdate > Core.Update > CS:AOE.Outside.MapManager > CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "layer": "engine"
+          },
+          {
+            "name": "Core.LateUpdate",
+            "totalMs": 996.81,
+            "totalPct": 4.99,
+            "count": 427,
+            "avgMs": 2.334,
+            "parentChain": "UnityMain > PlayerLoop > PreLateUpdate.ScriptRunBehaviourLateUpdate > LateBehaviourUpdate > Core.LateUpdate",
+            "layer": "business"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-021-delta-querySliceDeltas",
+      "tool": "querySliceDeltas",
+      "role": "delta",
+      "args": {
+        "baseRole": "base",
+        "compareRole": "cur",
+        "tool": "callTreeSubtree",
+        "minFoldChange": 2,
+        "topN": 10,
+        "minTotalPct": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-delta-base-vs-cur",
+        "tool": "querySliceDeltas",
+        "args": {
+          "baseRole": "base",
+          "compareRole": "cur",
+          "tool": "callTreeSubtree",
+          "minFoldChange": 2,
+          "topN": 10,
+          "minTotalPct": 0
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "base→cur sliceDeltas available=true rows=10 top=CS:AOE.Outside.OutSideViewArmyLineMgr foldChange=9999",
+      "dataRefs": [
+        "bk26b-perfetto-triad"
+      ],
+      "facts": {
+        "available": true,
+        "rows": [
+          {
+            "name": "CS:AOE.Outside.OutSideViewArmyLineMgr",
+            "baseTotalMs": null,
+            "compareTotalMs": 760.94,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 5.19
+          },
+          {
+            "name": "MapSignificanceMgr.ProcessTasks",
+            "baseTotalMs": null,
+            "compareTotalMs": 584.65,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 3.99
+          },
+          {
+            "name": "MapSignificanceMgr.EntityTask",
+            "baseTotalMs": null,
+            "compareTotalMs": 545.61,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 3.72
+          },
+          {
+            "name": "CS:AOE.MeshUIManager",
+            "baseTotalMs": null,
+            "compareTotalMs": 491.36,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 3.35
+          },
+          {
+            "name": "CS:AOE.Battle.BattleUIManager",
+            "baseTotalMs": null,
+            "compareTotalMs": 349.12,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 2.38
+          },
+          {
+            "name": "*** BattleUIUpdate ***",
+            "baseTotalMs": null,
+            "compareTotalMs": 345.07,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 2.35
+          },
+          {
+            "name": "MapSignificanceMgr.ProcessTask_MapObjRefresh",
+            "baseTotalMs": null,
+            "compareTotalMs": 301.52,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 2379,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 2.06
+          },
+          {
+            "name": "MUI_UpdateUIPos",
+            "baseTotalMs": null,
+            "compareTotalMs": 294.28,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 483,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 2.01
+          },
+          {
+            "name": "OutsideLineCtrl:CalculateVertexJob (Burst)",
+            "baseTotalMs": null,
+            "compareTotalMs": 206.86,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 57820,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 1.41
+          },
+          {
+            "name": "SceneCulling",
+            "baseTotalMs": null,
+            "compareTotalMs": 153.64,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 966,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 1.05
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-022-delta-querySliceDeltas",
+      "tool": "querySliceDeltas",
+      "role": "delta",
+      "args": {
+        "baseRole": "cur",
+        "compareRole": "throttle",
+        "tool": "callTreeSubtree",
+        "minFoldChange": 2,
+        "topN": 10,
+        "minTotalPct": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-delta-cur-vs-throttle",
+        "tool": "querySliceDeltas",
+        "args": {
+          "baseRole": "cur",
+          "compareRole": "throttle",
+          "tool": "callTreeSubtree",
+          "minFoldChange": 2,
+          "topN": 10,
+          "minTotalPct": 0
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "cur→throttle sliceDeltas available=true rows=6 top=ParticleSystem.EndUpdateAll foldChange=9999",
+      "dataRefs": [
+        "bk26b-perfetto-triad"
+      ],
+      "facts": {
+        "available": true,
+        "rows": [
+          {
+            "name": "ParticleSystem.EndUpdateAll",
+            "baseTotalMs": null,
+            "compareTotalMs": 100.88,
+            "foldChange": 9999,
+            "baseCount": null,
+            "compareCount": 427,
+            "avgMsChange": null,
+            "baseTotalPct": null,
+            "compareTotalPct": 0.51
+          },
+          {
+            "name": "Semaphore.WaitForSignal",
+            "baseTotalMs": 2812.39,
+            "compareTotalMs": 7592.75,
+            "foldChange": 2.7,
+            "baseCount": 483,
+            "compareCount": 427,
+            "avgMsChange": 11.959,
+            "baseTotalPct": 19.17,
+            "compareTotalPct": 38.04
+          },
+          {
+            "name": "Gfx.WaitForPresentOnGfxThread",
+            "baseTotalMs": 2817.69,
+            "compareTotalMs": 7600.06,
+            "foldChange": 2.697,
+            "baseCount": 483,
+            "compareCount": 427,
+            "avgMsChange": 11.965,
+            "baseTotalPct": 19.21,
+            "compareTotalPct": 38.08
+          },
+          {
+            "name": "URP.WaitForPresent",
+            "baseTotalMs": 2824.32,
+            "compareTotalMs": 7608.52,
+            "foldChange": 2.694,
+            "baseCount": 2415,
+            "compareCount": 2135,
+            "avgMsChange": 2.395,
+            "baseTotalPct": 19.25,
+            "compareTotalPct": 38.12
+          },
+          {
+            "name": "URP.Submit",
+            "baseTotalMs": 3162.57,
+            "compareTotalMs": 8069.14,
+            "foldChange": 2.551,
+            "baseCount": 2415,
+            "compareCount": 2135,
+            "avgMsChange": 2.469,
+            "baseTotalPct": 21.56,
+            "compareTotalPct": 40.43
+          },
+          {
+            "name": "URP.AfterRendering",
+            "baseTotalMs": 3300.05,
+            "compareTotalMs": 8253.95,
+            "foldChange": 2.501,
+            "baseCount": 966,
+            "compareCount": 854,
+            "avgMsChange": 6.249,
+            "baseTotalPct": 22.5,
+            "compareTotalPct": 41.36
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-023-cur-queryGcAllocByModule",
+      "tool": "queryGcAllocByModule",
+      "role": "cur",
+      "args": {
+        "role": "cur",
+        "topN": 10,
+        "minPerFrame": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-cur",
+        "tool": "queryGcAllocByModule",
+        "args": {
+          "role": "cur",
+          "topN": 10,
+          "minPerFrame": 0
+        },
+        "source": "perfetto",
+        "role": "cur"
+      },
+      "summary": "cur gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=130.54",
+      "dataRefs": [
+        "bk26b-perfetto-triad/cur/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "playerLoopFrameCount": 483,
+        "totalGcAllocSlices": 208568,
+        "rows": [
+          {
+            "name": "URP.BeforeRendering",
+            "count": 63050,
+            "totalMs": 76.34,
+            "perFrame": 130.54,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.BeforeRendering"
+            ]
+          },
+          {
+            "name": "Inl_OpaquePass",
+            "count": 62565,
+            "totalMs": 82.409,
+            "perFrame": 129.53,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.MainRenderingTransparent",
+              "Inl_OpaquePass"
+            ]
+          },
+          {
+            "name": "CS:AOE.MeshUIManager",
+            "count": 29622,
+            "totalMs": 31.037,
+            "perFrame": 61.33,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate",
+              "Core.LateUpdate",
+              "CS:AOE.MeshUIManager"
+            ]
+          },
+          {
+            "name": "TimeText.7",
+            "count": 11798,
+            "totalMs": 15.07,
+            "perFrame": 24.43,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule",
+              "BattleHeadMgr",
+              "BattleHeadMgr.OnUpdate",
+              "TimeText.7"
+            ]
+          },
+          {
+            "name": "BattleHeadMgr.OnUpdate",
+            "count": 10018,
+            "totalMs": 16.207,
+            "perFrame": 20.74,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule",
+              "BattleHeadMgr",
+              "BattleHeadMgr.OnUpdate"
+            ]
+          },
+          {
+            "name": "CS:AOE.Outside.MapManager",
+            "count": 6116,
+            "totalMs": 7.961,
+            "perFrame": 12.66,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.Outside.MapManager"
+            ]
+          },
+          {
+            "name": "Core.PostEndOfFrame",
+            "count": 6102,
+            "totalMs": 7.925,
+            "perFrame": 12.63,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.PlayerSendFrameComplete",
+              "PlayerEndOfFrame",
+              "CoroutinesDelayedCalls",
+              "Core.PostEndOfFrame"
+            ]
+          },
+          {
+            "name": "BehaviourUpdate",
+            "count": 4356,
+            "totalMs": 6.588,
+            "perFrame": 9.02,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate"
+            ]
+          },
+          {
+            "name": "TServer.ParsePacketMessages",
+            "count": 2546,
+            "totalMs": 3.998,
+            "perFrame": 5.27,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.TServerManager",
+              "TServer.DecodeMesssages",
+              "TServer.ParsePacketMessages"
+            ]
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "count": 2289,
+            "totalMs": 10.11,
+            "perFrame": 4.74,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-024-throttle-queryGcAllocByModule",
+      "tool": "queryGcAllocByModule",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "topN": 10,
+        "minPerFrame": 0
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryGcAllocByModule",
+        "args": {
+          "role": "throttle",
+          "topN": 10,
+          "minPerFrame": 0
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle gcAllocByModule available=true rows=10 top=URP.BeforeRendering perFrame=31",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "playerLoopFrameCount": 427,
+        "totalGcAllocSlices": 59518,
+        "rows": [
+          {
+            "name": "URP.BeforeRendering",
+            "count": 13237,
+            "totalMs": 22.15,
+            "perFrame": 31,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.BeforeRendering"
+            ]
+          },
+          {
+            "name": "Inl_OpaquePass",
+            "count": 12810,
+            "totalMs": 22.69,
+            "perFrame": 30,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering",
+              "URP.Render",
+              "URP.RenderCameraStack",
+              "URP.RenderSingleCamera",
+              "URP.MainRenderingTransparent",
+              "Inl_OpaquePass"
+            ]
+          },
+          {
+            "name": "TimeText.7",
+            "count": 10543,
+            "totalMs": 18.205,
+            "perFrame": 24.69,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule",
+              "BattleHeadMgr",
+              "BattleHeadMgr.OnUpdate",
+              "TimeText.7"
+            ]
+          },
+          {
+            "name": "CS:AOE.Outside.MapManager",
+            "count": 5537,
+            "totalMs": 10.87,
+            "perFrame": 12.97,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.Outside.MapManager"
+            ]
+          },
+          {
+            "name": "Core.PostEndOfFrame",
+            "count": 5254,
+            "totalMs": 19.522,
+            "perFrame": 12.3,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.PlayerSendFrameComplete",
+              "PlayerEndOfFrame",
+              "CoroutinesDelayedCalls",
+              "Core.PostEndOfFrame"
+            ]
+          },
+          {
+            "name": "BehaviourUpdate",
+            "count": 3852,
+            "totalMs": 8.957,
+            "perFrame": 9.02,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate"
+            ]
+          },
+          {
+            "name": "Core.Update",
+            "count": 2935,
+            "totalMs": 6.442,
+            "perFrame": 6.87,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update"
+            ]
+          },
+          {
+            "name": "PostLateUpdate.FinishFrameRendering",
+            "count": 1916,
+            "totalMs": 3.882,
+            "perFrame": 4.49,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PostLateUpdate.FinishFrameRendering"
+            ]
+          },
+          {
+            "name": "LuaMgr.OnTick&UpdateSchedule",
+            "count": 1334,
+            "totalMs": 2.769,
+            "perFrame": 3.12,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "Update.ScriptRunBehaviourUpdate",
+              "BehaviourUpdate",
+              "Core.Update",
+              "CS:AOE.LuaMgr",
+              "LuaMgr.OnTick&UpdateSchedule"
+            ]
+          },
+          {
+            "name": "CS:AOE.MeshUIManager",
+            "count": 899,
+            "totalMs": 1.793,
+            "perFrame": 2.11,
+            "parentChain": [
+              "UnityMain",
+              "PlayerLoop",
+              "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+              "LateBehaviourUpdate",
+              "Core.LateUpdate",
+              "CS:AOE.MeshUIManager"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev-025-throttle-queryOffCpuAttribution",
+      "tool": "queryOffCpuAttribution",
+      "role": "throttle",
+      "args": {
+        "role": "throttle",
+        "thread": "UnityMain"
+      },
+      "provenance": {
+        "runId": "bk26b-perfetto-throttle",
+        "tool": "queryOffCpuAttribution",
+        "args": {
+          "role": "throttle",
+          "thread": "UnityMain"
+        },
+        "source": "perfetto",
+        "role": "throttle"
+      },
+      "summary": "throttle offCpu totalOffCpuMs=8581 sleepingMs=7666.5 topState=S(89.34%) topWait=URP.WaitForPresent(7608.52ms) coveragePct=691.53",
+      "dataRefs": [
+        "bk26b-perfetto-triad/throttle/perfetto-profile.json"
+      ],
+      "facts": {
+        "available": true,
+        "thread": "UnityMain",
+        "runningPct": 56.99,
+        "sleepingPct": 38.99,
+        "runnablePct": 2.83,
+        "totalOffCpuMs": 8581,
+        "byState": [
+          {
+            "state": "D",
+            "totalMs": 111.4,
+            "count": 751,
+            "pctOfOffCpu": 1.3
+          },
+          {
+            "state": "R",
+            "totalMs": 564.5,
+            "count": 6707,
+            "pctOfOffCpu": 6.58
+          },
+          {
+            "state": "R+",
+            "totalMs": 238.6,
+            "count": 3983,
+            "pctOfOffCpu": 2.78
+          },
+          {
+            "state": "S",
+            "totalMs": 7666.5,
+            "count": 3113,
+            "pctOfOffCpu": 89.34
+          }
+        ],
+        "waitSlices": [
+          {
+            "name": "URP.WaitForPresent",
+            "totalMs": 7608.52,
+            "totalPct": 38.12,
+            "count": 2135,
+            "avgMs": 3.564,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent"
+          },
+          {
+            "name": "Gfx.WaitForPresentOnGfxThread",
+            "totalMs": 7600.06,
+            "totalPct": 38.08,
+            "count": 427,
+            "avgMs": 17.799,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread"
+          },
+          {
+            "name": "Semaphore.WaitForSignal",
+            "totalMs": 7592.75,
+            "totalPct": 38.04,
+            "count": 427,
+            "avgMs": 17.782,
+            "parentChain": "UnityMain > PlayerLoop > PostLateUpdate.FinishFrameRendering > URP.Render > URP.RenderCameraStack > URP.RenderSingleCamera > URP.AfterRendering > URP.Submit > URP.WaitForPresent > Gfx.WaitForPresentOnGfxThread > Semaphore.WaitForSignal"
+          },
+          {
+            "name": "PresentationSystemGroup",
+            "totalMs": 169.04,
+            "totalPct": 0.85,
+            "count": 427,
+            "avgMs": 0.396,
+            "parentChain": "UnityMain > PlayerLoop > PresentationSystemGroup"
+          },
+          {
+            "name": "Default World Unity.Entities.PresentationSystemGroup",
+            "totalMs": 166.18,
+            "totalPct": 0.83,
+            "count": 427,
+            "avgMs": 0.389,
+            "parentChain": "UnityMain > PlayerLoop > PresentationSystemGroup > Default World Unity.Entities.PresentationSystemGroup"
+          }
+        ],
+        "sleepingMs": 3345.7,
+        "waitSliceTotalMs": 23136.55,
+        "coveragePct": 691.53,
+        "note": "byState 直接从 thread_state 表分组求和; byReason 细分 (blockedFunction) 需内核 sched_blocked_reason, 本 trace 未含."
       }
     }
   ]

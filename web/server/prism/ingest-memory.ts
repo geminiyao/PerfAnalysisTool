@@ -15,7 +15,7 @@ import {
   cliUnavailableHint,
 } from '../utils/cli-resolver.js';
 import type { CliProvider } from '../../shared/types.js';
-import { appendMemory, clearBySource, loadMemory, type MemoryEntry } from './prism-memory.js';
+import { appendMemory, clearBySource, loadMemory, type MemoryEntry, type MemoryDataSource, isValidDataSource } from './prism-memory.js';
 
 /** LLM 清洗后单条知识 */
 export interface IngestKnowledgeItem {
@@ -41,6 +41,12 @@ export interface IngestSourceOptions {
   cliProvider?: CliProvider;
   /** 整篇重摄入：写入前先清除该 source 的旧条目（防 LLM 切分 id 不稳定导致重复堆积）。仅用于整源覆盖场景（如先验知识 md），三回路增量沉淀绝不可用。 */
   replaceSource?: boolean;
+  /**
+   * 数据源标识（WT-040）：写入条目的 dataSource frontmatter。
+   * 取值：perfetto / unity / simpleperf / cross-source。
+   * 缺省不写 dataSource 字段（兼容期旧条目，所有数据源都注入）。
+   */
+  dataSource?: MemoryDataSource;
 }
 
 export interface IngestSourceResult {
@@ -293,6 +299,7 @@ export async function ingestSource(opts: IngestSourceOptions): Promise<IngestSou
         source: sourceLabel,
         title: item.title,
         ...(item.tags?.length ? { tags: item.tags } : {}),
+        ...(opts.dataSource ? { dataSource: opts.dataSource } : {}),
       },
       { root: opts.root },
     );
@@ -325,6 +332,7 @@ function parseCliArgs(argv: string[]): {
   hints?: string;
   provider?: CliProvider;
   replaceSource?: boolean;
+  dataSource?: MemoryDataSource;
 } {
   const out: ReturnType<typeof parseCliArgs> = {};
   for (let i = 0; i < argv.length; i++) {
@@ -347,19 +355,33 @@ function parseCliArgs(argv: string[]): {
       i++;
     } else if (a === '--replace-source') {
       out.replaceSource = true;
+    } else if (a === '--data-source' && next) {
+      if (!isValidDataSource(next)) {
+        throw new Error(
+          `Invalid --data-source value: ${next}. Must be one of: perfetto, unity, simpleperf, cross-source`,
+        );
+      }
+      out.dataSource = next;
+      i++;
     }
   }
   return out;
 }
 
 async function main(): Promise<void> {
-  const args = parseCliArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseCliArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(`[ingest] ${(e as Error).message}`);
+    process.exit(1);
+  }
   if (!args.source || !args.category) {
-    console.error('Usage: npx tsx server/prism/ingest-memory.ts --source <path> --category <cat> [--label <slug>] [--hints <text>] [--replace-source]');
+    console.error('Usage: npx tsx server/prism/ingest-memory.ts --source <path> --category <cat> [--label <slug>] [--hints <text>] [--replace-source] [--data-source perfetto|unity|simpleperf|cross-source]');
     process.exit(1);
   }
 
-  console.log(`[ingest] source=${args.source} category=${args.category} label=${args.label ?? '(auto)'} replaceSource=${args.replaceSource ?? false}`);
+  console.log(`[ingest] source=${args.source} category=${args.category} label=${args.label ?? '(auto)'} replaceSource=${args.replaceSource ?? false} dataSource=${args.dataSource ?? '(none)'}`);
   const result = await ingestSource({
     sourcePath: args.source,
     category: args.category,
@@ -367,6 +389,7 @@ async function main(): Promise<void> {
     hints: args.hints,
     replaceSource: args.replaceSource,
     cliProvider: args.provider,
+    dataSource: args.dataSource,
   });
 
   if (!result.success) {

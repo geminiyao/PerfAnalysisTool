@@ -1,0 +1,68 @@
+{
+  "rating": "weak",
+  "headline": "整体跑在约43fps、中位帧20.74ms比16.67ms预算超24%，约82%的帧超标；根因是主线程被一组长尾稳态开销叠满（渲染启动6ms+逻辑8.5ms+UI 1.85ms），再被GC和同步加载尖刺放大尾延迟，非GPU瓶颈。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 20.74,
+  "observedP99Ms": 44.52,
+  "pctFramesOverBudget": 82,
+  "primaryDrivers": [
+    "render.mainthread-bound",
+    "logic.mapsignificance-steady",
+    "gc.collect-sync-spikes"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "Read(preprocess-result.json frameSummary)",
+      "args": { "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json", "section": "frameSummary" },
+      "resultDigest": {
+        "count": 600,
+        "mean": 22.99,
+        "median": 20.74,
+        "q1": 17.1,
+        "q3": 27.82,
+        "p90": 32.08,
+        "p95": 34.75,
+        "p99": 44.52,
+        "max": 54.14,
+        "min": 9.89,
+        "actualFps": 43.5,
+        "jankCount": 4,
+        "bigJankCount": 0,
+        "worstFrameIndex": 143
+      }
+    },
+    {
+      "tool": "queryUnityMarkers",
+      "args": { "role": "single", "topN": 15, "sortBy": "percentOfFrame" },
+      "resultDigest": {
+        "note": "Gfx.WaitForPresent 不在 top 榜（非GPU瓶颈）；WaitForTargetFPS msSelfMean=0.413 占帧1.8%（引擎基本未限速，是跑满了仍不达标）",
+        "topByPercentOfFrame": [
+          { "name": "GC.Collect", "percentOfFrame": 30.2, "count": 5 },
+          { "name": "RecycleGOTask", "percentOfFrame": 27, "presentOnFrameCount": 7 },
+          { "name": "Loading.LockPersistentManager", "percentOfFrame": 14.9 },
+          { "name": "ForwardRenderPass", "percentOfFrame": 13.6, "presentOnFrameCount": 599 }
+        ]
+      }
+    },
+    {
+      "tool": "Read(preprocess-result.json aggregatedCallTrees Submit Thread)",
+      "args": { "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json", "section": "aggregatedCallTrees[Submit Thread]" },
+      "resultDigest": {
+        "submitThreadMsPerFrameTotal": 23.01,
+        "gfxWaitForGfxCommandsFromMainThread_msPerFrameTotal": 13.322,
+        "submitThreadPctWaiting": 57.9,
+        "note": "Submit Thread 57.9% 时间在 Semaphore.WaitForSignal 等主线程发渲染指令，渲染线程自身实际工作约9.7ms/帧（未超预算），帧时长被主线程23ms卡住"
+      }
+    },
+    {
+      "tool": "Read(preprocess-result.json markerSpikes WaitForTargetFPS)",
+      "args": { "path": "web/data/results/camera_ab_24072PX77C_20260723_194703/preprocess-result.json", "section": "markerSpikes[WaitForTargetFPS]" },
+      "resultDigest": {
+        "spikeFrameCount": 105,
+        "totalFrameCount": 600,
+        "msSelfMax": 7.646,
+        "note": "105/600≈17.5% 帧跑得够快触发了限速睡眠（低于预算），反推约82.5%帧超预算；与 q1=17.1ms>16.67ms 一致（至少75%帧超预算）"
+      }
+    }
+  ]
+}

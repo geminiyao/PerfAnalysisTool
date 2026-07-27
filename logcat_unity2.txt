@@ -1,0 +1,4 @@
+--------- beginning of main
+07-21 11:45:57.695 29912 30031 W Unity   : <color=red>[Battle]</color> Cant find effect data of guid: -8392 
+07-21 11:45:57.695 29912 30031 W Unity   : (Filename: ./Runtime/Export/Debug/Debug.bindings.h Line: 35)
+07-21 11:45:57.695 29912 30031 W Unity   : 

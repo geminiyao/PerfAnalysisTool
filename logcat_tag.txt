@@ -1,0 +1,10 @@
+--------- beginning of main
+07-21 11:51:56.180 29912 29912 I Unity   : onPause
+07-21 11:51:56.237 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:51:56.240 29912 29912 I Unity   : onNewIntent
+07-21 11:51:56.252 29912 29912 I Unity   : onResume
+07-21 11:51:56.303 29912 30031 D Unity   : Sensor :        Accelerometer ( 1) ; 0.002393 / 0.00s ; lsm6dso Accelerometer Non-wakeup / STMicro 
+07-21 11:51:56.310 29912 30031 D Unity   : Choreographer available: Enabling VSYNC timing
+07-21 11:51:58.052 29912 30031 W Unity   : <color=red>[Battle]</color> Cant find effect data of guid: -8392 
+07-21 11:51:58.052 29912 30031 W Unity   : (Filename: ./Runtime/Export/Debug/Debug.bindings.h Line: 35)
+07-21 11:51:58.052 29912 30031 W Unity   : 

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.229Z
 source: unity-cpu
 title: "性能问题模式：Script Heavy"
 tags: ["unity","script","性能模式"]
+dataSource: unity
 ---
 
 **关键指标**：`ScriptRunBehaviourUpdate` > 5ms。

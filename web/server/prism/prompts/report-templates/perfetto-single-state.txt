@@ -1,0 +1,74 @@
+# Perfetto 单态报告章节模板（DR-44 §3.2 第 2 层，对照 DR-42 单态方法论）
+
+> 本模板定义 perfetto 单态报告的章节骨架，注入 narrative-prompt 的 {{REPORT_TEMPLATE}} 占位符。
+> **和作文机的区别**：模板只定义章节结构 + 写作纪律，内容由 LLM 按 narrative-prompt 契约写。
+> **不硬编码**业务名/绝对阈值/死模板（DR-41 + dev/conventions.md）。
+>
+> 单态裁剪自 v5.3 多态模板（对照 DR-42）：去掉三态对照，改用"占 p50% 判定"+"相对 vsync 周期"。
+
+---
+
+## 章节骨架（§0/§1/§2/§3/§5/§6，裁剪自 v5.3 §0-§7）
+
+### §0 结论先行（3 条独立结论 + ASCII 图穿插，四段式）
+
+写 3 条按强度排序的独立结论，每条用四段式块（DR-41 规则 4）：
+- 引用块 + 加粗一句话结论（人话，无字段名）
+- ASCII 图（柱状/缩进树/对照，数据源无关渲染工具产出）
+- 关键数字解读（每条一行，数字配解读）
+- 详见 §X 引用
+
+典型维度（从 findings 自然浮现，不预设盯防）：
+- 主线程瓶颈形态（Run/Sleep 分布 + wait slice 重叠）
+- 业务侧热点模块（perFrameMs 占 p50 百分比 + 单次 avg）
+- 降频/温度形态（bigCoreReach + 温度）
+
+### §1 采集元信息（一张表）
+
+一张表：帧数/fps/p50/p95/p99/温度/binder/count。
+不硬编码具体数字（从 findings 取）。
+
+### §2 多线程宏观（单态，无三态对照）
+
+- 每个识别到的线程一行：Run/Sleep/Runnable 百分比 + 关键 atrace 特征 + 一句话定位
+- 线程识别用通用名（如 UnityMain/Render/RHI/LuaMtGC/ECSWorker），不写 comm 名/tid 硬匹
+- 线程间对比（如 Render run < 主线程 run 的 50% → 等主线程）
+- 排除项声明（如 Audio 线程池 Sleep ≥99% 不是瓶颈）
+
+### §3 主线程 off-CPU 归因（单态，占 p50% 判定）
+
+- byState 分布表（S/R/D/R+ 占比）
+- wait slice 重叠法：主线程 Sleeping totalMs vs Gfx.WaitForPresent totalMs 重合度
+  - 单态判定：coveragePct ≥ 80% + 单次 wait > vsync 周期 → 强 GPU-bound
+- ASCII 状态分布图（单态 Run/Sleep/Runnable 柱状 + 解读行）
+- 排除项（binder/锁/其它线程阻塞）
+
+### §5 主线程一帧时间去向（callTree + 红线矩阵，占 p50% 判定）
+
+- PlayerLoop 帧分位数表（p50/p95/p99/slowFrame/fps/帧数）
+- 主线程 callTrees 缩进树（├─/└─ + [cur ms/帧] + 严重程度标注）
+  - 单态无 foldChange，用 perFrameMs 占 p50 百分比判定热点
+- Top 红线热点子函数下钻（每个红线模块一张卡片：单次 avg + 红线判定 + GC 归因 + 优化方向）
+- 红线触发清单（按 perFrameMs 占 p50% 排序，含模块/单次/红线类型/子函数热点）
+
+### §6 ROI 优化方向（按 severity + 贡献排序）
+
+- 按 severity + 贡献排序的优化方向列表
+- 每条：具体模块 + 问题 + 优化建议（基于代码/数据推理，不许套话）
+- 优化方向要具体（不是"建议优化"，是具体的代码层建议）
+
+---
+
+## 写作纪律（DR-41 五条硬规则）
+
+1. **报告 = 呈现层**：无 evidence id / tool name / 字段名（claim/boundary/relativeBaseline）
+2. **子树归并**：同一子树的节点不重复出现在 top 列表（用 mergeBySubtree）
+3. **结构 = 宏观 → 各线程 → 下钻**：不按 finding kind 罗列
+4. **图文穿插四段式**：引用块 + ASCII 图 + 关键数字 + 详见 §X，禁止超过 3 行的文字段落
+5. **人话先行**：技术数字沉底（narrative.json 的 findings[].claim + boundary），HTML 正文只有人话 + 关键数字
+
+## 叙事形态（单态专用，DR-42）
+
+- 当前态型叙事："多信号同向验证当前态"（不用"演化型"）
+- 单态判定用相对占比（perFrameMs 占 p50%）+ 相对周期（单次 vs vsync），不硬编码绝对 ms 阈值
+- 无 foldChange（没有基线可对比），用占 p50 百分比 + 线程间对比定位热点

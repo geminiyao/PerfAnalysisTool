@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.867Z
 source: unity-cpu
 title: "AOE TerrainVT 优化经验"
 tags: ["aoe","terrainvt","优化","android"]
+dataSource: unity
 ---
 
 - VT 分帧处理：由 6ms 降至 1ms。

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-21T13:16:31.214Z",
+  "updatedAt": "2026-07-24T12:41:19.112Z",
   "categories": {
     "constitution": {
       "count": 10,
@@ -19,12 +19,12 @@
       "lastUpdated": null
     },
     "capabilities": {
-      "count": 39,
-      "lastUpdated": "2026-07-20T08:41:45.664Z"
+      "count": 52,
+      "lastUpdated": "2026-07-24T11:38:21.757Z"
     },
     "lessons": {
-      "count": 20,
-      "lastUpdated": "2026-07-21T13:16:31.073Z"
+      "count": 34,
+      "lastUpdated": "2026-07-24T12:41:18.877Z"
     }
   }
 }

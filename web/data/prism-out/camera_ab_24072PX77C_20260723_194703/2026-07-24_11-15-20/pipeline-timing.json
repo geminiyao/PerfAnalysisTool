@@ -1,0 +1,191 @@
+{
+  "total": {
+    "start": 1784891720276,
+    "end": 1784893848077
+  },
+  "explore": {
+    "start": 1784891720295,
+    "toolCalls": [
+      {
+        "seq": 1,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "ls -la \"K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/2026-07-24_11-15-20/\" 2",
+        "ts": 1784891766550,
+        "resultTs": 1784891767824,
+        "toolMs": 1274,
+        "resultLen": 249
+      },
+      {
+        "seq": 2,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "ls -la \"K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/2026-07-24_11-15-20/\"",
+        "ts": 1784891773836,
+        "resultTs": 1784891774560,
+        "toolMs": 724,
+        "resultLen": 347
+      },
+      {
+        "seq": 3,
+        "name": "Bash",
+        "toolNames": "queryUnityMarkers",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js queryUnityMarkers '{\"thread\":\"1:Main Thread\",\"topN\":20,\"sortBy\":\"selfMs\"",
+        "ts": 1784891783148,
+        "resultTs": 1784891784578,
+        "toolMs": 1430,
+        "resultLen": 8638
+      },
+      {
+        "seq": 4,
+        "name": "Bash",
+        "toolNames": "queryUnityMarkers+queryMarkers…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"queryUnityMarkers\",\"args\":{\"topN\":25,\"sortBy\":\"selfMs\"}",
+        "ts": 1784891827477,
+        "resultTs": 1784891886582,
+        "toolMs": 59105,
+        "resultLen": 30479
+      },
+      {
+        "seq": 5,
+        "name": "Bash",
+        "toolNames": "scanMetricOverFrames+queryFrameCounters…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"scanMetricOverFrames\",\"args\":{\"markerName\":\"PlayerLoop\"",
+        "ts": 1784891975366,
+        "resultTs": 1784891979471,
+        "toolMs": 4105,
+        "resultLen": 30462
+      },
+      {
+        "seq": 6,
+        "name": "Bash",
+        "toolNames": "getFrameCallTree+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getFrameCallTree\",\"args\":{\"frameIndex\":143,\"thread\":\"1:",
+        "ts": 1784892044986,
+        "resultTs": 1784892048588,
+        "toolMs": 3602,
+        "resultLen": 30580
+      },
+      {
+        "seq": 7,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+drillDownMarker…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"CS:AOE.Outside.W",
+        "ts": 1784892102564,
+        "resultTs": 1784892121678,
+        "toolMs": 19114,
+        "resultLen": 10952
+      },
+      {
+        "seq": 8,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"CS:AOE.Outside.W",
+        "ts": 1784892176026,
+        "resultTs": 1784892190671,
+        "toolMs": 14645,
+        "resultLen": 6135
+      },
+      {
+        "seq": 9,
+        "name": "Bash",
+        "toolNames": "getFrameCallTree+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getFrameCallTree\",\"args\":{\"frameIndex\":552,\"thread\":\"1:",
+        "ts": 1784892261998,
+        "resultTs": 1784892267245,
+        "toolMs": 5247,
+        "resultLen": 30584
+      },
+      {
+        "seq": 10,
+        "name": "Bash",
+        "toolNames": "drillDownMarker+scanMetricOverFrames…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"drillDownMarker\",\"args\":{\"rootMarker\":\"MapSignificanceM",
+        "ts": 1784892379088,
+        "resultTs": 1784892393605,
+        "toolMs": 14517,
+        "resultLen": 30689
+      },
+      {
+        "seq": 11,
+        "name": "Bash",
+        "toolNames": "queryMarkers+getFrameCallTree…+2",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"queryMarkers\",\"args\":{\"thread\":\"1:Submit Thread\",\"sortB",
+        "ts": 1784892507629,
+        "resultTs": 1784892519859,
+        "toolMs": 12230,
+        "resultLen": 25745
+      },
+      {
+        "seq": 12,
+        "name": "Bash",
+        "toolNames": "getSourceForSymbol+getSourceForSymbol+getSourceForSymbol",
+        "cmd": "cd web && node server/prism/tools.cli.bundle.js batch '[{\"tool\":\"getSourceForSymbol\",\"args\":{\"symbol\":\"WorldEnvironmentM",
+        "ts": 1784892657083,
+        "resultTs": 1784892657787,
+        "toolMs": 704,
+        "resultLen": 6563
+      },
+      {
+        "seq": 13,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784892762257,
+        "resultTs": 1784892762404,
+        "toolMs": 147,
+        "resultLen": 165
+      },
+      {
+        "seq": 14,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784893009859,
+        "resultTs": 1784893009972,
+        "toolMs": 113,
+        "resultLen": 166
+      },
+      {
+        "seq": 15,
+        "name": "Write",
+        "toolNames": "Write ",
+        "cmd": "",
+        "ts": 1784893051405,
+        "resultTs": 1784893051525,
+        "toolMs": 120,
+        "resultLen": 171
+      },
+      {
+        "seq": 16,
+        "name": "Bash",
+        "toolNames": "Bash",
+        "cmd": "cd web && node -e \"const d='K:/AI/PerfAnalysisTool_Codebuddy/web/data/prism-out/camera_ab_24072PX77C_20260723_194703/202",
+        "ts": 1784893068114,
+        "resultTs": 1784893070057,
+        "toolMs": 1943,
+        "resultLen": 642
+      }
+    ],
+    "end": 1784893101963
+  },
+  "narrative": {
+    "start": 1784893101964,
+    "end": 1784893787875,
+    "subStages": {
+      "start": 1784893101966,
+      "precheck": 1,
+      "prompt_inject": 166,
+      "cli_resolve": 0,
+      "llm_call": 685350,
+      "artifact_check": 1,
+      "json_parse": 1,
+      "provenance_check": 0,
+      "red_team": 358
+    }
+  },
+  "render": {
+    "start": 1784893787875,
+    "end": 1784893848069
+  }
+}

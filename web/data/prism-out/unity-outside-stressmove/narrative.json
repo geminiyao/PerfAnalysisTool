@@ -1,0 +1,320 @@
+{
+  "runId": "unity-outside-stressmove",
+  "overview": "这不是单一元凶的故事——600 帧全程压在 41.9ms 中位数（超 16.67ms 预算 2.5 倍，100% 帧超预算），底盘由 URP 渲染管线（10.64ms/帧）和 Core.Update 脚本逻辑（12.88ms/帧）两块'铺底税'合占 ~23.5ms/帧，再被 GC.Collect 同步卡（单帧 70ms）、相机移动尖峰（19 次、每次平均 43ms）、资源卸载扫描（5 次、最高 29ms）反复捅刀。把所有尖峰都修掉，帧时仍会停在 ~40ms——这是容量问题，不是 bug hunt。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "稳态底盘超标：URP 渲染 + Core.Update 两块铺底税合占 ~23.5ms/帧，单独就吃掉 1.4 倍预算",
+      "kind": "稳态大头",
+      "contribution": "URP.RenderSingleCamera 子树 10.64ms/帧 + Core.Update 子树 12.88ms/帧 = 23.5ms/帧 × 600 帧 = 14100ms 累计，占平均帧时 (44.5ms) 的 52.8%；maxChildRatio 均 ≤0.53 说明无单一热点，是结构性铺底",
+      "dimensions": ["absoluteCost", "shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "high",
+      "callTree": {
+        "rootMarker": "Core.Update",
+        "note": "Core.Update 12.88ms/帧，子树拆分：LuaMgr 6.82 + MapManager 4.84 + TServerManager 0.92 ms/帧；maxChildRatio=0.53（无单一热点）。URP.RenderSingleCamera 10.64ms/帧，maxChildRatio=0.28（更分散）。"
+      }
+    },
+    {
+      "rank": 2,
+      "problem": "GC.Collect 同步阻塞：frame519 单帧 70.20ms（占该帧 61.82%），frame483 15.33ms（占 26.68%），是本 trace 最差帧的头号元凶",
+      "kind": "低频致命尖峰",
+      "contribution": "3 帧命中 / 600 帧，但 frame519 一帧就贡献 70.20ms self，是全场单帧最大单点开销；frame519 的 gc_allocated_in_frame 仅 8192 字节（正常偏低），证明这不是分配触发，是 Lua 侧桥接的强制/定时 full GC",
+      "dimensions": ["outlier", "absoluteCost"],
+      "judgability": "judgable",
+      "severity": "critical",
+      "callTree": {
+        "rootMarker": "CS:AOE.LuaMgr",
+        "note": "frame519 调用链：PostLateUpdate.PlayerSendFrameComplete(66.67%) -> CS:AOE.LuaMgr(66.31%, selfMs=4.87) -> GC.Collect(selfMs=70.20, pctOfFrame=61.82%)。GC 嵌在 LuaMgr 下，强烈暗示是 Lua 侧触发。"
+      }
+    },
+    {
+      "rank": 3,
+      "problem": "相机移动必卡：19 次移动 100% 命中慢帧，平均 43.14ms/帧、峰值 53.41ms（占 frame144 的 58.38%）",
+      "kind": "高频尖峰",
+      "contribution": "19 帧命中 / 600 帧 = 3.17% 帧占比；但这 19 帧 100% 落在慢帧集合内，且 frame144 是全场第二差帧。本次是 stressmove 压测，相机移动是设计内的核心场景，每次都炸说明 UpdateCameraPos 内部有 O(n) 工作随可见实体数放大",
+      "dimensions": ["outlier", "shareHigh"],
+      "judgability": "judgable",
+      "severity": "high",
+      "callTree": {
+        "rootMarker": "MapCameraCtrl.UpdateCameraPos",
+        "note": "frame144 调用链：PreLateUpdate.ScriptRunBehaviourLateUpdate -> ... -> MapCameraCtrl.UpdateCameraPos(totalMs=56.32, pctOfFrame=58.38%)。单次 53ms 远超相机更新合理量级。"
+      }
+    },
+    {
+      "rank": 4,
+      "problem": "增量 GC 周期性堆积：462-481 帧 20 帧连续密集窗口，紧贴 frame483 的 full GC，autocorr=0.68@lag2",
+      "kind": "周期性堆积",
+      "contribution": "600 帧全勤（baseline 0.59ms/帧），但 462-481 帧密集 burst 直接喂出 frame483 的 15.33ms GC.Collect；说明 C# 增量 GC 累积未扫垃圾，周期性崩出同步回收",
+      "dimensions": ["outlier", "absoluteCost"],
+      "judgability": "judgable",
+      "severity": "medium"
+    },
+    {
+      "rank": 5,
+      "problem": "资源卸载扫描偶发炸：5 帧 burst（80/102/146/414/464），最高 29.31ms（占 frame80 的 30.45%）",
+      "kind": "低频尖峰",
+      "contribution": "5 帧命中 / 600 帧 = 0.83% 帧占比；但 5/5 全部落入慢帧集合（100% overlap），且 frame80/frame256 调用链形态一致（PlayerSendFrameComplete -> LoaderManagerTryUnloadPending ~30%），是周期性扫描随 pending 队列规模放大",
+      "dimensions": ["outlier"],
+      "judgability": "judgable",
+      "severity": "medium"
+    },
+    {
+      "rank": 6,
+      "problem": "Lua 多线程 GC 独立尖峰：frame194 在 1:Lua.GC 线程 selfMs=21.59（占该线程帧时 43.53%）",
+      "kind": "工作线程尖峰",
+      "contribution": "独立于主线程 GC.Collect（F2）和 CollectIncremental（F4），是 Lua 自己的 GC 子系统；600 帧 baseline 0.59ms/帧，spikeRatio=36.5；因跑在独立线程，是否阻塞主线程需跨线程 wait 依赖确认（当前 8 工具看不到）",
+      "dimensions": ["outlier"],
+      "judgability": "needsDomainKnowledge",
+      "severity": "medium"
+    },
+    {
+      "rank": 7,
+      "problem": "GPU/Present 等待尖峰：17 帧 burst，frame22 三类 wait 合计 ~60ms",
+      "kind": "低频尖峰",
+      "contribution": "17 帧 burst / 600 帧，pctAinB=2.83%——只解释 2.83% 的慢帧；frame22 主线程 Semaphore+URP.WaitForPresent+Gfx.WaitForPresentOnGfxThread 合计 ~60ms，但属个案，非全场模式",
+      "dimensions": ["outlier"],
+      "judgability": "judgable",
+      "severity": "low"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体帧时 p50=41.90ms，超 16.67ms (60fps) 预算 2.51 倍，且 600/600 帧全超预算——这是单源可定的硬指标，整体不达标",
+      "GC.Collect 在 frame519 单帧 selfMs=70.20 占该帧 61.82%，是全场最差帧的头号贡献——单源可定为 critical",
+      "URP.RenderSingleCamera (10.64ms/帧) + Core.Update (12.88ms/帧) 合占平均帧时 52.8%，是稳态底盘的主结构——单源可定相对大小",
+      "相机移动 19 次 100% 命中慢帧、frame144 是全场第二差帧——单源可定为 stressmove 场景下的高频尖峰",
+      "资源卸载 5 帧 burst 100% 落入慢帧集合、调用链形态在 frame80/frame256 复现——单源可定'重复模式'而非孤例",
+      "GPU/Present 等待 17 帧 burst 的 pctAinB=2.83%——单源可定'非全场模式'，应降权处理"
+    ],
+    "cannotJudge": [
+      "URP 10.64ms/帧 和 Core.Update 12.88ms/帧 在本游戏压测下算不算'正常'——需历史基线 diff 或同场景不同版本对比，单源判不了'该不该管'",
+      "Core.Update 内 LuaMgr 6.82ms/帧 的 Lua 侧函数级分布——当前 8 工具无法穿透 xLua C# marker 边界，需 Lua 侧 instrument 或 LuaProfiler",
+      "LuaMtGc.ExecuteMtGc 在 frame194 的 21.59ms 是否阻塞主线程——需跨线程 wait 依赖数据，当前 8 工具看不到",
+      "LoaderManagerTryUnloadPending 5 帧 burst 时 pending 队列里有多少资源、什么类型——需 pending 队列规模 instrumentation",
+      "GC.Collect frame519 的具体触发源（哪个 Lua 调用、什么启发式）——需 Lua 侧 GC 触点或 collect 调用栈",
+      "未覆盖线程：本次 explore 未对 Render Thread / Job Worker / Loading Thread 单独跑 querySchedState，threadOverview 不列这些线程，不能断言它们非瓶颈"
+    ]
+  },
+  "ruledOut": [
+    {
+      "name": "Semaphore.WaitForSignal（作为整体慢帧主因）",
+      "why": "17 帧 burst 的 pctAinB=2.83%，只解释不到 3% 的慢帧；frame22 案例性显著但非全场模式，应降权"
+    },
+    {
+      "name": "Gfx.WaitForPresentOnGfxThread（作为整体慢帧主因）",
+      "why": "同上，present-wait burst 仅覆盖 17 帧；全场慢帧由 CPU 侧铺底税驱动，不是 GPU-bound"
+    },
+    {
+      "name": "frame519 GC.Collect 作为'分配触发'的解释",
+      "why": "queryFrameCounters 显示 frame519 当帧 gc_allocated_in_frame=8192 字节（正常偏低），不是分配尖峰触发，是定时/强制 full GC"
+    }
+  ],
+  "threadOverview": [
+    {
+      "thread": "1:Main Thread",
+      "runPct": 95,
+      "sleepPct": 3,
+      "runnablePct": 2,
+      "note": "主线程，业务/Lua/ECS 调度主入口；p50=41.9ms 全程超预算，CPU 侧铺底税 + GC/相机/卸载尖峰都在这根线上"
+    },
+    {
+      "thread": "1:Lua.GC",
+      "runPct": 8,
+      "sleepPct": 90,
+      "runnablePct": 2,
+      "note": "Lua 多线程 GC 专用线程；baseline 0.59ms/帧，frame194 独立尖峰 21.59ms；是否阻塞主线程未确认"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "稳态开销群：决定帧率天花板的常驻税",
+      "intro": "这两块每帧都在、合计 23.5ms/帧、占平均帧时 52.8%——它们不制造顿挫，但决定了'就算没有任何尖峰，帧时也压在 40ms 量级'这个天花板。maxChildRatio 都很低（≤0.53）说明没有单一元凶可摘，是结构性铺底，必须从'减少输入规模'层面动刀。",
+      "items": [
+        {
+          "findingIds": ["F8"],
+          "title": "Core.Update 脚本逻辑：12.88ms/帧，LuaMgr + MapManager 合占 11.66ms",
+          "narrative": "Core.Update 子树平均 12.88ms/帧，拆成三块：CS:AOE.LuaMgr 6.82ms（53%）、CS:AOE.Outside.MapManager 4.84ms（38%）、CS:AOE.TServerManager 0.92ms（7%）。frame100（一个非 burst 的普通帧）的调用链独立复现了同样的比例（LuaMgr 13.77% + MapManager 11.97% + TServerManager 5.10%），说明这是稳态底盘，不是被少数尖峰帧平均出来的假象。LuaMgr 是其中最大头，但当前 8 工具无法穿透 xLua C# marker 边界看到 Lua 侧函数级分布——这块要继续往下挖，必须接 LuaProfiler 或在 Lua 侧插 Profiler.beginSample。",
+          "callTree": {
+            "rootMarker": "Core.Update",
+            "note": "子树 12.88ms/帧，maxChildRatio=0.53（LuaMgr 6.82 / 12.88）；frame100 调用链 BehaviourUpdate=35.68% -> Core.Update=31.35%（LuaMgr 13.77% + MapManager 11.97% + TServerManager 5.10%）"
+          },
+          "sourceInsight": "未读到 Core.Update / LuaMgr.OnTick 的源码体；LuaMgr 6.82ms/帧的内部 Lua 函数级分布需 Lua 侧 instrumentation 才能定位",
+          "recommendations": [
+            "LuaMgr 6.82ms/帧是 Core.Update 内最大头，优先接 LuaProfiler 或在 Lua OnUpdateByCS 入口插 Profiler.beginSample 拆函数级分布",
+            "MapManager 4.84ms/帧次之，检查 Outside.MapManager.OnUpdate 是否有每帧全量遍历地图实体的逻辑",
+            "TServerManager 0.92ms/帧占比小，暂不优先"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": ["F7"],
+          "title": "URP 渲染管线：10.64ms/帧，分散在 5+ 阶段无单一热点",
+          "narrative": "URP.RenderSingleCamera 子树平均 10.64ms/帧，拆成 MainRenderingTransparent 2.98ms、AfterRendering 2.59ms、RendererSetup 2.34ms、BeforeRendering 1.85ms 等，maxChildRatio=0.28——单一最贵阶段也只占子树 28%。这是典型的'铺底税'形态：没有可摘的元凶，每阶段都贡献一点。优化天花板受限于'阶段数 × 每阶段最低开销'，单点微调收益有限，必须从减少输入规模（draw call 数、active render feature 数、透明 overdraw）层面动刀。",
+          "callTree": {
+            "rootMarker": "URP.RenderSingleCamera",
+            "note": "子树 10.64ms/帧，maxChildRatio=0.28；top children: MainRenderingTransparent=2.98, AfterRendering=2.59, RendererSetup=2.34, BeforeRendering=1.85 ms/帧"
+          },
+          "sourceInsight": "未读 URP 源码（Unity 引擎层）；render feature 列表和 draw call 数需 queryFrameCounters 的 batches/set_pass_calls/triangles 趋势交叉确认",
+          "recommendations": [
+            "检查 active URP render feature 列表，砍掉非必要的 feature（每个 feature 都给 BeforeRendering/AfterRendering 喂开销）",
+            "透明物体 overdraw 是 MainRenderingTransparent 2.98ms 的主要嫌疑，检查是否有可合并/可剔除的透明层",
+            "draw call 数和 set_pass calls 数的趋势要和帧时趋势交叉对比，定位是不是输入规模随场景膨胀"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "GC 群：三套独立 GC 子系统，各自能炸",
+      "intro": "本 trace 暴露出至少三套 GC 子系统：主线程 GC.Collect（同步阻塞，frame519 的 70ms）、主线程 CollectIncremental（周期性堆积，462-481 喂出 frame483）、Lua 多线程 GC（独立线程，frame194 的 21.59ms）。三套互相独立，意味着'修一套'不够——必须分别处理。其中 GC.Collect frame519 的 gc_allocated_in_frame 仅 8192 字节，证明这不是分配触发，是 Lua 侧桥接的强制/定时 full GC，这是反直觉的关键点。",
+      "items": [
+        {
+          "findingIds": ["F2"],
+          "title": "GC.Collect frame519：70.20ms 单帧阻塞，全场最差帧的头号贡献",
+          "narrative": "frame519 总 113.56ms，GC.Collect selfMs=70.20 占该帧 61.82%——这是全场最差帧，也是全场单点最大开销。调用链形态是 PostLateUpdate.PlayerSendFrameComplete -> CS:AOE.LuaMgr(66.31%) -> GC.Collect，GC 嵌在 LuaMgr 下，强烈暗示触发源在 Lua 侧。关键反直觉点：frame519 的 gc_allocated_in_frame 只有 8192 字节（正常偏低），说明这不是'当帧分配太多触发 GC'，而是 Lua 侧某个定时器或启发式强制触发了 full collection。frame483 是同形态的小版本（15.33ms，占 26.68%），从 Initialization.PlayerUpdateTime -> WaitForTargetFPS -> GarbageCollector.CollectIncremental -> GC.Collect 走，说明触发路径可能不止一条。",
+          "callTree": {
+            "rootMarker": "CS:AOE.LuaMgr",
+            "note": "frame519: PostLateUpdate.PlayerSendFrameComplete(66.67%) -> CS:AOE.LuaMgr(66.31%, selfMs=4.87) -> GC.Collect(selfMs=70.20, pctOfFrame=61.82%)"
+          },
+          "sourceInsight": "未读到 Lua 侧触发 GC.Collect 的具体代码；LuaMgr 嵌在调用链上方，需在 Lua 侧搜 collect / collectgarbage 调用点",
+          "recommendations": [
+            "在 Lua 侧搜 collectgarbage('collect') / collectgarbage('count') 触发点，看是不是定时器或启发式触发",
+            "如果是定时 full GC，改成完全 incremental 模式（Unity 已支持 incremental GC 选项）",
+            "如果必须 full collect，做时间片化：拆成 N 帧每帧少量 work，避免单帧 70ms 阻塞",
+            "frame519 和 frame483 触发路径不同（PlayerSendFrameComplete vs PlayerUpdateTime），两条路径都要堵"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["F3"],
+          "title": "CollectIncremental 周期性堆积：462-481 帧 20 帧密集窗口喂出 frame483",
+          "narrative": "GarbageCollector.CollectIncremental 600 帧全勤（baseline 0.59ms/帧），但 autocorrelation coefficient=0.68@lag2 异常强，且 462-481 这 20 帧是连续密集 burst 窗口，紧贴 frame483 的 15.33ms GC.Collect。这说明 C# 增量 GC 在累积未扫垃圾，周期性崩出同步回收——不是独立事件。要根治 frame483 这类同步 GC，得先减少 462-481 窗口的稳态分配（见 D1 数据请求：哪个 marker 在这窗口持续分配）。",
+          "sourceInsight": "未读到 CollectIncremental 内部源码（Unity 引擎层）；分配来源需 per-marker GC 字节统计",
+          "recommendations": [
+            "在 462-481 窗口内查 per-marker GC 分配字节（当前 8 工具看不到，需 DataRequest D1）",
+            "找到持续分配的 marker 后，改对象池 / 缓存 / 减少装箱",
+            "减少稳态分配 = 同时减少增量 GC 开销 + 降低崩出同步 GC 的概率"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["F6"],
+          "title": "Lua 多线程 GC frame194：21.59ms 独立线程尖峰",
+          "narrative": "LuaMtGc.ExecuteMtGc 在 1:Lua.GC 线程，baseline 0.59ms/帧，frame194 突到 21.59ms self（占该线程帧时 43.53%），spikeRatio=36.5。这是第三套 GC 子系统——Lua 自己的多线程 GC，独立于主线程 GC.Collect 和 CollectIncremental。因为它跑在独立线程，是否阻塞主线程需跨线程 wait 依赖确认（当前 8 工具看不到，见 D3 数据请求）。如果主线程在 frame194 没有明显等待，这条可降权；如果有 wait，要并到 P0 处理。",
+          "sourceInsight": "未读到 LuaMtGc 源码；跨线程依赖需 sched state 数据",
+          "recommendations": [
+            "先用跨线程 wait 依赖数据（D3）确认 frame194 主线程是否阻塞",
+            "如果阻塞：和 F2 一起处理，统一 GC 策略",
+            "如果不阻塞：作为后台噪声监控，暂不优先"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "相机移动尖峰：stressmove 场景的核心矛盾",
+      "intro": "本次是 stressmove 压测，相机移动是设计内的核心场景。OnCameraMove 19 次出现 100% 命中慢帧、平均 43.14ms/帧、峰值 53.41ms（占 frame144 的 58.38%）——每次相机移动都炸，且 frame144 是全场第二差帧。这不是'偶发尖峰'，是核心场景下的核心瓶颈。",
+      "items": [
+        {
+          "findingIds": ["F4"],
+          "title": "MapCameraCtrl.UpdateCameraPos：单次 53ms 远超相机更新合理量级",
+          "narrative": "frame144 调用链 PreLateUpdate.ScriptRunBehaviourLateUpdate -> MapCameraCtrl.UpdateCameraPos(totalMs=56.32, pctOfFrame=58.38%)。单次相机更新花 53ms 远超合理量级——相机更新本身是 O(1) 的视矩阵计算，能炸到 53ms 说明内部有 O(n) 工作随可见实体数放大。嫌疑最大的是 InfiniteZoomMgr.PostCameraMoveScale 和 OnCameraMove 触发的实体遍历/缩放计算。19 次 spike 100% 命中慢帧（pctBinA=100%），但只解释 3.17% 的慢帧（pctAinB=3.17%）——说明相机移动是'每次必炸但不是全场主因'，稳态底盘（F7/F8）才是全场主因。",
+          "callTree": {
+            "rootMarker": "MapCameraCtrl.UpdateCameraPos",
+            "note": "frame144: PreLateUpdate.ScriptRunBehaviourLateUpdate -> ... -> MapCameraCtrl.UpdateCameraPos(totalMs=56.32, pctOfFrame=58.38%)"
+          },
+          "sourceInsight": "OnCameraMove marker 在 getSourceForSymbol 查询返回 ambiguous（5 个同名候选），InfiniteZoomMgr.PostCameraMoveScale 也未精确匹配到函数体——行级源码定位未完成，需手动读 InfiniteZoomMgr 源码",
+          "recommendations": [
+            "优先读 InfiniteZoomMgr.PostCameraMoveScale 源码，找随可见实体数 O(n) 的遍历",
+            "如果 PostCameraMoveScale 每帧全量重算所有实体缩放，改脏标记：只在实体进入/退出视野或缩放档位变化时重算",
+            "OnCameraMove 的 5 个同名候选要按调用栈上下文消歧，定位真正在 frame144 触发的那一个"
+          ],
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "heading": "资源卸载尖峰：周期性扫描随队列规模放大",
+      "intro": "LoaderManagerTryUnloadPending 600 帧全勤（baseline 低），但 5 帧 burst（80/102/146/414/464）最高 29.31ms（占 frame80 的 30.45%）。frame80 和 frame256 的调用链形态完全一致（PlayerSendFrameComplete -> LoaderManagerTryUnloadPending ~30%），说明这是周期性扫描，开销随 pending 队列规模放大。5 帧 burst 100% 落入慢帧集合，是真实重复模式不是孤例。",
+      "items": [
+        {
+          "findingIds": ["F5"],
+          "title": "LoaderManagerTryUnloadPending：单帧扫描 29ms，应时间片化",
+          "narrative": "TryUnload 源码本身只是 CanUnload + DoUnload 的薄封装（4 行），但 frame80 自耗时峰值 14.59ms、totalMs 29.31ms，说明单帧内被调用了多次（pending 队列里堆了多个资源）。当前 8 工具看不到单帧调用次数和资源类型（见 D2 数据请求），但形态明确：周期性扫描 + 队列积压 + 单帧同步处理。修法是时间片化：每帧只处理 N 个 pending，剩余分摊到后续帧。",
+          "callTree": {
+            "rootMarker": "LoaderManagerTryUnloadPending",
+            "note": "frame80: PostLateUpdate.PlayerSendFrameComplete(31.26%) -> LoaderManagerTryUnloadPending(totalMs=21.34, pctOfFrame=30.45%)；frame256 同形态复现"
+          },
+          "sourceInsight": "TryUnload 源码 = 4 行（CanUnload 判断 + DoUnload 执行），是薄封装；单帧调用次数和资源类型需 instrumentation",
+          "recommendations": [
+            "改时间片化：每帧只处理 N 个 pending unload，剩余分摊到后续帧（N 根据预算动态调整）",
+            "查 pending 队列积压源头：是不是某段代码集中 Resources.Unload / AssetBundle.Unload 但没立即处理",
+            "如果 pending 队列规模可预测，可在场景切换等空闲时机预扫，避免在游戏中段 burst"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "已排除：present-wait 不是全场主因",
+      "intro": "Gfx.WaitForPresentOnGfxThread / URP.WaitForPresent / Semaphore.WaitForSignal 这三类等待在 frame22 案例性显著（合计 ~60ms），但 17 帧 burst 的 pctAinB=2.83%——只解释不到 3% 的慢帧。全场慢帧由 CPU 侧铺底税驱动，不是 GPU-bound。这一节存在的意义是'敢说这个不用管'，避免后续 agent 在 present-wait 上浪费预算。",
+      "items": [
+        {
+          "findingIds": ["F9"],
+          "title": "GPU/Present 等待：降权，只在 CPU 侧减负后再看",
+          "narrative": "frame22 主线程 Semaphore.WaitForSignal 20.68ms + URP.WaitForPresent 19.84ms + Gfx.WaitForPresentOnGfxThread 19.84ms，合计 ~60ms——但这是个案。17 帧 burst / 600 帧 = 2.83% 解释率，远低于 F7/F8 的稳态贡献。当前 trace 是 CPU-bound，present-wait 是偶发；只有当 F7/F8 的 CPU 铺底税减下来、游戏转向 GPU-bound 后，present-wait 才可能成为主因，到时再查。",
+          "sourceInsight": "无需读源码；这是 Unity 引擎层 wait，非业务代码",
+          "recommendations": [
+            "当前 trace 阶段降权，不优先处理",
+            "F7/F8 减负后重新采集，如果 present-wait burst 帧占比上升超过 20%，再作为主因查"
+          ],
+          "severity": "low"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "堵 GC.Collect frame519 同步阻塞：Lua 侧搜 collectgarbage('collect') 触发点，改成 incremental 或时间片化",
+      "benefit": "单帧 70ms 是全场最差帧的头号贡献，修掉直接把 max 从 113ms 降到 ~43ms 量级"
+    },
+    {
+      "priority": "P0",
+      "action": "Core.Update + URP 双铺底税减负：LuaMgr 6.82ms/帧接 LuaProfiler 拆函数级，URP 砍非必要 render feature + 透明 overdraw",
+      "benefit": "两块合占 23.5ms/帧 = 平均帧时 52.8%，是 600 帧全超预算的根本原因；修任何尖峰都救不了底盘，必须先动这里"
+    },
+    {
+      "priority": "P1",
+      "action": "相机移动 UpdateCameraPos + InfiniteZoomMgr.PostCameraMoveScale 改脏标记，避免每帧全量遍历",
+      "benefit": "stressmove 核心场景每次必炸，19 次 100% 命中慢帧；修掉把 frame144 类尖峰从 53ms 降到合理量级"
+    },
+    {
+      "priority": "P1",
+      "action": "CollectIncremental 462-481 窗口的稳态分配源头排查 + 减分配（对象池/缓存）",
+      "benefit": "根治 frame483 类周期性同步 GC，和 P0 的 GC.Collect 一起把 GC 群整体压下去"
+    },
+    {
+      "priority": "P2",
+      "action": "LoaderManagerTryUnloadPending 改时间片化（每帧 N 个 pending）",
+      "benefit": "5 帧 burst 各 29ms，修掉把 frame80 类尖峰从 70ms 降到 ~40ms 量级"
+    },
+    {
+      "priority": "P2",
+      "action": "LuaMtGc frame194 跨线程 wait 依赖确认（D3 数据请求）",
+      "benefit": "如果阻塞主线程则并 P0，不阻塞则降权监控；当前判不了"
+    },
+    {
+      "priority": "P3",
+      "action": "present-wait burst 暂不处理，F7/F8 减负后重新采集评估",
+      "benefit": "当前 2.83% 解释率，非主因；提前处理是浪费预算"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM"
+  }
+}

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.776Z
 source: unity-cpu
 title: "AOE 已知问题：LodStreamingManager spike"
 tags: ["aoe","已知问题","lod","流式加载"]
+dataSource: unity
 ---
 
 **触发场景**：LOD 流式加载。

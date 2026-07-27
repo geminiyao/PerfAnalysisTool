@@ -1,0 +1,109 @@
+
+=== 1. 库占比 ===
+lib                          base%      sm%   base abs     sm abs     delta%
+libunity                    41.77%   31.05%      15092      14664      -2.8%
+libil2cpp                   19.59%   18.38%       7080       8682     +22.6%
+libxlua                      5.33%    5.27%       1927       2488     +29.2%
+libAkSoundEngine             0.97%   10.06%        349       4753   +1260.2%
+lib_burst_generated          1.42%   10.63%        513       5019    +878.3%
+libGLESv2_adreno            13.21%   10.17%       4775       4802      +0.6%
+libc                         7.83%    7.33%       2828       3459     +22.3%
+libm                         2.06%    1.28%        743        604     -18.7%
+libart                       2.56%    1.45%        927        683     -26.3%
+
+=== 2. 线程占比 ===
+thread                       base%      sm%   base abs     sm abs     delta%
+UnityMain                   46.10%   39.29%      16658      18556     +11.4%
+Thread_102                  26.88%   21.29%       9714      10056      +3.5%
+UnityGfxRenderS             11.68%    9.34%       4221       4410      +4.5%
+NativeThread                 1.06%   10.36%        383       4895   +1179.2%
+Thread_129                   2.50%    4.10%        902       1937    +114.8%
+Thread_135                   2.46%    4.00%        888       1888    +112.7%
+Thread_136                   2.47%    3.95%        892       1864    +108.9%
+Thread_158                   2.44%    3.94%        883       1858    +110.4%
+AAudio_1                     0.94%    1.18%        338        555     +64.3%
+UnityChoreograp              1.39%    1.10%        500        520      +3.8%
+
+=== 3. 主线程剥洋葱后真热点 (按 abs self 降序) ===
+function                                                                          sm self%g   sm abs base abs      delta
+__memcpy                                                                             0.789%      373      187       +99%
+MUIControlManager_OnLateUpdate_mAD91DCD286F79F662FBC4BA326869C568D9A631C             0.763%      360       16     +2181%
+MUILayout_Set3DPosition_mDD919E0330AED1BE5D03D64EBBD3C02A174FD540                    0.702%      332        0        NEW
+Enumerator_MoveNext_m38B1099DDAD7EEDE2F4CDAB11C095AC784AC2E34_gshared                0.438%      207        0        NEW
+AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamplerHeights_0000FC5B$BurstDirectCall.Invoke(ref Unity.Mat     0.337%      159      172        -8%
+luaV_execute                                                                         0.290%      137      212       -35%
+TranscriptRenderingCommandBuffer::TranscriptRenderingCommandBuffer(MemLabelId const&, RenderingComma     0.267%      126      151       -17%
+RendererUpdateManager::UpdateSingleRenderer(Renderer&, RendererScene&)               0.241%      114      171       -33%
+Mesh::RecalculateSubmeshBoundsInternal(unsigned int)                                 0.240%      114        0        NEW
+tlsf_memalign                                                                        0.221%      104      129       -19%
+GC_end_stubborn_change                                                               0.190%       90       17      +416%
+Unity.Entities.ChunkIterationUtility.Unity.Entities.CalculateChunkCountExecute_00000745$BurstDirectC     0.188%       89       65       +36%
+Enumerator__ctor_m39C8C3D04576F8D63AF941CC77EE5871393388F0_gshared                   0.183%       87        0        NEW
+CullResults::GetOrCreateTranscriptRendererScene(TranscriptScriptableRenderContext*) const     0.162%       77       76        +1%
+UI::RectTransform::UpdateAnchorPositionIfTransformChanged(bool)                      0.151%       71       85       -16%
+TextureStreamingManager::Update()                                                    0.149%       70      137       -49%
+OutsideLineCtrl_RefreshLine_m5F27EA1C8AA0CC8A19184668CF267889EE1965F8                0.147%       69        0        NEW
+ComponentSystemGroup_UpdateAllSystems_m85CAF07C55B79B97FA9CC91EAD8998E69588B4A2      0.141%       67       78       -15%
+GameObject::IsActive() const                                                         0.139%       66       89       -26%
+OutSideViewArmyLineMgr_GetArmyLineID_m5E13B453788C927BDEFBCCA05D45B316AE21D689       0.138%       65        0        NEW
+BucketAllocator::Allocate(unsigned long, int)                                        0.121%       57      117       -51%
+ParticleSystem::Update1a(ParticleSystemUpdateData&)                                  0.116%       55        0        NEW
+ParticleSystemRenderer::CalculateWorldMatrixAndBoundsJob(BoundsJobData*, unsigned int, TransformAcce     0.112%       53        0        NEW
+Mesh::UpdateSubMeshVertexRange(int)                                                  0.099%       47        0        NEW
+MonoBehaviour::CallUpdateMethod(int)                                                 0.098%       47       54       -15%
+ThreadsafeLinearAllocator::Allocate(unsigned long, int)                              0.098%       47       47        -1%
+MemoryManager::Deallocate(void*, MemLabelId const&, char const*, int)                0.097%       46       37       +24%
+EntityComponentStore_Exists_mCCF5593F7723E4FEC633BC2B0C78759960BA8E0D                0.093%       44        0        NEW
+BatchJob(BatchJobDataSingle*)                                                        0.087%       41       31       +32%
+tlsf_free                                                                            0.082%       39       61       -37%
+il2cpp::vm::Object::IsInst(Il2CppObject*, Il2CppClass*)                              0.081%       38        0        NEW
+Animation::SampleInternal()                                                          0.080%       38        0        NEW
+UI::Canvas::EmitWorldGeometry(Camera*, unsigned short&, bool)                        0.080%       38       32       +18%
+il2cpp::vm::Class::IsAssignableFrom(Il2CppClass*, Il2CppClass*)                      0.080%       38        0        NEW
+MUILayoutManager_OnUpdate_mCF0395574A581508205E341F055FDE282CAEDDD6                  0.077%       36        0        NEW
+
+=== 4. Burst Job Top (Worker 线程, lib_burst_generated) ===
+  worker 总占比 sm = 15.98% global
+burst job                                                                                      sm%g   sm abs base abs      delta
+Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_SoldierMoveSystem.SoldierMov   1.363%      644        0        NEW
+AOE.DOTS.RotationLerpSystem.DoSmoothLerp(ref AOE.DOTS.RotationLerpData rotationLerpData, ref Unity.T   0.985%      465        0        NEW
+Unity.Rendering.WriteInstanceDataJob.DoWriteData(Unity.Rendering.WriteInstanceDataJob* this, int Sha   0.851%      402        0        NEW
+AOE.DOTS.UtilHeightMapBurst.AOE.DOTS.GetSamplerHeights_0000FC5B$BurstDirectCall.Invoke(ref Unity.Mat   0.700%      331      195       +69%
+Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.SyncViewEntitySystem.SyncViewEntityJob   0.694%      328        0        NEW
+Unity.Transforms.LocalToParentSystem.UpdateHierarchy.ChildLocalToWorld(Unity.Transforms.LocalToParen   0.640%      302        0        NEW
+Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_ArmyMoveSystem.ArmyMoveJob>.   0.487%      230        0        NEW
+AOE.DOTS.MoveChain_SoldierMoveSystem.SoldierMoveJob.OnStepMove(AOE.DOTS.MoveChain_SoldierMoveSystem.   0.442%      209        0        NEW
+Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.SyncLogicEntitySystem.SyncLogicEntityJ   0.431%      204        0        NEW
+Unity.Entities.JobChunkExtensions.JobChunkProducer`1<AOE.DOTS.MoveChain_SoldierMoveSystem.ArchiveSol   0.410%      194        0        NEW
+AOE.DOTS.MoveChain_ArmyMoveSystem.RefreshCurPosition(ref AOE.DOTS.PathPointData pathPointData, ref A   0.389%      184        0        NEW
+
+=== 5. PlayerLoop 阶段 ===
+phase                                base%main    sm%main   base abs     sm abs      delta
+ScriptRunBehaviourUpdate                16.28%     32.74%       2711       6075      +124%
+ScriptRunBehaviourLateUpdate            10.38%     15.03%       1729       2788       +61%
+PlayerSendFrameComplete                  3.10%      2.08%        517        385       -25%
+PlayerUpdateCanvases                     2.02%      1.24%        336        229       -32%
+ParticleSystemBeginUpdateAll             0.16%      0.91%         26        170      +540%
+ParticleSystemEndUpdateAll               0.00%      0.24%          0         44        NEW
+LegacyAnimationUpdate                    0.28%      0.75%         46        140      +202%
+FinishFrameRendering                     1.02%      0.67%        171        125       -27%
+UpdateTextureStreamingManager            2.79%      1.59%        465        295       -37%
+PlayerEmitCanvasGeometry                 1.07%      0.66%        178        122       -31%
+UpdateAllRenderers                       0.24%      0.55%         40        102      +155%
+SendMouseEvents                          0.38%      0.35%         63         65        +4%
+LuaMultiThreadGC                         0.14%      0.00%         24          0      -100%
+
+=== 6. RHI 线程 (Thread-102) 子树 ===
+symbol                                     base%rhi     sm%rhi   base abs     sm abs      delta
+GfxDeviceWorker::RunCommand                  99.25%     99.19%       9641       9975        +3%
+DrawBuffers                                  52.89%     53.44%       5138       5374        +5%
+ConstantBuffersGLES::UpdateBuffers           15.75%     18.89%       1530       1900       +24%
+ConstantBuffersGLES::UpdateCB                 4.12%      4.46%        400        448       +12%
+BeforeDrawCall                               21.59%     23.33%       2097       2346       +12%
+PresentFrame                                  7.36%      7.04%        715        708        -1%
+eglSwapBuffers                                5.56%      4.31%        540        433       -20%
+JobQueue::WaitForJobGroupID                   2.39%      3.85%        232        387       +67%
+SetShadersThreadable                          9.91%      7.49%        963        753       -22%
+SetVertexStateGLES                            3.98%      3.71%        387        373        -4%
+ApplyGpuProgramGLES                           8.94%      6.60%        868        664       -24%
+DynamicVBO::DrawChunk                         3.07%      2.74%        298        275        -8%

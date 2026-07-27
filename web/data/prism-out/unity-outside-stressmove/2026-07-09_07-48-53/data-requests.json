@@ -1,0 +1,44 @@
+[
+  {
+    "id": "DR01",
+    "topic": "OnCameraMove精确源码位置",
+    "description": "OnCameraMove这个marker本身在getSourceForSymbol查询中返回ambiguous（5个同名候选，无法唯一确定），InfiniteZoomMgr侧的cls:PostCameraMoveScale和infiniteZoomMgr_OnOutsideCameraMove也未能在codegraph/map-source中精确匹配到函数体。只能定位到InfiniteZoomMgr.PostCameraMoveScale这一层调用及其附近的OnOutsideCameraMove相关代码段。",
+    "reasonMissing": "符号解析工具（getSourceForSymbol）的codegraph/map-source索引对这几个符号存在歧义或缺失记录，可能是因为OnCameraMove是一个被多个不同类实现/注册的事件回调名，或是Lua侧的匿名函数/局部变量赋值形式定义，未被静态索引工具捕捉到唯一定义位置。",
+    "impactOnFindings": "F02（相机移动尖峰）的recommendation无法给出行级别的具体代码修改建议，只能基于调用链和行为模式推测优化方向（改为增量更新、加节流），未能确认具体是哪一行代码在做重计算。"
+  },
+  {
+    "id": "DR02",
+    "topic": "MapEntityCtrl.CreateMapEntity_4源码定位",
+    "description": "MapEntityCtrl.CreateMapEntity_4这个marker在queryMarkers结果中出现（sumSelfMs=191.32ms,presentInFrames=220,avgSelfMsPerPresentFrame=0.87ms），但getSourceForSymbol查询该符号未能找到匹配的源码定义。",
+    "reasonMissing": "该符号可能是运行时动态生成的重载方法名（\"_4\"后缀暗示可能是某个重载/变体版本），或者是通过反射/模板生成的方法，未被静态代码索引记录。",
+    "impactOnFindings": "该marker总量191ms、出现在220帧（约37%的帧），量级不算最突出，本次未将其纳入正式finding，但如果后续需要深挖地图实体创建相关的性能问题，需要先解决这个符号定位问题。"
+  },
+  {
+    "id": "DR03",
+    "topic": "MeshUIManager内部子系统（camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers）各自耗时占比",
+    "description": "已确认MeshUIManager.OnLateUpdate依次调用了7个子系统的更新方法，但这些子系统各自没有独立的CustomSampler/Profiler marker，因此drillDownMarker在该marker上只能返回自身作为唯一叶子节点，无法进一步拆解2.08ms/帧内部的具体分布。",
+    "reasonMissing": "这是采集时的Profiler埋点粒度限制，不是查询工具的局限——业务代码本身没有在这7个子系统调用前后插入采样标记。",
+    "impactOnFindings": "F05（MeshUIManager稳态开销）的recommendation只能建议\"未来采集时补充细粒度采样\"，无法在本次数据基础上给出具体应该优化哪个子系统的结论。"
+  },
+  {
+    "id": "DR04",
+    "topic": "TryUnloadPending.TryUnload单帧内的调用次数（资源卸载数量）",
+    "description": "已通过getSourceForSymbol确认TryUnload方法体本身逻辑简单（4行代码，CanUnload判断+DoUnload执行），但queryMarkers/scanMetricOverFrames等工具只能给出该marker在某一帧的汇总selfMs，无法得知frame80这类突发帧里TryUnload被调用了多少次（即当帧同时卸载了多少个资源对象）。",
+    "reasonMissing": "现有的marker统计工具（scanMetricOverFrames/queryMarkers）按sampleCount可以看到调用次数的全局汇总，但没有按frame维度拆分调用次数的接口——只有耗时汇总，没有次数的frame级明细。",
+    "impactOnFindings": "F07（资源卸载尖峰）的推理停留在\"逻辑简单但可能是批量调用导致\"的合理推测层面，无法用具体的调用次数数字坐实这个假设。"
+  },
+  {
+    "id": "DR05",
+    "topic": "GC.Collect（frame519/frame483）触发前的对象分配来源追踪",
+    "description": "已确认frame519和frame483的gc_allocated_in_frame处于全程正常偏低水平（非当帧分配触发GC），但无法获取GC.Collect触发前若干帧的按marker/按调用来源的分配明细，因此无法定位是哪个系统长期累积的小分配最终触发了这次同步GC。",
+    "reasonMissing": "queryFrameCounters工具提供的gc_allocated_in_frame是逐帧的总量counter，没有按marker/按代码路径拆分分配来源的接口（这类数据通常需要Memory Profiler的Allocation Callstacks功能，超出当前Timeline式采样的能力范围）。",
+    "impactOnFindings": "F01（GC同步卡顿）的recommendation只能给出排查方向（检查是否手动调用Collect、调整增量GC时间片），无法精确定位到具体是哪段业务代码在持续攒对象导致阈值触发。"
+  },
+  {
+    "id": "DR06",
+    "topic": "YzEntityMoveLineNtf消息的payload大小/实体数量",
+    "description": "已确认YzEntityMoveLineNtf消息处理在frame273炸到14.9ms，但无法获取该消息本身携带了多少个实体的移动线更新数据，因此无法判断14.9ms是否与消息体大小成正比。",
+    "reasonMissing": "当前的Profiler Timeline采集只记录了marker的耗时，不包含业务层的消息payload内容或大小，这类信息需要额外的网络层日志或消息层instrumentation才能拿到。",
+    "impactOnFindings": "F04（网络消息尖峰）的confidence定为medium而非high，因为无法排除这是否是消息批量大小偶然波动导致的正常现象，还是有其他深层的服务器推送节奏问题。"
+  }
+]

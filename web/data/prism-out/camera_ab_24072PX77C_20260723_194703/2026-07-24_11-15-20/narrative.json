@@ -1,0 +1,581 @@
+{
+  "runId": "camera_ab_24072PX77C_20260723_194703",
+  "overview": "这不是单一元凶，是一组稳态开销（URP 渲染 + Lua 逻辑 + LateUpdate + ECS + Canvas）每帧雷打不动吃掉 20+ms 打底，再被相机移动触发的环境物回收/实体加载尖刺反复捅刀——84% 的帧超 60fps 预算，最差帧 54ms。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "稳态长尾超标：84% 帧超预算，5 系统分摊无单一元凶",
+      "kind": "稳态长尾",
+      "contribution": "中位帧 20.75ms 超预算 24%，506/600 帧超标；成本被 URP 渲染 28% + Lua 逻辑 22% + LateUpdate 17% + ECS 13% + Canvas 8% 分摊，无单一 >30% 主因",
+      "dimensions": [
+        "absoluteCost",
+        "shareHigh"
+      ],
+      "judgability": "judgable",
+      "severity": "critical"
+    },
+    {
+      "rank": 2,
+      "problem": "相机移动触发环境物一帧回收，制造最差两帧",
+      "kind": "相机尖峰",
+      "contribution": "平时 0.2ms，相机扫到新区域时单帧回收 37 个 GO 炸到 24.8ms；最差帧 54ms@143、48ms@469 都是它干的（2/600 帧）",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 3,
+      "problem": "相机移动触发实体显著度任务风暴，一帧同步加载 22.7ms",
+      "kind": "相机尖峰",
+      "contribution": "平时 2.3ms，相机移动致任务队列暴涨时 11 个 ConsumeTasks 一帧全跑，552 帧炸到 22.7ms 把那帧推到 47ms（1/600 帧）",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 4,
+      "problem": "同步 GC 5 次突袭，最重 11ms",
+      "kind": "GC 尖峰",
+      "contribution": "5 帧（257/278/283/566/576）触发同步 GC.Collect，均 8.96ms/次，最重 11.13ms@576；增量 GC 攒不住退化成同步",
+      "dimensions": [
+        "outlier"
+      ],
+      "judgability": "judgable",
+      "severity": "medium"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体帧时中位数 20.75ms，超 60fps 预算 24%，84.3% 帧超标——稳态不达标是确定的",
+      "相机移动是最差帧的确定性触发源（143/469/552 三帧都有相机相关尖刺）",
+      "URP 渲染是稳态最大单块（6.51ms/帧占 28%），但属分摊型无单一大头",
+      "帧主要被主线程 CPU 工作限制（主线程 Semaphore 等待仅 0.35ms/帧，无 Gfx.WaitForPresent），非 GPU bound"
+    ],
+    "cannotJudge": [
+      "URP 渲染 6.51ms/帧、LuaMgr 3.37ms/帧、LateBehaviourUpdate 3.9ms/帧在本游戏压测下算不算正常——需历史基线或业务知识，单源判不了",
+      "同步 GC 的分配来源——本次采集逐帧计数器全部为 0，无法定位是哪个系统在持续分配触发 GC",
+      "相机移动是否每次都触发尖刺——burstFrames 仅 143/469/552，可能在跨区块时才触发，需业务知识确认"
+    ]
+  },
+  "ruledOut": [
+    {
+      "name": "Submit 线程 Semaphore 等待 14ms/帧",
+      "why": "主线程 Semaphore 等待仅 0.35ms/帧 + Gfx.WaitForPresent 未进任何 top 榜——帧受主线程 CPU 工作限制，Submit 等待是并行等主线程交付渲染命令的流水线行为，非 GPU 瓶颈"
+    },
+    {
+      "name": "OnApplicationPause 生命周期尖峰（frame 670，43.6ms）",
+      "why": "一次性应用暂停事件，PlayerLoop 自身 22.43ms 归因 native 暂停切换开销，非游戏性卡顿，不计入主因"
+    },
+    {
+      "name": "Gfx.WaitForPresent（GPU-bound 经典标志）",
+      "why": "未出现在任何 top 榜单，结合主线程等待极小，判定非 GPU bound"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "§0 结论先行：稳态长尾超标 + 相机尖刺 + GC 突袭",
+      "intro": "三条结论按对整体帧率的贡献排序：稳态长尾（84% 帧超标）排第一，相机尖刺（制造最差三帧）排第二，GC 突袭与隔帧交替（伴随现象）排第三。",
+      "items": [
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "① 稳态长尾超标：84% 帧超预算，5 系统分摊无单一元凶",
+          "narrative": "> **一半以上的帧连 50fps 都到不了，但抓不出一个大坏蛋**——中位帧 20.75ms 超 60fps 预算 24%，84% 的帧超标。成本被 URP 渲染、Lua 逻辑、LateUpdate、ECS、Canvas 五个系统分摊，每个占 8%~28%，谁都不是绝对大头。这是典型的'多系统各占一点、合力把帧预算吃光'的长尾型不达标，优化时不能只盯一个模块。\n\n关键数字：中位帧 20.75ms（超预算 24%）/ 84.3% 帧超标 / 8.7% 帧超 33ms（双倍预算）/ 最差帧 54ms。详见 §3 下钻 ①~⑤。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "中位帧成本分布（frame 400，23ms，近 p50）",
+            "ascii": {
+              "content": "URP 渲染       ████████████  6.51ms (28%)\nLua 逻辑       █████████     4.97ms (22%)\nLateUpdate     ████████      3.89ms (17%)\nECS 三系统     ██████        2.89ms (13%)\nCanvas         ████          1.87ms (8%)\n其它           ████          2.88ms (12%)\n── 无单一 >30% 主因，5 系统分摊（长尾型）",
+              "caption": "中位帧成本被 5 个系统分摊，最大单块 URP 渲染也只占 28%——典型的长尾型不达标，没有可一刀砍的大头"
+            }
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": [
+            "camera-recycle-burst",
+            "camera-loading-storm"
+          ],
+          "title": "② 相机一动就卡：环境物回收 + 实体加载风暴制造最差三帧",
+          "narrative": "> **相机一扫到新区域，单帧就炸到 47~54ms**——平时 0.2ms 的环境物回收在相机移动时一帧集中回收 37 个 GameObject 炸到 24.8ms；平时 2.3ms 的实体显著度任务在一帧同步加载 22.7ms。全场最差的三帧（143/469/552）都是相机移动触发的，平时与尖峰相差 10~224 倍。\n\n关键数字：最差帧 54ms@143 / 环境物回收平时 0.2ms→尖峰 24.8ms（相差 224 倍）/ 实体加载平时 2.3ms→尖峰 22.7ms（相差 9.7 倍）。详见 §3 下钻 ⑥⑦。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "相机移动触发的尖峰帧 vs 中位帧",
+            "ascii": {
+              "content": "中位帧 p50    ████          20.75ms\nframe 143     ████████████  54ms   (环境物回收 24.8ms)\nframe 469     ███████████   48ms   (环境物回收 24.8ms)\nframe 552     ██████████    47ms   (实体加载风暴 22.7ms)\n── 平时 0.2~2.3ms，相机一动就炸到 22~24ms+",
+              "caption": "最差三帧全部由相机移动触发：环境物回收（143/469）+ 实体显著度任务风暴（552），平时安静一动就卡"
+            }
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "gc-collect-spike",
+            "frame-pacing-lag2"
+          ],
+          "title": "③ 同步 GC 5 次突袭 + 隔帧交替节律（伴随现象）",
+          "narrative": "> **增量 GC 攒不住就退化成同步 GC，5 次突袭每次 9ms**——frame 576 最重 11.13ms，frame 278 调用树清楚显示是增量 GC 收尾触发的同步 GC。同时引擎有隔帧交替节律（隔帧信号强度达 0.65~0.86），等效半帧率。这些都是稳态超标的伴随现象，不是独立主因。\n\n关键数字：5 次同步 GC 均 8.96ms / 最重 11.13ms@576 / 隔帧交替信号 0.648。详见 §3 下钻。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "GC.Collect 5 次同步突袭",
+            "ascii": {
+              "content": "frame 257  ████████   ~9ms\nframe 278  ████████   7.02ms  (增量 GC 收尾触发)\nframe 283  ████████   ~9ms\nframe 566  ████████   ~9ms\nframe 576  █████████  11.13ms (最重)\n── 257-276 增量 GC 持续加重，278 帧退化成同步",
+              "caption": "增量 GC 攒不住就退化成同步 GC——257-276 连续 20 帧增量加重，278 帧触发同步收尾，是典型的'增量兜不住'模式"
+            }
+          },
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "§1 采集元信息",
+      "intro": "本次采集 600 帧，中位帧 20.75ms（~48fps），84% 的帧超 60fps 预算。",
+      "items": [
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "采集元信息",
+          "narrative": "600 帧的 Unity Profiler 采集，主线程 PlayerLoop 中位帧 20.75ms，超 60fps 预算 24%；84.3% 的帧超标，8.7% 的帧超双倍预算。最差帧 54ms 出现在 frame 143（相机移动触发环境物回收）。",
+          "visualAsset": {
+            "type": "table",
+            "title": "采集元信息",
+            "table": {
+              "headers": [
+                "指标",
+                "值"
+              ],
+              "rows": [
+                [
+                  "帧数",
+                  "600"
+                ],
+                [
+                  "fps（按 p50）",
+                  "~48 fps"
+                ],
+                [
+                  "p50",
+                  "20.75 ms"
+                ],
+                [
+                  "p95",
+                  "34.70 ms"
+                ],
+                [
+                  "p99",
+                  "44.50 ms"
+                ],
+                [
+                  "最差帧",
+                  "54.14 ms @ frame 143"
+                ],
+                [
+                  "帧预算",
+                  "16.67 ms (60fps) / 33.33 ms (30fps)"
+                ],
+                [
+                  "超预算帧占比",
+                  "84.3% 超 16.67ms / 8.7% 超 33.33ms"
+                ],
+                [
+                  "PlayerLoop 总耗时",
+                  "13776 ms（均值 22.96ms × 600 帧）"
+                ],
+                [
+                  "隔帧交替信号",
+                  "强度 0.648（lag=2，显著）"
+                ]
+              ]
+            }
+          },
+          "severity": "info"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "帧分位数柱状图",
+          "narrative": "p50 已超预算 24%，p95 接近双倍预算，p99 接近三倍——整场采集帧时普遍偏高，不是偶发尖刺拉高均值。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "PlayerLoop 帧分位数 vs 帧预算",
+            "ascii": {
+              "content": "预算 16.67  ████\np50  20.75  █████        (超预算 24%)\np95  34.70  ████████     (超预算 108%)\np99  44.50  ██████████   (超预算 167%)\nmax  54.14  ████████████ (超预算 225%, 相机尖刺)",
+              "caption": "p50 就超预算，p95 接近双倍——这是稳态超标不是尖刺拉高"
+            }
+          },
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§2 多线程宏观",
+      "intro": "主线程是帧瓶颈（p50 20.75ms），Submit 线程在等主线程交付渲染命令（等待 14ms/帧，但主线程自身等待仅 0.35ms/帧，非 GPU bound）；Loading 线程仅在相机移动帧活跃；Audio 线程仅在暂停事件帧尖峰。",
+      "items": [
+        {
+          "findingIds": [
+            "submit-thread-wait",
+            "steady-spread-cost"
+          ],
+          "title": "多线程宏观",
+          "narrative": "帧主要被主线程 CPU 工作限制。Submit 线程每帧等 14ms 是并行等主线程交付渲染命令（Unity 渲染流水线的正常行为），不是等 GPU——主线程自己的 Semaphore 等待仅 0.35ms/帧，且 Gfx.WaitForPresent 未进任何 top 榜。Loading 线程仅在相机移动触发同步加载时活跃（552 帧同期 LockPersistentManager 13.7ms）。Audio 线程仅 frame 670 暂停事件有 4.32ms 尖峰。",
+          "visualAsset": {
+            "type": "table",
+            "title": "多线程宏观",
+            "table": {
+              "headers": [
+                "线程",
+                "ms/帧",
+                "占主线程%",
+                "topMarker",
+                "定位"
+              ],
+              "rows": [
+                [
+                  "UnityMain",
+                  "22.96",
+                  "100%",
+                  "PlayerLoop/Core.Update/LuaMgr",
+                  "主线程，业务/Lua/ECS 调度主入口，帧瓶颈所在"
+                ],
+                [
+                  "UnityGfxRenderS (Submit)",
+                  "等待 14.09 + 工作 ~5",
+                  "61%（等待占比）",
+                  "Semaphore.WaitForSignal / RenderLoop.Draw 1.96",
+                  "渲染命令提交层，等主线程发命令（主线程等待仅 0.35ms/帧 → 非 GPU bound）"
+                ],
+                [
+                  "Loading Thread",
+                  "偶发 13.7（仅 552 帧）",
+                  "—",
+                  "LockPersistentManager / File.Open 11.5",
+                  "资源加载线程，仅在相机移动触发同步加载时活跃"
+                ],
+                [
+                  "Audio.Thread",
+                  "偶发 4.32（仅 670 帧）",
+                  "—",
+                  "Audio",
+                  "音频线程，仅暂停事件帧尖峰，非瓶颈"
+                ]
+              ]
+            }
+          },
+          "severity": "info"
+        },
+        {
+          "findingIds": [
+            "submit-thread-wait"
+          ],
+          "title": "主线程 vs Submit 线程等待对比",
+          "narrative": "Submit 线程等 14ms 但主线程只等 0.35ms——说明帧瓶颈在主线程 CPU 工作，不在 GPU。Submit 的等待是渲染流水线的正常并行行为。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "主线程 vs Submit 线程 Semaphore 等待",
+            "ascii": {
+              "content": "Submit 线程等待  ████████████████  14.09ms/帧\n主线程等待      ▏                  0.35ms/帧\n── Submit 在等主线程交付渲染命令，不是等 GPU\n    （Gfx.WaitForPresent 未进任何 top 榜）",
+              "caption": "Submit 等待 14ms vs 主线程等待 0.35ms——帧受主线程 CPU 限制，Submit 等待是并行流水线行为非 GPU 瓶颈"
+            }
+          },
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§3 主线程一帧时间去向",
+      "intro": "以 frame 400（23ms，近 p50）为典型帧拆解稳态成本，再下钻每个红线模块；末尾下钻相机移动触发的尖峰帧。中位帧无单一 >30% 主因，5 系统分摊：URP 渲染 28% + Lua 逻辑 22% + LateUpdate 17% + ECS 13% + Canvas 8%。",
+      "items": [
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "红线触发清单（稳态帧）",
+          "narrative": "按占中位帧百分比排序（≥5% 为红线）。归并规则：父子不同时列，大头拆出——LuaMgr.OnTick&UpdateSchedule 拆出替代 ScriptRunBehaviourUpdate，其下 MapSignificanceMgr.ProcessTasks 69% 占比属 Lua tick 流程统筹在 LuaMgr；LateBehaviourUpdate 拆出替代 PreLateUpdate.ScriptRunBehaviourLateUpdate；URP.RenderSingleCamera 分摊型（10 子节点无单一大头）统筹在 FinishFrameRendering。",
+          "visualAsset": {
+            "type": "table",
+            "title": "红线触发清单",
+            "table": {
+              "headers": [
+                "模块",
+                "cur ms/帧",
+                "占 p50%",
+                "红线类型",
+                "子函数热点"
+              ],
+              "rows": [
+                [
+                  "PostLateUpdate.FinishFrameRendering",
+                  "6.51",
+                  "31.4%",
+                  "占 p50 ≥5% 红线",
+                  "URP.RenderSingleCamera 22.9%（分摊型，10 子节点无单一大头，统筹）"
+                ],
+                [
+                  "PreLateUpdate.LateBehaviourUpdate",
+                  "3.90",
+                  "18.8%",
+                  "占 p50 ≥5% 红线",
+                  "GameLauncher.LateUpdate 9.9% + WorldTileStreaming.LateUpdate 3.3%"
+                ],
+                [
+                  "LuaMgr.OnTick&UpdateSchedule",
+                  "3.37",
+                  "16.2%",
+                  "占 p50 ≥5% 红线",
+                  "MapSignificanceMgr.ProcessTasks 11.2%（Lua tick 流程统筹）"
+                ],
+                [
+                  "UpdateFunction.Invoke (ECS)",
+                  "3.15",
+                  "15.2%",
+                  "占 p50 ≥5% 红线",
+                  "Simulation 7.6% + Presentation 4.3% + Init 2.7%（三系统同属 ECS，统筹）"
+                ],
+                [
+                  "PostLateUpdate.PlayerUpdateCanvases",
+                  "1.87",
+                  "9.0%",
+                  "占 p50 ≥5% 红线",
+                  "UGUI Canvas 重建（未下钻到子 Pass）"
+                ]
+              ]
+            }
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "下钻 ① URP 渲染管线（稳态最大单块，分摊型）",
+          "narrative": "PostLateUpdate.FinishFrameRendering 6.51ms/帧（占 31.4%），是稳态最大单块。其中 URP.RenderSingleCamera 4.75ms/帧（占 22.9%），但是分摊型——子节点最大占比仅 0.388，10 个子节点无单一大头（Bloom/PlanarShadow/StencilOutline/ForwardRenderPass 等各占一点）。URP 是 Unity 引擎渲染管线，本次未读源码（引擎管线非业务代码）。GC 归因：本次采集逐帧计数器全部为 0，无法定位 per-marker GC 分配。\n\n红线判定：占中位帧 31.4%，远超 5% 红线，但属分摊型无单一大头，优化需多 Pass 各削一点。",
+          "callTree": {
+            "rootMarker": "PostLateUpdate.FinishFrameRendering",
+            "note": "URP.RenderSingleCamera 4.75ms/帧占 22.9%，分摊型（10 子节点无单一大头，子节点最大占比 0.388）"
+          },
+          "recommendations": [
+            "核查 DrawCall 数量与 Shader 复杂度（Bloom/PlanarShadow/StencilOutline 都在 Submit 线程榜单）",
+            "评估后效分辨率是否可降低或合并 Pass（分摊型无单点，需多 Pass 各削一点）",
+            "需要看 URP 渲染管线配置才能给具体建议——本次未读引擎管线源码"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost",
+            "camera-loading-storm"
+          ],
+          "title": "下钻 ② LuaMgr.OnTick&UpdateSchedule（Lua 主 tick，含相机加载风暴源）",
+          "narrative": "LuaMgr.OnTick&UpdateSchedule 3.37ms/帧（占 16.2%），其中 MapSignificanceMgr.ProcessTasks 2.33ms/帧（占 11.2%，69% 占比属 Lua tick 流程统筹在此）。ProcessTasks 顺序跑 11 个 ConsumeTasks_* 子消费者，源码确认无每帧任务数上限或时间预算——这是相机移动时炸到 22.7ms 的根因（见下钻 ⑦）。子树大头 ForceSubEntity 1.125ms/帧（占 ProcessTasks 48%），其下触发同步 entityLoader_sync。GC 归因：本次采集逐帧计数器全部为 0，无法定位 per-marker GC 分配。\n\n红线判定：占中位帧 16.2%，超 5% 红线 3 倍；相机移动时单帧可炸到 22.7ms（详见下钻 ⑦）。",
+          "callTree": {
+            "rootMarker": "LuaMgr.OnTick&UpdateSchedule",
+            "note": "MapSignificanceMgr.ProcessTasks 2.33ms/帧占 69%，ForceSubEntity 1.125ms/帧是 ProcessTasks 内大头（48%）"
+          },
+          "sourceInsight": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua:1290-1372 —— ProcessSignificanceTasks 顺序调用 11 个 ConsumeTasks_*（ForceSubEntity/Self/PriorityMapEntity/Timeout/InfiniteZoom/MapEntity/Common/LocalResEntity/SubEntity/MapEntityForDestroy），每个用 SamplerBegin/End 包裹，函数体内未见每帧任务数上限或时间预算",
+          "recommendations": [
+            "给每个 ConsumeTasks_* 加每帧处理数量上限或时间预算（如单帧最多处理 N 个实体或最多跑 2ms，剩余排队下一帧）——源码当前完全没有这类节流",
+            "优先处理 ForceSubEntity（占 ProcessTasks 48%），其下 SubEntity_FrameExcute 触发同步 entityLoader_sync，应改为异步加载或预加载即将进入视野的实体资源"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost",
+            "camera-recycle-burst"
+          ],
+          "title": "下钻 ③ LateBehaviourUpdate（LateUpdate 大头，含相机回收路径）",
+          "narrative": "PreLateUpdate.LateBehaviourUpdate 3.90ms/帧（占 18.8%），其中 GameLauncher.LateUpdate 2.06ms/帧 + WorldTileStreaming.LateUpdate 0.68ms/帧。注意：相机移动触发的环境物回收尖刺（frame 143 的 24.8ms）也走这条路径——GameLauncher.LateUpdate → Core.LateUpdate → MapManager → WorldEnvironmentMeshItemMgr → RecycleGOTask（详见下钻 ⑥）。本次未读 LateBehaviourUpdate 源码。GC 归因：本次采集逐帧计数器全部为 0，无法定位 per-marker GC 分配。\n\n红线判定：占中位帧 18.8%，超 5% 红线；相机移动时这条路径会炸到 24.8ms（详见下钻 ⑥）。",
+          "callTree": {
+            "rootMarker": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+            "note": "LateBehaviourUpdate 3.90ms/帧占 18.8%，GameLauncher.LateUpdate 2.06ms + WorldTileStreaming.LateUpdate 0.68ms；相机回收尖刺也走此路径"
+          },
+          "recommendations": [
+            "评估哪些 LateUpdate 能降频或合并（如 WorldTileStreaming 是否需要每帧跑）",
+            "GameLauncher.LateUpdate 下含相机回收路径，需配合下钻 ⑥ 治理",
+            "需要看 GameLauncher.LateUpdate 与 WorldTileStreaming.LateUpdate 的实现才能给具体建议"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "下钻 ④ UpdateFunction.Invoke（ECS 三系统组）",
+          "narrative": "UpdateFunction.Invoke 3.15ms/帧（占 15.2%），由 ECS 三系统组成：Simulation 1.57ms/帧（7.6%）+ Presentation 0.90ms/帧（4.3%）+ Init 0.57ms/帧（2.7%）。三个 System 语义同属 ECS 流程，统筹在 UpdateFunction.Invoke。本次未读 ECS 源码。GC 归因：本次采集逐帧计数器全部为 0，无法定位 per-marker GC 分配。\n\n红线判定：占中位帧 15.2%，超 5% 红线；三个子系统各占一点，分摊型。",
+          "callTree": {
+            "rootMarker": "UpdateFunction.Invoke",
+            "note": "ECS 三系统：Simulation 1.57ms (7.6%) + Presentation 0.90ms (4.3%) + Init 0.57ms (2.7%)，统筹"
+          },
+          "recommendations": [
+            "核查是否所有 ECS System 都需要每帧跑（如 Init 是否可降频）",
+            "需要看 ECS System 的实现才能给具体建议——本次未读源码"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "下钻 ⑤ PlayerUpdateCanvases（UGUI Canvas 重建）",
+          "narrative": "PostLateUpdate.PlayerUpdateCanvases 1.87ms/帧（占 9.0%），是 UGUI Canvas 每帧重建开销。本次未读 Canvas 源码，未下钻到子 Pass。GC 归因：本次采集逐帧计数器全部为 0，无法定位 per-marker GC 分配。\n\n红线判定：占中位帧 9.0%，超 5% 红线；UI 层常见瓶颈。",
+          "callTree": {
+            "rootMarker": "PostLateUpdate.PlayerUpdateCanvases",
+            "note": "UGUI Canvas 每帧重建 1.87ms/帧占 9.0%"
+          },
+          "recommendations": [
+            "拆分 Canvas（静态/动态分离），减少 Layout 嵌套",
+            "静态 UI 缓存，避免每帧 Rebuild",
+            "需要看 UI 层级配置才能给具体建议"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": [
+            "camera-recycle-burst"
+          ],
+          "title": "下钻 ⑥ 相机移动 → 环境物一帧回收（最差帧 54ms@143）",
+          "narrative": "WorldEnvironmentMeshItemMgr 平时 0.196ms/帧，但 frame 143/469 两帧炸到 24.8ms（相差 224 倍）。drillDownMarker 确认其唯一子节点是 RecycleGOTask，单帧回收约 37 个 GameObject（262 次/7 帧）。frame 143 调用树热点路径：PreLateUpdate.ScriptRunBehaviourLateUpdate(27.98ms,51.7%) → LateBehaviourUpdate → GameLauncher.LateUpdate → Core.LateUpdate → MapManager → WorldEnvironmentMeshItemMgr(24.8ms,51.3%)。\n\n源码未在 codegraph 中索引（WorldEnvironmentMeshItemMgr 与 RecycleGOTask 均未找到，推断在 Assets/Scripts/.Lua/Outside/Map/ 下），无法直接看实现——如实说明需手动定位后再核实。",
+          "callTree": {
+            "rootMarker": "CS:AOE.Outside.WorldEnvironmentMeshItemMgr",
+            "note": "唯一子节点 RecycleGOTask，仅在 143/469 两帧出现，单帧回收 37 个 GO 炸到 24.8ms"
+          },
+          "recommendations": [
+            "把单帧集中回收改为分帧回收——给 RecycleGOTask 加每帧回收数量上限或时间预算（如单帧最多回收 N 个 GO，剩余排队下一帧）",
+            "评估是否已有对象池可复用——若环境网格物件是反复创建/销毁，应走池化而非 Destroy/Instantiate",
+            "相机移动时预判视野变化，提前在轻帧分批回收即将出视野的物件",
+            "需要先手动定位 WorldEnvironmentMeshItemMgr 类源码（未在 codegraph 索引）才能给更具体建议"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "camera-loading-storm"
+          ],
+          "title": "下钻 ⑦ 相机移动 → 实体显著度任务风暴（47ms@552）",
+          "narrative": "MapSignificanceMgr.ProcessTasks 平时 2.33ms/帧，frame 552 炸到 22.69ms（相差 9.7 倍），把那帧推到 47ms。frame 552 调用树热点路径：Update > GameLauncher.Update(27.8ms) > Core.Update > CS:AOE.LuaMgr > LuaMgr.OnTick&UpdateSchedule(25.42ms) > MapSignificanceMgr(22.72ms) > ProcessTasks(22.69ms, 48.5%)。源码已确认（Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua:1290-1372）：ProcessSignificanceTasks 顺序执行 11 个 ConsumeTasks_*，无每帧上限/时间预算——相机移动致任务队列暴涨时全部一帧处理。子树深层叶子是同步资源加载与 Semaphore.WaitForSignal（等加载线程），与 552 帧同期 Loading 线程簇（LockPersistentManager 13.7ms/File.Open 11.5ms）互为表里：主线程同步等资源 + 加载线程忙读盘。\n\n这是相机移动带来的'任务洪水'——平时队列短跑得完，相机一扫大量实体同时变更显著度，11 个消费者一帧全跑且含同步加载，直接卡死。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr.ProcessTasks",
+            "note": "11 个 ConsumeTasks_* 子消费者，源码确认无每帧任务数上限；ForceSubEntity 占 48% 是大头"
+          },
+          "sourceInsight": "Assets/Scripts/.Lua/Outside/Map/Core/MapSignificanceMgr.lua:1290-1372 —— ProcessSignificanceTasks 顺序调用 11 个 ConsumeTasks_*，每个用 SamplerBegin/End 包裹，函数体内未见每帧任务数上限或时间预算",
+          "recommendations": [
+            "给每个 ConsumeTasks_* 加每帧处理数量上限或时间预算（如单帧最多处理 N 个实体或最多跑 2ms，剩余排队下一帧）——源码当前完全没有这类节流",
+            "优先处理 ForceSubEntity（占 ProcessTasks 48%），其下 SubEntity_FrameExcute 触发同步 entityLoader_sync，应改为异步加载或预加载即将进入视野的实体资源",
+            "配合下钻 ⑥ 一起治理——两者都是相机移动触发，可统一做'相机移动预测 + 分帧预算'机制"
+          ],
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "heading": "§4 ROI 优化方向",
+      "intro": "按 severity + 对整体帧率的贡献排序。稳态削峰（84% 帧超标）排 P0，相机尖刺治理（最差三帧）排 P1，GC 与伴随现象排 P2。",
+      "items": [
+        {
+          "findingIds": [
+            "steady-spread-cost",
+            "camera-loading-storm",
+            "camera-recycle-burst"
+          ],
+          "title": "ROI 散点图：稳态占比 × 尖峰倍数",
+          "narrative": "横轴是占中位帧百分比（稳态贡献），纵轴是尖峰倍数（尖刺强度）。P0 是稳态大头（URP 渲染 + LuaMgr + LateUpdate 合计 66%），P1 是相机尖刺（相机回收 + 实体加载），P2 是 GC 与伴随现象。",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "ROI 散点图：稳态占比 × 尖峰倍数",
+            "ascii": {
+              "content": "URP 渲染             31.4%  ×1.0   ████████████  P0 稳态最大单块\nLateBehaviourUpdate  18.8%  ×224   ███████  ████ P0 稳态+相机尖刺\nLuaMgr.OnTick        16.2%  ×9.7   ██████  ██    P0 稳态+相机尖刺\nECS 三系统           15.2%  ×1.0   ██████        P1 稳态分摊\nCanvas                9.0%  ×1.0   ████          P1 稳态分摊\n环境物回收           0.9%  ×224   ▏  ████       P1 相机尖刺\n实体加载风暴         2.3%  ×9.7   █  ████       P1 相机尖刺\n同步 GC              0.4%  ×∞     ▏  ███        P2 伴随现象",
+              "caption": "P0 先治稳态大头（URP + LuaMgr + LateUpdate，合计 66%）；P1 再治相机尖刺（一帧分帧化）；P2 最后处理 GC"
+            }
+          },
+          "severity": "info"
+        },
+        {
+          "findingIds": [
+            "steady-spread-cost"
+          ],
+          "title": "P0 稳态削峰：把 p50 从 20.75ms 压到 16.67ms 以下",
+          "narrative": "目标：各系统合计削掉 ~4ms。没有单一可砍的大头，需多管齐下、各自削一点。",
+          "recommendations": [
+            "URP 渲染 6.51ms/帧（28%）是最大单块——核查 DrawCall/Shader/后效（Bloom/PlanarShadow/StencilOutline），考虑降低后效分辨率或合并 Pass（详见 §3 下钻 ①）",
+            "LuaMgr.OnTick&UpdateSchedule 3.37ms/帧（16%）——给 MapSignificanceMgr.ProcessTasks 的 11 个 ConsumeTasks_* 加每帧任务数上限或时间预算（详见 §3 下钻 ②⑦）",
+            "LateBehaviourUpdate 3.90ms/帧（19%）——评估哪些 LateUpdate 能降频或合并（详见 §3 下钻 ③）",
+            "ECS 三系统 3.15ms/帧（15%）——核查是否所有 System 都需要每帧跑（详见 §3 下钻 ④）",
+            "Canvas 1.87ms/帧（9%）——拆分 Canvas、减少 Layout 嵌套、静态缓存（详见 §3 下钻 ⑤）"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": [
+            "camera-recycle-burst",
+            "camera-loading-storm"
+          ],
+          "title": "P1 相机尖刺治理：把'一动就卡'改成'分帧化'",
+          "narrative": "两个相机尖刺都是'平时安静、一动就一帧全跑'的集中处理模式，修法一致：加每帧预算 + 分帧化。",
+          "recommendations": [
+            "环境物回收：给 RecycleGOTask 加每帧回收数量上限（如单帧最多 N 个 GO，剩余排队下一帧），避免一次 37 个同帧 Destroy（详见 §3 下钻 ⑥）",
+            "实体加载风暴：给 ProcessTasks 的 ConsumeTasks_* 加每帧处理上限或时间预算，把相机移动带来的任务洪水分摊到多帧（详见 §3 下钻 ⑦）",
+            "统一做'相机移动预测 + 分帧预算'机制——两者都是相机移动触发，可一起治理",
+            "ForceSubEntity 下的同步 entityLoader_sync 改为异步加载或预加载即将进入视野的实体资源"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": [
+            "gc-collect-spike"
+          ],
+          "title": "P2 GC 与伴随现象：先修采集再定方向",
+          "narrative": "同步 GC 5 次突袭是稳态超标的伴随现象，但本次采集逐帧计数器全部为 0，无法定位分配源——需先修采集再定优化方向。",
+          "recommendations": [
+            "下次采集修复逐帧计数器捕获（gc_allocated_in_frame 这次全为 0），定位 257-276 帧持续分配的来源",
+            "排查 257-276 这段时间游戏在做什么（可能与某段相机移动/加载区间重合），那段区间往往是分配高峰",
+            "增大增量 GC 的每帧预算可能让增量部分多扛一些、避免退化成同步 GC，但需先确认分配源",
+            "隔帧交替节律无需单独优化（WaitForTargetFPS 是正常帧节律），若想打破可排查是否有业务系统在以'每两帧一次'的频率跑"
+          ],
+          "severity": "medium"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "稳态削峰：URP 渲染 + LuaMgr + LateBehaviourUpdate + ECS + Canvas 各削一点，合计削掉 ~4ms 把 p50 压到 16.67ms 以下",
+      "benefit": "84% 帧超标 → 达标，整体帧率从 ~48fps 提升到 60fps"
+    },
+    {
+      "priority": "P1",
+      "action": "相机尖刺分帧化：给 RecycleGOTask 和 ProcessTasks 加每帧预算 + 分帧处理，统一做相机移动预测机制",
+      "benefit": "消除最差三帧（54/48/47ms），相机移动不再卡顿"
+    },
+    {
+      "priority": "P2",
+      "action": "GC 治理：先修采集定位分配源，再决定增大增量 GC 预算或治理分配热点",
+      "benefit": "消除 5 次同步 GC 突袭（最重 11ms）"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM",
+    "timing": {
+      "start": 1784893101966,
+      "precheck": 1,
+      "prompt_inject": 166,
+      "cli_resolve": 0,
+      "llm_call": 685350,
+      "artifact_check": 1,
+      "json_parse": 1,
+      "provenance_check": 0,
+      "red_team": 358
+    },
+    "repairCount": 0
+  }
+}

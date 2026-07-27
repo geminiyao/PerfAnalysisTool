@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.406Z
 source: unity-cpu
 title: "AOE 各场景性能基线（帧率与关键瓶颈）"
 tags: ["aoe","性能基线","帧率","场景"]
+dataSource: unity
 ---
 
 基于多轮采集的实际帧率数据：

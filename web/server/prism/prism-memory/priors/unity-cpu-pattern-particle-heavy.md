@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.279Z
 source: unity-cpu
 title: "性能问题模式：Particle Heavy"
 tags: ["unity","particle","性能模式"]
+dataSource: unity
 ---
 
 **关键指标**：`ParticleSystem.Update` > 2ms。

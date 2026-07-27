@@ -1,41 +1,75 @@
 {
   "script": "server/scripts/perfetto-report-mvp.ts",
-  "ticket": "WT-018",
-  "generatedAt": "2026-07-14T06:52:03.852Z",
+  "ticket": "WT-023 (DR-41 报告层五条硬规则)",
+  "generatedAt": "2026-07-15T09:54:10.222Z",
   "inputs": {
     "ledger": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\ledger.json",
     "findings": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\findings.json",
     "verdict": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-explore-mvp\\verdict.json",
-    "ledgerEvidenceCount": 17,
-    "findingCount": 6
+    "triadSummaries": {
+      "base": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-triad\\base\\perfetto-profile-summary.json",
+      "cur": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-triad\\cur\\perfetto-profile-summary.json",
+      "throttle": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-triad\\throttle\\perfetto-profile-summary.json"
+    },
+    "ledgerEvidenceCount": 25,
+    "findingCount": 29
   },
   "outputs": {
     "narrative": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-report-mvp\\narrative.json",
     "reportHtml": "K:\\AI\\PerfAnalysisTool_Codebuddy\\web\\data\\prism-out\\bk26b-perfetto-report-mvp\\report.html"
   },
-  "provenancePolicy": "All narrative numbers/claims derive from WT-017 ledger/findings/verdict; no ungoverned summary rewrite.",
+  "dr41Rules": {
+    "rule1_auditStrip": "report.html 删除 evidence id/tool/runId/证据字样；finding card 只显示 humanNarrative",
+    "rule2_subtreeMerge": "top 列表子树归并（parentChain 包含关系，不硬编码业务名）",
+    "rule3_structureReorder": "§0→§1→§2→§3→§4→§5→§6 宏观→各线程→下钻；§7 GPU-bound 合并进 §3",
+    "rule4_fourPartBlock": "§0 三大独立结论引用块+ASCII+数字解读四段式",
+    "rule5_humanFirst": "正文无字段名（byState.S.totalMs / coveragePct / foldChange=9999）"
+  },
+  "v53Alignment": {
+    "multiThreadMacro": 8,
+    "callTreeDrilldown": {
+      "base": true,
+      "cur": true,
+      "throttle": true
+    },
+    "offCpuAttribution": {
+      "byStateRows": 4,
+      "hasAsciiState": true,
+      "hasAsciiCausal": true
+    },
+    "freqMatrix": {
+      "matrixRows": 5,
+      "perCpuCount": 8,
+      "hasAscii": true
+    },
+    "redlineMatrix": 3,
+    "gpuBoundMatrix": 5,
+    "topConclusionBlocks": 3
+  },
+  "provenancePolicy": "All narrative numbers/claims derive from WT-020 ledger/findings/verdict + WT-022 triad profile-summary; deterministic Chinese narrative + ROI; no LLM; no ungoverned rewrite; no hardcoded business module list / absolute thresholds / §0-§9 dead template. DR-41 报告层五条硬规则已执行：审计剥离 / 热点模块归并 / 宏观→各线程→下钻分层 / 图文穿插四段式 / 人话先行。",
   "capabilityBoundaries": [
     "FrameTimeline / GPU unavailable — cannot judge Android jank or GPU busy",
     "base callTree via PlayerLoop anchor fallback — lower confidence absolute ms",
     "correlateFrameSchedCpu is window-only — no per-frame claim"
   ],
+  "roiCount": 8,
   "callTreeNotes": {
     "base": {
       "available": true,
       "viaPlayerLoopAnchorFallback": true,
-      "note": "via PlayerLoop anchor fallback — absolute ms lower-confidence vs cur/throttle native roots",
+      "note": "经 PlayerLoop 锚点 fallback — 绝对 ms 相对 cur/throttle 原生根置信度较低",
       "evidenceId": "ev-005-base-getPerfettoCallTree"
     },
     "cur": {
       "available": true,
       "viaPlayerLoopAnchorFallback": false,
-      "note": "native callTree root",
+      "note": "原生 callTree 根",
       "evidenceId": "ev-010-cur-getPerfettoCallTree"
     },
     "throttle": {
       "available": true,
       "viaPlayerLoopAnchorFallback": false,
-      "note": "native callTree root",
+      "note": "原生 callTree 根",
       "evidenceId": "ev-015-throttle-getPerfettoCallTree"
     }
   }

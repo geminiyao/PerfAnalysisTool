@@ -1,0 +1,546 @@
+{
+  "runId": "udiff_1782983710451_be175ef1",
+  "overview": "这不是单一元凶，是一组稳态开销（Lua Update/LateUpdate/URP 渲染）每帧雷打不动吃掉 34ms 打底，再被相机移动（19 次 ×43ms）、同步 GC（单帧 70ms）、GPU 等待（每 2 帧一次）反复捅刀。基线完美 60fps，当前退化到 22.4fps，100% 帧超 16.67ms 预算。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "Lua 脚本更新模块退化：Update 路径涨 8.87 倍，每帧 14ms",
+      "kind": "稳态大头",
+      "contribution": "每帧 13.96ms × 600 帧 = 8376ms 累计，占当前 p50 的 33.3%，是当前态 median 41.92ms 的主基底",
+      "dimensions": ["absoluteCost", "shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "critical"
+    },
+    {
+      "rank": 2,
+      "problem": "相机移动触发 Lua 业务尖峰：19 次移动平均每次 43ms",
+      "kind": "高频尖峰",
+      "contribution": "19 次 × 43.14ms = 817ms，100% 命中慢帧（>33ms），是玩家可感知的'一动就卡'",
+      "dimensions": ["outlier", "shareHigh"],
+      "judgability": "judgable",
+      "severity": "critical"
+    },
+    {
+      "rank": 3,
+      "problem": "同步 GC 单帧炸 70ms：Lua 端 EndOfFrame 协程触发",
+      "kind": "低频尖峰",
+      "contribution": "3 帧 GC.Collect 均值 30.82ms，frame 519 单帧 70.2ms 占当帧 61.8%，是 worst frame 主因",
+      "dimensions": ["outlier"],
+      "judgability": "judgable",
+      "severity": "critical"
+    },
+    {
+      "rank": 4,
+      "problem": "Lua LateUpdate 退化：涨幅 6.89 倍，MeshUIManager 新出现",
+      "kind": "稳态大头",
+      "contribution": "每帧 8.21ms × 600 帧 = 4926ms 累计，占当前 p50 的 19.6%",
+      "dimensions": ["absoluteCost", "shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "high"
+    },
+    {
+      "rank": 5,
+      "problem": "URP 渲染管线退化：涨幅 1.91 倍，ForwardRenderPass 单帧炸 13ms",
+      "kind": "稳态大头",
+      "contribution": "每帧 12.52ms × 600 帧 = 7512ms 累计，占当前 p50 的 29.9%",
+      "dimensions": ["absoluteCost", "shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "high"
+    },
+    {
+      "rank": 6,
+      "problem": "Gfx.PresentFrame 周期性尖峰：每 2 帧一次 GPU 等待",
+      "kind": "高频尖峰",
+      "contribution": "Submit Thread 均值 8.8ms × 599 帧，主线程每帧等 GPU 7.93ms，是 GPU bound 强信号",
+      "dimensions": ["outlier", "shareHigh"],
+      "judgability": "judgable",
+      "severity": "high"
+    },
+    {
+      "rank": 7,
+      "problem": "ECS Job Worker 退化：SoldierMoveJob 新出现 5.15ms/帧",
+      "kind": "工作线程退化",
+      "contribution": "Job.Worker median 0.58→7.46ms（涨 12.86 倍），3 个新 Burst Job 合计 9.57ms/帧，并行成本不直接吃主线程",
+      "dimensions": ["shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "medium"
+    },
+    {
+      "rank": 8,
+      "problem": "多个偶发尖刺：TryUnload/YzEntityMoveLineNtf/MapSignificance 子任务",
+      "kind": "低频尖峰",
+      "contribution": "TryUnload peak 14.59ms + YzEntityMoveLineNtf peak 14.9ms，单次猛但 presentFrames 少，对整体帧率影响 <5%",
+      "dimensions": ["outlier"],
+      "judgability": "judgable",
+      "severity": "medium"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体帧时中位数 41.92ms，是 16.67ms 预算的 2.5 倍，100% 帧超预算",
+      "Update 路径是本次采集累计 self 最高的稳态项，涨 8.87 倍",
+      "相机移动是本次采集内离群最严重的尖峰源，19 次 100% 命中慢帧",
+      "GC.Collect frame 519 单帧 70.2ms 是 worst frame 主因（callTree 证实）",
+      "Gfx.PresentFrame 周期性尖峰（autocorr 0.645 @ lag 2）是 GPU bound 的强信号",
+      "frame 184 三线程视角（Submit 等 GPU 40ms + 主线程等 7.93ms + Job.Worker Idle 33.7ms）同向验证 GPU bound"
+    ],
+    "cannotJudge": [
+      "MapSignificanceMgr 每帧 3.994ms 在本游戏压测下算不算正常——需历史基线或业务知识，单源判不了",
+      "MeshUIManager 每帧 2.01ms 是新出现还是基线就有但未采样——需历史基线确认",
+      "URP 渲染 12.52ms/帧 在当前场景复杂度下算不算合理——需 GPU profiler + 历史基线",
+      "ECS Job Worker 7.46ms/帧 是当前态场景实体量合理副产品还是调度问题——需 ECS SystemGroup 配置",
+      "Lua GC 压力是结构性问题还是当前态放大——基线 GC.Collect 均值 7.05ms 也不低，但单源判不了该不该管"
+    ]
+  },
+  "ruledOut": [
+    {
+      "name": "Job.Worker Idle（frame 519）",
+      "why": "frame 519 三个 Job.Worker 都大量 Idle（100-103ms），说明主线程没分发给它们工作——ECS Job 退化是稳态问题，不是 frame 519 尖峰源"
+    },
+    {
+      "name": "Android 音频线程池",
+      "why": "unity 数据源未暴露 Android 音频线程池，不在此报告范围"
+    },
+    {
+      "name": "CPU 降频/温度",
+      "why": "unity 不暴露 CPU 频率/温度，不写降频章节（perfetto 特有概念）"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "§0 结论先行：全量结论叙事展开",
+      "intro": "当前态相对 60fps 目标整体不合格：median 41.92ms 是预算 2.5 倍，100% 帧超预算。八大结论按'对整体帧率贡献'排序——稳态大头（Update/LateUpdate/URP）排前，高频尖峰（相机/GC/GPU）居中，偶发尖刺群垫后。",
+      "items": [
+        {
+          "findingIds": ["luamgr.update-foldchange-8.87"],
+          "title": "① Update 路径退化是本次回归主因——Lua 脚本每帧多花 12ms 拖垮帧率",
+          "narrative": "> 🔴 ① Update 路径退化是本次回归主因：从基线 1.57ms 涨到当前 13.96ms（涨 8.87 倍），占当前 p50 的 33.3%——是当前态 median 41.92ms 的最大单一基底。\n\nUpdate 子树大头分布:\n  MapSignificanceMgr     59.1% ████████████  ← 基线无当前新出现\n  BattleHeadMgr          17.9% ███\n  其它 (TimeWheel/UIMgr) 22.9% ████\n\n关键数字：\n- 基线 1.57ms → 当前 13.96ms，绝对增量 +12.39ms/帧\n- 600 帧累计多花 7434ms，是全场第一大稳态退化\n- 大头是子节点 MapSignificanceMgr（占 LuaMgr.OnTick&UpdateSchedule 子树 59.1%，基线无当前新出现）\n\n详见 §3 下钻 ①",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "Update 路径基线 vs 当前 + 子树大头分布",
+            "ascii": {
+              "content": "Update 路径每帧 ms:\n  基线  ███ 1.57ms\n  当前  ████████████████████████ 13.96ms (涨 8.87 倍)\n\nUpdate 子树大头分布 (当前态):\n  MapSignificanceMgr     59.1% ████████████  ← 新出现\n  BattleHeadMgr          17.9% ███\n  其它 (TimeWheel/UIMgr) 22.9% ████",
+              "caption": "Update 路径涨 8.87 倍的核心增量来自 Lua 端 MapSignificanceMgr——基线无当前新出现"
+            }
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["oncamera-move.lua-burst"],
+          "title": "② 相机一动就卡：19 次移动尖峰 100% 命中慢帧",
+          "narrative": "> 🔴 ② 相机移动必卡——19 次尖峰每次 43ms，100% 落在慢帧里（>33ms），是确定性卡顿源。\n\nOnCameraMove 19 次尖峰时序 (每条 | = 1 次移动):\n  frame 24   |\n  frame 43   |\n  frame 54   |\n  ... (共 19 次,100% 落在慢帧 >33ms)\n  frame 519  |  ← GC.Collect 帧主因不是 OnCameraMove\n\n关键数字：\n- 基线无 → 当前 19 帧出现，avg 43.14ms/次，max 53.41ms @ frame 144\n- 19 帧全部是慢帧，100% 命中——是玩家可感知的'一动就卡'\n- 大头是子节点 MapCameraCtrl（相机移动触发的 Lua 业务，占当帧 58.5%）\n\n详见 §3 下钻 ②",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "OnCameraMove 19 次尖峰时序 + 慢帧共现",
+            "ascii": {
+              "content": "OnCameraMove 19 次尖峰时序 (每条 | = 1 次移动):\n  frame 24   |\n  frame 43   |\n  frame 54   |\n  frame 64   |\n  frame 74   |\n  frame 99   |\n  frame 129  |\n  frame 144  |  ← max 53.41ms\n  frame 154  |\n  frame 179  |\n  ... (共 19 次,100% 落在慢帧 >33ms)\n  frame 519  |  ← GC.Collect 帧主因不是 OnCameraMove\n\n每次尖峰 avg 43.14ms,占当帧 95.4%",
+              "caption": "19 次相机移动尖峰 100% 命中慢帧——一动相机就卡是确定性卡顿源"
+            }
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["gc.collect.sync-70ms"],
+          "title": "③ GC.Collect 周期性炸 70ms：当前态最严重的单点尖峰",
+          "narrative": "> 🔴 ③ GC.Collect 是当前态最严重的单点尖峰——frame 519 单帧 70.2ms，是 worst frame（113.56ms）的主因，占当帧 61.8%。\n\nGC.Collect 基线 vs 当前 (均值):\n  基线  ▏ 7.05ms (2 次,占 52.9%)\n  当前  ████ 30.82ms (3 次,占 71.5%)  (涨 4.37 倍)\n\n关键数字：\n- 基线均值 7.05ms（2 次）→ 当前均值 30.82ms（3 次），涨 4.37 倍\n- frame 519 单帧 70.2ms，是 worst frame 113.56ms 的主因\n- frame 519 的 gc_allocated_in_frame 仅 8192 字节——不是当帧分配触发，是 Lua 端主动/累积触发\n- 基线 GC.Collect 均值 7.05ms 也不低——Lua GC 压力是结构性问题\n\n详见 §3 下钻 ③",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "GC.Collect 基线 vs 当前均值对比",
+            "ascii": {
+              "content": "GC.Collect 均值对比:\n  基线  ▏ 7.05ms (2 次,占 52.9%)\n  当前  ████ 30.82ms (3 次,占 71.5%)  (涨 4.37 倍)\n\nframe 519 单帧 70.2ms 是 worst frame 主因\n  frame 519 总耗时 113.56ms\n  └─ GC.Collect 70.2ms (占当帧 61.8%)",
+              "caption": "GC.Collect 涨 4.37 倍，frame 519 单帧 70ms 是当前态最严重单点尖峰"
+            }
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["luamgr.lateupdate-foldchange-6.89"],
+          "title": "④ LateUpdate 稳态退化：每帧多花 7ms，MeshUIManager 新出现成第二大子节点",
+          "narrative": "> 🟠 ④ LateUpdate 路径从基线 1.19ms 涨到当前 8.21ms（涨 6.89 倍），占当前 p50 的 19.6%——是稳态退化第二大模块。\n\nLateUpdate 子树大头分布:\n  CS:AOE.LuaMgr             3.44ms  ████████ (50%)\n  CS:AOE.MeshUIManager      2.01ms  █████ (29%)  ← 新出现\n  CS:AOE.Outside.MapManager 1.26ms  ███ (18%)\n  其它                       0.16ms ▏\n\n关键数字：\n- 基线 1.19ms → 当前 8.21ms，绝对增量 +7.02ms/帧\n- 600 帧累计多花 4212ms，是第二大稳态退化\n- 大头分摊在三个子节点：LuaMgr（50%）+ MeshUIManager（29%，新出现）+ MapManager（18%）\n- MeshUIManager 基线无当前有，每帧 count 3308（每帧调用 5.5 次）\n\n详见 §3 下钻 ④",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "LateUpdate 路径基线 vs 当前 + 子树大头分布",
+            "ascii": {
+              "content": "LateUpdate 路径每帧 ms:\n  基线  █ 1.19ms\n  当前  █████████ 8.21ms (涨 6.89 倍)\n\nLateUpdate 子树大头分布 (当前态):\n  CS:AOE.LuaMgr             3.44ms  ████████ (50%)\n  CS:AOE.MeshUIManager      2.01ms  █████ (29%)  ← 新出现\n  CS:AOE.Outside.MapManager 1.26ms  ███ (18%)\n  其它                       0.16ms ▏",
+              "caption": "LateUpdate 涨 6.89 倍，MeshUIManager 新出现成第二大子节点"
+            }
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": ["urp.render-foldchange-1.91"],
+          "title": "⑤ URP 渲染每帧多花 6ms：分摊型大头，无单一点可一刀切",
+          "narrative": "> 🟠 ⑤ URP 渲染管线从基线 6.56ms 涨到当前 12.52ms（涨 1.91 倍，临近红线），占当前 p50 的 29.9%——是稳态退化第三大模块。\n\nURP.RenderSingleCamera 子 pass 分布 (每帧):\n  URP.MainRenderingTransparent  2.98ms  ██████\n  URP.AfterRendering            2.59ms  █████\n  URP.RendererSetup             2.34ms  █████\n  URP.BeforeRendering            1.85ms ████\n  其它 (6 个子 pass)             0.88ms  ██\n\n关键数字：\n- 基线 6.56ms → 当前 12.52ms，绝对增量 +5.96ms/帧\n- 600 帧累计多花 3576ms\n- URP.RenderSingleCamera 是分摊型大头（10 个子 pass，maxChildRatio 0.28，无单一大头）\n- ForwardRenderPass 偶发尖峰：frame 453 单帧 13.08ms（Submit Thread）\n\n详见 §3 下钻 ⑤",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "URP 渲染基线 vs 当前 + 子 pass 分布",
+            "ascii": {
+              "content": "URP 渲染每帧 ms:\n  基线  ███ 6.56ms\n  当前  ███████ 12.52ms (涨 1.91 倍)\n\nURP.RenderSingleCamera 子 pass 分布 (每帧):\n  URP.MainRenderingTransparent  2.98ms  ██████\n  URP.AfterRendering            2.59ms  █████\n  URP.RendererSetup             2.34ms  █████\n  URP.BeforeRendering            1.85ms ████\n  其它 (6 个子 pass)             0.88ms  ██",
+              "caption": "URP 渲染分摊型大头——10 个子 pass 都贡献成本，无单一点可一刀切"
+            }
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": ["gfx.presentframe.gpu-bound"],
+          "title": "⑥ GPU bound 信号：Submit Thread 每 2 帧等 GPU 一次",
+          "narrative": "> 🟠 ⑥ Gfx.PresentFrame 从基线 0.923ms 涨到当前 8.8ms（涨 9.53 倍），Submit Thread 周期性等 GPU——是 GPU bound 强信号。\n\nGfx.PresentFrame 周期性尖峰 (每 2 帧一次):\n  frame 0    ▏\n  frame 1    ▏\n  frame 2    ███ peak\n  frame 3    ▏\n  frame 4    ███ peak\n  ...\n  frame 184  ████████████ 40.19ms (worst)\n\n关键数字：\n- 基线 0.923ms → 当前 8.8ms，涨 9.53 倍，绝对增量 +7.88ms/帧\n- autocorr 0.645 @ lag 2 → 强周期性，每 2 帧一次尖峰\n- frame 184（48ms 帧）：Submit Thread 等 GPU 40.19ms，主线程等 GPU 7.93ms，Job.Worker Idle 33.7ms——三信号同向验证 GPU bound\n- 主线程每帧等 GPU 7.93ms（URP.WaitForPresent + Gfx.WaitForPresentOnGfxThread）\n\n详见 §3 下钻 ⑥",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "Gfx.PresentFrame 周期性尖峰时序",
+            "ascii": {
+              "content": "Gfx.PresentFrame 周期性尖峰 (每 2 帧一次):\n  frame 0    ▏\n  frame 1    ▏\n  frame 2    ███ peak\n  frame 3    ▏\n  frame 4    ███ peak\n  ...\n  frame 184  ████████████ 40.19ms (worst)\n\nautocorr 0.645 @ lag 2 → 强周期性\n基线 0.923ms → 当前 8.8ms (涨 9.53 倍)",
+              "caption": "Gfx.PresentFrame 每 2 帧一次尖峰——Submit Thread 在等 GPU present"
+            }
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": ["ecs.jobworker-退化"],
+          "title": "⑦ ECS Job Worker 退化：并行成本，不直接吃主线程预算",
+          "narrative": "> 🟡 ⑦ ECS Job Worker 从基线 median 0.58ms 退化到当前 7.46ms（涨 12.86 倍），但并行成本不直接吃主线程——severity=medium。\n\nJob.Worker median 对比:\n  基线  ▏ 0.58ms (几乎不工作)\n  当前  ████████████ 7.46ms (涨 12.86 倍)\n\n当前态 3 个新 Burst Job:\n  SoldierMoveJob    5.15ms/帧  ████████\n  AnimatorECSJob    3.83ms/帧  ██████\n  ArmyMoveJob       0.59ms/帧  █\n\n关键数字：\n- 基线 Job.Worker 几乎不工作（topMarker 只有 Canvas.GeometryJob 0.467ms）\n- 当前态出现 3 个新 Burst Job：SoldierMoveJob 5.15ms + AnimatorECSJob 3.83ms + ArmyMoveJob 0.59ms\n- frame 519 三个 Job.Worker 都大量 Idle（100-103ms）——ECS Job 退化是稳态问题，不是 frame 519 尖峰源\n- 主线程 WaitForJobGroupID < 1ms——并行成本不反向阻塞主线程\n\n详见 §3 下钻 ⑦",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "Job.Worker 基线 vs 当前 + 3 个新 Burst Job",
+            "ascii": {
+              "content": "Job.Worker median 对比:\n  基线  ▏ 0.58ms (几乎不工作)\n  当前  ████████████ 7.46ms (涨 12.86 倍)\n\n当前态 3 个新 Burst Job:\n  SoldierMoveJob    5.15ms/帧  ████████\n  AnimatorECSJob    3.83ms/帧  ██████\n  ArmyMoveJob       0.59ms/帧  █\n\nframe 519 Job.Worker Idle 100-103ms → 稳态问题非尖峰源",
+              "caption": "ECS Job Worker 退化是当前态场景实体量增加的副产品，并行成本不直接吃主线程"
+            }
+          },
+          "severity": "medium"
+        },
+        {
+          "findingIds": ["spikes-偶发尖刺群"],
+          "title": "⑧ 偶发尖刺群：单次猛但帧数少，顺带处理",
+          "narrative": "> 🟡 ⑧ 多个偶发尖刺——TryUnload peak 14.59ms + YzEntityMoveLineNtf peak 14.9ms，单次猛但 presentFrames 少，对整体帧率影响 <5%。\n\n偶发尖峰散点 (单次峰值 vs 平均):\n  TryUnload              peak 14.59ms  ████████████  (avg 0.11ms, spikeRatio 1394)\n  YzEntityMoveLineNtf   peak 14.9ms   ████████████  (avg 1.97ms, 77 帧出现)\n  MapObjCleanUp         peak 4.62ms   ████\n  BattleHeadMgr          peak 4.57ms   ████\n  LuaMtGc.WaitGCThread   peak 3.9ms    ███\n\n关键数字：\n- TryUnload peak 14.59ms @ frame 80（spikeRatio 1394，avg 0.11ms）——资源卸载一次性卸了多个对象\n- YzEntityMoveLineNtf peak 14.9ms @ frame 273（autocorr 0.32 @ lag 5，每 5 帧一次批量更新）——网络消息携带大量实体\n- 这组尖刺单次都超 16.67ms 预算，但全年累加影响 <5% 帧\n\n详见 §3 下钻 ⑧",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "偶发尖刺群散点图",
+            "ascii": {
+              "content": "偶发尖峰散点 (单次峰值 vs 平均):\n  TryUnload              peak 14.59ms  ████████████  (avg 0.11ms, spikeRatio 1394)\n  YzEntityMoveLineNtf   peak 14.9ms   ████████████  (avg 1.97ms, 77 帧出现)\n  MapObjCleanUp         peak 4.62ms   ████\n  BattleHeadMgr          peak 4.57ms   ████\n  LuaMtGc.WaitGCThread   peak 3.9ms    ███\n\n单次猛但 presentFrames 少,对整体帧率影响 <5%",
+              "caption": "偶发尖刺群——单次峰值高但帧数少，优化时顺带处理"
+            }
+          },
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "§1 采集元信息：基线 vs 当前对照表",
+      "intro": "基线态完美 60fps（median 16.66ms = vsync），当前态退化到 22.4fps（median 41.92ms 是预算 2.5 倍），100% 帧超 16.67ms 预算。",
+      "items": [
+        {
+          "findingIds": [],
+          "title": "采集元信息对照表",
+          "narrative": "基线 599 帧 / 60fps / median 16.66ms；当前 600 帧 / 22.4fps / median 41.92ms。当前态 100% 帧超预算，jankCount 10，worst frame 113.56ms @ frame 519。",
+          "visualAsset": {
+            "type": "table",
+            "title": "采集元信息",
+            "table": {
+              "headers": ["指标", "基线", "当前"],
+              "rows": [
+                ["采集窗口", "基线 ~10s / 当前 ~26.8s"],
+                ["帧数", "599 → 600"],
+                ["fps", "60.0 → 22.4 (-62.67%)"],
+                ["mean", "16.66 → 44.59 ms (涨 2.68 倍)"],
+                ["p50", "16.66 → 41.92 ms (涨 2.52 倍)"],
+                ["p90", "— → 50.45 ms"],
+                ["p95", "— → 59.36 ms"],
+                ["p99", "16.98 → 95.51 ms (涨 5.62 倍)"],
+                ["max", "— → 113.56 ms (frame 519)"],
+                ["jankCount", "0 → 10"],
+                ["帧预算", "16.67 ms (60fps)"],
+                ["超预算帧占比", "0% → 100%"]
+              ]
+            }
+          },
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§2 多线程宏观：基线 vs 当前 msPerFrameTotal 对照",
+      "intro": "Main Thread 是主瓶颈（涨 2.68 倍），Submit Thread 等 GPU（Gfx.PresentFrame 涨 9.53 倍），Job.Worker 并行成本涨 12.86 倍但不直接吃主线程。Render Thread 无多态均值数据，仅 frame 184 单帧采样 44.98ms。",
+      "items": [
+        {
+          "findingIds": ["ecs.jobworker-退化", "gfx.presentframe.gpu-bound"],
+          "title": "多线程宏观对照表",
+          "narrative": "Main Thread 涨 2.68 倍是主瓶颈入口；Submit Thread Gfx.PresentFrame 涨 9.53 倍是 GPU bound 信号；Job.Worker 涨 12.86 倍是并行成本（不直接吃主线程，WaitForJobGroupID < 1ms）；LuaMtGc 偶发尖峰 3.9ms @ frame 351。",
+          "visualAsset": {
+            "type": "table",
+            "title": "多线程宏观",
+            "table": {
+              "headers": ["线程", "基线 ms/帧", "当前 ms/帧", "foldChange", "关键特征", "定位"],
+              "rows": [
+                ["Main Thread", "16.66", "44.53", "×2.68", "PlayerLoop/Update/LateUpdate/Render", "主线程，业务/Lua/ECS 调度主入口"],
+                ["Submit Thread", "0.923 (Gfx.PresentFrame)", "8.8", "×9.53", "Gfx.PresentFrame/RenderLoop.Draw", "渲染提交线程，等 GPU present（周期性 @ lag 2）"],
+                ["Render Thread", "—", "frame 184 sample 44.98", "—", "URP.Render/Gfx.RenderSlaver", "Unity 渲染命令录制层（无多态均值，仅单帧采样）"],
+                ["Job.Worker", "0.58 (median)", "7.46 (median)", "×12.86", "SoldierMoveJob/AnimatorECSJob (Burst)", "ECS/Burst Job 并行工作线程，不直接吃主线程"],
+                ["LuaMtGc", "—", "peak 3.9ms @ frame 351", "—", "LuaMtGc.WaitGCThread", "Lua 多线程 GC 等待，spikeRatio 221.71 极端偶发"]
+              ]
+            }
+          },
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§3 主线程一帧时间去向：红线矩阵 + 下钻",
+      "intro": "当前态 PlayerLoop p50 41.92ms 是预算 2.5 倍。三大子树（Update +12.39ms / LateUpdate +7.02ms / 渲染 +5.96ms）合计 delta 25.36ms，占 PlayerLoop delta 27.89ms 的 90.9%——当前态退化主要由 Update + LateUpdate + 渲染三个子系统驱动。红线触发清单按 foldChange 排序，每个红线条目都有独立下钻。",
+      "items": [
+        {
+          "findingIds": [],
+          "title": "PlayerLoop 帧分位数对比",
+          "narrative": "PlayerLoop 从基线 median 16.66ms 涨到当前 41.92ms（涨 2.52 倍），p99 从 16.98ms 飙到 95.51ms（涨 5.62 倍），100% 帧超 16.67ms 预算。",
+          "visualAsset": {
+            "type": "table",
+            "title": "PlayerLoop 帧分位数对比",
+            "table": {
+              "headers": ["分位数", "基线", "当前", "涨幅"],
+              "rows": [
+                ["mean", "16.66ms", "44.59ms", "×2.68"],
+                ["p50", "16.66ms", "41.92ms", "×2.52"],
+                ["p90", "—", "50.45ms", "—"],
+                ["p95", "—", "59.36ms", "—"],
+                ["p99", "16.98ms", "95.51ms", "×5.62"],
+                ["max", "—", "113.56ms (frame 519)", "—"],
+                ["帧数", "599", "600", "—"],
+                ["fps", "60.0", "22.4", "-62.67%"],
+                ["超预算帧占比", "0%", "100%", "—"]
+              ]
+            }
+          },
+          "severity": "info"
+        },
+        {
+          "findingIds": [],
+          "title": "红线触发清单（按 foldChange 排序，分布形态 + 语义独立性归并）",
+          "narrative": "8 条红线：Update/LateUpdate/渲染三大路径统筹在父模块（分摊型大头），OnCameraMove/GC.Collect/Gfx.PresentFrame/ForwardRenderPass/Job.Worker 独立列出。父子不同时列（DR-41 规则 2 子树归并）。",
+          "visualAsset": {
+            "type": "table",
+            "title": "红线触发清单",
+            "table": {
+              "headers": ["模块", "基线 ms/帧", "当前 ms/帧", "foldChange", "占当前 p50%", "红线类型", "子函数热点"],
+              "rows": [
+                ["Update.ScriptRunBehaviourUpdate (统筹)", "1.574", "13.959", "×8.87", "33.3%", "foldChange≥2 + 占 p50≥5%", "MapSignificanceMgr 59.1% + BattleHeadMgr 17.9%（父统筹，大头 MapSignificanceMgr 语义独立但已拆出下钻）"],
+                ["PreLateUpdate.ScriptRunBehaviourLateUpdate (统筹)", "1.192", "8.213", "×6.89", "19.6%", "foldChange≥2 + 占 p50≥5%", "CS:AOE.LuaMgr 50% + CS:AOE.MeshUIManager 29% (新出现) + MapManager 18%（三子节点分摊型，统筹在父）"],
+                ["PostLateUpdate.FinishFrameRendering (统筹)", "6.561", "12.519", "×1.91", "29.9%", "foldChange临近红线 + 占 p50≥5%", "URP.MainRenderingTransparent 2.98ms + URP.AfterRendering 2.59ms（10 个子 pass 分摊型，统筹在父）"],
+                ["OnCameraMove (拆出)", "0", "43.141", "×∞", "95.4%", "新出现 + 占 p50≥5%", "MapCameraCtrl 子树（相机移动触发的 Lua 业务，占当帧 58.5%）"],
+                ["GC.Collect (独立)", "7.054", "30.822", "×4.37", "71.5%", "foldChange≥2 + 占 p50≥5%", "无子节点（叶子），frame 519 单帧 70.2ms"],
+                ["Gfx.PresentFrame (Submit Thread)", "0.923", "8.8", "×9.53", "19.7%", "foldChange≥2 + 占 p50≥5%", "无子节点（等待 GPU present），周期性 @ lag 2"],
+                ["ForwardRenderPass (Submit Thread)", "2.718", "5.91", "×2.17", "13.3%", "foldChange≥2 + 占 p50≥5%", "frame 453 单帧 13.08ms（spikeRatio 5.13）"],
+                ["Job.Worker (并行线程)", "0.58 (median)", "7.46 (median)", "×12.86", "—", "foldChange≥2（并行，不占主线程 p50）", "SoldierMoveJob 5.15ms + AnimatorECSJob 3.83ms + ArmyMoveJob 0.59ms（3 个新 Burst Job）"]
+              ]
+            }
+          },
+          "severity": "info"
+        },
+        {
+          "findingIds": ["luamgr.update-foldchange-8.87"],
+          "title": "§3 下钻 ① MapSignificanceMgr：Update 路径下涨幅最猛的子节点",
+          "narrative": "MapSignificanceMgr.EntityTask 子树每帧 3.574ms，分摊在 7 个 ProcessTask 子节点上：ProcessTask_MapEntityAdd 1.546ms + ProcessTask_MapObjRefresh 1.198ms + ProcessTask_MapObjCleanUp 0.47ms。GC alloc 从 0 涨到 14043——说明 MapSignificanceMgr 在当前态每帧大量分配 Lua 对象。\n\nMapSignificanceMgr self 极低（0.012ms），说明它是调度壳，真正成本在子调用 EntityTask 上。MapSignificanceMgr.EntityTask 占 LuaMgr.OnTick&UpdateSchedule 子树的 52.9%。\n\n红线判定：MapSignificanceMgr 涨 57.88 倍（0.069→3.994ms），占当前 p50 的 9.5%——foldChange≥2 + 占 p50≥5% 触红线。GC alloc 0→14043 触红线强化。",
+          "callTree": {
+            "rootMarker": "MapSignificanceMgr",
+            "note": "子树大头 MapSignificanceMgr.EntityTask 3.574ms，占 LuaMgr.OnTick&UpdateSchedule 子树 52.9%；ProcessTask_MapEntityAdd 1.546ms 是最大子节点"
+          },
+          "sourceInsight": "MapSignificanceMgr 是 Lua 端 marker，getSourceForSymbol 查不到 C# 源码。从子节点名 ProcessTask_MapEntityAdd/MapObjRefresh/MapObjCleanUp 可推断是地图实体显著性分级管理（决定哪些实体在当前视野内需要加载/刷新/清理）。",
+          "recommendations": [
+            "排查 MapSignificanceMgr 为什么每帧要处理这么多实体——可能是相机移动触发了视野内实体批量刷新，但稳态每帧 4ms 说明不是只在移动时才跑",
+            "ProcessTask_MapEntityAdd 1.55ms/帧 是大头，考虑把实体添加分帧化（每帧只处理 N 个）",
+            "GC alloc 0→14043 说明每帧在 Lua 端创建大量临时表/对象，建议复用 entity task 对象池",
+            "需要看 Lua 端 MapSignificanceMgr 的实现才能给具体改法"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["oncamera-move.lua-burst"],
+          "title": "§3 下钻 ② OnCameraMove/MapCameraCtrl：相机移动触发的 Lua 业务尖峰",
+          "narrative": "frame 144 的 callTree 显示 LateUpdate→Core.LateUpdate→CS:AOE.LuaMgr→LuaMgr.OnLateUpdateSchedule→MapCameraCtrl total 56.4ms（占当帧 58.5%）。MapCameraCtrl 子树每帧均值 2.73ms 但相机移动帧炸到 56.57ms（spikeRatio 47.4）。\n\n调用链：MapCameraCtrl→UpdateCameraPos (2.665ms)→infiniteZoomMgr_OnOutsideCameraMove (1.997ms, present 529/600)→InfiniteZoomMgr.PostCameraMoveScale (1.746ms)→OnCameraMove (1.366ms self, present 19/600)。OnCameraMove 是 InfiniteZoomMgr.PostCameraMoveScale 的子调用，只在 19 帧出现（相机真正移动时），但每帧 self 高达 43.14ms。\n\n红线判定：OnCameraMove 新出现（基线无当前有）+ 占当帧 95.4% → 触红线。19 帧全部是慢帧（pctBinA=100%）→ 100% 共现强化。",
+          "callTree": {
+            "rootMarker": "MapCameraCtrl",
+            "note": "子树大头 OnCameraMove 43.14ms self，只在 19 帧出现（相机真正移动时）；调用链 MapCameraCtrl→UpdateCameraPos→infiniteZoomMgr_OnOutsideCameraMove→InfiniteZoomMgr.PostCameraMoveScale→OnCameraMove"
+          },
+          "sourceInsight": "OnCameraMove 是 Lua 端 marker，getSourceForSymbol 查 MapCameraCtrl 返回 not-found，无法看 C# 源码。InfiniteZoomMgr.PostCameraMoveScale 也未能在 codegraph/map-source 中精确匹配到函数体（capabilities 已记录此限制）。",
+          "recommendations": [
+            "让 Lua 团队排查 OnCameraMove 在 frame 144 这类相机移动帧里执行了什么 Lua 业务逻辑——可能是遍历所有可见地图实体/军队/线条，做视野判定或顶点重算",
+            "MapCameraCtrl 子树里 infiniteZoomMgr_OnOutsideCameraMove 在 529/600 帧都执行（每帧 2ms），但只在相机移动的 19 帧炸到 56ms，说明是相机移动触发了批量重算——考虑把批量重算分帧或缓存上一帧结果",
+            "需要看 Lua 端 OnCameraMove 的实现才能给具体改法"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["gc.collect.sync-70ms"],
+          "title": "§3 下钻 ③ GC.Collect：Lua 端 EndOfFrame 协程触发的同步全量 GC",
+          "narrative": "frame 519 的 callTree 显示 GC.Collect 是 CS:AOE.LuaMgr 的直接子节点（在 EndOfFrame 协程路径），单帧 70.2ms 占当帧 61.8%。frame 483 是另一个 GC.Collect burst 帧（57.48ms），那里 GarbageCollector.CollectIncremental peak 3.51ms——说明 frame 483 是增量 GC 溢出升级为同步 GC 的场景。\n\nframe 519 的 gc_allocated_in_frame=8192 字节排除了'当帧分配触发'的可能——是 Lua 端主动调用 collectgarbage('collect') 或长期累积达阈值触发的同步全量 GC。callTree 路径：PostLateUpdate.PlayerSendFrameComplete→CoroutinesDelayedCalls→AOE.GameLauncher.EndOfFrame [Coroutine: MoveNext]→Core.EndOfFrame→CS:AOE.LuaMgr→GC.Collect。\n\n红线判定：GC.Collect 涨 4.37 倍（7.054→30.822ms），占当前 p50 的 71.5%——foldChange≥2 + 占 p50≥5% 触红线。frame 519 单帧 70.2ms 占 p50 167.6% → critical。",
+          "callTree": {
+            "rootMarker": "GC.Collect",
+            "note": "frame 519 单帧 70.2ms，是 CS:AOE.LuaMgr EndOfFrame 协程路径的直接子节点；callTree: PostLateUpdate.PlayerSendFrameComplete→CoroutinesDelayedCalls→EndOfFrame→Core.EndOfFrame→CS:AOE.LuaMgr→GC.Collect"
+          },
+          "sourceInsight": "未读到 GC.Collect 的 Lua 触发源码，但 callTree 证实是 CS:AOE.LuaMgr 在 EndOfFrame 协程里触发。frame 519 的 gc_allocated_in_frame=8192 字节排除了当帧分配触发的可能。",
+          "recommendations": [
+            "排查 CS:AOE.LuaMgr 在 EndOfFrame 协程里是否有主动 collectgarbage('collect') 调用，如有改为增量 GC（collectgarbage('step', k)）或降低频率",
+            "若是累积触发，需要排查 Lua 端哪些 marker 在持续分配（当前工具给不了 per-marker GC 分配，见 data-requests.json）",
+            "基线态 GC.Collect 均值 7.05ms 也不算低（占 52.9%），说明 Lua GC 压力是结构性问题，当前态只是把频率/量级放大了",
+            "需要看 CS:AOE.LuaMgr 的 EndOfFrame 协程实现才能给具体改法"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["luamgr.lateupdate-foldchange-6.89"],
+          "title": "§3 下钻 ④ LateUpdate 路径：LuaMgr + MeshUIManager + MapManager 三大头",
+          "narrative": "Core.LateUpdate 子树每帧 6.857ms，分摊在 40 个子节点上（maxChildRatio 0.502），前三大：CS:AOE.LuaMgr 3.44ms + CS:AOE.MeshUIManager 2.01ms（新出现）+ CS:AOE.Outside.MapManager 1.26ms。\n\nMeshUIManager 每帧 count 3308（每帧调用 5.5 次），根据 capabilities 记录它依次调用 7 个子系统（camera/dynamicAtlas/eventSystem/animation/layouts/controls/renderers），但这些子系统没有独立 Profiler marker，无法进一步拆解 2.01ms 内部分布。LuaMgr 在 LateUpdate 路径稳态 3.44ms，但相机移动帧会炸到 57.4ms（见 §3 下钻 ②）。\n\n红线判定：PreLateUpdate.ScriptRunBehaviourLateUpdate 涨 6.89 倍（1.192→8.213ms），占当前 p50 的 19.6%——foldChange≥2 + 占 p50≥5% 触红线。MeshUIManager 新出现 + 占 p50 4.7% 临近红线。",
+          "callTree": {
+            "rootMarker": "Core.LateUpdate",
+            "note": "分摊型大头（40 个子节点，maxChildRatio 0.502），前三大 LuaMgr 3.44ms + MeshUIManager 2.01ms (新出现) + MapManager 1.26ms"
+          },
+          "sourceInsight": "MeshUIManager 的 7 个子系统没有独立 Profiler marker，无法进一步拆解 2.01ms 内部分布（capabilities 已记录此限制）。MeshUIManager.OnLateUpdate 依次调用 7 个子系统更新方法。",
+          "recommendations": [
+            "给 MeshUIManager 的 7 个子系统加独立 Profiler marker，否则无法定位是哪个子系统贵",
+            "LuaMgr 在 LateUpdate 路径稳态 3.44ms，但相机移动帧会炸到 57.4ms（见 §3 下钻 ②），优化 LuaMgr 的 LateUpdate 逻辑能同时降低稳态和尖峰",
+            "需要看 Lua 端 LateUpdate 实现才能给具体改法"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["urp.render-foldchange-1.91"],
+          "title": "§3 下钻 ⑤ URP 渲染：分摊型大头，10 个子 pass 都贡献成本",
+          "narrative": "URP.RenderSingleCamera 子树每帧 10.64ms，分摊在 10 个子节点上（maxChildRatio 0.28，无单一大头），前四大：URP.MainRenderingTransparent 2.98ms + URP.AfterRendering 2.59ms + URP.RendererSetup 2.34ms + URP.BeforeRendering 1.85ms。\n\nForwardRenderPass 基线 1.679ms → 当前 3.076ms（涨 2.17 倍），frame 453 单帧 13.08ms（Submit Thread，spikeRatio 5.13）。frame 453 的 Submit Thread callTree 显示 OpaquePass→ForwardRenderPass 单帧 13.08ms（占当帧 33%），是 GPU 渲染负载最重的一帧。\n\n红线判定：PostLateUpdate.FinishFrameRendering 涨 1.91 倍（6.561→12.519ms），占当前 p50 的 29.9%——foldChange 临近红线（≥2 为红线）+ 占 p50≥5% 触红线。ForwardRenderPass 涨 2.17 倍 + 绝对增量 +3.19ms 触红线。",
+          "callTree": {
+            "rootMarker": "URP.RenderSingleCamera",
+            "note": "分摊型大头（10 个子 pass，maxChildRatio 0.28），前四大 MainRenderingTransparent 2.98ms + AfterRendering 2.59ms + RendererSetup 2.34ms + BeforeRendering 1.85ms"
+          },
+          "sourceInsight": "未读到 URP 渲染管线配置源码。URP.RenderSingleCamera 是分摊型大头，10 个子 pass 都贡献成本，无单一点可一刀切。",
+          "recommendations": [
+            "URP.MainRenderingTransparent 2.98ms/帧 最大，里面 Inl_OpaquePass 0.675ms + Inl_TerrainPass 0.174ms + Inl_RolePass 0.13ms，可考虑合并 pass 或降低 overdraw",
+            "URP.AfterRendering 2.59ms/帧，里面 URP.Submit→URP.WaitForPresent 0.953ms + URP.MakeTranscriptRenderContext 0.853ms，MakeTranscriptRenderContext 可能有优化空间",
+            "ForwardRenderPass frame 453 单帧 13.08ms，说明当前态场景的 opaque 渲染负载显著增加——可能是相机移动后视野内可见物体增多，结合 §3 下钻 ② 的相机移动尖峰一起优化",
+            "需要看 URP 渲染管线配置才能给具体改法"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["gfx.presentframe.gpu-bound"],
+          "title": "§3 下钻 ⑥ Gfx.PresentFrame：Submit Thread 周期性等 GPU",
+          "narrative": "frame 184 的线程视角证实 GPU bound：Submit Thread topLevelMs 56.143ms，Gfx.PresentFrame 40.19ms；主线程 mainThreadWaits 里 URP.WaitForPresent 7.93ms + Gfx.WaitForPresentOnGfxThread 7.93ms + Semaphore.WaitForSignal 8.66ms——主线程在等 GPU。Job.Worker 大量 Idle（33.7ms）说明 CPU 不是瓶颈。\n\n时序显示强周期性：autocorr coefficient 0.645 @ lag 2，即每 2 帧一次 PresentFrame 尖峰。frame 184 的 batches=168，triangles 1329152，说明不是 triangles 数量问题，可能是 Shader 复杂度或 overdraw。\n\n红线判定：Gfx.PresentFrame 涨 9.53 倍（0.923→8.8ms），占当前 p50 的 19.7%——foldChange≥2 + 占 p50≥5% 触红线。autocorr 0.645 @ lag 2 > 0.3 → 强周期性强化。",
+          "callTree": {
+            "rootMarker": "Gfx.PresentFrame",
+            "note": "Submit Thread 等待 GPU present，frame 184 单帧 40.19ms；周期性 @ lag 2（autocorr 0.645）；主线程等 GPU 7.93ms/帧"
+          },
+          "sourceInsight": "未读到 vsync/SwapChain 配置源码。frame 184 的 batches=168，triangles 1329152，说明不是 triangles 数量问题，可能是 Shader 复杂度或 overdraw。unity 多态没有 perfetto 的 wait slice 重叠法，只能用 mainThreadWaits + 渲染线程 run% + Semaphore/WaitForSignal marker 时序间接推断 GPU bound——单源无法断言 GPU 满载，但三信号同向验证。",
+          "recommendations": [
+            "排查当前态场景的 DrawCall 数量（queryFrameCounters 的 batches 从基线对比当前态，但当前工具给不了 draw_calls）",
+            "frame 184 的 batches=168，triangles 1329152，说明不是 triangles 数量问题，可能是 Shader 复杂度或 overdraw",
+            "Gfx.PresentFrame 周期性尖峰（每 2 帧一次）可能与 vsync 或 SwapChain 设置有关，检查 QualitySettings.vSyncCount",
+            "结合 §3 下钻 ⑤ 的 URP 渲染退化一起优化——ForwardRenderPass 13.08ms 单帧尖峰说明 GPU 渲染负载重",
+            "需要 GPU profiler（RenderDoc/Frame Debugger）才能给具体改法"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["ecs.jobworker-退化"],
+          "title": "§3 下钻 ⑦ ECS Job Worker：3 个新 Burst Job，并行成本不直接吃主线程",
+          "narrative": "Job.Worker median 从基线 0.58ms 退化到当前 7.46ms（涨 12.86 倍）。基线态 Job.Worker 几乎不工作（topMarker 只有 Canvas.GeometryJob 0.467ms），当前态出现 3 个新的大头 Burst Job：MoveChain_SoldierMoveSystem:SoldierMoveJob 5.154ms/帧（present 2998 次，每帧 5 次）+ AnimatorECSComponentSystem:AnimatorECSJob 3.83ms/帧（present 1995 次，每帧 3.3 次）+ MoveChain_ArmyMoveSystem:ArmyMoveJob 0.586ms/帧。\n\nframe 519 三个 Job.Worker 都大量 Idle（100-103ms），说明主线程没分发给它们工作——ECS Job 退化是稳态问题，不是 frame 519 的尖峰源。主线程 WaitForJobGroupID 在 frame 519 只等了 0.563ms，在 frame 184 等了 0.982ms，都不高——并行成本不反向阻塞主线程。\n\n红线判定：Job.Worker median 涨 12.86 倍触红线，但并行线程不占主线程 p50——severity=medium。",
+          "callTree": {
+            "rootMarker": "Job.Worker",
+            "note": "并行工作线程，3 个新 Burst Job 大头：SoldierMoveJob 5.15ms + AnimatorECSJob 3.83ms + ArmyMoveJob 0.59ms；frame 519 Job.Worker Idle 100-103ms"
+          },
+          "sourceInsight": "未读到 ECS SystemGroup 配置源码。3 个新 Burst Job 都是 Burst 编译的，说明当前态场景的 ECS 实体数量显著增加（军队/士兵/动画）。",
+          "recommendations": [
+            "MoveChain_SoldierMoveSystem:SoldierMoveJob 5.154ms/帧（present 2998 次，每帧 5 次）是 Burst 编译的，可检查 Job 调度是否合理（是否每帧 5 次太频繁）",
+            "AnimatorECSComponentSystem:AnimatorECSJob 3.83ms/帧（present 1995 次，每帧 3.3 次），可考虑 LOD 动画或可见性剔除",
+            "frame 519 三个 Job.Worker 都大量 Idle（100-103ms），说明主线程没把工作分发给它们——ECS Job 退化是稳态问题，不是 frame 519 的尖峰源，优化 ECS Job 不会改善 frame 519",
+            "若要降低 ECS 成本，需排查当前态场景的实体数量是否合理（军队/士兵数量是否过多）",
+            "需要看 ECS SystemGroup 配置才能给具体改法"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": ["spikes-偶发尖刺群"],
+          "title": "§3 下钻 ⑧ 偶发尖刺合集：TryUnload/YzEntityMoveLineNtf 等",
+          "narrative": "这组尖刺单次峰值高但 presentFrames 少：\n\n1) TryUnloadPending.TryUnload peak 14.59ms @ frame 80（spikeRatio 1394，avg 0.11ms，600 帧都在但只 frame 80 炸）——资源卸载一次性卸了多个对象。源码定位：Assets/Framework/com.tencent.timitbu.res/Runtime/V3/Core/Loader/BaseLoader.cs:668，TryUnload 本身只有 4 行逻辑（CanUnload 判断 + DoUnload 执行），peak 14.59ms 是因为当帧 DoUnload 卸载了大量资源对象。\n\n2) YzEntityMoveLineNtf peak 14.9ms @ frame 273（spikeRatio 7.56，autocorr 0.32 @ lag 5 周期性，77 帧出现）——网络消息携带大量实体移动线数据。源码定位：Assets/Scripts/.Lua/Outside/Map/Util/NetMsgPostProcesser.lua:122，遍历 msg.fullUpdateLine 表，对每个实体调用 FormatWorldPosition_MoveAttr。peak 14.9ms 是因为当帧消息体携带大量实体。\n\n3) MapSignificanceMgr.ProcessTask_MapObjCleanUp peak 4.62ms @ frame 269（spikeRatio 7.5）——地图对象清理任务。\n\n4) BattleHeadMgr.OnUpdate peak 4.57ms @ frame 352（spikeRatio 7.17）——战斗头管理器更新。\n\n5) LuaMtGc.WaitGCThread peak 3.9ms @ frame 351（spikeRatio 221.71）——Lua 多线程 GC 等待，极端偶发，可能与 §3 下钻 ③ 的 GC.Collect 相关。",
+          "callTree": {
+            "rootMarker": "TryUnloadPending.TryUnload",
+            "note": "合集 item：5 个低频尖峰模块，单次猛但帧数少；TryUnload 源码 BaseLoader.cs:668，YzEntityMoveLineNtf 源码 NetMsgPostProcesser.lua:122"
+          },
+          "sourceInsight": "TryUnload 本身只有 4 行逻辑（internal bool TryUnload() { if (!CanUnload()) return false; DoUnload(); state = LoaderState.Pooled; return true; }），peak 14.59ms 是因为当帧 DoUnload 卸载了大量资源对象。YzEntityMoveLineNtf 是 Lua 遍历 msg.fullUpdateLine 表（for _, v in pairs(msg.fullUpdateLine) do ... end），peak 14.9ms 是因为当帧消息体携带大量实体。",
+          "recommendations": [
+            "TryUnloadPending.TryUnload peak 14.59ms @ frame 80 是资源卸载一次性卸了多个对象，建议分帧卸载（每帧只卸 N 个）",
+            "YzEntityMoveLineNtf peak 14.9ms @ frame 273 是网络消息携带大量实体移动线数据，Lua 遍历 msg.fullUpdateLine 处理——建议把批量处理分帧化，或检查消息体是否可以分片发送",
+            "MapSignificanceMgr.ProcessTask_MapObjCleanUp peak 4.62ms 是地图对象清理任务，建议分帧清理",
+            "BattleHeadMgr.OnUpdate peak 4.57ms 是战斗头管理器更新，建议排查当帧是否有特殊事件",
+            "LuaMtGc.WaitGCThread peak 3.9ms 是 Lua 多线程 GC 等待，spikeRatio 221.71 说明极端偶发，可能与 §3 下钻 ③ 的 GC.Collect 相关"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "§4 ROI 优化方向：按 foldChange × 占 p50% 排序",
+      "intro": "优先治涨幅最大的回归——P0 是涨 8.87 倍的 Update 路径 + 涨 ∞ 倍的相机移动 + 涨 4.37 倍的 GC.Collect；P1 是 LateUpdate/URP/Gfx.PresentFrame；P2 是 ECS Job 和偶发尖刺群。",
+      "items": [
+        {
+          "findingIds": [],
+          "title": "ROI 散点图 + 优先级排序",
+          "narrative": "按 foldChange × 占当前 p50% 排序的优化方向列表。P0 优先治涨幅最大的回归，P1 治稳态退化，P2 顺带处理。\n\nROI 散点 (foldChange × 占 p50%):\n  OnCameraMove:        ×∞    × 95.4%  ████████████  P0\n  MapSignificanceMgr:  ×57.88 × 9.5%   █████         P0\n  GC.Collect:          ×4.37 × 71.5%  ████████████  P0\n  Update path:         ×8.87 × 33.3%  ██████████    P0\n  LateUpdate path:     ×6.89 × 19.6%  ██████         P1\n  URP render:          ×1.91 × 29.9%  ███████        P1\n  Gfx.PresentFrame:    ×9.53 × 19.7%  ██████         P1\n  ECS Job Worker:      ×12.86 × —     ██             P2\n\nP0（优先治，涨幅最大 + 玩家可感知）：\n- MapSignificanceMgr 对象池 + 分帧处理（详见 §3 下钻 ①）\n- OnCameraMove/MapCameraCtrl 批量重算分帧 + 缓存上一帧（详见 §3 下钻 ②）\n- GC.Collect 改增量 GC + 排查 Lua 分配源（详见 §3 下钻 ③）\n\nP1（治稳态退化）：\n- LateUpdate MeshUIManager 加子 marker + LuaMgr 优化（详见 §3 下钻 ④）\n- URP 渲染合并 pass + 降 overdraw（详见 §3 下钻 ⑤）\n- Gfx.PresentFrame 检查 vsync + GPU profiler（详见 §3 下钻 ⑥）\n\nP2（顺带处理）：\n- ECS Job 调度优化 + 实体量排查（详见 §3 下钻 ⑦）\n- 偶发尖刺分帧化（详见 §3 下钻 ⑧）",
+          "visualAsset": {
+            "type": "ascii",
+            "title": "ROI 散点图（foldChange × 占 p50%）",
+            "ascii": {
+              "content": "ROI 散点 (foldChange × 占 p50%):\n  OnCameraMove:        ×∞    × 95.4%  ████████████  P0\n  MapSignificanceMgr:  ×57.88 × 9.5%   █████         P0\n  GC.Collect:          ×4.37 × 71.5%  ████████████  P0\n  Update path:         ×8.87 × 33.3%  ██████████    P0\n  LateUpdate path:     ×6.89 × 19.6%  ██████         P1\n  URP render:          ×1.91 × 29.9%  ███████        P1\n  Gfx.PresentFrame:    ×9.53 × 19.7%  ██████         P1\n  ECS Job Worker:      ×12.86 × —     ██             P2\n\nP0 优先治涨幅最大的回归\nP1 治稳态退化\nP2 顺带处理",
+              "caption": "ROI 排序——P0 是涨幅最大的回归（Update/相机/GC），P1 是稳态退化（LateUpdate/URP/GPU），P2 顺带处理（ECS/偶发尖刺）"
+            }
+          },
+          "severity": "info"
+        }
+      ]
+    }
+  ],
+  "prioritySummary": [
+    {
+      "priority": "P0",
+      "action": "MapSignificanceMgr 对象池 + ProcessTask_MapEntityAdd 分帧化（详见 §3 下钻 ①）",
+      "benefit": "涨 57.88 倍是全场涨幅最猛的子节点，GC alloc 0→14043 说明每帧大量分配 Lua 临时对象——对象池 + 分帧能同时降 GC 压力和稳态成本"
+    },
+    {
+      "priority": "P0",
+      "action": "OnCameraMove/MapCameraCtrl 批量重算分帧 + 缓存上一帧结果（详见 §3 下钻 ②）",
+      "benefit": "19 次相机移动 100% 命中慢帧，玩家可感知'一动就卡'——是确定性卡顿源，优先治"
+    },
+    {
+      "priority": "P0",
+      "action": "GC.Collect 改增量 GC + 排查 Lua EndOfFrame 协程的 collectgarbage 调用（详见 §3 下钻 ③）",
+      "benefit": "frame 519 单帧 70ms 是 worst frame 主因，Lua GC 压力是结构性问题——改增量 GC 能消除同步尖峰"
+    },
+    {
+      "priority": "P1",
+      "action": "LateUpdate MeshUIManager 加 7 个子系统独立 Profiler marker + LuaMgr 优化（详见 §3 下钻 ④）",
+      "benefit": "涨 6.89 倍是第二大稳态退化，MeshUIManager 新出现但无子 marker 无法定位——加 marker 是前置工作"
+    },
+    {
+      "priority": "P1",
+      "action": "URP 渲染合并 pass + 降 overdraw + ForwardRenderPass frame 453 单帧 13ms 排查（详见 §3 下钻 ⑤）",
+      "benefit": "涨 1.91 倍是第三大稳态退化，分摊型大头无单一点——需逐个子 pass 优化"
+    },
+    {
+      "priority": "P1",
+      "action": "Gfx.PresentFrame 检查 vsync + GPU profiler 定位 GPU bound 根因（详见 §3 下钻 ⑥）",
+      "benefit": "涨 9.53 倍 + 周期性 @ lag 2 是 GPU bound 强信号——需 GPU profiler 才能给具体改法"
+    },
+    {
+      "priority": "P2",
+      "action": "ECS Job 调度优化 + 实体量排查（详见 §3 下钻 ⑦）",
+      "benefit": "涨 12.86 倍但并行成本不直接吃主线程（WaitForJobGroupID < 1ms）——优化 ECS Job 不会改善 frame 519"
+    },
+    {
+      "priority": "P2",
+      "action": "偶发尖刺分帧化（TryUnload 分帧卸载 + YzEntityMoveLineNtf 分帧处理）（详见 §3 下钻 ⑧）",
+      "benefit": "单次猛但 presentFrames 少，对整体帧率影响 <5%——优化时顺带处理"
+    }
+  ],
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM"
+  }
+}

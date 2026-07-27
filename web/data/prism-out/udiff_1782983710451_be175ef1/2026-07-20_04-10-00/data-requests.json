@@ -1,0 +1,37 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈（哪个函数/Lua marker 在分配），不是整帧总量",
+    "rationale": "queryFrameCounters 只有整帧 gc_allocated_in_frame；frame 519 和 frame 483 的当帧分配都不高（8KB 级），但发生了同步 GC.Collect 70ms。多态 callTree 显示 Core.Update 的 GcAllocCount 从 4777 涨到 51365（10 倍），Core.LateUpdate 从 7907 涨到 93196（10 倍），但不知道是哪些子模块/函数在分配。要定位 GC 触发源和 10 倍分配增长的具体来源，需要到函数级/marker 级的分配明细。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）；queryAggCallTreeMultiState（有 baseGcAllocCount/curGcAllocCount 但只到子树聚合级，不到单个 marker/函数级）"
+  },
+  {
+    "id": "msg.payload-size",
+    "want": "YzEntityMoveLineNtf 等网络消息的 payload 大小/实体数量（消息体里有多少个实体的移动线更新数据）",
+    "rationale": "YzEntityMoveLineNtf 在 frame 273 炸到 14.9ms，77 帧出现，spikeRatio 20。源码显示 for 循环遍历 msg.fullUpdateLine 调 FormatWorldPosition_MoveAttr，但无法获取 msg.fullUpdateLine 里有多少个实体。14.9ms 是否与消息体大小成正比？是服务端一次性推送大量实体，还是 FormatWorldPosition_MoveAttr 单次太贵？需要消息层 payload 内容才能判断。",
+    "suspectedAxis": "network",
+    "closestExistingTool": "getFrameCallTree（只能看 marker 耗时，看不到消息 payload 内容）；getSourceForSymbol（看源码但看不到运行时数据）"
+  },
+  {
+    "id": "tryunload.count-per-frame",
+    "want": "TryUnloadPending.TryUnload 单帧内的调用次数（当帧同时卸载了多少个资源对象）",
+    "rationale": "TryUnloadPending.TryUnload 在 frame 80 单帧 14.59ms，但源码显示 TryUnload 本身只有 4 行（CanUnload+DoUnload+state=Pooled）。queryMarkers/scanMetricOverFrames 只能给 marker 在某一帧的汇总 selfMs，无法得知 frame 80 这类突发帧里 TryUnload 被调用了多少次（即当帧同时卸载了多少个资源对象）。是 1 个大资源贵，还是 N 个小资源累加？需要调用次数才能判断。",
+    "suspectedAxis": "loading",
+    "closestExistingTool": "queryMarkers（只能给 sumSelfMs/presentInFrames/count，count 是总调用次数不是单帧调用次数）；getFrameCallTree（看调用树但 TryUnload 是 leaf，无 children 显示调用次数）"
+  },
+  {
+    "id": "buckets.size",
+    "want": "OnCameraMove 内部 buckets 数组的运行时大小（每个 bucket 有多少个 entity）",
+    "rationale": "OnCameraMove 在 frame 144 单帧 53.4ms，源码显示双重 for 循环遍历 buckets[i] 所有 entity 调 RefreshDistancePriority。19 次相机移动每次平均 43ms，但不知道 buckets 规模有多大——是几百个 entity 还是几千个？这决定了优化方向（分帧 vs 空间划分 vs Job 并行）。需要运行时 buckets 大小数据才能判断。",
+    "suspectedAxis": "gameplay",
+    "closestExistingTool": "getSourceForSymbol（看源码但看不到运行时数据）；drillDownMarker（OnCameraMove 是 leaf，无 children 显示 buckets 遍历次数）"
+  },
+  {
+    "id": "lua-gc.trigger-reason",
+    "want": "LuaMtGc.ExecuteMtGc 的触发原因和 GC 工作量（是增量 GC 步进还是全量 GC，触发时 Lua 堆大小/对象数）",
+    "rationale": "LuaMtGc.ExecuteMtGc 在 frame 194 单帧 21.59ms，spikeRatio 59，600 帧常驻 mean 0.59ms。但无法获取每次 GC 是增量步进还是全量收集，触发时 Lua 堆有多大，哪些 Lua 对象在回收。frame 350-352 连续 3 帧尖峰说明有连续触发源，但看不到触发逻辑。需要 Lua runtime 内部 GC 状态数据才能判断优化方向。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "scanMetricOverFrames（只能看 selfMs 时序，看不到 GC 类型/堆大小/触发原因）；getSourceForSymbol（LuaMtGc 是 Lua runtime 内部，源码不可见）"
+  }
+]

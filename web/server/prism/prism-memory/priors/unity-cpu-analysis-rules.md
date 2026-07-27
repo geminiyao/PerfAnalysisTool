@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.302Z
 source: unity-cpu
 title: "Unity CPU 性能分析通用规则"
 tags: ["unity","分析规则","self-time","spike"]
+dataSource: unity
 ---
 
 1. **对比 worst 和 median 帧**，区分“偶发 spike”和“持续性能问题”。

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.904Z
 source: unity-cpu
 title: "AOE 战场简化模式"
 tags: ["aoe","简化模式","优化","自适应"]
+dataSource: unity
 ---
 
 - 自动检测机制：监听外部事件（帧率/温度），动态变更性能设置项 & 显隐 UI。

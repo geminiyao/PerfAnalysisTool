@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.649Z
 source: unity-cpu
 title: "AOE 已知问题：Wwise 死锁崩溃"
 tags: ["aoe","已知问题","wwise","崩溃","音频"]
+dataSource: unity
 ---
 
 **触发场景**：切后台再恢复。

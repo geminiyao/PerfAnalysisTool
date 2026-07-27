@@ -1,0 +1,70 @@
+{
+  "rating": "fail",
+  "headline": "当前态相对 60fps 目标整体不合格：median 41.92ms 是预算 2.5 倍，100% 帧超预算，p99 飙到 95.51ms。三大主因：Lua 脚本更新模块退化（×8.87）、相机移动触发 Lua 业务尖峰（19 次每次 43ms）、同步 GC 单帧炸 70ms。基线态完美 60fps，当前态退化到 22.4fps。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.92,
+  "observedP99Ms": 95.51,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "luamgr.update-foldchange-8.87",
+    "oncamera-move.lua-burst",
+    "gc.collect.sync-70ms"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "queryFrameSummaryMultiState",
+      "args": {},
+      "resultDigest": {
+        "base": {"count":599,"actualFps":60,"mean":16.66,"median":16.66,"p99":16.98,"jankCount":0,"worstFrameIndex":133},
+        "cur": {"count":600,"actualFps":22.4,"mean":44.59,"median":41.92,"p90":50.45,"p95":59.36,"p99":95.51,"max":113.56,"jankCount":10,"worstFrameIndex":519},
+        "deltas": [
+          {"metric":"mean","delta":27.93,"deltaPct":167.65},
+          {"metric":"median","delta":25.26,"deltaPct":151.62},
+          {"metric":"p99","delta":78.53,"deltaPct":462.49},
+          {"metric":"actualFps","delta":-37.6,"deltaPct":-62.67}
+        ],
+        "note": "基线态完美 60fps（median 16.66ms = vsync），当前态退化到 22.4fps（median 41.92ms 是预算 2.5 倍），100% 帧超预算（cur.min=33.48ms > 16.67ms）"
+      }
+    },
+    {
+      "tool": "queryMarkersMultiState",
+      "args": {"minFoldChange":1.5,"minAbsoluteDelta":0.3,"topN":30,"sortBy":"absoluteDelta"},
+      "resultDigest": {
+        "topAbsoluteDelta": [
+          {"marker":"OnCameraMove","absoluteDelta":43.141,"presence":"appeared"},
+          {"marker":"GC.Collect","absoluteDelta":23.768,"foldChange":4.369,"presence":"changed"},
+          {"marker":"*** pb.decode***25051","absoluteDelta":10.67,"presence":"appeared"},
+          {"marker":"*** pb.decode***26501","absoluteDelta":9.171,"presence":"appeared"},
+          {"marker":"[res]ab_unload prefab","absoluteDelta":7.969,"presence":"appeared"},
+          {"marker":"Gfx.PresentFrame","absoluteDelta":7.877,"foldChange":9.534,"presence":"changed"},
+          {"marker":"MapEntityCtrl.CreateMapEntity_89","absoluteDelta":5.679,"presence":"appeared"},
+          {"marker":"Canvas.GeometryJob","absoluteDelta":5.276,"presence":"appeared"},
+          {"marker":"MoveChain_SoldierMoveSystem:SoldierMoveJob","absoluteDelta":5.154,"presence":"appeared"}
+        ]
+      }
+    },
+    {
+      "tool": "queryAggCallTreeMultiState",
+      "args": {"thread":"1:Main Thread","maxDepth":4,"topChildren":6,"minMsPerFrame":0.3},
+      "resultDigest": {
+        "playerLoop": {"baseMsPerFrameTotal":16.64,"curMsPerFrameTotal":44.531,"foldChange":2.676,"delta":27.891},
+        "topChildren": [
+          {"name":"Update.ScriptRunBehaviourUpdate","foldChange":8.868,"delta":12.385},
+          {"name":"PostLateUpdate.FinishFrameRendering","foldChange":1.908,"delta":5.958},
+          {"name":"PreLateUpdate.ScriptRunBehaviourLateUpdate","foldChange":6.89,"delta":7.021}
+        ],
+        "note": "三大子树合计 delta 25.36ms，占 PlayerLoop delta 27.89ms 的 90.9%——当前态退化主要由 Update + LateUpdate + 渲染三个子系统驱动"
+      }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": {"frameIndex":519,"thread":"1:Main Thread","maxDepth":8,"minPct":0.5},
+      "resultDigest": {
+        "frameIndex": 519,
+        "msFrame": 113.56,
+        "hotPath": "PlayerLoop → PostLateUpdate.PlayerSendFrameComplete (75.7ms, 66.7%) → CoroutinesDelayedCalls → AOE.GameLauncher.EndOfFrame [Coroutine: MoveNext] → Core.EndOfFrame → CS:AOE.LuaMgr (75.3ms, 66.3%) → GC.Collect (70.2ms, 61.8%)",
+        "note": "worst 帧的主因是 GC.Collect 70.2ms，不是 OnCameraMove 或 LuaMgr 业务逻辑——是 Lua 端在 EndOfFrame 协程里触发的同步全量 GC"
+      }
+    }
+  ]
+}

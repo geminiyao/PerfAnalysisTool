@@ -1,0 +1,254 @@
+[
+  {
+    "id": "cam-move.significance",
+    "title": "相机移动触发实体显著性重算·稳态黑洞+尖峰",
+    "conclusion": "相机每移动一次,地图实体显著性系统就要花2.3毫秒重新计算哪些实体该显示/隐藏;相机连续移动时(本场景是相机A/B位交替测试),这个系统每2帧就跑一次重的,最坏一帧炸到22.7毫秒——单这一项就超过了一整帧60fps的预算,是全场最稳定的性能黑洞。",
+    "severity": "high",
+    "confidence": "high",
+    "keyMetrics": {
+      "mean": 2.33,
+      "p50": 1.43,
+      "p95": 6.05,
+      "p99": 11.61,
+      "max": 22.69,
+      "maxFrameIndex": 552,
+      "spikeRatio": 15.84,
+      "presentFrames": 600,
+      "autocorrLag": 2,
+      "autocorrCoef": 0.5
+    },
+    "rootCause": "MapSignificanceMgr.ProcessTasks 稳态 mean 2.33ms/帧 = 占 p50(20.75ms) 的 11.2%(≥5% 触发热点阈值,DR-42)。max 22.69ms@frame552 = vsync(16.67ms) 的 136%(≥50% 触发红线)。spikeRatio 15.84 表示极端尾延迟——均值健康但长尾爆。autocorr bestLag=...",
+    "recommendation": "已看源码(MapSignificanceMgr.lua:1290-1372):ProcessSignificanceTasks 每帧顺序执行11个 ConsumeTasks_X 子步骤,无任何单帧时间预算或分帧限流——所有队列每帧全部排空。建议:(1)引入单帧时间预算(如 2ms),超预算时把剩余任务延到下一帧(分帧排空);(2)ForceSubEntity 是最大头(占61%),优先检查 Con..."
+  },
+  {
+    "id": "cam-move.sync-loading",
+    "title": "相机移入新建筑区域·同步资源加载卡死主帧40ms",
+    "conclusion": "相机移进新建筑区域时,主线程同步加载资源卡了约40毫秒——这一帧(46.8ms)基本全花在等资源加载完成,玩家会感受到明显的画面卡顿。",
+    "severity": "high",
+    "confidence": "high",
+    "keyMetrics": {
+      "frameMs": 46.83,
+      "mainThreadWaits": [
+        {
+          "name": "[res]entityLoader_sync (environment/world/building)",
+          "totalMs": 20.88
+        },
+        {
+          "name": "[res]assetLoader_sync (environment/world)",
+          "totalMs": 18.29
+        },
+        {
+          "name": "[res]asset_sync (environment/world/building)",
+          "totalMs": 18.1
+        },
+        {
+          "name": "Semaphore.WaitForSignal",
+          "totalMs": 4.28
+        }
+      ],
+      "preloadManagerThread": "Application.Preload Assets 27.57ms (Loading.PreloadManager 活跃)"
+    },
+    "rootCause": "frame552 主线程 mainThreadWaits 显示三个同步资源加载 marker 嵌套/叠加约40ms(entityLoader_sync 20.88 + assetLoader_sync 18.29 + asset_sync 18.10),占该帧85%。资源路径含 'environment/world/building' 证实是相机进入新建筑区域触发的建筑prefab/asset同步...",
+    "recommendation": "[res]entityLoader_sync / assetLoader_sync / asset_sync 是同步加载接口,在主线程直接阻塞。建议:(1)相机移动方向预测预加载——根据相机移动向量提前异步加载即将进入视野的建筑prefab;(2)将同步加载接口改为异步(entityLoader_async/assetLoader_async),主线程不等待;(3)检查 Loading.LockP..."
+  },
+  {
+    "id": "cam-move.entity-teardown",
+    "title": "相机移出视野·地图管理器单帧回收25ms",
+    "conclusion": "相机把一堆实体移出视野时,地图管理器单帧花了25毫秒回收GameObject,其中RecycleGOTask一次回收就吃掉19.5毫秒——这种\"相机一移就大扫除\"的帧会让玩家感到顿挫。",
+    "severity": "medium",
+    "confidence": "high",
+    "keyMetrics": {
+      "mean": 0.95,
+      "p50": 0.84,
+      "p95": 1.28,
+      "p99": 1.9,
+      "max": 25.34,
+      "maxFrameIndex": 469,
+      "spikeRatio": 30.1,
+      "burstFrames": [
+        143,
+        469
+      ],
+      "autocorrLag": 2,
+      "autocorrCoef": 0.033
+    },
+    "rootCause": "CS:AOE.Outside.MapManager 均值仅0.95ms 但 spike 到 25.34ms@frame469(spikeRatio 30),RecycleGOTask 同帧峰值19.51ms(presentFrames仅7,spikeRatio 20.3)。frame469 调用树证实 MapManager 25.08ms 占帧51.9%,是 LateUpdate 阶段的主导成本。...",
+    "recommendation": "RecycleGOTask 源码未能定位(不在 codegraph 中,getSourceForSymbol 返回 not-found),需要看其实现才能给具体建议。从数据看:(1)建议将 GameObject 回收分帧(每帧最多回收 N 个),避免单帧批量销毁19.5ms;(2)相机移动时实体进出视野是常态,回收应平滑化而非集中爆发;(3)若 RecycleGOTask 是对象池回收,检查池满判..."
+  },
+  {
+    "id": "gc.collect-sync",
+    "title": "5次同步GC每次卡9-11ms·全部落在慢帧",
+    "conclusion": "采集期间触发了5次同步GC,每次9-11毫秒,全都在慢帧里——这5次GC单独就能让一帧掉到30fps以下。",
+    "severity": "medium",
+    "confidence": "high",
+    "keyMetrics": {
+      "presentFrames": 5,
+      "max": 11.13,
+      "maxFrameIndex": 576,
+      "burstFrames": [
+        257,
+        278,
+        283,
+        566,
+        576
+      ],
+      "autocorrLag": 26,
+      "autocorrCoef": 0.215
+    },
+    "rootCause": "GC.Collect 共5次(frames 257,278,283,566,576),msSelfMean 8.964ms = 占帧30.2%,max 11.13ms@frame576。correlateFrameSets 证实5个GC帧100%都是>30ms慢帧(pctAinB=100%),但GC只占91慢帧中的5帧(pctBinA=5.5%)——GC是加剧因子非主因。每次GC 9-11ms =...",
+    "recommendation": "帧计数器(gc_allocated_in_frame)在本采集全为0,无法定位是哪个系统分配触发GC(见 data-requests.json)。建议:(1)启用 GC 分配计数器并按 marker 拆分,定位分配源;(2)将同步 GC 改为增量式(Unity Incremental GC)避免单次9-11ms停顿;(3)排查 frames 257/278/283 附近是否有相机移动触发的实体创建..."
+  },
+  {
+    "id": "cam-move.every-2-frames",
+    "title": "相机A/B交替节拍绑架整条响应链·帧时间高低交替",
+    "conclusion": "这次相机A/B位交替测试每2帧切一次相机位置,带动显著性、无限缩放、加载tick、纹理上传、UI重建五个系统全都隔帧跑重的——整条相机响应链被A/B交替节拍绑架,帧时间呈现明显的\"高低高低\"交替(自相关系数0.65)。",
+    "severity": "medium",
+    "confidence": "high",
+    "keyMetrics": {
+      "autocorrLag": 2,
+      "autocorrCoef": 0.648,
+      "mean": 22.96,
+      "p50": 20.75
+    },
+    "rootCause": "6个独立 marker 的 autocorr 都在 bestLag=2 达到 0.40-0.648,同向证实相机每2帧移动一次(A/B位交替),每次移动触发一整条处理链:显著性重算(0.50)+无限缩放(0.46)+加载tick(0.46)+纹理上传(0.40)+UI重建(0.45)。PlayerLoop 自身 autocorr 0.648 lag2 最强,帧时间呈高低交替。这是测试场景的相机节拍...",
+    "recommendation": "这是测试场景的相机节拍,非bug。但它暴露了相机响应链的累积成本——若相机移动频率降低,这些系统的总开销会显著下降。建议:(1)评估相机移动限速/平滑,减少单位时间内相机移动触发的处理次数;(2)各子系统(显著性/缩放/加载tick)错峰执行,避免同帧全部变重;(3)此发现作为其它相机触发 finding(cam-move.significance/sync-loading/entity-tear..."
+  },
+  {
+    "id": "coroutine.spike-frame143",
+    "title": "最差帧frame143·协程延迟调用吃11ms",
+    "conclusion": "最差帧(frame143,54ms)里,协程延迟调用单独吃了11毫秒——占整帧20%,是除LateUpdate外的第二大开销。",
+    "severity": "low",
+    "confidence": "medium",
+    "keyMetrics": {
+      "frameMs": 54.14,
+      "segments": [
+        {
+          "name": "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+          "totalMs": 27.98,
+          "pctOfFrame": 51.68
+        },
+        {
+          "name": "PostLateUpdate.ScriptRunDelayedDynamicFrameRate / CoroutinesDelayedCalls",
+          "totalMs": 11.08,
+          "pctOfFrame": 20.47
+        },
+        {
+          "name": "PostLateUpdate.FinishFrameRendering",
+          "totalMs": 5.91,
+          "pctOfFrame": 10.92
+        }
+      ],
+      "hotPath": "PlayerLoop→PreLateUpdate(28ms,51.7%)→LateBehaviourUpdate→AOE::GameLauncher.LateUpdate(26.28ms)→Core.LateUpdate(26.07ms,48.1%)"
+    },
+    "rootCause": "frame143 是全程最差帧(54.14ms),主要由 PreLateUpdate 28ms(Core.LateUpdate 26ms)和 CoroutinesDelayedCalls 11.08ms(20.5%)构成。mainThreadWaits 全部<1ms,证实是 CPU 计算密集非等待/GPU阻塞。CoroutinesDelayedCalls 是 Unity 内置 marker,无法从...",
+    "recommendation": "CoroutinesDelayedCalls 是 Unity 内置 marker,无法定位具体协程(见 data-requests.json)。建议:(1)在 frame143 附近排查启动了哪些协程(可能是相机移动触发的加载/实体初始化);(2)对长协程考虑分帧(yield 拆段)或改 Job System;(3)Core.LateUpdate 26ms 是 frame143 最大头,但其子节点..."
+  },
+  {
+    "id": "render.baseline-urp",
+    "title": "URP渲染管线每帧4.75ms·占帧28%的基线成本",
+    "conclusion": "URP渲染管线每帧稳定花4.75毫秒(占帧28%),是最大的单项稳态成本——它是正常的渲染开销,但占掉了近三成帧预算,留给游戏逻辑的余量很紧。",
+    "severity": "info",
+    "confidence": "high",
+    "keyMetrics": {
+      "markerName": "URP.RenderSingleCamera",
+      "subtreeMsPerFrame": 4.75,
+      "ownSelfMsPerFrame": 0.16,
+      "directChildCount": 10,
+      "maxChildRatio": 0.388,
+      "topChildren": [
+        {
+          "name": "URP.BeforeRendering",
+          "msPerFrame": 1.84
+        },
+        {
+          "name": "URP.MainRenderingTransparent",
+          "msPerFrame": 1.03
+        },
+        {
+          "name": "URP.RendererSetup",
+          "msPerFrame": 0.82
+        },
+        {
+          "name": "URP.AfterRendering",
+          "msPerFrame": 0.71
+        }
+      ],
+      "callTreeAnnotations": [
+        {
+          "nodeName": "URP.RenderSingleCamera",
+          "redlineFlag": "占 p50 22.9% (最大稳态子树,分摊型)",
+          "foldChange": null,
+          "severityTag": "medium"
+        },
+        {
+          "nodeName": "URP.BeforeRendering",
+          "redlineFlag": "子树最大头 1.84ms/帧",
+          "foldChange": null,
+          "severityTag": "low"
+        },
+        {
+          "nodeName": "URP.MainRenderingTransparent",
+          "redlineFlag": null,
+          "foldChange": null,
+          "severityTag": "low"
+        }
+      ]
+    },
+    "rootCause": "URP.RenderSingleCamera subtreeMsPerFrame 4.75ms = 占 p50(20.75ms) 的 22.9%,是最大的单项稳态子树成本。directChildCount=10 且 maxChildRatio=0.388(无单一大头)→分摊型成本:BeforeRendering 1.84 + MainRenderingTransparent 1.03 + Rend...",
+    "recommendation": "这是渲染基线成本,非异常,优先级低于上述相机触发的问题。若需优化可评估:(1)RendererSetup/RenderGraphSetup 0.82ms 是否有可缓存的重复计算;(2)BeforeRendering 1.84ms 内部是否有可剔除的 pass;(3)MainRenderingTransparent 1.03ms 是否透明物体过多。但这些都需要看 URP 配置/场景内容,本次数据不足..."
+  },
+  {
+    "id": "ecs.baseline-systems",
+    "title": "ECS系统组每帧3.15ms·占帧15%的分摊基线",
+    "conclusion": "DOTS ECS 三个系统组(模拟/呈现/初始化)每帧合计花3.15毫秒(占帧15%),是仅次于URP渲染的第二大稳态子树——内部分摊在十几个子系统上无单一大头,属于正常的ECS更新基线,但进一步压缩了逻辑侧帧预算。",
+    "severity": "info",
+    "confidence": "high",
+    "keyMetrics": {
+      "markerName": "UnityEngine.CoreModule.dll!::UpdateFunction.Invoke()",
+      "subtreeMsPerFrame": 3.151,
+      "ownSelfMsPerFrame": 0.075,
+      "directChildCount": 5,
+      "maxChildRatio": 0.498,
+      "topChildren": [
+        {
+          "name": "Default World Unity.Entities.SimulationSystemGroup",
+          "msPerFrame": 1.569
+        },
+        {
+          "name": "Default World Unity.Entities.PresentationSystemGroup",
+          "msPerFrame": 0.895
+        },
+        {
+          "name": "Default World Unity.Entities.InitializationSystemGroup",
+          "msPerFrame": 0.567
+        },
+        {
+          "name": "LuaMtGc.PulseGCThread",
+          "msPerFrame": 0.043
+        }
+      ],
+      "callTreeAnnotations": [
+        {
+          "nodeName": "UpdateFunction.Invoke()",
+          "redlineFlag": "占 p50 15.2% (第二大稳态子树,分摊型)",
+          "foldChange": null,
+          "severityTag": "medium"
+        },
+        {
+          "nodeName": "SimulationSystemGroup",
+          "redlineFlag": "子树最大头 1.57ms/帧",
+          "foldChange": null,
+          "severityTag": "low"
+        },
+        {
+          "nodeName": "PresentationSystemGroup",
+          "redlineFlag": null,
+          "foldChange": null,
+          "severityTag": "low"
+        }
+      ]
+    },
+    "rootCause": "UpdateFunction.Invoke subtreeMsPerFrame 3.151ms = 占 p50(20.75ms) 的 15.2%,是仅次于 URP(4.75ms) 的第二大稳态子树。directChildCount=5 且 maxChildRatio=0.498(无单一大头)→分摊型:SimulationSystemGroup 1.57 + PresentationSystemGr...",
+    "recommendation": "这是 ECS 系统正常更新基线,非异常,优先级低于相机触发的问题。若需优化:(1)SimulationSystemGroup 1.57ms 是最大头,可检查 ArmyGroup/TransformSystemGroup 内是否有可合并或降频的系统;(2)PresentationSystemGroup 的 StructuralChangePresentationSystem/AddShadowCom..."
+  }
+]

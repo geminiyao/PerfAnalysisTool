@@ -1,0 +1,61 @@
+=== v4 Top-N (业务模块聚合 + 跨线程，按绝对增量排序) ===
+模块                                         base abs     sm abs       增量 abs        增量%
+ECS Burst Job 工作量                               513       5019        +4506      +878%
+Wwise 音频中间件                                     349       4753        +4403     +1260%
+MeshUI 迭代位置刷新                                    25        866         +842     +3390%
+行军线刷新（OutSideViewArmyLineMgr）                     8        221         +214     +2759%
+RHI 常量缓冲上传                                      244        263          +19        +8%
+Lua GC 工作线程                                       0          0           +0        NEW
+RHI DrawCall 提交                                 740        652          -89      +-12%
+Lua VM 解释执行                                     310        219          -91      +-29%
+URP 主线程渲染配置                                     403        244         -159      +-40%
+
+=== 模块内部子节点 self 拆细 (sm) ===
+
+--- MeshUI 迭代位置刷新 ---
+  self  0.763%g  abs=  360  MUIControlManager_OnLateUpdate_mAD91DCD286F79F662FBC4BA326869C568D9A631C
+  self  0.702%g  abs=  332  MUILayout_Set3DPosition_mDD919E0330AED1BE5D03D64EBBD3C02A174FD540
+  self  0.077%g  abs=   36  MUILayoutManager_OnUpdate_mCF0395574A581508205E341F055FDE282CAEDDD6
+  self  0.072%g  abs=   34  MUIRenderable_get_m_pos_mF815B797555F14F787B15A29FC291C4CC7F8ECC8
+  self  0.050%g  abs=   24  MUILayoutRoot_UpdateDirtyNodes_m8AA2A53534DF581386590D151AB20E601816316C
+  self  0.042%g  abs=   20  MUIText_Set3DPosition_mDD6731D5B9F20AB9CF2B50DA1B539FD886B22C11
+  self  0.036%g  abs=   17  MUIRendererBase_FreshVertexAttribute_TisVector3_tDCF05E21F632FE2BA260C06E0D10CA81513E6720_
+  self  0.023%g  abs=   11  MUISprite_Set3DPosition_mEA8067266C893E8220FFF30E7802F5D16826D0E9
+  self  0.016%g  abs=    7  MeshUIManager_OnLateUpdate_mD1A233FAD58F6CA85ECA50F7F3FEA41B5C5F5A10
+  self  0.015%g  abs=    7  MUILayoutRoot_SetLocalPos_mD2145C59A4E19DC440DD7791BC4CEDAD2AA77A88
+
+--- 行军线刷新（OutSideViewArmyLineMgr） ---
+  self  0.147%g  abs=   69  OutsideLineCtrl_RefreshLine_m5F27EA1C8AA0CC8A19184668CF267889EE1965F8
+  self  0.138%g  abs=   65  OutSideViewArmyLineMgr_GetArmyLineID_m5E13B453788C927BDEFBCCA05D45B316AE21D689
+  self  0.044%g  abs=   21  OutSideViewArmyLineMgr_UpdateStraightMoveLine_m2A55BFB728A741DF0304245B833D056FD30FA47F
+  self  0.033%g  abs=   16  AOE.Outside.OutsideLineCtrl.CalculateVertexJob.CalculateVertex(AOE.Outside.OutsideLineCtrl
+  self  0.028%g  abs=   13  OutsideLineMesh_RefreshLineVertex_m58B8B82716544EB6A248E53E011D8B721B384536
+  self  0.025%g  abs=   12  Unity.Jobs.IJobExtensions.JobStruct`1<AOE.Outside.OutsideLineCtrl.CalculateVertexJob>.Exec
+  self  0.018%g  abs=    9  OutsideLineMesh_RefreshMesh_m42533A3B73CA3F900193962A2D41780EA7457860
+  self  0.012%g  abs=    6  AOE.Outside.OutsideLineCtrl.CalculateVertexJob.SamplePathPointTerrainHeight(AOE.Outside.Ou
+
+--- URP 主线程渲染配置 ---
+  self  0.047%g  abs=   22  OutsideTreeTypeRenderer_DrawForestCell_m2599D7C54E343FBC5053B0446806E42E11DCB8A4
+  self  0.043%g  abs=   21  TBURenderGraphPass_ConfigureTarget_mDB9658CEE2047F6A4E854B4A13F479B0E17F2D62
+  self  0.042%g  abs=   20  TBUBaseFeature_AddRenderPasses_m468D93846F6224C765E3684D60664520B29202E2
+  self  0.039%g  abs=   18  MobileBaseRenderer_SetupRenderPassFromFeatures_m35ACB1DF6787A019AB289C3ADE164BD53A3094D8
+  self  0.037%g  abs=   17  DrawRendererPass_Execute_mB0274D80F03D124D6C9974755F3AB0577DBC698B
+  self  0.029%g  abs=   14  DrawRendererPass_Setup_m1B3D34D48A1B52786195887B2F20E128DD08EDEF
+  self  0.024%g  abs=   11  RenderPipelineUtil_DrawFoliageInstanceRenderers_mA11238423A6454C15AB798B39122D8AD8FE284F4
+  self  0.018%g  abs=    9  PlanarShadow_PrepareAllStaticShadows_mFA28CEFD0BB505BEAE13C7864C13D221FADD2DB4
+  self  0.018%g  abs=    9  TBURenderGraphPass_SetColorBuffer_m4B73417A452DC9E89AA8147AF3DE95033D9A3075
+  self  0.016%g  abs=    8  TBURenderGraphPass_Clear_m85B064A3367C2D3431C1C768A46F85F174BCF771
+
+--- RHI 常量缓冲上传 ---
+  self  0.462%g  abs=  218  ConstantBuffersGLES::UpdateBuffers(MonoOrStereoscopicEye, bool)
+  self  0.096%g  abs=   45  ConstantBuffersGLES::UpdateCB(CbKey, void const*, unsigned long)
+
+--- RHI DrawCall 提交 ---
+  self  0.519%g  abs=  245  GlslGpuProgramGLES::ApplyGpuProgramGLES(unsigned int, GpuProgramParameters const&, unsigne
+  self  0.472%g  abs=  223  GfxDeviceGLES::DrawBuffers(GfxBuffer*, unsigned int, GfxBuffer* const*, unsigned int const
+  self  0.273%g  abs=  129  SetVertexStateGLES(ShaderChannelMask, VertexChannelsInfo const&, GfxBuffer* const*, unsign
+  self  0.068%g  abs=   32  GfxDeviceGLES::BeforeDrawCall()
+  self  0.026%g  abs=   12  SinglePassStereoSupportExt::BeforeDrawCallStereo()
+  self  0.023%g  abs=   11  SinglePassStereoSupportExt::DrawBuffersStereo(GfxBuffer*, unsigned int, GfxBuffer* const*,
+
+--- Lua GC 工作线程 ---

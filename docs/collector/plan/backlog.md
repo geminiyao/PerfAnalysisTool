@@ -51,14 +51,25 @@
 
 ## C2 · 可组合（1-2 周）
 
-> 拆 maple_sample.py 成 Driver + Primitive，YAML 声明"用什么工具+做什么动作"。
+> 拆 collect.py 成 Driver + Primitive，YAML 声明"用什么工具+做什么动作"。
 
 | ID | 需求 | 描述 | 状态 |
 |----|------|------|------|
-| **CL-7 Driver 热插拔** | simpleperf/perfetto/unity-profiler 封装成统一 Driver 接口（start/stop/pull），YAML 声明 `tools: [simpleperf, perfetto]` → 对应 driver 启停 | ⬜ |
-| **CL-8 Primitive 框架 + 首批** | 定义 Primitive 接口（Lua 函数签名 + ADB intent 调用）。首批：`enter_scene` / `camera_sweep` / `wait_duration`。**游戏侧 Lua 不支持时用 ADB input 降级** | ⬜ |
-| **CL-9 runs/runMetrics 写入** | Orchestrator 收尾写 runs + runMetrics 表（run_id/时间/版本/场景/文件路径/指标）。复用现有 schema.ts 的 Run/runMetrics 模型 | ⬜ |
-| **CL-10 端到端验证** | 手写 YAML（场景+动作+工具）→ Orchestrator 执行 → 文件 + runs 写入。C2 验收门 | ⬜ |
+| **CL-7 Driver 热插拔** | simpleperf/perfetto/unity-profiler 封装成统一 Driver 接口（start/stop/pull），YAML 声明 `tools: [simpleperf, perfetto]` → 对应 driver 按序启停 | ✅ 完成 |
+| **CL-8 Primitive 框架 + 首批** | 定义 Primitive 接口（Lua 函数签名 + ADB intent 调用）。首批：`enter_scene` / `camera_sweep` / `wait_duration`。**游戏侧 Lua 不支持时用 ADB input 降级** | ✅ 完成 |
+| **CL-9 runs/runMetrics 写入** | Orchestrator 收尾写 runs + runMetrics 表（run_id/时间/版本/场景/文件路径/指标）。复用现有 schema.ts 的 Run/runMetrics 模型 | ✅ 完成 |
+| **CL-10 端到端验证** | 手写 YAML（场景+动作+工具）→ Orchestrator 执行 → 文件 + runs 写入。C2 验收门 | ✅ 完成 |
+
+**C2 交付物**：
+- `scripts/auto_collector/core.py` — 共享函数（从 collect.py 抽出，drivers/orchestrator 共用）
+- `scripts/auto_collector/drivers/` — Driver 包（base + simpleperf + perfetto + unity_profiler + registry）
+- `scripts/auto_collector/primitives/` — Primitive 包（base + enter_scene + camera_sweep + wait_duration + registry）
+- `scripts/auto_collector/orchestrator.py` — Orchestrator（协调 Drivers + Primitives）
+- `scripts/auto_collector/runs_writer.py` — runs/runMetrics 写入器（直接写 web/data/db.sqlite）
+- `scripts/auto_collector/collect.py` — 重构为委托 Orchestrator，向后兼容 C0/C1
+- `projects/aoeyz/collect-c2-demo.yaml` — C2 端到端验证 YAML（含 action.steps）
+- Schema 文档更新：`docs/collector/plan/collect-yaml-schema.md`（C2 action.steps + Driver + runs 写入）
+- 验证：Driver 注册表、Primitive 注册表、Orchestrator action.steps 检测、RunsWriter db 写入 — 全部通过
 
 ---
 

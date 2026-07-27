@@ -243,6 +243,10 @@ export interface LedgerEntry {
   input: Record<string, unknown>;
   /** Text output from the matching tool_result content block (or '' if unmatched yet) */
   resultText: string;
+  /** Timestamp (ms epoch) when the LLM emitted this tool_use */
+  ts: number;
+  /** Timestamp (ms epoch) when the tool_result was received */
+  resultTs?: number;
 }
 
 /** One evidence item annotated with verification outcome */
@@ -295,6 +299,8 @@ export interface RunPrismExploreOpts {
   timeoutMs?: number;
   /** F8 判定基准：帧预算 ms/帧。默认取 aoe-watch-spec deviceTier 默认 16.67 (60fps)。 */
   frameBudgetMs?: number;
+  /** unity 多态目录（含 base/cur/throttle 子目录）。可选；不传则单态分析。 */
+  multiStateDir?: string;
   /**
    * 数据源标识（DR-44 B1）：决定加载哪个 explore-prompt。
    * - 'unity'（默认）：prompts/unity-explore-prompt.txt（Unity marker 工具集）
@@ -302,6 +308,8 @@ export interface RunPrismExploreOpts {
    * 路由到不同 prompt，但复用同一份 spawn CLI + ledger + verify 逻辑。
    */
   source?: 'unity' | 'perfetto';
+  /** 实时进度回调: CLI 输出时触发, 推送日志行给 SSE */
+  onProgress?: (message: string) => void;
 }
 
 // ─────────────────────────────────────────────
@@ -320,17 +328,42 @@ function toPosix(p: string): string {
 // NOTE: prompt is piped via stdin (see spawn below), NOT passed as `-p` arg.
 // Windows .cmd wrappers truncate long multi-line prompts passed as positional
 // args; `-p` with no value tells codebuddy/claude to read the prompt from stdin.
+//
+// 工具控制说明（A4 修复）：
+// - `--allowedTools` 只是"无需提示用户即可允许"的白名单，不是排他——加 `-y` 后其它工具也能用，
+//   所以 LLM 之前能用 Edit/TaskCreate/TaskUpdate/PowerShell 改源码、做任务管理、跑偏 explore。
+// - `--disallowedTools` 是真正的黑名单，显式禁止 explore 阶段不该用的工具。
+//   被 ban 的：Edit（改源码）、Task*（任务管理，会花 2+ 分钟做计划而不查询）、
+//   PowerShell（Windows 专用，explore 不需要）、Agent/SendMessage/Team*（spawn 子 agent）、
+//   WebFetch/WebSearch（explore 阶段不需要上网，数据全在本地）。
+//   保留的：Bash（调 tools.cli.ts）、Read/Glob/Grep（辅助探索）、Write（写 findings/verdict/data-requests）。
+const EXPLORE_DISALLOWED_TOOLS = [
+  'Edit',
+  'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'TaskOutput', 'TaskStop',
+  'PowerShell',
+  'Agent', 'SendMessage', 'TeamCreate', 'TeamDelete',
+  'WebFetch', 'WebSearch',
+].join(',');
+
 const CLI_PROVIDERS: Record<string, (prompt: string) => string[]> = {
   codebuddy: (_prompt) => [
     '-p',
     '--output-format', 'stream-json',
     '-y',
-    '--allowedTools', 'Bash,Read,Write,Glob,Grep',
+    // ★ --tools 是排他性限制：只加载这 5 个工具定义（省 ~24KB 上下文/轮）
+    '--tools', 'Bash,Read,Write,Glob,Grep',
+    // ★ 禁用所有 MCP 服务器（crashsight/garyUnity/garyUnreal/km/tapd 等 126 个 MCP 工具与 explore 无关）
+    '--mcp-config', '{}',
+    '--strict-mcp-config',
+    '--disallowedTools', EXPLORE_DISALLOWED_TOOLS,
   ],
   claude: (_prompt) => [
     '-p',
     '--output-format', 'stream-json',
-    '--allowedTools', 'Bash,Read,Write,Glob,Grep',
+    '--tools', 'Bash,Read,Write,Glob,Grep',
+    '--mcp-config', '{}',
+    '--strict-mcp-config',
+    '--disallowedTools', EXPLORE_DISALLOWED_TOOLS,
   ],
 };
 
@@ -719,6 +752,30 @@ export async function runPrismExplore(
   // Ensure outputDir exists
   fs.mkdirSync(outputDir, { recursive: true });
 
+  // ★ 预编译 tools.cli.bundle.js（消除每次 tool call 的 tsx 编译开销，~5s/call → ~0.3s/call）
+  const toolsCliSrc = path.join(__dirname, 'tools.cli.ts');
+  const toolsCliBundle = path.join(__dirname, 'tools.cli.bundle.js');
+  try {
+    const needRebuild = !fs.existsSync(toolsCliBundle)
+      || fs.statSync(toolsCliBundle).mtimeMs < fs.statSync(toolsCliSrc).mtimeMs;
+    if (needRebuild) {
+      const esbuild = await import('esbuild');
+      await esbuild.build({
+        entryPoints: [toolsCliSrc],
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        outfile: toolsCliBundle,
+        external: ['better-sqlite3'],
+        logLevel: 'silent',
+      });
+      console.log('[explore] Rebuilt tools.cli.bundle.js (eliminates tsx startup overhead)');
+      opts.onProgress?.('工具预编译完成 (tools.cli.bundle.js)');
+    }
+  } catch (e: any) {
+    console.warn(`[explore] Failed to build tools bundle: ${e.message}. Will fall back to tsx.`);
+  }
+
   const ledgerPath = path.join(outputDir, 'ledger.json');
   const findingsPath = path.join(outputDir, 'findings.json');
   const dataRequestsPath = path.join(outputDir, 'data-requests.json');
@@ -763,21 +820,25 @@ export async function runPrismExplore(
 
   console.log(`[explore] Spawning ${provider} CLI (${cliCommand})...`);
   console.log(`[explore] runId=${runId}, outputDir=${outputDirPosix}`);
+  opts.onProgress?.(`CLI 启动: ${provider} (${cliCommand}), runId=${runId}`);
+
+  const exploreStartTime = Date.now();
 
   const ledger: LedgerEntry[] = [];
   let toolCallSeq = 0;
   // Pending tool_use entries awaiting their tool_result (matched by position in stream order)
   const pendingToolUses: LedgerEntry[] = [];
 
-  const timeoutMs = opts.timeoutMs ?? 20 * 60 * 1000;
+  const timeoutMs = opts.timeoutMs ?? 30 * 60 * 1000;
 
   return new Promise<ExploreRunResult>((resolve) => {
     let settled = false;
     let jsonBuffer = '';
+    let gracePollHandle: ReturnType<typeof setInterval> | null = null;
 
     const child = spawnCliProcess(cliCommand, args, {
       cwd: config.skillProjectPath,
-      env: process.env,
+      env: { ...process.env, PRISM_RUN_ID: runId },
       windowsHide: true,
       stdio: 'pipe',
     });
@@ -785,6 +846,10 @@ export async function runPrismExplore(
     // Pipe the prompt via stdin (Windows .cmd wrappers truncate long prompts
     // passed as positional args; stdin avoids that trap). `-p` with no value
     // makes the CLI read the prompt from stdin.
+    child.stdin?.on('error', (e: Error) => {
+      // Prevent unhandled 'error' event crash when CLI exits before stdin write completes
+      console.error(`[explore] stdin error event: ${e.message}`);
+    });
     try {
       child.stdin?.write(promptText);
       child.stdin?.end();
@@ -795,23 +860,136 @@ export async function runPrismExplore(
     const doResolve = (result: ExploreRunResult) => {
       if (!settled) {
         settled = true;
+        if (gracePollHandle) clearInterval(gracePollHandle);
         resolve(result);
       }
     };
 
-    const timeoutHandle = setTimeout(() => {
-      if (child.exitCode === null) {
-        child.kill('SIGTERM');
+    /**
+     * Try to finalize the explore run from findings.json on disk.
+     * Returns true if successfully resolved (findings.json exists and is valid).
+     * Shared by the timeout handler (immediate check + grace polling).
+     */
+    const tryFinalizeFromFindings = (): boolean => {
+      try {
+        const findingsText = fs.readFileSync(findingsPath, 'utf-8');
+        const findings = JSON.parse(findingsText) as Finding[];
+        if (!Array.isArray(findings) || findings.length === 0) return false;
+
+        const { annotated, summary } = verifyFindings(findings, ledger);
+        let verdict: Record<string, unknown> | null = null;
+        try { verdict = JSON.parse(fs.readFileSync(verdictPath, 'utf-8')); } catch { /* optional */ }
+        let dataRequests: DataRequest[] = [];
+        try { dataRequests = JSON.parse(fs.readFileSync(dataRequestsPath, 'utf-8')); } catch { /* optional */ }
+        const result: ExploreRunResult = {
+          success: true,
+          runId,
+          findings,
+          dataRequests,
+          verdict,
+          meta: {
+            toolCallCount: toolCallSeq,
+            rounds: undefined,
+            notes: [`ledger has ${ledger.length} entries`],
+          },
+          ledgerPath,
+          findingsPath,
+          verification: summary,
+          annotatedFindings: annotated,
+        };
+        fs.writeFileSync(exploreResultPath, JSON.stringify(result, null, 2), 'utf-8');
+        console.log(`[explore] Finalized from findings.json (${findings.length} findings).`);
+        doResolve(result);
+        return true;
+      } catch {
+        return false;
       }
+    };
+
+    const timeoutHandle = setTimeout(() => {
       // Write whatever ledger we have so far
       writeLedger(ledgerPath, ledger);
-      doResolve(makeError(runId, ledgerPath, findingsPath, `Exploration timed out after ${timeoutMs}ms`));
+
+      // ★ Immediate check: if findings.json was already written by the LLM,
+      // treat as success even though the process hasn't exited yet.
+      if (tryFinalizeFromFindings()) {
+        console.log('[explore] Timeout fired but findings.json already written. Treating as success.');
+        return;
+      }
+
+      // ★ Grace polling: the LLM may be seconds away from writing findings.json.
+      // Observed: timeout fired at 20min, findings.json written 95s later.
+      // Poll every 10s for up to 5 min before giving up. This catches the common
+      // case where the LLM is in the final output phase (verdict.json already
+      // written) but hasn't finished writing findings.json yet.
+      console.log('[explore] Timeout fired, findings.json not yet written. Starting 5-min grace polling...');
+      opts.onProgress?.('超时但 LLM 可能在收尾, 轮询等待 findings.json (最多5分钟)...');
+
+      const graceMs = 5 * 60 * 1000;
+      const pollMs = 10 * 1000;
+      const graceStart = Date.now();
+
+      gracePollHandle = setInterval(() => {
+        if (tryFinalizeFromFindings()) {
+          // Success — kill the lingering CLI process
+          if (child.exitCode === null) {
+            try { child.kill(); } catch { /* best effort */ }
+          }
+          return;
+        }
+        if (Date.now() - graceStart >= graceMs) {
+          // Grace period expired — force-kill the process tree and return error
+          if (child.exitCode === null) {
+            try {
+              if (process.platform === 'win32') {
+                spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)]);
+              } else {
+                child.kill('SIGTERM');
+              }
+            } catch { /* best effort */ }
+          }
+          doResolve(makeError(runId, ledgerPath, findingsPath,
+            `Exploration timed out after ${timeoutMs}ms (+5min grace polling, findings.json never appeared)`));
+        }
+      }, pollMs);
     }, timeoutMs);
 
     child.stdout?.on('data', (data: Buffer) => {
       jsonBuffer += data.toString();
       const lines = jsonBuffer.split('\n');
       jsonBuffer = lines.pop() || '';
+      // ★ 存 raw stream 到文件（供离线 profile 调优）
+      const rawStreamPath = path.join(outputDir, 'explore-raw-stream.jsonl');
+      // ★ 实时推送: 检测 tool_use 事件，解析出具体 Prism 工具名
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try { fs.appendFileSync(rawStreamPath, trimmed + '\n'); } catch { /* best effort */ }
+        try {
+          const evt = JSON.parse(trimmed);
+          if (evt.type === 'tool_use' && evt.name) {
+            const elapsed = Math.round((Date.now() - exploreStartTime) / 1000);
+            let toolDetail = evt.name;
+            if (evt.name === 'Bash' && evt.input?.command) {
+              const cmd = String(evt.input.command);
+              // 从 batch 命令中提取 Prism 工具名
+              const toolNames = [...cmd.matchAll(/"tool"\s*:\s*"(\w+)"/g)].map(m => m[1]);
+              if (toolNames.length > 0) {
+                toolDetail = toolNames.length <= 3
+                  ? toolNames.join('+')
+                  : `${toolNames.slice(0, 2).join('+')}…+${toolNames.length - 2}`;
+              } else {
+                const singleMatch = cmd.match(/tools\.cli\.ts\s+(\w+)/);
+                if (singleMatch) toolDetail = singleMatch[1];
+              }
+            } else if (evt.name === 'Write') {
+              const fp = String(evt.input?.file_path || evt.input?.filePath || '');
+              toolDetail = `Write ${fp.split('/').pop()}`;
+            }
+            opts.onProgress?.(`#${ledger.length + 1} 调用 ${toolDetail} (${elapsed}s)`);
+          }
+        } catch { /* 非 JSON 行, 忽略 */ }
+      }
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -836,6 +1014,7 @@ export async function runPrismExplore(
       const text = data.toString().trim();
       if (text) {
         console.error(`[explore:stderr] ${text.slice(0, 300)}`);
+        opts.onProgress?.(`[stderr] ${text.slice(0, 120)}`);
       }
     });
 
@@ -958,7 +1137,7 @@ function handleExploreStreamEvent(
         const name = (b.name as string) ?? 'unknown';
         const input = (b.input as Record<string, unknown>) ?? {};
 
-        const entry: LedgerEntry = { seq, name, input, resultText: '' };
+        const entry: LedgerEntry = { seq, name, input, resultText: '', ts: Date.now() };
         ledger.push(entry);
         pendingToolUses.push(entry);
 
@@ -980,6 +1159,7 @@ function handleExploreStreamEvent(
         const pending = pendingToolUses.shift();
         if (pending) {
           pending.resultText = text;
+          pending.resultTs = Date.now();
         }
       }
     }

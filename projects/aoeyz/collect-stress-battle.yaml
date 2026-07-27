@@ -1,0 +1,107 @@
+# collect-stress-battle.yaml — 远征压测-战斗 采集用例
+#
+# 1. 进入场景
+# 2. 启动战斗压测（AddBattlePressTestScene type=1）
+# 3. 等待压测初始化
+# 4. camera_sweep: 相机切到战斗中心，enable 控制是否移动
+#
+# 前置条件：游戏已登录、ProfileTestMgr.lua 已扩展 start_stress_test 命令
+#
+# 用法：
+#   python scripts/auto_collector/collect.py --config projects/aoeyz/collect-stress-battle.yaml
+#
+# camera_sweep.enable 切换模式：
+#   true  = 相机从 from_grid 移动到 to_grid（移动采集）
+#   false = 相机瞬移到 to_grid 后不动（静止采集）
+
+# === 项目标识 ===
+project:
+  name: aoeyz
+  package: com.tencent.aoeyz
+  activity: com.tencent.aoeyz.MainActivity
+  intentAction: com.aoe.EXTERNAL_PROFILE
+
+# === 设备路径 ===
+device:
+  simpleperfPath: /data/local/tmp/simpleperf
+  pdataDir: /storage/emulated/0/Android/data/com.tencent.aoeyz/files/doc/log/profile_data/
+
+# === 采集工具 ===
+tools:
+  simpleperf:
+    enabled: false
+    ndkDir: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf
+    recordOpts: "-e cpu-clock --call-graph fp --clockid boottime -f 4000"
+    durationPadding: 15
+  perfetto:
+    enabled: false
+    script: g:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts/record_android_trace.py
+    bufferSize: 64mb
+    durationPadding: 15
+    events:
+      - sched
+      - freq
+      - idle
+      - am
+      - wm
+      - gfx
+      - view
+      - binder_driver
+      - hal
+      - dalvik
+      - camera
+      - input
+      - res
+      - memory
+
+# === 场景定义 ===
+scenes:
+  default:
+    label: stress_battle
+    scene: StressTestBattleSimpleMode
+
+# === 动作 ===
+# 顺序关键：服务器需要先感知到视野中心在 center_grid 才会响应 AddBattlePressTestScene
+# 1. enter_scene: 进入场景
+# 2. camera_sweep: 相机瞬移到战斗中心 [1712, 271]
+# 3. wait_duration: 等待服务器感知视野中心（2s）
+# 4. stress_test: 发送战斗压测命令
+action:
+  defaultDuration: 10            # 小于 camera_sweep.duration，触发自动扩展
+  steps:
+    - primitive: enter_scene
+      params:
+        scene: StressTestBattleSimpleMode
+        coord: [540, 1200]
+    - primitive: camera_sweep
+      params:
+        duration: 2
+        pattern: move_to_grid
+        enable: false                # 瞬移到 to_grid 后不动
+        from_grid: [1600, 200]      # 起点偏移坐标（enable=true 时使用）
+        to_grid: [1712, 271]        # = center_grid，相机先切到战斗中心
+        rounds: 1
+    - primitive: wait_duration
+      params:
+        duration: 2                 # 等待服务器感知视野中心在 center_grid
+    - primitive: stress_test
+      params:
+        type: battle
+        army_id: 1
+        center_grid: [1712, 271]    # 战斗中心坐标
+        range_grid: 20              # 范围（格）
+        army_count: 2               # 单格数量
+        duration: 43200            # 战斗持续时长（秒）
+
+# === 输出配置 ===
+output:
+  baseDir: output/collect
+  webApiBase: http://localhost:3000/api
+
+# === 符号配置 ===
+symbols:
+  libDir: output/maple/symbols
+
+# === Meta 默认值 ===
+meta:
+  project: aoeyz

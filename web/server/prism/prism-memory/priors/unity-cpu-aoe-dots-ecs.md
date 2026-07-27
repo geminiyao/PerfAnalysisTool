@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.421Z
 source: unity-cpu
 title: "AOE DOTS/ECS 部队系统与性能关注点"
 tags: ["aoe","dots","ecs","部队","弹道特效"]
+dataSource: unity
 ---
 
 AOE 使用 Unity DOTS (ECS + Burst) 进行大规模部队模拟。

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.832Z
 source: unity-cpu
 title: "AOE Lua 层热点函数（LuaProfiler 分场景）"
 tags: ["aoe","lua","热点函数","luaprofiler"]
+dataSource: unity
 ---
 
 来自 LuaProfiler 采集的 Lua 热点函数（二档机，单位 ms）：

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    "报告中 16 个数字未在骨架中找到（疑似幻觉，TopN: ['1.8', '1.68 ms', '21.37 ms', '16.67 ms', '4.6']）"
+  ],
+  "lineCount": 673,
+  "skeletonLineCount": 602,
+  "lineRatio": 1.118,
+  "llmFillRemaining": 0,
+  "missingTableRows": 0,
+  "missingCodeBlocks": 0,
+  "tier": "L3"
+}

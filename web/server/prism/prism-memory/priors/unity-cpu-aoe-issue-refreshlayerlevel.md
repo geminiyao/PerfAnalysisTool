@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.757Z
 source: unity-cpu
 title: "AOE 已知问题：RefreshLayerLevel spike"
 tags: ["aoe","已知问题","无极缩放","大地图"]
+dataSource: unity
 ---
 
 **触发场景**：无极缩放层级切换。

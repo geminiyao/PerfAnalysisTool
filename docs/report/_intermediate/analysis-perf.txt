@@ -1,0 +1,203 @@
+背景
+内部用户反馈 iOS 启动长时间白屏问题，从现有日志和性能工具较难分析定位特例用户的卡慢问题。
+ANR问题分析
+从 Bulgy 系统分析，Top ANR 问题中大部分ANR Trace 都停留在MessageQueue.nativePollOnce ，从 ANR Trace 看，比较难定位出 ANR 前几秒的Trace信息辅助排查。
+全线程抓取
+现有性能工具，只有主线程的Trace信息，无法精确知道其他工作线程的耗时情况，我们需要其他线程信息去辅助分析锁、CPU占用过高等性能问题。
+线下工具性能问题
+综上所述，我们急需一个可同时线上线下使用，支持Android/iOS双端的全线程、高性能的方法Trace工具，提高分析性能问题的效率。我们针对业内方案进行了调研。
+方案调研
+PS : 方案调研均以已开源代码为准，如有差异，烦请告知。
+业界方案
+Profilo
+Facebook 开源线上性能分析工具，主要有以下的优点：
+集成atrace能力：Profilo 通过 PLT Hook 拦截了写入操作，并将关心的事件进行分析和记录。
+快速获取Java 堆栈：通过 Thread 对象拿到 ManagedStack 单链表，遍历内部的QuickFrame还原出堆栈。
+SystemCounter 功能：通过读取/proc/下文件，并将数据汇集到自定义的 profilo 文件中，用于线上性能分析。
+当然 Profilo 也存在缺点，由于它利用了大量的黑科技，兼容性是需要注意的问题。它内部实现有大量函数的 Hook，unwind 也需要强依赖 Android Runtime 实现。快速抓栈功能不支持Android 10 以上（maybe 内部版本支持）。
+Matrix
+微信开源的线上卡顿监控工具，主要通过生成方法ID并插桩，通过记录主线程方法调用，在超出卡顿阈值时dump出方法ID，线下通过工具还原实际方法名称。
+btrace
+字节跳动 开源的线下 Android Trace 工具，结合Profilo 和 Matrix 的方案特点，对方法进行插桩，通过PLT Hook ATrace写入事件，将Atrace数据转储到自定义日志文件中。
+JVMTI
+JVMTI（JVM Tool Interface）是 Java 虚拟机所提供的 native 编程接口。主要用于Debug包的分析，内置有方法探针。由于JVMTI的方法探针无法进行采样和过滤操作，只能针对全Java方法进行采集，性能损耗很大（直接卡死~o(╯□╰)o）。
+线上Trace技术难点
+基于业界方案的调研现有开源及内部工具，均无法满足我们的诉求。我们需设计一款高性能方法Trace工具。当然这里也存在一些技术难点：
+如何达到
+高性能，减少Trace带来的性能损耗？
+如何实现线上
+低内存占用，减少对业务的影响？
+如何实现
+高存储效率？用最小的Trace文件，存储最多的性能数据。
+如何实现线上线下
+统一的工具链？减少开发的学习成本，提交性能分析效率。
+如Android使用插桩方案。如何减少方法插桩对
+包体带来的增量？
+Trace工具实践
+方案简介
+本方案是一个用于线下及灰度包的性能分析工具，本工具融合业界先进方案的线上性能工具，结合各个性能指标数据，线下提供配套命令行工具进行转换成 systrace，配合Google 官方的 Perfetto 工具进行Trace 分析，提供分析性能问题效率。下面横向对比各个方案的特性：
+方案
+线上
+全线程
+方法采集
+Android&amp;iOS
+Pefetto分析
+Profilo
+√
+√
+部分版本支持
+仅Android
+×
+btrace
+×
+√
+√
+仅Android
+√
+Matrix
+√
+×
+√
+仅Android
+×
+本工具
+√
+√
+√
+双端
+√
+整体设计
+本方案主要包含以下四层：
+工具层：线下分析的命令行工具，主要功能：Trace文件转换systrace格式，一键Trace抓取工具，合并ftrace（仅Android）性能数据等。
+数据处理层：包括数据的上报，数据清理等功能。
+数据采集层：主要提供ATrace采集、方法插桩采集、系统关键指标信息采集。
+数据存储层：主要分为数据存储、数据压缩。采用Profilo开源的
+LockFreeRingbuffer进行数据存储。
+高性能方法探针
+Android Java&amp;Kotlin 方法采集
+业界方案
+btrace 方法插桩思路，通过ASM对方法出口入口进行Trace插桩。btrace方案插桩的方法为Trace.beginSection，并参考Profilo Hook 了Atrace写入，将Trace数据（即字符串）写入 Profilo 开源的LockFreeRingBuffer中。btrace一次方法调用需要写入两条数据（方法进、方法出）。btrace采集的方法ID为字符串类型（可能为历史原因，完全可以用Int）。btrace采用的数据存储格式是systrace格式，systrace格式较为冗余。
+本方案
+不同于业界方案，本工具采用为每个线程记录独立的执行栈，在方法出栈时，直接计算该函数的执行耗时，对低耗时方法不进行记录（这类方法通常不是优化对象，分析高频调用除外）；并且一次方法调用只需写入一条数据（时间戳、tid、方法ID、方法耗时），减少Trace写入引起的性能损耗。本方案插桩的方法ID为Int类型，可以减少数据的写入数量。整体方法采集如下：
+异常处理
+由于运行时方法内部可能会有RuntimeException，就有可能出现插桩方法调用不成对的情况，故需对异常情况进行特殊处理。
+业界方案
+对于异常的处理，btrace采用较为取巧的方案，btrace在插桩时，在MethodEnter时插入Trace.beginSection("b|方法id")，在MethodExit时插入Trace.beginSection("e|方法id")，这样在出现RuntimeExecption时，只会出现"b|方法id"，只需要在线下使用脚本工具对不成对的方法Trace数据剔除，即可实现对异常的处理。具体插桩实现如下：
+旧线下Trace工具
+旧线下 Trace工具，采用 ASM 给所有需插桩方法增加 try-catch，这样就能对方法进出成对插桩。但由于新增字节码较多，导致包体增加较大（初步估计包体增大20%），故线上工具无法使用这个方案。
+本方案
+本方案由于采用为每个线程记录单独调用栈的数据结构，只需在 MethodExit 时，判断调用栈弹栈的方法ID与当前方法ID不相等时，视为方法内部抛出RuntimeException，只需一直弹栈至相同方法ID即可，抛出异常的方法耗时也会体现在上层方法。
+方法插桩优化
+业界方案
+Matrix、btrace主要的插桩优化思路在将简单方法（如get、set、简单的构造函数等）、高频方法（btrace基于每日trace采集高频方法，自适应过滤高频方法）进行过滤。
+本方案
+本方案除了对简单方法、高频方法（未实现自适应，人工操作~o(╯□╰)o）的过滤。由于本方案一次方法调用需要获取两次纳秒级时间戳，所以获取时间戳的耗时也是我们需要重点关注的性能点。我们发现在低端机获取纳秒级别的时间耗时高达 600ns。
+为减少时间戳获取带来的性能损耗，我们设计了FastCall 插桩优化。具体实现为在插桩前扫描所有class，并生成方法调用链和类依赖链，在插桩时去决策是否需要重新获取纳秒级时间戳。具体策略如下：
+ |-------- A ---------|
+ |---B---||-C-||---D--|
+ 
+ 假设 B、D都需插桩的方法，C为快方法。
+ 且D有且只有一个A的调用点。
+ D在MethodEnter时。不需要获取时间。直接复用最后时间即可。
+ 同理，假设A、B、D需插桩，
+ B、D有且仅有一个A调用点
+ B的MethodEnter不需要获取时间。直接复用A的MethodEnter时获取的时间
+ A的MethodExit不需要获取时间。直接复用D的MethodExit时获取的时间
+内存优化
+业界方案
+btrace使用 Profilo 开源的 LockFreeRingBuffer的方式，将Atrace的信息转储到RingBuffer中。我们知道Atrace的数据较为冗余，有很多不必要的字符串数据。
+本方案
+本方案采用RingBuffer + 方法调用栈的方式进行数据缓冲。在方法调用栈上，采用Process.myTid作为索引。我们知道Linux 的 tid 范围是在0 ~ 32768。对单个线程栈限制最大栈深度 (目前为50 )。每个栈帧需两个long型分别存储方法ID和调用该方法时间，这样我们可以计算出方法调用栈最大栈内存占用在 3.14 MB（当然通常不会有所有tid都被占用的情况）。可能有的同学要问，为什么不参考 Matrix 采用一个Long型同时存储时间和方法 ID，主要是本方案需要去获取纳秒级的时间戳，腾讯视频需插桩方法有20w+，一个long型已经存储不下。
+iOS Object-C方法采集
+利用 fishhook + 汇编来hook系统的 objc_msgSend 方法,从而获取所有的函数的调用,进而记录到 trace 文件中. 支持模拟器+真机 arm64 两种架构。
+由于objc_msgSend是不定参数的函数，这里没办法使用c的方式来实现，故而只能用汇编来实现，简单来看，就是通过在汇编代码中，保存所有的上下文，调用我们定义的记录方法，最后再还原上下文(主要是指寄存器)
+由于存在多层级objc_msgSend调用，需要一个调用栈来保存调用层级和记录起始时间。 调用before_objc_msgSend时，将最新的调用指令LR进行入栈操作，记录当前时间和调用层级，调用after_objc_msgSend时取出栈顶元素，即可得到方法及对应的耗时。
+C/C++ 源码插桩
+前面我们使用 ASM 对 Java 字节码进行插桩，当然C++源码也是可以进行方法插桩的，我们可以使用 GCC/clang Function instrumentation 机制可以用来跟踪 c/c++ 源码中函数的调用关系。只需新增-finstrument-function编译参数，就能在所有方法进出进行插桩（此 Native 方法探针会增大 so 体积，目前仅在线下使用）。下面以Android为例，主要实现为：
+获取当前 so 基地址
+计算 this_func 在 so 内部相对地址
+使用 ATrace 进行打点
+使用 addr2line 命令将偏移地址转为具体代码行号（or 符号）
+Android详细的使用文档见：Android Native插桩文档
+Native源码插桩如下图所示： 
+代码示例如下：
+void __attribute__((no_instrument_function))
+__cyg_profile_func_enter(void *this_func, void *call_site) {
+  ScopedTrace::init();
+  if (0 != _ATrace_isEnabled &amp;&amp; _ATrace_isEnabled()) {
+    Dl_info info1;
+    if (dli_fbase == NULL) {
+      dladdr(this_func, &amp;info1);
+      dli_fbase = info1.dli_fbase;
+    }
+    int fn_addr = (char *) this_func - (char *) dli_fbase - 1;
+    char buff[32];
+    snprintf(buff, 32, "%p", fn_addr);
+    _ATrace_beginSection(buff);
+  }
+}
+void __attribute__((no_instrument_function))
+__cyg_profile_func_exit(void *this_func, void *call_site) {
+  if (0 != _ATrace_isEnabled &amp;&amp; _ATrace_isEnabled()) {
+    _ATrace_endSection();
+  }
+}
+低内存占用
+为减少Trace工具对APP的影响，本方案采用以下几个手段对内存占用进行优化：
+RingBuffer
+本方案采用RingBuffer方式进行数据缓存，当写入数据超过RingBuffer长度时，旧数据会被覆写。这样我们就可以在线上长时间的进行Trace采集。
+低耗时方法采样
+对于低于阈值的方法耗时（比如1ms）不进行写入。
+支持仅主线程抓取
+控制调用栈深度
+在Android插桩方案中，我们采用控制栈深度的方式来减少内存的占用。
+高存储效率
+为提高Trace文件的存储效率，减少日志数据冗余。将采取以下方式进行数据压缩：
+数值类型采用上一个
+数据偏移值的方式记录
+时间戳类型进行
+裁剪
+线上线下统一工具链
+线上分析工具
+线上问题，我们只需通过日志系统、Bugly系统下载用户上传的Trace文件，就能转换成systrace，就能通过Perfetto网站进行分析。
+线下分析工具
+我们知道 Android 的 systrace 主要包含ftrace、atrace信息，atrace信息我们通过PLT Hook 写入的方式转储到自定义的trace文件。ftrace（即CPU相关信息）为Linux内核写入，暂无法覆盖到（如知线上抓取ftrace的黑科技，烦请告知）。
+为此，我们在开发线下工具时同时抓取Perfetto（Android10 以上使用 Perfetto 抓取、Android10以下使用Systrace抓取）和 VBTrace，并将两工具的时钟对齐（systrace 记录的时间是 开机时间），最后将 Trace 文件转systrace 格式、合并，这样我们就能在 Perfetto 网站进行方法耗时分析了。
+自动化分析报告
+基于 Perfetto提供的 Python 库，使用 tdesign-react 、echart、FlameGraph 实现了自动化分析报告。我们主要分析了帧率，慢函数、CPU占用、IO次数、锁竞争、高频函数等。 下图以帧率和 CPU时间分布为例：  
+Perfetto网站增强
+Perfetto 网站并不是用于方法耗时分析，但是由于Android Studio上 Profiler性能较为卡顿。业务同学反馈方法耗时问题大部分需要分析方法自身耗时，希望能有类似 Profiler 中”Bottom Up“功能（该功能主要用于分析函数自身耗时）。
+Android Studio Profiler Bottom Up 功能截图： 
+为此我们将 Perfetto 网站源码进行扩展，并在命令行启动本地 webserver，将修改后的 Web 网站发布到 webserver上，从而实现Perfetto网站扩展。 具体Bottom Up 实现为：
+获取选中区域时间
+递归查询区域内所有节点
+构建节点树
+计算节点自身耗时
+生成 Bottom Up 表格
+具体功能如下： 
+Trace工具使用场景
+线上：ANR问题分析
+我们在腾讯视频灰度版本（通常48w日活）已开启Trace监控，在发生ANR时，提前将Trace日志导出到文件，并通过Bugly上报异常时携带。线下使用 VBTrace 命令工具转换成 Perfetto 网站能识别的 systrace 格式。
+当然实践过程中也遇到了些许问题，下面分享下实践过程中的遇到的问题以及解决方案：
+OOM上涨问题：
+我们在Android 灰度时发现，灰度版本OOM率上涨，通过分析发现大部分是使用腾讯视频6小时以上出现 OOM。最后定位到调用栈的索引使用的 java的Thread.getID()我们知道java层的thread ID是自增的，并非实际的Linux层的 tid，从而导致记录调用栈内存出现泄露。我们的解决方案使用Linux的tid，我们知道tid范围是在 0 ~ 32768，并且我们只要合理的控制栈深度就能减少内存占用。
+调用栈缺少问题:
+我们在分析灰度用户上传的ANR Trace时，发现发生死锁的最后的调用栈并未体现在Trace上。主要的原因是ANR发生时，出现死锁的方法还未来得及调用 MethodExit。这样我们只需在停止 Trace 时将每个线程调用栈上所有数据逐个写入到Trace问题，即可解决这个问题。
+整体流程如下：
+转换命令如下（由于需要对方法ID进行转义，故需要传入mapping文件）：
+vbtracec -i userExtraByteData -m method_mapping.txt
+生成效果如下所示： 
+线下：Android 一键Trace工具
+Android一键抓取Trace命令：
+vbtrace -p com.tencent.qqlive -o temp.html -m /path/to/method_mapping.txt
+下图为线下Trace工具的演示。 PS：线上Trace目前暂无ftrace信息（即图中的CPU调度信息），以下为线下配合Perfetto工具进行抓取的演示：
+0 损耗？
+性能损耗
+众所周知，不谈性能损耗的Trace工具都是耍流氓。既然要在线上开启Trace，就需要在性能损耗优化至可接受的范围。这里我们以腾讯视频冷启动30次的启动任务耗时作为对比，分别对比：全量包、ATrace插桩包（即 SysTrace插桩工具）、本方案  使用Systrace对关键阶段加 Trace，并冷启动100次计算平均值，得到的性能损耗：  从上图中可以看到，虽然相比ATrace插桩包已经有很大优化了，但在低端机的损耗是比较严重的，后续我们也会持续的进行性能优化。
+包体增量
+前文提到，Object-C 有统一的方法探针，无需做编译期插桩，iOS包体增量仅包含Trace代码相关逻辑，这块的增量是在可接受的范围内。Android由于需要做方法插桩的缘故，包体的增量是无法避免的。目前因插桩增加包体的增量在1%左右。
+后续规划
+前面介绍了我们是如何实现线上Trace工具，当然仍有性能优化空间。后续我们也会持续的进行Trace工具的损耗优化和更丰富的性能数据采集。后续规划：
+卡顿连续 Trace：目前启动Trace和停止Trace需要申请一块内存空间，当出现连续卡顿时，再去连续Dump的情况会有内存抖动。所以需设计一套支持连续Dump Trace的能力。
+锁竞争信息采集：目前只有Atrace输出的 Monitor 锁信息，仍缺少mutex锁、AQS锁信息采集。
+Trace 聚类：从上报上来的ANR问题Trace文件，nativePollOnce 问题的实际原因很分散，无法通过通过聚类算法将问题归类。后续计划在终端侧对Trace文件进行特性分析，分析出该Trace文件的最可能问题方法，将问题进行上报至Bugly系统，借助Bugly强大的堆栈聚类能力，从而发现问题的根因。

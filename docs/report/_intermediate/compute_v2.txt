@@ -1,0 +1,39 @@
+=== PlayerLoop stages diff (base vs stressmove) ===
+stage                                base%main    sm%main   base abs     sm abs     delta
+ScriptRunBehaviourUpdate                16.28%     32.74%       2624       5948   +126.7%
+ScriptRunBehaviourLateUpdate            10.38%     15.03%       1673       2730    +63.2%
+PlayerSendFrameComplete                  3.10%      2.08%        500        377    -24.6%
+PlayerUpdateCanvases                     2.02%      1.24%        326        225    -31.0%
+ParticleSystemBeginUpdateAll             0.16%      0.91%         26        166   +547.8%
+ParticleSystemEndUpdateAll               0.00%      0.24%          0         43       N/A
+LegacyAnimationUpdate                    0.28%      0.75%         45        137   +205.9%
+FinishFrameRendering                     1.02%      0.67%        165        122    -26.1%
+UpdateTextureStreamingManager            2.79%      1.59%        450        289    -35.8%
+PlayerEmitCanvasGeometry                 1.07%      0.66%        172        120    -30.4%
+UpdateAllRenderers                       0.24%      0.55%         39        100   +158.2%
+SendMouseEvents                          0.38%      0.35%         61         64     +5.2%
+LuaMultiThreadGC                         0.14%      0.00%         23          0   -100.0%
+
+=== base vs stressmove: 主线程主要子树 ===
+  RenderManager::RenderCameras        base  41.29%/main →  26.57%/main  abs Δ -27.5%
+  UnityPlayerLoop                     base  52.23%/main →  69.17%/main  abs Δ +49.2%
+  nativeRender                        base  52.24%/main →  69.17%/main  abs Δ +49.2%
+
+=== base 渲染 Pass（对照 stressmove）===
+  PlanarShadow_RenderShadow            base  6.68%→ sm  3.95%  abs Δ -33.3%
+  BloomPass_Execute                    base  4.88%→ sm  3.71%  abs Δ -14.2%
+  DrawFoliageInstanceRenderers         base  4.81%→ sm  2.61%  abs Δ -38.9%
+  OutsideForestRenderer_DrawInternal   base  2.33%→ sm  1.34%  abs Δ -35.2%
+  ShadowPass_ProcessShadow             base  8.88%→ sm  5.25%  abs Δ -33.5%
+  MobileBaseRenderer_Setup             base  5.12%→ sm  3.25%  abs Δ -28.4%
+  DrawRendererPass_Execute             base  8.76%→ sm  5.34%  abs Δ -31.4%
+
+=== RHI 线程 (Thread-102) 子树 base vs stressmove ===
+  DrawBuffers                          base 52.89%→ sm 53.44% (in-thread) | global 14.22%→11.34% | abs Δ +4.2%
+  ConstantBuffersGLES::UpdateBuffers   base 15.75%→ sm 18.89% (in-thread) | global 4.23%→4.01% | abs Δ +23.7%
+  ConstantBuffersGLES::UpdateCB        base  4.12%→ sm  4.46% (in-thread) | global 1.11%→0.95% | abs Δ +11.6%
+  eglSwapBuffers                       base  5.56%→ sm  4.31% (in-thread) | global 1.50%→0.91% | abs Δ -20.1%
+  PresentFrame                         base  7.36%→ sm  7.04% (in-thread) | global 1.98%→1.49% | abs Δ -1.4%
+  JobQueue::WaitForJobGroupID          base  2.39%→ sm  3.85% (in-thread) | global 0.64%→0.82% | abs Δ +66.0%
+  SetShadersThreadable                 base  9.91%→ sm  7.49% (in-thread) | global 2.67%→1.59% | abs Δ -22.1%
+  DynamicVBO::DrawChunk                base  3.07%→ sm  2.74% (in-thread) | global 0.82%→0.58% | abs Δ -8.0%

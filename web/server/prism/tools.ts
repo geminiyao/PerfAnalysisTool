@@ -987,6 +987,12 @@ export interface DrillDownNode {
   pctOfRoot: number;
   presentFrames: number;
   children: DrillDownNode[];
+  /** WT-033: 红线触发标注（如 "单次 1.50ms 触红线" / "临近红线"），来自 findings 的 explore LLM 判定 */
+  redlineFlag?: string;
+  /** WT-033: 涨幅倍数标注（如 "×4.2"），多态从 querySliceDeltas 来 */
+  foldChange?: string;
+  /** WT-033: 严重度标签，render 据此上色（critical=触红线/high=临近/medium=占比显著/low/healthy） */
+  severityTag?: 'critical' | 'high' | 'medium' | 'low' | 'healthy';
 }
 
 export interface DrillDownLeaf {
@@ -3460,5 +3466,680 @@ export function queryGcAllocByModule(
       rows,
     },
     provenance: perfettoProvenance('queryGcAllocByModule', args, run),
+  };
+}
+
+// ─────────────────────────── WT-044: Unity multi-state JSON tools ─────
+//
+// 参考 perfetto multi 机制（PerfettoSampleRole / resolvePerfettoRunDir / loadPerfettoRun）。
+// unity 多态约定：udiff 目录下 base/ + cur/ 子目录，每个含 preprocess-result.json
+// + preprocess-summary.json。多态对比从两个 role 的 JSON 读数据，算 foldChange +
+// 绝对增量，不灌库（方案 B：JSON 路线）。
+//
+// explore-service 不需要改：它只传 runId（=udiff 目录名），多态是 tools 层 + LLM 层
+// 的事。LLM 调工具时传 role 参数访问不同样本。
+
+export type UnitySampleRole = 'base' | 'cur' | 'single';
+
+export interface UnityJsonToolArgs {
+  /** udiff 目录名（如 udiff_1782983710451_be175ef1）。不传则用 UNITY_UDIFF_ROOT 默认。 */
+  runId?: string;
+  /** 样本角色：base/cur/single。不传默认 cur。 */
+  role?: UnitySampleRole;
+  /** 显式指定 udiff 目录绝对路径（覆盖 runId）。 */
+  runDir?: string;
+}
+
+interface UnityMarkerRow {
+  name: string;
+  msSelfMean: number;
+  msTotalMean: number;
+  percentOfFrame: number;
+  count: number;
+  presentOnFrameCount: number;
+  thread: string;
+  depth: number;
+  spikeRatio?: number;
+  mustReport?: boolean;
+  mustReportReason?: string;
+}
+
+interface UnityAggTreeNode {
+  name: string;
+  depth: number;
+  msTotal: number;
+  msPerFrameTotal: number;
+  msSelf: number;
+  msPerFrameSelf: number;
+  presentOnFrameCount: number;
+  presentRate: number;
+  threadPct: number;
+  count: number;
+  gcAllocCount: number;
+  children: UnityAggTreeNode[];
+}
+
+interface UnityAggCallTree {
+  threadName: string;
+  frameCount: number;
+  msTotalAllFrames?: number;
+  msPerFrameTotal?: number;
+  presentOnFrameCount?: number;
+  roots: UnityAggTreeNode[];
+}
+
+interface UnityFrameSummary {
+  count: number;
+  actualFps: number;
+  mean: number;
+  median: number;
+  min: number;
+  max: number;
+  q1: number;
+  q3: number;
+  p90: number;
+  p95: number;
+  p99: number;
+  p999: number;
+  worstFrameIndex: number;
+  medianFrameIndex: number;
+  jankCount: number;
+  bigJankCount: number;
+}
+
+interface UnityThreadSummary {
+  name: string;
+  msMedian: number;
+  msMax: number;
+  msPerFrameTotal: number;
+  topMarkers: Array<{ name: string; msSelfMean: number; percentOfFrame: number }>;
+}
+
+interface LoadedUnityRun {
+  runId: string;
+  role: UnitySampleRole;
+  runDir: string;
+  resultPath: string;
+  summaryPath: string;
+  result: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  markers: UnityMarkerRow[];
+  aggregatedCallTrees: UnityAggCallTree[];
+  frameSummary: UnityFrameSummary;
+  threads: UnityThreadSummary[];
+}
+
+/**
+ * udiff 根目录：web/data/results/。LLM 默认 runId=udiff_1782983710451_be175ef1。
+ * 工具按 runId 拼路径 web/data/results/<runId>/<role>/preprocess-{result,summary}.json。
+ */
+const UNITY_UDIFF_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../data/results'
+);
+
+function normalizeUnityRole(role: unknown): UnitySampleRole {
+  return role === 'base' || role === 'cur' || role === 'single'
+    ? role
+    : 'cur';
+}
+
+/**
+ * 解析 unity 多态 run 目录。
+ * - role=single：runDir 直接是样本目录（含 preprocess-result.json）
+ * - role=base/cur：runDir 是 udiff 目录，拼 /base 或 /cur 子目录
+ */
+function resolveUnityRunDir(args: UnityJsonToolArgs): { role: UnitySampleRole; runDir: string } {
+  const role = normalizeUnityRole(args.role);
+  if (args.runDir) {
+    return { role, runDir: path.resolve(args.runDir) };
+  }
+  const runId = args.runId ?? 'udiff_1782983710451_be175ef1';
+  if (role === 'single') {
+    return { role, runDir: path.join(UNITY_UDIFF_ROOT, runId) };
+  }
+  return { role, runDir: path.join(UNITY_UDIFF_ROOT, runId, role) };
+}
+
+function loadUnityRun(args: UnityJsonToolArgs): LoadedUnityRun {
+  const { role, runDir } = resolveUnityRunDir(args);
+  const resultPath = path.join(runDir, 'preprocess-result.json');
+  const summaryPath = path.join(runDir, 'preprocess-summary.json');
+  if (!fs.existsSync(resultPath)) {
+    throw new Error(`Unity preprocess-result.json not found: ${resultPath}`);
+  }
+  if (!fs.existsSync(summaryPath)) {
+    throw new Error(`Unity preprocess-summary.json not found: ${summaryPath}`);
+  }
+  const result = JSON.parse(fs.readFileSync(resultPath, 'utf8')) as Record<string, unknown>;
+  const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8')) as Record<string, unknown>;
+  const markers = (Array.isArray(result.markers) ? result.markers : []).map((m: unknown) => {
+    const r = asRecord(m);
+    return {
+      name: typeof r.name === 'string' ? r.name : String(r.name ?? ''),
+      msSelfMean: asNumber(r.msSelfMean) ?? 0,
+      msTotalMean: asNumber(r.msTotalMean) ?? 0,
+      percentOfFrame: asNumber(r.percentOfFrame) ?? 0,
+      count: asNumber(r.count) ?? 0,
+      presentOnFrameCount: asNumber(r.presentOnFrameCount) ?? 0,
+      thread: typeof r.thread === 'string' ? r.thread : '',
+      depth: asNumber(r.depth) ?? 0,
+      spikeRatio: asNumber(r.spikeRatio),
+      mustReport: r.mustReport === true,
+      mustReportReason: typeof r.mustReportReason === 'string' ? r.mustReportReason : undefined,
+    } as UnityMarkerRow;
+  });
+  const aggregatedCallTrees = (Array.isArray(result.aggregatedCallTrees) ? result.aggregatedCallTrees : [])
+    .map((t: unknown) => t as UnityAggCallTree);
+  const frameSummary = asRecord(result.frameSummary) as unknown as UnityFrameSummary;
+  const threads = (Array.isArray(result.threads) ? result.threads : []).map((t: unknown) => t as UnityThreadSummary);
+  const runId = args.runId ?? `unity-${role}`;
+  return { runId, role, runDir, resultPath, summaryPath, result, summary, markers, aggregatedCallTrees, frameSummary, threads };
+}
+
+function unityProvenance(tool: string, args: UnityJsonToolArgs, run: LoadedUnityRun): Provenance {
+  return {
+    runId: run.runId,
+    tool,
+    args: args as Record<string, unknown>,
+    source: 'unity',
+    role: run.role,
+  };
+}
+
+// ── Unity 多态工具 1: queryMarkersMultiState ──────────────────────────
+// 读 base/cur 两个 role 的 markers，算 foldChange + 绝对增量，按 foldChange 排序返回 top N。
+// 不硬编码业务名，通用计算对所有 marker 适用。
+
+export interface QueryMarkersMultiStateArgs extends UnityJsonToolArgs {
+  /** 基线 role（默认 base） */
+  baseRole?: UnitySampleRole;
+  /** 当前 role（默认 cur） */
+  compareRole?: UnitySampleRole;
+  /** 线程过滤（可选，子串匹配） */
+  thread?: string;
+  /** 最小 foldChange（默认 1.5，防噪声） */
+  minFoldChange?: number;
+  /** 最小绝对增量（ms/帧，默认 0.05，防"从 0.01 涨到 0.05 涨 5 倍但无意义"的噪声） */
+  minAbsoluteDelta?: number;
+  /** top N（默认 20） */
+  topN?: number;
+  /** 排序方式：foldChange（默认） / absoluteDelta / curMsPerFrame */
+  sortBy?: 'foldChange' | 'absoluteDelta' | 'curMsPerFrame';
+}
+
+export interface QueryMarkersMultiStateRow {
+  name: string;
+  thread: string;
+  baseMsSelfMean: number | null;
+  curMsSelfMean: number | null;
+  baseMsTotalMean: number | null;
+  curMsTotalMean: number | null;
+  foldChange: number | null;
+  absoluteDelta: number | null;
+  basePercentOfFrame: number | null;
+  curPercentOfFrame: number | null;
+  baseCount: number | null;
+  curCount: number | null;
+  /** "appeared"（基线无 + 当前有）/ "removed"（基线有 + 当前无）/ "changed"（两态都有） */
+  presence: 'appeared' | 'removed' | 'changed';
+}
+
+export interface QueryMarkersMultiStateResult {
+  data: {
+    available: boolean;
+    baseFrameCount: number;
+    curFrameCount: number;
+    rows: QueryMarkersMultiStateRow[];
+  };
+  provenance: Provenance;
+}
+
+export function queryMarkersMultiState(
+  _db: Database.Database | null | undefined,
+  args: QueryMarkersMultiStateArgs
+): QueryMarkersMultiStateResult {
+  const baseRole = normalizeUnityRole(args.baseRole ?? 'base');
+  const compareRole = normalizeUnityRole(args.compareRole ?? 'cur');
+  const baseRun = loadUnityRun({ ...args, role: baseRole });
+  const curRun = loadUnityRun({ ...args, role: compareRole });
+
+  const threadFilter = args.thread?.toLowerCase();
+  const minFoldChange = args.minFoldChange ?? 1.5;
+  const minAbsoluteDelta = args.minAbsoluteDelta ?? 0.05;
+  const topN = Math.min(args.topN ?? 20, 100);
+  const sortBy = args.sortBy ?? 'foldChange';
+
+  const baseByName = new Map(baseRun.markers.map(m => [`${m.name}@${m.thread}`, m]));
+  const curByName = new Map(curRun.markers.map(m => [`${m.name}@${m.thread}`, m]));
+  const allKeys = new Set<string>([...baseByName.keys(), ...curByName.keys()]);
+
+  const rows: QueryMarkersMultiStateRow[] = [];
+  for (const key of allKeys) {
+    const base = baseByName.get(key);
+    const cur = curByName.get(key);
+    if (threadFilter) {
+      const t = (cur?.thread ?? base?.thread ?? '').toLowerCase();
+      if (!t.includes(threadFilter)) continue;
+    }
+    const baseMs = base?.msSelfMean ?? null;
+    const curMs = cur?.msSelfMean ?? null;
+    let foldChange: number | null = null;
+    let absoluteDelta: number | null = null;
+    if (baseMs != null && curMs != null) {
+      absoluteDelta = roundNumber(curMs - baseMs, 4) ?? null;
+      foldChange = baseMs > 0 ? roundNumber(curMs / baseMs, 3) ?? null : 9999;
+    } else if (curMs != null && (baseMs == null || baseMs === 0)) {
+      foldChange = 9999;
+      absoluteDelta = roundNumber(curMs, 4) ?? null;
+    } else if (baseMs != null && (curMs == null || curMs === 0)) {
+      foldChange = 0;
+      absoluteDelta = roundNumber(-baseMs, 4) ?? null;
+    }
+    // 过滤：foldChange 不达阈值 + 绝对增量不达阈值 = 跳过（防噪声）
+    if (foldChange == null) continue;
+    const foldOk = foldChange >= minFoldChange || foldChange <= 1 / minFoldChange;
+    const deltaOk = absoluteDelta != null && Math.abs(absoluteDelta) >= minAbsoluteDelta;
+    if (!foldOk || !deltaOk) continue;
+
+    const presence: QueryMarkersMultiStateRow['presence'] =
+      (baseMs == null || baseMs === 0) && curMs != null && curMs > 0
+        ? 'appeared'
+        : (curMs == null || curMs === 0) && baseMs != null && baseMs > 0
+          ? 'removed'
+          : 'changed';
+
+    rows.push({
+      name: cur?.name ?? base?.name ?? key.split('@')[0],
+      thread: cur?.thread ?? base?.thread ?? '',
+      baseMsSelfMean: baseMs,
+      curMsSelfMean: curMs,
+      baseMsTotalMean: base?.msTotalMean ?? null,
+      curMsTotalMean: cur?.msTotalMean ?? null,
+      foldChange,
+      absoluteDelta,
+      basePercentOfFrame: base?.percentOfFrame ?? null,
+      curPercentOfFrame: cur?.percentOfFrame ?? null,
+      baseCount: base?.count ?? null,
+      curCount: cur?.count ?? null,
+      presence,
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (sortBy === 'absoluteDelta') {
+      return Math.abs(b.absoluteDelta ?? 0) - Math.abs(a.absoluteDelta ?? 0);
+    }
+    if (sortBy === 'curMsPerFrame') {
+      return (b.curMsSelfMean ?? 0) - (a.curMsSelfMean ?? 0);
+    }
+    return (b.foldChange ?? 0) - (a.foldChange ?? 0);
+  });
+
+  const trimmed = rows.slice(0, topN);
+  const provenanceRun = curRun;
+  return {
+    data: {
+      available: trimmed.length > 0,
+      baseFrameCount: baseRun.frameSummary?.count ?? 0,
+      curFrameCount: curRun.frameSummary?.count ?? 0,
+      rows: trimmed,
+    },
+    provenance: unityProvenance('queryMarkersMultiState', args, provenanceRun),
+  };
+}
+
+// ── Unity 多态工具 2: queryFrameSummaryMultiState ─────────────────────
+// 读 base/cur 的 frameSummary，返回两态帧分位数对照表 + delta + deltaPct。
+// 不硬编码绝对阈值，deltaPct 是相对倍数。
+
+export interface QueryFrameSummaryMultiStateArgs extends UnityJsonToolArgs {
+  baseRole?: UnitySampleRole;
+  compareRole?: UnitySampleRole;
+}
+
+export interface QueryFrameSummaryMultiStateResult {
+  data: {
+    available: boolean;
+    base: UnityFrameSummary | null;
+    cur: UnityFrameSummary | null;
+    deltas: QueryFrameSummaryDelta[];
+  };
+  provenance: Provenance;
+}
+
+export interface QueryFrameSummaryDelta {
+  metric: string;
+  base: number | null;
+  cur: number | null;
+  delta: number | null;
+  deltaPct: number | null;
+}
+
+export function queryFrameSummaryMultiState(
+  _db: Database.Database | null | undefined,
+  args: QueryFrameSummaryMultiStateArgs
+): QueryFrameSummaryMultiStateResult {
+  const baseRole = normalizeUnityRole(args.baseRole ?? 'base');
+  const compareRole = normalizeUnityRole(args.compareRole ?? 'cur');
+  const baseRun = loadUnityRun({ ...args, role: baseRole });
+  const curRun = loadUnityRun({ ...args, role: compareRole });
+  const base = baseRun.frameSummary;
+  const cur = curRun.frameSummary;
+  const metricKeys: Array<keyof UnityFrameSummary> = ['mean', 'median', 'p90', 'p95', 'p99', 'p999', 'actualFps', 'jankCount', 'bigJankCount', 'count'];
+  const deltas = metricKeys.map(k => {
+    const b = base ? (base as unknown as Record<string, number>)[k as string] ?? null : null;
+    const c = cur ? (cur as unknown as Record<string, number>)[k as string] ?? null : null;
+    let delta: number | null = null;
+    let deltaPct: number | null = null;
+    if (b != null && c != null) {
+      delta = roundNumber(c - b, 3) ?? null;
+      deltaPct = b !== 0 ? roundNumber(((c - b) / Math.abs(b)) * 100, 2) ?? null : null;
+    }
+    return { metric: k as string, base: b, cur: c, delta, deltaPct };
+  });
+  return {
+    data: {
+      available: base != null || cur != null,
+      base,
+      cur,
+      deltas,
+    },
+    provenance: unityProvenance('queryFrameSummaryMultiState', args, curRun),
+  };
+}
+
+// ── Unity 多态工具 3: queryThreadsMultiState ──────────────────────────
+// 读 base/cur 的 threads 数组，返回两态线程 msPerFrameTotal 对照 + foldChange。
+// 线程识别用 unity 通用名（UnityMain / UnityGfxRenderS / Job.Worker / LuaMtGC 等）。
+
+export interface QueryThreadsMultiStateArgs extends UnityJsonToolArgs {
+  baseRole?: UnitySampleRole;
+  compareRole?: UnitySampleRole;
+  /** 线程名过滤（子串匹配，可选） */
+  thread?: string;
+  topN?: number;
+}
+
+export interface QueryThreadsMultiStateRow {
+  name: string;
+  baseMsPerFrameTotal: number | null;
+  curMsPerFrameTotal: number | null;
+  foldChange: number | null;
+  delta: number | null;
+  baseMsMedian: number | null;
+  curMsMedian: number | null;
+  baseTopMarkers: Array<{ name: string; msSelfMean: number; percentOfFrame: number }> | null;
+  curTopMarkers: Array<{ name: string; msSelfMean: number; percentOfFrame: number }> | null;
+}
+
+export interface QueryThreadsMultiStateResult {
+  data: {
+    available: boolean;
+    rows: QueryThreadsMultiStateRow[];
+  };
+  provenance: Provenance;
+}
+
+export function queryThreadsMultiState(
+  _db: Database.Database | null | undefined,
+  args: QueryThreadsMultiStateArgs
+): QueryThreadsMultiStateResult {
+  const baseRole = normalizeUnityRole(args.baseRole ?? 'base');
+  const compareRole = normalizeUnityRole(args.compareRole ?? 'cur');
+  const baseRun = loadUnityRun({ ...args, role: baseRole });
+  const curRun = loadUnityRun({ ...args, role: compareRole });
+  const threadFilter = args.thread?.toLowerCase();
+  const topN = Math.min(args.topN ?? 20, 50);
+
+  const baseByName = new Map(baseRun.threads.map(t => [t.name, t]));
+  const curByName = new Map(curRun.threads.map(t => [t.name, t]));
+  const allNames = new Set<string>([...baseByName.keys(), ...curByName.keys()]);
+
+  const rows: QueryThreadsMultiStateRow[] = [];
+  for (const name of allNames) {
+    if (threadFilter && !name.toLowerCase().includes(threadFilter)) continue;
+    const base = baseByName.get(name);
+    const cur = curByName.get(name);
+    const baseMs = base?.msPerFrameTotal ?? null;
+    const curMs = cur?.msPerFrameTotal ?? null;
+    let foldChange: number | null = null;
+    let delta: number | null = null;
+    if (baseMs != null && curMs != null) {
+      delta = roundNumber(curMs - baseMs, 4) ?? null;
+      foldChange = baseMs > 0 ? roundNumber(curMs / baseMs, 3) ?? null : 9999;
+    }
+    rows.push({
+      name,
+      baseMsPerFrameTotal: baseMs,
+      curMsPerFrameTotal: curMs,
+      foldChange,
+      delta,
+      baseMsMedian: base?.msMedian ?? null,
+      curMsMedian: cur?.msMedian ?? null,
+      baseTopMarkers: base?.topMarkers ?? null,
+      curTopMarkers: cur?.topMarkers ?? null,
+    });
+  }
+  rows.sort((a, b) => (b.curMsPerFrameTotal ?? 0) - (a.curMsPerFrameTotal ?? 0));
+  const trimmed = rows.slice(0, topN);
+  return {
+    data: { available: trimmed.length > 0, rows: trimmed },
+    provenance: unityProvenance('queryThreadsMultiState', args, curRun),
+  };
+}
+
+// ── Unity 多态工具 4: queryAggCallTreeMultiState ──────────────────────
+// 读 base/cur 的 aggregatedCallTrees，按 thread + rootMarker 定位，返回两态对照子树。
+// 用于多态 callTree 渲染（render-html 会读这个数据画对照树）。
+
+export interface QueryAggCallTreeMultiStateArgs extends UnityJsonToolArgs {
+  baseRole?: UnitySampleRole;
+  compareRole?: UnitySampleRole;
+  /** 线程名（如 "1:Main Thread"） */
+  thread?: string;
+  /** 根 marker 名（如 "PlayerLoop"） */
+  rootMarker?: string;
+  /** 最大深度（默认 8） */
+  maxDepth?: number;
+  /** 每层最多保留几个子节点（默认 8） */
+  topChildren?: number;
+  /** 最小 msPerFrameTotal（默认 0.1，过滤小成本节点） */
+  minMsPerFrame?: number;
+}
+
+export interface UnityAggTreeNodeMultiState {
+  name: string;
+  depth: number;
+  baseMsPerFrameTotal: number | null;
+  curMsPerFrameTotal: number | null;
+  baseMsPerFrameSelf: number | null;
+  curMsPerFrameSelf: number | null;
+  foldChange: number | null;
+  delta: number | null;
+  baseGcAllocCount: number | null;
+  curGcAllocCount: number | null;
+  baseThreadPct: number | null;
+  curThreadPct: number | null;
+  children: UnityAggTreeNodeMultiState[];
+}
+
+export interface QueryAggCallTreeMultiStateResult {
+  data: {
+    available: boolean;
+    thread: string;
+    rootMarker: string;
+    baseFrameCount: number | null;
+    curFrameCount: number | null;
+    tree: UnityAggTreeNodeMultiState | null;
+  };
+  provenance: Provenance;
+}
+
+function findAggTreeRoot(
+  run: LoadedUnityRun,
+  thread: string,
+  rootMarker?: string
+): { tree: UnityAggCallTree; root: UnityAggTreeNode } | null {
+  const trees = run.aggregatedCallTrees;
+  let selected: UnityAggCallTree | undefined;
+  if (thread) {
+    selected = trees.find(t => t.threadName === thread || t.threadName.toLowerCase().includes(thread.toLowerCase()));
+  }
+  if (!selected) selected = trees[0];
+  if (!selected) return null;
+  let root: UnityAggTreeNode | undefined;
+  if (rootMarker) {
+    root = selected.roots.find(r => r.name === rootMarker) ?? selected.roots.find(r => r.name.includes(rootMarker) || rootMarker.includes(r.name));
+  }
+  if (!root) root = selected.roots[0];
+  if (!root) return null;
+  return { tree: selected, root };
+}
+
+function pruneAndMergeAggTree(
+  baseNode: UnityAggTreeNode | undefined,
+  curNode: UnityAggTreeNode | undefined,
+  depth: number,
+  maxDepth: number,
+  topChildren: number,
+  minMsPerFrame: number
+): UnityAggTreeNodeMultiState {
+  const name = (curNode?.name ?? baseNode?.name) ?? '(unknown)';
+  const baseMs = baseNode?.msPerFrameTotal ?? null;
+  const curMs = curNode?.msPerFrameTotal ?? null;
+  let foldChange: number | null = null;
+  let delta: number | null = null;
+  if (baseMs != null && curMs != null) {
+    delta = roundNumber(curMs - baseMs, 4) ?? null;
+    foldChange = baseMs > 0 ? roundNumber(curMs / baseMs, 3) ?? null : 9999;
+  } else if (curMs != null && (baseMs == null || baseMs === 0)) {
+    foldChange = 9999;
+    delta = roundNumber(curMs, 4) ?? null;
+  }
+  const children: UnityAggTreeNodeMultiState[] = [];
+  if (depth < maxDepth) {
+    const baseChildren = new Map((baseNode?.children ?? []).map(c => [c.name, c]));
+    const curChildren = new Map((curNode?.children ?? []).map(c => [c.name, c]));
+    const allNames = new Set<string>([...baseChildren.keys(), ...curChildren.keys()]);
+    const childEntries: UnityAggTreeNodeMultiState[] = [];
+    for (const cname of allNames) {
+      const bc = baseChildren.get(cname);
+      const cc = curChildren.get(cname);
+      const childMs = cc?.msPerFrameTotal ?? bc?.msPerFrameTotal ?? 0;
+      if (childMs < minMsPerFrame && depth > 1) continue; // 深层过滤小成本节点
+      childEntries.push(pruneAndMergeAggTree(bc, cc, depth + 1, maxDepth, topChildren, minMsPerFrame));
+    }
+    childEntries.sort((a, b) => (b.curMsPerFrameTotal ?? b.baseMsPerFrameTotal ?? 0) - (a.curMsPerFrameTotal ?? a.baseMsPerFrameTotal ?? 0));
+    children.push(...childEntries.slice(0, topChildren));
+  }
+  return {
+    name,
+    depth,
+    baseMsPerFrameTotal: baseMs,
+    curMsPerFrameTotal: curMs,
+    baseMsPerFrameSelf: baseNode?.msPerFrameSelf ?? null,
+    curMsPerFrameSelf: curNode?.msPerFrameSelf ?? null,
+    foldChange,
+    delta,
+    baseGcAllocCount: baseNode?.gcAllocCount ?? null,
+    curGcAllocCount: curNode?.gcAllocCount ?? null,
+    baseThreadPct: baseNode?.threadPct ?? null,
+    curThreadPct: curNode?.threadPct ?? null,
+    children,
+  };
+}
+
+export function queryAggCallTreeMultiState(
+  _db: Database.Database | null | undefined,
+  args: QueryAggCallTreeMultiStateArgs
+): QueryAggCallTreeMultiStateResult {
+  const baseRole = normalizeUnityRole(args.baseRole ?? 'base');
+  const compareRole = normalizeUnityRole(args.compareRole ?? 'cur');
+  const baseRun = loadUnityRun({ ...args, role: baseRole });
+  const curRun = loadUnityRun({ ...args, role: compareRole });
+  const thread = args.thread ?? '1:Main Thread';
+  const rootMarker = args.rootMarker;
+  const maxDepth = Math.min(args.maxDepth ?? 8, 20);
+  const topChildren = Math.min(args.topChildren ?? 8, 30);
+  const minMsPerFrame = args.minMsPerFrame ?? 0.1;
+
+  const baseFound = findAggTreeRoot(baseRun, thread, rootMarker);
+  const curFound = findAggTreeRoot(curRun, thread, rootMarker);
+  if (!baseFound && !curFound) {
+    return {
+      data: {
+        available: false,
+        thread,
+        rootMarker: rootMarker ?? '(auto)',
+        baseFrameCount: baseRun.frameSummary?.count ?? null,
+        curFrameCount: curRun.frameSummary?.count ?? null,
+        tree: null,
+      },
+      provenance: unityProvenance('queryAggCallTreeMultiState', args, curRun),
+    };
+  }
+  const tree = pruneAndMergeAggTree(
+    baseFound?.root,
+    curFound?.root,
+    1,
+    maxDepth,
+    topChildren,
+    minMsPerFrame
+  );
+  return {
+    data: {
+      available: tree != null,
+      thread: baseFound?.tree.threadName ?? curFound?.tree.threadName ?? thread,
+      rootMarker: tree?.name ?? rootMarker ?? '(auto)',
+      baseFrameCount: baseFound?.tree.frameCount ?? baseRun.frameSummary?.count ?? null,
+      curFrameCount: curFound?.tree.frameCount ?? curRun.frameSummary?.count ?? null,
+      tree,
+    },
+    provenance: unityProvenance('queryAggCallTreeMultiState', args, curRun),
+  };
+}
+
+// ── Unity 单态工具（兼容单态查询，LLM 在单态时用） ────────────────────
+// 读 single role 的 preprocess-result.json，提供和 multi 工具对称的单态查询能力。
+// 当 LLM 检测到单态（只有 1 个样本）时，用这些工具而不是 multi 工具。
+
+export interface QueryUnitySingleArgs extends UnityJsonToolArgs {
+  thread?: string;
+  topN?: number;
+  sortBy?: 'selfMs' | 'totalMs' | 'percentOfFrame';
+}
+
+export interface QueryUnitySingleResult {
+  data: {
+    available: boolean;
+    frameCount: number;
+    rows: UnityMarkerRow[];
+  };
+  provenance: Provenance;
+}
+
+export function queryUnityMarkers(
+  _db: Database.Database | null | undefined,
+  args: QueryUnitySingleArgs
+): QueryUnitySingleResult {
+  const run = loadUnityRun({ ...args, role: args.role ?? 'single' });
+  const threadFilter = args.thread?.toLowerCase();
+  const sortBy = args.sortBy ?? 'selfMs';
+  const topN = Math.min(args.topN ?? 20, 100);
+  let rows = run.markers;
+  if (threadFilter) rows = rows.filter(m => m.thread.toLowerCase().includes(threadFilter));
+  rows.sort((a, b) => {
+    if (sortBy === 'totalMs') return b.msTotalMean - a.msTotalMean;
+    if (sortBy === 'percentOfFrame') return b.percentOfFrame - a.percentOfFrame;
+    return b.msSelfMean - a.msSelfMean;
+  });
+  return {
+    data: {
+      available: rows.length > 0,
+      frameCount: run.frameSummary?.count ?? 0,
+      rows: rows.slice(0, topN),
+    },
+    provenance: unityProvenance('queryUnityMarkers', args, run),
   };
 }

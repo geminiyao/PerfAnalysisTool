@@ -8,12 +8,17 @@ import {
   Drawer,
   Dropdown,
   Empty,
+  Modal,
+  Popover,
+  Progress,
+  Table,
+  Tooltip,
+  Typography,
   Row,
   Select,
   Space,
   Spin,
   Tag,
-  Typography,
   message,
 } from 'antd';
 import type { MenuProps } from 'antd';
@@ -27,6 +32,8 @@ import {
   DownOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
+  ExperimentOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ReactECharts from 'echarts-for-react';
@@ -35,9 +42,13 @@ import {
   fetchTriadTrends,
   fetchRunsByVersion,
   generateRunAnalysisWithSources,
+  generatePrismAnalysis,
+  subscribeProgress,
   listRuns,
+  fetchPrismTiming,
   type TriadTrendsData,
   type VersionRunItem,
+  type PipelineTiming,
 } from '@/services/api';
 
 const { Text, Title } = Typography;
@@ -63,10 +74,36 @@ const Dashboard: React.FC = () => {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null); // 正在分析的 runId
 
+  // Prism 分析状态 (WT-051b)
+  // prismAnalyzing: 正在跑 Prism 的 runId (与 analyzing 区分, 互不阻塞)
+  // prismProgress: runId → { stage, progress, message, sessionId?, done? }
+  const [prismAnalyzing, setPrismAnalyzing] = useState<string | null>(null);
+  const [prismProgress, setPrismProgress] = useState<Record<string, {
+    stage: string;
+    progress: number;
+    message: string;
+    sessionId?: string;
+    done?: boolean;
+    startTime?: number;
+    endTime?: number;
+    logs?: string[];
+  }>>({});
+  // 每秒 tick 驱动已用时间更新
+  const [, setPrismTick] = useState(0);
+  useEffect(() => {
+    if (!prismAnalyzing) return;
+    const timer = setInterval(() => setPrismTick(t => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [prismAnalyzing]);
+
   // 筛选器选项: 从 runs 列表提取去重
   const [projectOptions, setProjectOptions] = useState<{ label: string; value: string }[]>([]);
   const [deviceOptions, setDeviceOptions] = useState<{ label: string; value: string }[]>([]);
   const [sceneOptions, setSceneOptions] = useState<{ label: string; value: string }[]>([]);
+  const [timingData, setTimingData] = useState<PipelineTiming | null>(null);
+  const [timingOpen, setTimingOpen] = useState(false);
+  const [timingAnalysisList, setTimingAnalysisList] = useState<Array<{ id: string; label: string }>>([]);
+  const [timingSelectedId, setTimingSelectedId] = useState<string>('');
 
   useEffect(() => {
     listRuns(200, 0).then(res => {
@@ -138,6 +175,80 @@ const Dashboard: React.FC = () => {
       setAnalyzing(null);
     }
   }, [drawerVersion]);
+
+  // 触发 Prism 三段管线分析 (WT-051b)
+  // 进度阶段映射 (后端 progress 是 0-100, 这里按 message 关键字判定当前三段中的哪一段):
+  //   explore   → 10-30%
+  //   narrative → 40-80%
+  //   render    → 85-100%
+  const handlePrismAnalyze = useCallback(async (runId: string) => {
+    setPrismAnalyzing(runId);
+    setPrismProgress(prev => ({ ...prev, [runId]: { stage: 'queued', progress: 0, message: '提交中...', startTime: Date.now(), logs: [] } }));
+    let sessionId: string | null = null;
+    let unsub: (() => void) | null = null;
+    try {
+      const res = await generatePrismAnalysis(runId, { source: 'unity' });
+      sessionId = res.sessionId;
+      setPrismProgress(prev => ({ ...prev, [runId]: { stage: 'queued', progress: 5, message: `已入队 (位置 ${res.position})`, sessionId } }));
+
+      // 订阅 SSE 进度
+      unsub = subscribeProgress(sessionId, (evt) => {
+        if (!evt || evt.type === 'connected') return;
+        const rawStage = typeof evt.stage === 'string' ? evt.stage : '';
+        const rawMsg = typeof evt.message === 'string' ? evt.message : '';
+        const rawProgress = typeof evt.progress === 'number' ? evt.progress : 0;
+        const msgLower = rawMsg.toLowerCase();
+
+        // 三段判定: 优先看 message 关键字, 其次看后端 stage
+        let stage = 'explore';
+        let progress = rawProgress;
+        if (msgLower.includes('narrative') || rawStage === 'narrative') {
+          stage = 'narrative';
+          progress = Math.max(rawProgress, 40);
+        } else if (msgLower.includes('render') || rawStage === 'render') {
+          stage = 'render';
+          progress = Math.max(rawProgress, 85);
+        } else if (msgLower.includes('explore') || rawStage === 'explore') {
+          stage = 'explore';
+          progress = Math.max(rawProgress, 10);
+        } else if (rawStage === 'completed') {
+          stage = 'done';
+          progress = 100;
+        } else if (rawStage === 'failed') {
+          stage = 'failed';
+        }
+
+        setPrismProgress(prev => ({
+          ...prev,
+          [runId]: {
+            ...prev[runId],
+            stage, progress,
+            message: rawMsg || stage,
+            sessionId: sessionId ?? undefined,
+            logs: [...(prev[runId]?.logs ?? []), rawMsg].filter(Boolean).slice(-12),
+          },
+        }));
+
+        if (rawStage === 'completed') {
+          setPrismProgress(prev => ({
+            ...prev,
+            [runId]: { ...prev[runId], stage: 'done', progress: 100, message: '报告已生成', sessionId: sessionId ?? undefined, done: true, endTime: Date.now() },
+          }));
+          setPrismAnalyzing(null);
+          unsub?.();
+          unsub = null;
+        } else if (rawStage === 'failed') {
+          message.error(`Prism 分析失败: ${rawMsg}`);
+          setPrismAnalyzing(null);
+          unsub?.();
+          unsub = null;
+        }
+      });
+    } catch (e: any) {
+      message.error(`Prism 分析启动失败: ${e.message}`);
+      setPrismAnalyzing(null);
+    }
+  }, []);
 
   if (loading && !data) {
     return (
@@ -300,8 +411,140 @@ const Dashboard: React.FC = () => {
           analyzing={analyzing}
           onAnalyze={handleAnalyze}
           onViewRun={(runId) => { setDrawerOpen(false); navigate(`/runs/${runId}`); }}
+          prismAnalyzing={prismAnalyzing}
+          prismProgress={prismProgress}
+          onPrismAnalyze={handlePrismAnalyze}
         />
       </Drawer>
+
+      {/* 流水计时 Modal (zIndex 高于 Drawer 避免被遮住) */}
+      <Modal
+        title="Prism 三阶段流水计时"
+        open={timingOpen}
+        onCancel={() => setTimingOpen(false)}
+        footer={null}
+        width={800}
+        zIndex={2000}
+      >
+        {timingAnalysisList.length > 1 && (
+          <div style={{ marginBottom: 12 }}>
+            <Select
+              size="small"
+              style={{ width: '100%' }}
+              value={timingSelectedId}
+              onChange={async (val: string) => {
+                setTimingSelectedId(val);
+                setTimingData(null);
+                const t = await fetchPrismTiming(val);
+                if (t) setTimingData(t);
+                else message.warning('该分析暂无计时数据');
+              }}
+              options={timingAnalysisList.map(a => ({ value: a.id, label: a.label }))}
+            />
+          </div>
+        )}
+        {timingData && (
+          <div>
+            {/* 总览 */}
+            <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8 }}>
+              <Text strong>总耗时: </Text>
+              <Text>{timingData.total.end ? ((timingData.total.end - timingData.total.start) / 1000).toFixed(1) : '?'}s</Text>
+              {timingData.explore && (
+                <div style={{ marginTop: 8 }}>
+                  <Tag color="blue">Explore: {((timingData.explore.end - timingData.explore.start) / 1000).toFixed(1)}s</Tag>
+                  <Tag color="purple">Narrative: {timingData.narrative ? ((timingData.narrative.end - timingData.narrative.start) / 1000).toFixed(1) : '?'}s</Tag>
+                  <Tag color="green">Render: {timingData.render ? ((timingData.render.end - timingData.render.start) / 1000).toFixed(1) : '?'}s</Tag>
+                </div>
+              )}
+            </div>
+
+            {/* Explore per-tool-call */}
+            {timingData.explore?.toolCalls && timingData.explore.toolCalls.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <Text strong>Stage 1 — Explore 明细 ({timingData.explore.toolCalls.length} tool calls)</Text>
+                <Table
+                  size="small"
+                  pagination={false}
+                  dataSource={timingData.explore.toolCalls.map((tc, i) => ({ ...tc, key: i }))}
+                  columns={[
+                    { title: '#', dataIndex: 'seq', width: 40 },
+                    { title: '工具', dataIndex: 'toolNames', width: 200, ellipsis: true },
+                    {
+                      title: '执行',
+                      dataIndex: 'toolMs',
+                      width: 70,
+                      render: (v: number | null) => v != null ? `${v}ms` : '—',
+                    },
+                    {
+                      title: 'LLM 间隔',
+                      width: 80,
+                      render: (_: any, record: any, idx: number) => {
+                        if (idx === 0) return '—';
+                        const prev = timingData.explore!.toolCalls[idx - 1];
+                        const prevEnd = prev.resultTs || prev.ts;
+                        const curStart = record.ts;
+                        const gap = curStart - prevEnd;
+                        return gap > 0 ? (
+                          <Text style={{ color: gap > 60000 ? '#ff4d4f' : gap > 30000 ? '#faad14' : '#52c41a' }}>
+                            {(gap / 1000).toFixed(1)}s
+                          </Text>
+                        ) : '—';
+                      },
+                    },
+                    {
+                      title: '结果大小',
+                      dataIndex: 'resultLen',
+                      width: 80,
+                      render: (v: number) => v > 0 ? `${(v / 1024).toFixed(1)}KB` : '—',
+                    },
+                  ]}
+                />
+              </div>
+            )}
+
+            {/* Narrative sub-stages */}
+            {timingData.narrative?.subStages && (
+              <div style={{ marginBottom: 16 }}>
+                <Text strong>Stage 2 — Narrative 子阶段</Text>
+                <Table
+                  size="small"
+                  pagination={false}
+                  dataSource={Object.entries(timingData.narrative.subStages).map(([k, v]) => ({ key: k, stage: k, ms: v }))}
+                  columns={[
+                    { title: '子阶段', dataIndex: 'stage', width: 150 },
+                    {
+                      title: '耗时',
+                      dataIndex: 'ms',
+                      width: 120,
+                      render: (v: number) => (
+                        <Text style={{ color: v > 60000 ? '#ff4d4f' : v > 10000 ? '#faad14' : '#52c41a' }}>
+                          {v > 1000 ? `${(v / 1000).toFixed(1)}s` : `${v}ms`}
+                        </Text>
+                      ),
+                    },
+                    {
+                      title: '占比',
+                      render: (_: any, record: any) => {
+                        const total = Object.values(timingData.narrative!.subStages!).reduce((a: number, b: any) => a + b, 0);
+                        return total > 0 ? `${((record.ms / total) * 100).toFixed(1)}%` : '—';
+                      },
+                    },
+                  ]}
+                />
+              </div>
+            )}
+
+            {/* Render */}
+            {timingData.render && (
+              <div>
+                <Text strong>Stage 3 — Render: </Text>
+                <Text>{((timingData.render.end - timingData.render.start) / 1000).toFixed(1)}s</Text>
+                <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>(纯代码，无 LLM)</Text>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
@@ -346,12 +589,24 @@ function VersionRunDrawer({
   analyzing,
   onAnalyze,
   onViewRun,
+  prismAnalyzing,
+  prismProgress,
+  onPrismAnalyze,
 }: {
   items: VersionRunItem[];
   loading: boolean;
   analyzing: string | null;
   onAnalyze: (runId: string, sources: string[]) => void;
   onViewRun: (runId: string) => void;
+  prismAnalyzing: string | null;
+  prismProgress: Record<string, {
+    stage: string;
+    progress: number;
+    message: string;
+    sessionId?: string;
+    done?: boolean;
+  }>;
+  onPrismAnalyze: (runId: string) => void;
 }) {
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载 Run 列表..." /></div>;
@@ -369,6 +624,17 @@ function VersionRunDrawer({
           label: opt.label,
           onClick: () => onAnalyze(run.id, opt.sources),
         }));
+
+        const prismState = prismProgress[run.id];
+        const isPrismRunning = prismAnalyzing === run.id;
+        const prismDone = prismState?.done && prismState?.sessionId;
+        const prismStageLabel = prismState?.stage === 'explore' ? '① 探索'
+          : prismState?.stage === 'narrative' ? '② 叙事'
+          : prismState?.stage === 'render' ? '③ 渲染'
+          : prismState?.stage === 'done' ? '完成'
+          : prismState?.stage === 'failed' ? '失败'
+          : prismState?.stage === 'queued' ? '排队'
+          : prismState?.stage || '准备中';
 
         return (
           <Card key={run.id} size="small" bodyStyle={{ padding: 12 }}>
@@ -390,28 +656,99 @@ function VersionRunDrawer({
               </Text>
             </div>
 
-            {/* 第三行: 已有分析 */}
-            {run.analyses.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <Text type="secondary" style={{ fontSize: 11 }}>已有 AI 分析:</Text>
-                <Space wrap size={[4, 4]} style={{ marginTop: 4 }}>
-                  {run.analyses.map(a => (
-                    <Tag
-                      key={a.id}
-                      icon={a.hasReport ? <CheckCircleOutlined /> : undefined}
-                      color={a.hasReport ? 'success' : 'default'}
-                      style={{ fontSize: 11, cursor: 'pointer' }}
-                      onClick={() => onViewRun(run.id)}
-                    >
-                      {a.typeLabel}
-                    </Tag>
-                  ))}
-                </Space>
-              </div>
-            )}
+            {/* 第三行: 已有分析（最多展示 4 个，多了折叠成 +N） */}
+            {run.analyses.length > 0 && (() => {
+              const MAX_VISIBLE = 4;
+              const visible = run.analyses.slice(0, MAX_VISIBLE);
+              const hidden = run.analyses.slice(MAX_VISIBLE);
+              return (
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>已有 AI 分析:</Text>
+                  <Space wrap size={[4, 4]} style={{ marginTop: 4 }}>
+                    {visible.map(a => (
+                      <Tag
+                        key={a.id}
+                        icon={a.hasReport ? <CheckCircleOutlined /> : undefined}
+                        color={a.hasReport ? 'success' : 'default'}
+                        style={{ fontSize: 11, cursor: 'pointer' }}
+                        onClick={() => {
+                          if (a.skill === 'prism-pipeline' && a.hasReport) {
+                            window.open(`/cpu/prism-report/${a.id}`, '_blank');
+                          } else {
+                            onViewRun(run.id);
+                          }
+                        }}
+                      >
+                        {a.typeLabel}
+                      </Tag>
+                    ))}
+                    {hidden.length > 0 && (
+                      <Popover
+                        trigger="click"
+                        placement="bottom"
+                        content={
+                          <Space direction="vertical" size={4} style={{ maxWidth: 320 }}>
+                            {hidden.map(a => (
+                              <Tag
+                                key={a.id}
+                                icon={a.hasReport ? <CheckCircleOutlined /> : undefined}
+                                color={a.hasReport ? 'success' : 'default'}
+                                style={{ fontSize: 11, cursor: 'pointer' }}
+                                onClick={() => {
+                                  if (a.skill === 'prism-pipeline' && a.hasReport) {
+                                    window.open(`/cpu/prism-report/${a.id}`, '_blank');
+                                  } else {
+                                    onViewRun(run.id);
+                                  }
+                                }}
+                              >
+                                {a.typeLabel}
+                              </Tag>
+                            ))}
+                          </Space>
+                        }
+                      >
+                        <Tag style={{ fontSize: 11, cursor: 'pointer' }}>+{hidden.length} 更多</Tag>
+                      </Popover>
+                    )}
+                    {run.analyses.some(a => a.skill === 'prism-pipeline') && (
+                      <Tooltip title="查看三阶段流水计时">
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<ClockCircleOutlined />}
+                          style={{ fontSize: 11, padding: '0 4px', height: 20 }}
+                          onClick={async () => {
+                            // 列出所有 prism 分析，按时间从旧到新
+                            const prismAll = run.analyses.filter(a => a.skill === 'prism-pipeline');
+                            const prismWithReport = prismAll.filter(a => a.hasReport);
+                            const prismAnalysis = prismWithReport[prismWithReport.length - 1]
+                              ?? prismAll[prismAll.length - 1];
+                            if (!prismAnalysis) return;
+                            // 填充下拉列表
+                            setTimingAnalysisList(prismAll.map((a, i) => ({
+                              id: a.id,
+                              label: `#${prismAll.length - i} ${a.hasReport ? '✓' : '✗'} ${new Date(a.createdAt || 0).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`,
+                            })).reverse()); // 最新在最前
+                            setTimingSelectedId(prismAnalysis.id);
+                            const t = await fetchPrismTiming(prismAnalysis.id);
+                            if (t) {
+                              setTimingData(t);
+                              setTimingOpen(true);
+                            } else {
+                              message.warning('暂无流水计时数据（流水计时仅在分析成功后生成）');
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </Space>
+                </div>
+              );
+            })()}
 
             {/* 第四行: 操作按钮 */}
-            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
                 icon={<EyeOutlined />}
@@ -430,12 +767,99 @@ function VersionRunDrawer({
                   新建分析 <DownOutlined />
                 </Button>
               </Dropdown>
+              <Button
+                size="small"
+                icon={<ExperimentOutlined />}
+                loading={isPrismRunning}
+                onClick={() => onPrismAnalyze(run.id)}
+              >
+                Prism 分析
+              </Button>
+              {prismDone && (
+                <>
+                  <Button
+                    size="small"
+                    type="link"
+                    icon={<FileTextOutlined />}
+                    onClick={() => {
+                      const url = `/cpu/prism-report/${prismState!.sessionId}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    打开报告
+                  </Button>
+                  <Tooltip title="查看三阶段流水计时">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<ClockCircleOutlined />}
+                      onClick={async () => {
+                        if (!prismState?.sessionId) return;
+                        const t = await fetchPrismTiming(prismState.sessionId);
+                        if (t) {
+                          setTimingData(t);
+                          setTimingOpen(true);
+                        } else {
+                          message.warning('暂无流水计时数据');
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                </>
+              )}
             </div>
+
+            {/* Prism 进度条 (运行中或已有状态时展示) */}
+            {(isPrismRunning || prismState) && prismState && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    Prism · {prismStageLabel}
+                    {prismState.startTime && (
+                      <span style={{ marginLeft: 6, color: 'var(--color-warning)' }}>
+                        ⏱ {formatElapsed((prismState.endTime ?? Date.now()) - prismState.startTime)}
+                      </span>
+                    )}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 11, maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {prismState.message}
+                  </Text>
+                </div>
+                <Progress
+                  percent={prismState.progress}
+                  size="small"
+                  status={
+                    prismState.stage === 'failed' ? 'exception'
+                      : prismState.stage === 'done' ? 'success'
+                      : 'active'
+                  }
+                />
+                {/* 实时日志区: 最近 6 条, 倒序 */}
+                {prismState.logs && prismState.logs.length > 0 && prismState.stage !== 'done' && (
+                  <div style={{
+                    marginTop: 6, maxHeight: 80, overflowY: 'auto',
+                    background: 'var(--color-fill-quaternary)', borderRadius: 4, padding: '4px 8px',
+                    fontSize: 10, color: 'var(--color-text-tertiary)', fontFamily: 'monospace',
+                  }}>
+                    {prismState.logs.slice(-6).reverse().map((log, i) => (
+                      <div key={i} style={{ opacity: 1 - i * 0.15, lineHeight: 1.5 }}>{log}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
         );
       })}
     </Space>
   );
+}
+/** 格式化已用时间: ms → "1m30s" / "45s" */
+function formatElapsed(ms: number): string {
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  return `${min}m${sec % 60}s`;
 }
 
 function ChartCard({

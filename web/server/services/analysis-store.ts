@@ -114,6 +114,7 @@ const SKILL_LABELS: Record<string, string> = {
   'simpleperf-native-analysis': 'simpleperf 单源',
   'perfetto-trace-analysis': 'Perfetto 单源',
   'cross-source-analysis': '多源交叉',
+  'prism-pipeline': 'Prism 报告',
 };
 
 /** 列出一个 Run 关联的所有分析任务 (含报告摘要), 按 createdAt 降序。 */

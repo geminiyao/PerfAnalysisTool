@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.885Z
 source: unity-cpu
 title: "AOE 士兵 VT 渲染方案"
 tags: ["aoe","士兵vt","virtual-texture","优化"]
+dataSource: unity
 ---
 
 - 用 Virtual Texture 替代传统 3D 渲染士兵，减少 GPU Draw 开销。

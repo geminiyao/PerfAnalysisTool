@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prism 性能报告 · bk26b-perfetto-triad/2026-07-15_10-36-27</title>
+<style>
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --surface3: #0f3460;
+  --border: #2a2a4a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #7c4dff;
+  --accent2: #00e5ff;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 28px 32px;
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+a { color: var(--accent2); }
+
+/* ── Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.header-left { flex: 1; min-width: 200px; }
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.run-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.rating-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-radius: var(--radius);
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.rating-emoji { font-size: 26px; line-height: 1; }
+.rating-label { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+
+/* Overview lead paragraph */
+.overview-block {
+  font-size: 15px;
+  color: #c5cae9;
+  line-height: 1.75;
+  margin: 0 0 20px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  max-width: 960px;
+}
+
+/* Metrics strip */
+.metrics-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.metric-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  min-width: 110px;
+  text-align: center;
+}
+.metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--accent2);
+}
+
+/* ── Table of contents ── */
+.toc-block {
+  margin-bottom: 28px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-width: 960px;
+}
+.toc-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.toc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.toc-list a {
+  color: var(--accent2);
+  text-decoration: none;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.toc-list a:hover { text-decoration: underline; }
+
+/* ── Section headers ── */
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin: 36px 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Top conclusions table ── */
+.top-conclusions {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+}
+.top-conclusions th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.top-conclusions td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  background: var(--surface);
+}
+.top-conclusions tr:last-child td { border-bottom: none; }
+.tc-rank { color: var(--accent); font-weight: 700; width: 36px; text-align: center; }
+.tc-problem { font-weight: 600; color: #e8eaf6; }
+.tc-kind { color: #90a4ae; white-space: nowrap; }
+.tc-contribution { color: #b0bec5; }
+.tc-severity { white-space: nowrap; }
+
+/* ── Ruled-out strip ── */
+.ruled-out-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 10px 14px;
+  background: #12181e;
+  border: 1px solid #1e2a3a;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.ruled-out-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #546e7a;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.ruled-out-item {
+  font-size: 12.5px;
+  color: #607d8b;
+}
+.ruled-out-item em { color: #546e7a; font-style: normal; }
+
+/* ── Narrative section ── */
+.narrative-section {
+  margin-bottom: 32px;
+}
+.section-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8eaf6;
+  margin: 24px 0 10px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.section-intro {
+  color: #90a4ae;
+  font-size: 13.5px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #37474f;
+}
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Item card ── */
+.item-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.sev-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+  min-width: 200px;
+}
+.chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.item-body { padding: 14px 16px; }
+.narrative-text {
+  color: #cfd8dc;
+  line-height: 1.75;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+}
+
+/* ── Tree visualization ── */
+.tree-section {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.tree-section.fallback { border-color: #37474f; }
+.tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #0f1b2d;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tree-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent2);
+}
+.tree-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+.legend-item { font-size: 11px; }
+.tree-container {
+  padding: 10px 12px;
+  background: #080d14;
+  overflow-x: auto;
+  --tree-full-width: 1080px;
+}
+.tree-note {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #78909c;
+  background: #080d14;
+  font-style: italic;
+}
+.tree-row {
+  margin-bottom: 4px;
+  margin-left: var(--tree-indent);
+  min-width: calc(var(--tree-full-width) - var(--tree-indent));
+}
+.tree-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-left: 3px solid var(--tree-border);
+  border-radius: 3px;
+  min-width: 520px;
+  width: calc(var(--tree-full-width) - var(--tree-indent));
+  overflow: visible;
+  cursor: default;
+  transition: filter 0.12s;
+}
+.tree-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--tree-width);
+  min-width: 8px;
+  max-width: 100%;
+  border-radius: 3px;
+  background: var(--tree-bg);
+  pointer-events: none;
+}
+.tree-bar:hover { filter: brightness(1.2); }
+.tree-label,
+.tree-ms,
+.tree-pct {
+  position: relative;
+  z-index: 1;
+}
+.tree-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: 0;
+}
+.tree-ms {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tree-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Source insight callout ── */
+.source-insight {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: #0a1628;
+  border: 1px solid #1e3050;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: #90caf9;
+  line-height: 1.65;
+  font-family: var(--font-mono);
+}
+.insight-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #42a5f5;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+}
+
+/* ── Recommendations ── */
+.rec-section { margin: 12px 0; }
+.rec-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7986cb;
+  margin-bottom: 8px;
+}
+.rec-list {
+  padding-left: 22px;
+  color: #b0bec5;
+  line-height: 1.8;
+}
+.rec-list li { margin-bottom: 4px; font-size: 13.5px; }
+
+/* ── Priority table ── */
+.priority-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.priority-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.priority-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  vertical-align: top;
+}
+.priority-table tr:last-child td { border-bottom: none; }
+.priority-p0 td { background: #1a1020; border-left: 3px solid #f44336; }
+.pri-priority { font-weight: 700; color: var(--accent2); width: 60px; }
+.pri-action { color: #e8eaf6; }
+.pri-benefit { color: #90a4ae; }
+
+/* ── 可选视觉资产（DR-45 §1.3）── */
+.asset-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.asset-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.asset-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  vertical-align: top;
+}
+.asset-table tr:last-child td { border-bottom: none; }
+.asset-label { color: var(--text-muted); font-weight: 600; white-space: nowrap; width: 140px; }
+.asset-value { color: #e0e0e0; font-family: var(--font-mono); }
+.ao-thread { font-weight: 600; color: #e8eaf6; white-space: nowrap; }
+
+/* 降频判定矩阵：confirmed/likely/suspected 三档配色 */
+.tm-confirmed td { background: #1a1020; }
+.tm-confirmed .tm-level { color: #f44336; font-weight: 700; }
+.tm-likely td { background: #1a1a1020; }
+.tm-likely .tm-level { color: #ff9800; font-weight: 700; }
+.tm-suspected td { background: var(--surface); }
+.tm-suspected .tm-level { color: #ffc107; font-weight: 700; }
+
+/* 红线矩阵 */
+.rm-module { font-weight: 600; color: #ff7961; }
+
+/* ASCII 图块（LLM 产文本，render 原样渲染在等宽 <pre>） */
+.ascii-art-block {
+  margin: 14px 0 20px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--accent2);
+}
+.ascii-art-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ascii-art-content {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cfd8dc;
+  background: #080d14;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+.ascii-art-caption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Footer ── */
+.page-footer {
+  margin-top: 48px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.footer-item { display: flex; gap: 6px; align-items: center; }
+.footer-label { color: #546e7a; }
+.muted { color: var(--text-muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ Header ═══════════════════ -->
+<div class="page-header">
+  <div class="header-left">
+    <div class="report-title">Prism 性能分析报告</div>
+    <div class="run-id">bk26b-perfetto-triad/2026-07-15_10-36-27</div>
+  </div>
+  <div class="rating-badge" style="color:#f44336;background:#f4433620;border-color:#f4433640">
+    <div class="rating-emoji">🔴</div>
+    <div class="rating-label" style="color:#f44336">不合格</div>
+  </div>
+</div>
+
+<!-- Overview lead -->
+<div class="overview-block">这不是单一元凶，是 GPU-bound 叠加 SoC 热限流的双重恶化：三态从 base 的 60fps 健康态，经 cur 的 33fps 中等 GPU-bound，演化到 throttle 的 21fps 病态——主线程近四成时间在干等 GPU（单次等 17.8ms 已超 vsync 周期），同时大核频率被热限流压到 59%、中核 max 频率主动下调，形成&#39;GPU 满载发热→SoC 降频→帧更慢→积压更多&#39;的恶性循环。业务逻辑侧（Core.Update）的涌现是场景差异（base 空场景 vs cur/throttle 战斗+行军压测），不是性能退化；GC 分配是长期风险但当前不是帧时主因。</div>
+
+<!-- ═══════════════════ Metrics strip ═══════════════════ -->
+<div class="metrics-strip">
+
+  <div class="metric-box">
+    <div class="metric-label">帧预算</div>
+    <div class="metric-value">16.7ms / 60fps</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P50</div>
+    <div class="metric-value">45.9ms</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P95</div>
+    <div class="metric-value">—</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P99</div>
+    <div class="metric-value">66.3ms</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">最差帧</div>
+    <div class="metric-value">—</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">超预算%</div>
+    <div class="metric-value">98.8%</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOC ═══════════════════ -->
+
+<div class="toc-block">
+  <div class="toc-title">目录</div>
+  <ul class="toc-list">
+    <li><a href="#sec-core-conclusions">核心结论</a></li><li><a href="#sec-section-0">§1 采集元信息：三态从 60fps 退化到 21fps</a></li><li><a href="#sec-section-1">§2 多线程宏观：主线程越来越闲，渲染线程同步变闲</a></li><li><a href="#sec-section-2">§3 主线程 off-CPU 归因：89% 是 Sleeping，核心是等 GPU</a></li><li><a href="#sec-section-3">§4 降频时序：大核 59%，中核 max 被压低，温度 75-79°C</a></li><li><a href="#sec-section-4">§5 主线程一帧时间去向：Core.Update 是业务主入口，行军线在 throttle 涨 37%</a></li><li><a href="#sec-section-5">§6 GPU-bound 判定：多信号同向，throttle 强 GPU-bound</a></li><li><a href="#sec-section-6">§7 ROI 优化方向：按 severity + 贡献排序</a></li><li><a href="#sec-priority">优化优先级</a></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════ § 核心结论 ═══════════════════ -->
+<div class="section-title" id="sec-core-conclusions">核心结论</div>
+<table class="top-conclusions">
+  <thead>
+    <tr>
+      <th>#</th><th>问题</th><th>类型</th><th>对整体贡献</th><th>严重度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="tc-rank">1</td>
+      <td class="tc-problem">throttle 态主线程 38% 时间在干等 GPU，单次等 17.8ms 已超 vsync 周期</td>
+      <td class="tc-kind">稳态大头</td>
+      <td class="tc-contribution">throttle 态等 GPU 占窗口 38.1%（7600ms），427 帧平均每帧等 17.8ms，单次已超 16.67ms vsync 周期；三态单调恶化 base 5.4%→cur 19.2%→throttle 38.1%，是帧率从 60fps 崩到 21fps、98.83% 帧超预算的首要成因</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span></td>
+    </tr><tr>
+      <td class="tc-rank">2</td>
+      <td class="tc-problem">SoC 热限流：大核频率被压到 59%，中核 max 频率从 2419MHz 降到 2227MHz</td>
+      <td class="tc-kind">伴随恶化</td>
+      <td class="tc-contribution">大核 reach 74.9%→75.6%→59.2%（throttle 暴跌破 65%），中核观测 max 从 cpuinfo 上限 2419MHz 被压到 2227MHz，温度三态持续 75-79°C；是 GPU-bound 的加剧因素而非独立主因，与 GPU 满载发热形成恶性循环</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span></td>
+    </tr><tr>
+      <td class="tc-rank">3</td>
+      <td class="tc-problem">主线程越来越闲但帧越来越慢：run 86.9%→57%，帧时却 16.7→45.9ms</td>
+      <td class="tc-kind">宏观佐证</td>
+      <td class="tc-contribution">主线程 runningPct 三态单调下降 86.9%→77.8%→57.0%，sleepingPct 单调上升 12%→20.4%→39%；闲下来的时间几乎全部是等 GPU（wait slice 占比同步 5.4%→19.2%→38.1%），与 GPU-bound 判定互印证</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span></td>
+    </tr><tr>
+      <td class="tc-rank">4</td>
+      <td class="tc-problem">Core.Update 业务模块涌现是场景差异不是性能退化</td>
+      <td class="tc-kind">场景澄清</td>
+      <td class="tc-contribution">base 是空场景（Core.Update 内无战斗/行军 marker），cur/throttle 是战斗+行军压测，业务模块 foldChange=9999 是 base 无数据的伪信号；cur→throttle 同场景对照 BattleHeadMgr 731→471ms、MapSignificanceMgr 627→456ms 反而略降，无系统性恶化</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span></td>
+    </tr><tr>
+      <td class="tc-rank">5</td>
+      <td class="tc-problem">渲染管线内部持续 GC 分配（URP.BeforeRendering + OpaquePass 每帧上百次）</td>
+      <td class="tc-kind">长期风险</td>
+      <td class="tc-contribution">cur 每帧 130+129 次分配（共 208568 次），throttle 每帧 31+30 次（共 59518 次）；GC.Collect 实际只触发 3次/1次占总窗口 &lt;0.4%，当前不是帧时主因，但持续分配挤压 GC 堆是长期卡顿风险</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#4caf50;background:#4caf5020">低</span></td>
+    </tr>
+  </tbody>
+</table>
+<div class="ruled-out-strip">
+        <span class="ruled-out-label">已排除</span>
+        <span class="ruled-out-item" title="UnityGfxRenderS runningPct 从 base 25.98% 降到 throttle 16.71%，CPU 渲染链路变闲不是瓶颈，反向佐证压力在 GPU 侧">Render 线程瓶颈: <em>UnityGfxRenderS runningPct 从 base 25.98% 降到 throttle 16.71%，CPU 渲染链路变闲不是瓶颈，反向佐证压力在 GPU 侧</em></span><span class="ruled-out-item" title="三态 Choreographer 都稳定 60fps / slowFrameRate=0，合成侧健康">Choreographer / SurfaceFlinger 问题: <em>三态 Choreographer 都稳定 60fps / slowFrameRate=0，合成侧健康</em></span><span class="ruled-out-item" title="throttle 态主线程 off-CPU 中 D 状态（不可中断睡眠）仅 1.3%，IO/锁/binder 阻塞可排除">binder / IO / 锁阻塞: <em>throttle 态主线程 off-CPU 中 D 状态（不可中断睡眠）仅 1.3%，IO/锁/binder 阻塞可排除</em></span><span class="ruled-out-item" title="cur→throttle 同场景对照 BattleHeadMgr 731→471ms、MapSignificanceMgr 627→456ms 反而略降，Core.Update 3537→3436ms 也略降，业务侧无系统性恶化；foldChange=9999 是 base 空场景无数据的伪信号">业务模块性能退化: <em>cur→throttle 同场景对照 BattleHeadMgr 731→471ms、MapSignificanceMgr 627→456ms 反而略降，Core.Update 3537→3436ms 也略降，业务侧无系统性恶化；foldChange=9999 是 base 空场景无数据的伪信号</em></span>
+      </div>
+
+<!-- ═══════════════════ § 可选视觉资产（元信息/多线程宏观/降频矩阵/红线矩阵/ASCII 图） ═══════════════════ -->
+
+
+<!-- ═══════════════════ § 主题分群 ═══════════════════ -->
+<div class="section-title">主题分群</div>
+
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-0" style="border-left:4px solid #2196f3;background:#2196f318">
+      §1 采集元信息：三态从 60fps 退化到 21fps
+    </div>
+    <p class="section-intro">三态采集对照，帧预算 16.67ms（60Hz vsync 周期）：<br><br>| 指标 | base | cur | throttle |<br>|---|---|---|---|<br>| PlayerLoop p50 | 16.69ms | 30.15ms | 45.94ms |<br>| PlayerLoop p99 | 21.37ms | 42.54ms | 66.32ms |<br>| FPS | 59.8 | 33.1 | 21.4 |<br>| slowFrameRate | 0% | 11.18% | 98.83% |<br>| 采集后温度 | 77.3°C | 79.0°C | 76.7°C |<br><br>base 刚好踩在 60fps 线上（p50 16.69 ≈ 预算），cur 已掉到 33fps（p50 近 2 倍预算），throttle 彻底崩到 21fps（p50 近 2.75 倍预算、几乎所有帧超预算）。温度三态都在 75°C 以上，throttle 已进入持续热稳态。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">三态帧时演化：从健康到病态的单调恶化</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">三态构成一条清晰的退化轨迹：base 是凉机起步的健康态（p50 踩线 60fps），cur 是升温后的中等 GPU-bound（p50 30ms、slowFrame 11%），throttle 是持续热限流下的病态（p50 46ms、98.83% 帧超预算）。p50 与 p99 的差距（throttle 45.94 vs 66.32）说明慢帧是稳态而非偶发尖峰——不是个别帧被卡，是几乎每帧都慢。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，帧时数据来自 PlayerLoop 调度计数器。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>以 throttle 态为优化基线——它代表设备在热稳态下的真实表现，不是最差尖峰</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-1" style="border-left:4px solid #ff9800;background:#ff980018">
+      §2 多线程宏观：主线程越来越闲，渲染线程同步变闲
+    </div>
+    <p class="section-intro">识别到的关键线程三态健康度：<br><br>| 线程 | base run/sleep | cur run/sleep | throttle run/sleep | 定位 |<br>|---|---|---|---|---|<br>| UnityMain | 86.9% / 12.0% | 77.8% / 20.4% | 57.0% / 39.0% | 越来越闲但帧越来越慢，闲在等 GPU |<br>| UnityGfxRenderS | 25.98% run | — | 16.71% / 79.85% | 渲染线程变闲，CPU 渲染链路不是瓶颈 |<br><br>```<br>主线程 Run 占比演化（越高越忙）<br>  base      ████████████████████████████████████░  86.9%<br>  cur       █████████████████████████████░░░░░░░░  77.8%<br>  throttle  ████████████████████████░░░░░░░░░░░░  57.0%<br><br>主线程 Sleep 占比演化（越高越闲）<br>  base      ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12.0%<br>  cur       ██████████░░░░░░░░░░░░░░░░░░░░░░░░░░  20.4%<br>  throttle  ████████████████████░░░░░░░░░░░░░░░░  39.0%<br>```<br><br>两根柱子反向同步演化——主线程闲下来的部分几乎全部是 Sleep，且 Sleep 的增量与 GPU wait 的增量同步（见 §3），这是&#39;主线程在等 GPU&#39;的宏观形态。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#2196f3" title="信息"></span>
+      <span class="item-title">UnityMain：从 86.9% 忙到 57% 闲，闲在等 GPU 而非无事可做</span>
+      <span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">主线程 runningPct 单调下降 86.9%→77.8%→57.0%，sleepingPct 单调上升 12%→20.4%→39%。关键判读：主线程不是&#39;干活变慢&#39;而是&#39;越来越多时间在等待&#39;——off-CPU 归因显示 throttle 态 Sleep 中 89.34% 是可中断睡眠（S 状态），仅 1.3% 是不可中断（D 状态，IO/锁），wait slice 重叠法证明 Sleep 的增量几乎 100% 是等 GPU。R+（被抢占）从 0.42% 升到 2.78%，与降频期间大核不足、任务排队增多一致，是降频的伴随现象。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，调度状态来自 sched 分析。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>无需独立优化主线程 idle——解决 GPU-bound 后 idle 比例自然回落</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#2196f3" title="信息"></span>
+      <span class="item-title">UnityGfxRenderS：渲染线程变闲，CPU 渲染链路不是瓶颈</span>
+      <span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">渲染线程 runningPct 从 base 25.98% 降到 throttle 16.71%、sleepingPct 升到 79.85%。如果瓶颈在 CPU 渲染链路（DrawCall 提交 / 渲染状态设置），渲染线程应该更忙才对；它反而变闲，说明 CPU 侧的渲染提交不是阻塞点，压力在 GPU 侧——这是 GPU-bound 判定的关键辅证之一。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，调度状态来自 sched 分析。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>渲染线程无需优化——它不是瓶颈，优化 GPU 侧负载才会让渲染线程重新忙起来</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-2" style="border-left:4px solid #9c27b0;background:#9c27b018">
+      §3 主线程 off-CPU 归因：89% 是 Sleeping，核心是等 GPU
+    </div>
+    <p class="section-intro">throttle 态主线程 off-CPU byState 分布：<br><br>| 状态 | 占 off-CPU | 含义 |<br>|---|---|---|<br>| S（可中断睡眠） | 89.34% | 等待资源/信号量，绝大多数是等 GPU |<br>| R（就绪未跑上） | 6.58% | 想跑但没 CPU，降频期间大核不足 |<br>| R+（被抢占） | 2.78% | 跑了一半被抢，任务排队 |<br>| D（不可中断） | 1.30% | IO/锁阻塞，已排除 |<br><br>wait slice 重叠法（核心证据）：<br><br>```<br>主线程 Sleeping 总量 vs Gfx.WaitForPresent 总量（throttle 态）<br>  Sleeping 总量        ████████████████████████████████  7666ms<br>  Gfx.WaitForPresent   ██████████████████████████████   7600ms<br>  重合度              ██████████████████████████████   ~99%<br><br>  → Sleep 增量几乎 100% 是等 GPU，binder/IO/锁只占 1.3%（D 状态）<br>```<br><br>因果链（throttle 一帧的等待链路）：<br><br>```<br>UnityMain 发起渲染提交<br>    │<br>    ▼<br>URP.Submit (throttle 8069ms, foldChange ×124.5)<br>    │<br>    ▼<br>Gfx.WaitForPresentOnGfxThread (单次 avg 17.8ms，超 vsync 16.67ms)<br>    │  主线程在此阻塞，干等 swapchain<br>    ▼<br>Semaphore.WaitForSignal (叶子，等 GPU 完成一帧)<br>    │<br>    ▼<br>GPU 完成 → swapchain 提交 → 主线程被唤醒<br>```</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">wait slice 重叠：主线程 Sleep 的增量几乎 100% 是等 GPU</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">三态 Gfx.WaitForPresentOnGfxThread 单次 avg 从 0.9ms → 5.83ms → 17.8ms，对照 60Hz vsync 周期 16.67ms：base &lt; 35%（健康），cur 35%~100%（中等 GPU-bound），throttle &gt; vsync（强 GPU-bound critical，swapchain 撑爆）。Sleep 增量（base 1351ms → throttle 7666ms，增量 6315ms）≈ wait slice 增量（624→7608ms，增量 6984ms），核心增量是等 GPU。URP.Submit 的 foldChange 高达 ×124.5（base 64.8ms → throttle 8069ms），是三态涨幅最大的 slice，直接指向渲染提交链路被 GPU 拖累。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#9e9e9e1a;--tree-border:#757575;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#bdbdbd" title="URP.WaitForPresent">URP.WaitForPresent</span>
+      <span class="tree-ms">1.17ms</span>
+      <span class="tree-pct">19.3%</span>
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，wait slice 来自 atrace slice 聚合。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>GPU 侧根因需 GPU counter / RenderDoc 截帧才能定位（DrawCall 过多 / Shader 复杂 / 分辨率 / 渲染负载）</li><li>检查 URP.RenderCameraStack count=854（throttle 每帧约 2 个 camera），确认是否有不必要的多相机渲染</li><li>URP.MainRenderingTransparent throttle 727ms（3.64%），透明渲染 pass 值得排查</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#2196f3" title="信息"></span>
+      <span class="item-title">排除项：binder / IO / 锁阻塞只占 1.3%</span>
+      <span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">D 状态（不可中断睡眠，IO/锁/binder 阻塞标志）在 throttle 态仅占 off-CPU 的 1.3%，可以排除 binder 调用阻塞、文件 IO、锁竞争等常见主线程卡顿源。R+（被抢占）从 base 0.42% 升到 throttle 2.78%，是降频期间大核不足、任务排队增多的伴随现象，不是独立阻塞点。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，byState 来自 sched 状态聚合。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>无需排查 binder/IO/锁——数据已排除</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-3" style="border-left:4px solid #78909c;background:#78909c18">
+      §4 降频时序：大核 59%，中核 max 被压低，温度 75-79°C
+    </div>
+    <p class="section-intro">三态降频对照表：<br><br>| 指标 | base | cur | throttle |<br>|---|---|---|---|<br>| 大核 reach%（vs cpuinfoMax） | 74.9% | 75.6% | 59.2% |<br>| 大核 avg MHz | 1729.5 | 1576.3 | 1324.6 |<br>| 中核 reach% | 76.1% | 71.8% | 52.4% |<br>| 中核观测 max MHz | 2419.2 | 2342.4 | 2227.2 |<br>| 中核 cpuinfoMax MHz | 2419.2 | 2419.2 | 2419.2 |<br>| 采集前温度 | 65.6°C | 79.8°C | 75.6°C |<br>| 采集后温度 | 77.3°C | 79.0°C | 76.7°C |<br>| 温度 Δ | +11.7°C | -0.8°C | +1.1°C |<br><br>降频形态（三态演化）：<br><br>```<br>形态 1: base — 凉机起步快速升温<br>  特征: 起点 65.6°C → 终点 77.3°C (Δ+11.7°C)，大核 reach 74.9% 健康<br>  推断: 凉机起步，快速升温进入热保护区间，尚未限流<br><br>形态 2: cur — 高温饱和<br>  特征: 起点 79.8°C 已饱和，大核 reach 仍 75.6%，中核 max 开始下调 2419→2342<br>  推断: 起点已热，中核 max 被压是 SoC 限频的早期信号<br><br>形态 3: throttle — 持续热限流<br>  特征: 大核 reach 暴跌至 59.2%（&lt;65%），中核 max 2227MHz（&lt;cpuinfo 2419），温度 75-77°C 稳态<br>  推断: SoC 主动压低 max-freq + 大核 reach 不足，持续热限流<br>```<br><br>per-CPU 实测对照（throttle）：<br><br>| 集群 | avg MHz | max MHz | cpuinfoMax | reach% |<br>|---|---|---|---|---|<br>| 大核 (cpu7) | 1324.6 | — | 2419.2 | 59.2% |<br>| 中核 (cpu4-6) | — | 2227.2 | 2419.2 | 52.4% |<br><br>降频判定矩阵：<br><br>| 信号 | base | cur | throttle | 档位 |<br>|---|---|---|---|---|<br>| 大核 reach &lt; 65% | ✗ | ✗ | ✓ (59.2%) | likely |<br>| 中核 max &lt; cpuinfoMax | ✗ | ✓ (2342&lt;2419) | ✓ (2227&lt;2419) | likely |<br>| 温度 ≥ 75°C | ✓ (77.3) | ✓ (79.0) | ✓ (76.7) | likely |<br>| scaling_max_freq 下调 | ? | ? | ? | 不可达 |<br><br>三信号同向 → likely 降频（confirmed 档需 scaling_max_freq，非 root 设备不可达）。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">SoC 热限流：大核被压到 59%，中核 max 频率主动下调</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">throttle 态大核 reach 暴跌至 59.2%（base 74.9% → cur 75.6% → throttle 59.2%），中核观测 max 从 cpuinfo 上限 2419MHz 被压到 2227MHz——这是 SoC 主动压低 max-freq 的间接证据（理论上限不可达）。三态温度演化构成&#39;凉机起步 → 高温饱和 → 持续热限流&#39;的形态：base 起点仅 65.6°C 采后升到 77.3°C（Δ+11.7°C，凉机快速升温），cur 起点已 79.8°C（起点已饱和），throttle 持续 75-77°C（高温稳态）。降频是 GPU-bound 的加剧因素：GPU 满载发热 → SoC 热限流 → CPU 降频 → 主线程可用算力更少 → 帧更慢 → 积压更多，形成恶性循环。</p>
+      
+    <div class="tree-section fallback">
+      <div class="tree-header"><span class="tree-title">调用树备注</span></div>
+      <div class="tree-note">大核集群 reach 59.2%，avg 1324.6MHz；中核 cpu4-6 max 被压到 2227MHz（&lt;cpuinfo 2419）</div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，频率来自 cpu_freq trace，温度来自 summary beforeC/afterC（thermal sidecar 实际是占位符）。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>短期：优先解决 GPU-bound，GPU 负载降下来温度自然降</li><li>长期：看是否有画质档位可动态降级（AOE3D 有 5 档画质），在温度超阈值时自动降档</li><li>检查渲染分辨率（移动端 900p）是否可在热态时动态下调</li><li>需要看项目的温控策略代码和画质档位配置才能给具体建议</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-4" style="border-left:4px solid #4caf50;background:#4caf5018">
+      §5 主线程一帧时间去向：Core.Update 是业务主入口，行军线在 throttle 涨 37%
+    </div>
+    <p class="section-intro">PlayerLoop 帧分位数对比表：<br><br>| 指标 | base | cur | throttle |<br>|---|---|---|---|<br>| p50 | 16.69ms | 30.15ms | 45.94ms |<br>| p95 | — | — | — |<br>| p99 | 21.37ms | 42.54ms | 66.32ms |<br>| fps | 59.8 | 33.1 | 21.4 |<br>| slowFrameRate | 0% | 11.18% | 98.83% |<br>| 帧数 | ~682 | ~483 | ~427 |<br><br>主线程 callTree 缩进树（Core.Update 三态对照）：<br><br>```<br>Core.Update  base 1177 / cur 3537 / throttle 3436 ms (占比 10.3% / 24.1% / 17.2%)<br>├─ [base 内无战斗/行军 marker — 空场景]<br>├─ CS:AOE.Outside.OutSideViewArmyLineMgr  base ~0 / cur 761 / throttle 1042 ms/帧区间 (📈 cur 涌现 → throttle 涨 37%)<br>│  └─ OutsideLineCtrl:CalculateVertexJob (Burst)  throttle 260ms / 51240 次 (行军线 vertex 并行计算)<br>├─ BattleHeadMgr  base ~0 / cur 731 / throttle 471 ms (📈 cur 涌现 → throttle 降 36%)<br>├─ MapSignificanceMgr  base ~0 / cur 627 / throttle 456 ms (📈 cur 涌现 → throttle 降 27%)<br>└─ CS:AOE.Outside.MapManager  base 298 / cur — / throttle — (base 即有，行军管理基座)<br>```<br><br>关键判读：base 的 Core.Update 内部只有 LuaMgr (678ms) + MapManager (298ms)，没有战斗/行军相关 marker——base 是空场景采集。cur/throttle 的业务模块涌现是场景差异（战斗+行军压测），不是性能退化。cur→throttle 同场景对照，BattleHeadMgr 和 MapSignificanceMgr 反而略降，OutSideViewArmyLineMgr 涨 37%（761→1042ms）是行军压测压力增大，不是异常。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ffc107" title="中"></span>
+      <span class="item-title">OutSideViewArmyLineMgr：行军线管理在 throttle 涨 37%，是行军压测的正常负载</span>
+      <span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">OutSideViewArmyLineMgr 在 throttle 占 5.22%（1042ms），其子节点 OutsideLineCtrl:CalculateVertexJob (Burst) 占 1.31%（260ms，51240 次调用），是 Burst 并行计算的 vertex 生成——行军场景的正常成本。cur→throttle 涨 37%（761→1042ms）对应行军压力增大，不是性能退化。foldChange=9999 是 base 无数据的伪信号（base 是空场景，Core.Update 内根本没有这个 marker），不能当退化证据。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.OutSideViewArmyLineMgr">CS:AOE.Outside.OutSideViewArmyLineMgr</span>
+      <span class="tree-ms">1.58ms</span>
+      <span class="tree-pct">5.2%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:1.0%;--tree-bg:#9c27b01a;--tree-border:#9c27b0;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#ce93d8" title="OutsideLineCtrl:CalculateVertexJob (Burst)">OutsideLineCtrl:CalculateVertexJob (Burst)</span>
+      <span class="tree-ms">0.00ms</span>
+      <span class="tree-pct">1.4%</span>
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，需看 OutSideViewArmyLineMgr 和 OutsideLineCtrl 的实现才能给具体建议。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>看 OutSideViewArmyLineMgr 的实现，确认行军线数量是否可裁剪——视野外的行军线不计算 vertex</li><li>CalculateVertexJob 是 Burst 并行计算，已用 Job 系统，优化空间在减少输入量而非并行度</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ffc107" title="中"></span>
+      <span class="item-title">BattleHeadMgr / MapSignificanceMgr：cur→throttle 反而略降，无系统性恶化</span>
+      <span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">BattleHeadMgr 731→471ms（降 36%），MapSignificanceMgr 627→456ms（降 27%）——cur→throttle 同场景对照，业务模块没有系统性恶化。throttle 态帧时暴增的主因是 GPU wait（见 §3），不是业务逻辑变慢。这条 finding 的核心是诚实声明：querySliceDeltas 报出的 foldChange=9999（baseTotalMs=null）不能当性能退化证据，base 调用树证实是空场景。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Core.Update">Core.Update</span>
+      <span class="tree-ms">7.32ms</span>
+      <span class="tree-pct">24.1%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:51.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.LuaMgr">CS:AOE.LuaMgr</span>
+      <span class="tree-ms">3.80ms</span>
+      <span class="tree-pct">12.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:51.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LuaMgr.OnTick&amp;UpdateSchedule">LuaMgr.OnTick&amp;UpdateSchedule</span>
+      <span class="tree-ms">3.75ms</span>
+      <span class="tree-pct">12.3%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:20.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr">BattleHeadMgr</span>
+      <span class="tree-ms">1.51ms</span>
+      <span class="tree-pct">5.0%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:20.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr.OnUpdate">BattleHeadMgr.OnUpdate</span>
+      <span class="tree-ms">1.50ms</span>
+      <span class="tree-pct">4.9%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:17.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr">MapSignificanceMgr</span>
+      <span class="tree-ms">1.30ms</span>
+      <span class="tree-pct">4.3%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:17.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr.sampler_OnUpdate">MapSignificanceMgr.sampler_OnUpdate</span>
+      <span class="tree-ms">1.29ms</span>
+      <span class="tree-pct">4.3%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:39.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.MapManager">CS:AOE.Outside.MapManager</span>
+      <span class="tree-ms">2.90ms</span>
+      <span class="tree-pct">9.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:21.5%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.OutSideViewArmyLineMgr">CS:AOE.Outside.OutSideViewArmyLineMgr</span>
+      <span class="tree-ms">1.58ms</span>
+      <span class="tree-pct">5.2%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:1.0%;--tree-bg:#9c27b01a;--tree-border:#9c27b0;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#ce93d8" title="OutsideLineCtrl:CalculateVertexJob (Burst)">OutsideLineCtrl:CalculateVertexJob (Burst)</span>
+      <span class="tree-ms">0.00ms</span>
+      <span class="tree-pct">1.4%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:9.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Battle.BattleUIManager">CS:AOE.Battle.BattleUIManager</span>
+      <span class="tree-ms">0.72ms</span>
+      <span class="tree-pct">2.4%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:9.8%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="*** BattleUIUpdate ***">*** BattleUIUpdate ***</span>
+      <span class="tree-ms">0.71ms</span>
+      <span class="tree-pct">2.4%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:8.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MUI_UpdateUIPos">MUI_UpdateUIPos</span>
+      <span class="tree-ms">0.61ms</span>
+      <span class="tree-pct">2.0%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:4.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.TServerManager">CS:AOE.TServerManager</span>
+      <span class="tree-ms">0.30ms</span>
+      <span class="tree-pct">1.0%</span>
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>无需把 BattleHeadMgr/MapSignificanceMgr 当退化点优化——cur→throttle 它们在降</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#4caf50" title="低"></span>
+      <span class="item-title">GC 归因：渲染管线每帧上百次分配，TimeText 每帧 24 次</span>
+      <span class="chip sev-chip" style="color:#4caf50;background:#4caf5020">低</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">GC 分配归因（按模块，子树总次数 → 次/帧）：<br><br>```<br>URP.BeforeRendering (渲染管线内部)<br>  base:  —<br>  cur:   每帧 130.54 次 (头号 GC 源)<br>  throttle: 每帧 31 次<br><br>Inl_OpaquePass (不透明 pass)<br>  base:  —<br>  cur:   每帧 129.53 次<br>  throttle: 每帧 30 次<br><br>TimeText.7 (BattleHeadMgr.OnUpdate 子节点)<br>  base:  —<br>  cur:   每帧 24.43 次<br>  throttle: 每帧 24.69 次 (两态都稳定)<br><br>CS:AOE.MeshUIManager<br>  cur:   每帧 61.33 次<br>  throttle: 每帧 2.11 次<br>```<br><br>GC.Collect 实际只触发 cur 3次 / throttle 1次（avg 18~33ms），占总窗口 &lt;0.4%——当前不是帧时主因。但 cur 态每帧 260+ 次渲染管线分配（URP.BeforeRendering + OpaquePass）说明每帧渲染都在产生临时对象（可能是 command buffer / render texture / 材质属性块），持续分配挤压 GC 堆是长期卡顿风险。TimeText.7 每帧 24 次分配在两态都稳定，是 Lua 业务层的固定分配源。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.BeforeRendering">URP.BeforeRendering</span>
+      <span class="tree-ms">0.92ms</span>
+      <span class="tree-pct">6.1%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:24.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CullScriptable">CullScriptable</span>
+      <span class="tree-ms">0.23ms</span>
+      <span class="tree-pct">1.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:17.2%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="SceneCulling">SceneCulling</span>
+      <span class="tree-ms">0.16ms</span>
+      <span class="tree-pct">1.1%</span>
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码。queryGcAllocByModule 是聚合数据，无法定位单次 GC.Collect 触发前的分配来源（工具限制）。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>URP.BeforeRendering/OpaquePass 的 GC 分配通常是 Unity 引擎侧行为，项目可优化空间有限——检查是否有自定义渲染 Pass 在分配</li><li>TimeText.7 在 BattleHeadMgr.OnUpdate 下每帧 24 次分配——看 TimeText 实现，可能是每帧创建字符串格式化时间显示，可缓存或用 StringBuilder</li><li>需要看 BattleHeadMgr.OnUpdate 和 TimeText 的源码才能给具体建议</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-5" style="border-left:4px solid #009688;background:#00968818">
+      §6 GPU-bound 判定：多信号同向，throttle 强 GPU-bound
+    </div>
+    <p class="section-intro">GPU-bound 判定矩阵（多信号同向）：<br><br>| 信号 | base | cur | throttle | 指向 |<br>|---|---|---|---|---|<br>| Gfx.WaitForPresent 单次 avg | 0.9ms | 5.83ms | 17.8ms | 单次超 vsync → 强 GPU-bound |<br>| wait slice 占窗口 | 5.4% | 19.2% | 38.1% | 单调暴涨 |<br>| Render 线程 runningPct | 25.98% | — | 16.71% | 变闲，CPU 渲染不是瓶颈 |<br>| Choreographer | 60fps / 0% | 60fps / 0% | 60fps / 0% | 稳定，排除合成侧 |<br>| 主线程 D 状态 | — | — | 1.3% | 低，排除 IO/锁 |<br>| URP.Submit foldChange | — | — | ×124.5 | 渲染提交链路被 GPU 拖累 |<br><br>Gfx.WaitForPresent 单次 avg 演化表（vs vsync 16.67ms）：<br><br>```<br>                base       cur        throttle     vsync 16.67ms<br>单次 avg ms     0.9        5.83       17.8        ─────────────<br>占 vsync %      5%         35%        107%        ▲ 超 vsync<br>档位            健康       中等       强(critical)<br>```<br><br>判定结论：throttle 强 GPU-bound，cur 中等 GPU-bound，base 健康。多信号同向（wait slice 暴涨 + Render 变闲 + Choreographer 稳定 + D 状态低 + URP.Submit foldChange ×124.5），结论稳健。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">GPU-bound 判定结论：throttle 强 GPU-bound，诚实声明硬证给不出</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">判定逻辑：主线程等 GPU 的单次时间从 0.9ms → 5.83ms → 17.8ms，throttle 单次已超 vsync 16.67ms 周期——这意味着每帧的 swapchain 提交都在跨 vsync，GPU 来不及完成上一帧。多信号同向验证：(1) Render 线程变闲（25.98%→16.71%），CPU 渲染链路不是瓶颈；(2) Choreographer 三态稳定 60fps / slowFrameRate=0，排除 SurfaceFlinger；(3) D 状态 1.3%，排除 binder/IO/锁；(4) URP.Submit foldChange ×124.5，渲染提交链路被 GPU 拖累。<br><br>诚实声明边界：本 trace 无 GPU busy/freq counter，&#39;GPU 100% 满载&#39;硬结论给不出，只能停在间接强信号档（单次 wait &gt; vsync + 多信号同向）。要给&#39;GPU 满载&#39;硬结论需 GPU counter / RenderDoc 截帧。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.Submit">URP.Submit</span>
+      <span class="tree-ms">1.31ms</span>
+      <span class="tree-pct">21.6%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:89.3%;--tree-bg:#9e9e9e1a;--tree-border:#757575;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#bdbdbd" title="URP.WaitForPresent">URP.WaitForPresent</span>
+      <span class="tree-ms">1.17ms</span>
+      <span class="tree-pct">19.3%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:8.2%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.MakeTranscriptRenderContext">URP.MakeTranscriptRenderContext</span>
+      <span class="tree-ms">0.11ms</span>
+      <span class="tree-pct">1.8%</span>
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，GPU 侧根因需 GPU counter / RenderDoc 截帧。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>GPU 侧根因定位需 GPU counter / RenderDoc 截帧（DrawCall 过多 / Shader 复杂 / 分辨率 / 渲染负载）</li><li>检查 URP.RenderCameraStack count=854（throttle 每帧约 2 个 camera），确认是否有不必要的多相机渲染</li><li>URP.MainRenderingTransparent throttle 727ms（3.64%），透明渲染 pass 值得排查</li><li>Inl_OpaquePass 在 cur 占 2.71%，是 GC 分配大头之一，渲染管线内部有持续分配</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-6" style="border-left:4px solid #2196f3;background:#2196f318">
+      §7 ROI 优化方向：按 severity + 贡献排序
+    </div>
+    <p class="section-intro">按 severity 和对整体帧率的贡献排序。注意：当前单源无历史基线、无业务知识回路，&#39;该不该管&#39;的判断走&#39;通用三维 + 声明判不了&#39;这一档——以下优化方向基于代码/数据推理，具体落地需结合 GPU 侧数据和业务知识。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">P0：GPU-bound 根因定位——throttle 态帧时首要成因</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">throttle 态主线程 38% 时间在等 GPU，单次 17.8ms 超 vsync，是帧率从 60fps 崩到 21fps 的首要成因。但 GPU 侧根因（DrawCall / Shader / 分辨率 / 渲染负载）单源判不了，需 GPU counter / RenderDoc 截帧。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>用 GPU counter / RenderDoc 截帧定位 GPU 侧根因</li><li>检查 URP.RenderCameraStack count=854（throttle 每帧约 2 个 camera），确认是否有不必要的多相机渲染</li><li>URP.MainRenderingTransparent throttle 727ms（3.64%），透明渲染 pass 值得排查</li><li>Inl_OpaquePass 在 cur 是 GC 分配大头，渲染管线内部有持续分配</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">P1：温控策略——画质档位动态降级</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">SoC 热限流是 GPU-bound 的加剧因素。短期靠解决 GPU-bound 降温；长期需温控策略，在温度超阈值时自动降档。AOE3D 有 5 档画质，可做动态降级。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，需看项目的温控策略代码和画质档位配置。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>看是否有画质档位可动态降级（AOE3D 有 5 档画质），在温度超阈值时自动降档</li><li>检查渲染分辨率（移动端 900p）是否可在热态时动态下调</li><li>需要看项目的温控策略代码和画质档位配置才能给具体建议</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ffc107" title="中"></span>
+      <span class="item-title">P2：行军线视野裁剪——OutSideViewArmyLineMgr 在 throttle 涨 37%</span>
+      <span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">OutSideViewArmyLineMgr 在 throttle 占 5.22%（1042ms），子节点 CalculateVertexJob (Burst) 51240 次调用。是行军压测的正常负载，但若行军线数量可裁剪（视野外不计算 vertex），可降低 Burst 计算量。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，需看 OutSideViewArmyLineMgr 和 OutsideLineCtrl 的实现。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>看 OutSideViewArmyLineMgr 的实现，确认行军线数量是否可裁剪——视野外的行军线不计算 vertex</li><li>CalculateVertexJob 是 Burst 并行计算，已用 Job 系统，优化空间在减少输入量而非并行度</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#4caf50" title="低"></span>
+      <span class="item-title">P3：TimeText 字符串分配缓存——每帧 24 次</span>
+      <span class="chip sev-chip" style="color:#4caf50;background:#4caf5020">低</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">TimeText.7 在 BattleHeadMgr.OnUpdate 下每帧 24 次分配，两态都稳定，是 Lua 业务层的固定分配源。可能是每帧创建字符串格式化时间显示。</p>
+      
+      <div class="source-insight"><span class="insight-label">源码归因</span>未定位到行级源码，需看 BattleHeadMgr.OnUpdate 和 TimeText 的实现。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>看 TimeText 的实现，可能是每帧创建字符串格式化时间显示，可缓存或用 StringBuilder</li><li>URP.BeforeRendering/OpaquePass 的 GC 分配通常是 Unity 引擎侧行为，项目可优化空间有限——检查是否有自定义渲染 Pass 在分配</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+
+<!-- ═══════════════════ § 优化优先级 ═══════════════════ -->
+<div class="section-title" id="sec-priority">优化优先级</div>
+<table class="priority-table">
+  <thead>
+    <tr><th>优先级</th><th>动作</th><th>收益</th></tr>
+  </thead>
+  <tbody>
+    <tr class="priority-p0">
+      <td class="pri-priority">P0</td>
+      <td class="pri-action">GPU-bound 根因定位：用 GPU counter / RenderDoc 截帧定位（DrawCall / Shader / 分辨率 / 渲染负载），同时检查 URP.RenderCameraStack 多相机必要性和透明渲染 pass</td>
+      <td class="pri-benefit">throttle 态帧时首要成因，解决后帧率从 21fps 回升空间最大</td>
+    </tr><tr class="">
+      <td class="pri-priority">P1</td>
+      <td class="pri-action">温控策略：画质档位动态降级 + 渲染分辨率热态动态下调</td>
+      <td class="pri-benefit">缓解 SoC 热限流，打断 GPU 满载发热→降频→帧更慢的恶性循环</td>
+    </tr><tr class="">
+      <td class="pri-priority">P2</td>
+      <td class="pri-action">行军线视野裁剪：OutSideViewArmyLineMgr 视野外行军线不计算 vertex</td>
+      <td class="pri-benefit">降低 Burst CalculateVertexJob 计算量（throttle 51240 次 / 260ms）</td>
+    </tr><tr class="">
+      <td class="pri-priority">P3</td>
+      <td class="pri-action">TimeText 字符串分配缓存：每帧 24 次分配改缓存或 StringBuilder</td>
+      <td class="pri-benefit">减少 GC 堆压力，是长期卡顿风险防范</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ Footer ═══════════════════ -->
+<div class="page-footer">
+  <span class="footer-item"><span class="footer-label">runId</span>bk26b-perfetto-triad/2026-07-15_10-36-27</span>
+  <span class="footer-item"><span class="footer-label">生成时间</span>2026/7/16 11:04:19</span>
+  <span class="footer-item"><span class="footer-label">生成工具</span>Prism render-html (deterministic)</span>
+</div>
+
+</body>
+</html>

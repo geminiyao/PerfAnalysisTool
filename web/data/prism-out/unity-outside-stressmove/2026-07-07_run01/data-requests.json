@@ -1,0 +1,32 @@
+[
+  {
+    "id": "D1",
+    "request": "Per-allocation-site (or at least per-marker) breakdown of managed heap allocation bytes during frames 462-481, correlated with the GarbageCollector.CollectIncremental burst window identified in F3.",
+    "reason": "queryFrameCounters only exposes gc_allocated_in_frame as a single whole-frame total per frame; it cannot attribute which specific marker/subsystem/script call is allocating during this 20-frame burst window. Without this, it is impossible to confirm which system is driving the periodic incremental GC pressure feeding into the frame-483 GC.Collect stall (F2/F3).",
+    "hypothesisToTest": "That a specific recurring gameplay system (e.g. camera/map update, entity sync, or Lua tick) is allocating steadily during frames 462-481, causing the incremental GC to build up pressure that resolves in a full collect at frame 483."
+  },
+  {
+    "id": "D2",
+    "request": "Time series or event log of the LoaderManagerTryUnloadPending pending-unload queue size (number of assets queued for unload) around frames 80, 102, 146, 414, 464.",
+    "reason": "None of the 8 tools expose asset/resource manager internal state (queue depth, asset counts) -- they only see marker timing (selfMs/totalMs) in the call tree. F5 established that this marker spikes to ~30ms on 5 specific frames but cannot explain why those specific frames trigger a larger unload batch than neighboring frames.",
+    "hypothesisToTest": "That the pending-unload queue accumulates over some interval and periodically drains in a single expensive frame, and that queue depth at spike time correlates with the ~30ms cost observed."
+  },
+  {
+    "id": "D3",
+    "request": "A cross-thread wait-dependency graph for frame 194 showing whether the Main Thread was blocked waiting on the '1:Lua.GC' thread's LuaMtGc.ExecuteMtGc call (F6), or whether the two ran fully in parallel without any Main Thread stall.",
+    "reason": "getThreadTimeline reports per-thread topLevelMs and top markers but does not report explicit wait/signal dependencies between the Main Thread and the '1:Lua.GC' thread for this specific event. Without this, F6's real user-facing impact (does this spike actually cost the frame, or is it hidden behind other parallel work) is unconfirmed.",
+    "hypothesisToTest": "That frame 194's overall frame time (49.60ms) was extended by Main Thread waiting on this Lua GC pass, rather than the GC work being fully absorbed by parallelism."
+  },
+  {
+    "id": "D4",
+    "request": "Per-camera (not just per-frame) breakdown of batches / set_pass_calls / triangles for frames using URP.RenderSingleCamera, to determine whether the 10.64ms/frame rendering subtree cost (F7) scales primarily with draw call count, transparent overdraw, or shader complexity.",
+    "reason": "queryFrameCounters only provides whole-frame totals (e.g. total batches across all cameras/passes for the frame), not a per-camera or per-pass breakdown. F7 identified that no single URP stage dominates the subtree cost, but cannot determine which upstream input (batch count vs overdraw vs shader cost) is driving the aggregate 10.64ms.",
+    "hypothesisToTest": "That reducing draw call count or transparent overdraw for the main camera would proportionally reduce URP.RenderSingleCamera's subtree cost, as opposed to the cost being inherent to shader/pass complexity regardless of draw call count."
+  },
+  {
+    "id": "D5",
+    "request": "Lua-side function-level profiling (call stack inside the Lua VM) for the CS:AOE.LuaMgr Update tick, to break down its 6.82ms/frame average cost (F8) into individual Lua functions or modules.",
+    "reason": "The 8 tools only see Lua work as a single opaque C# marker boundary (CS:AOE.LuaMgr); getFrameCallTree cannot descend into Lua call stacks since Lua execution is not instrumented as native Unity Profiler markers. This is the single largest script-side subsystem in F8 but its internal composition is completely opaque to the current toolset.",
+    "hypothesisToTest": "That a small number of specific Lua modules/functions dominate this 6.82ms/frame cost and could be targeted for optimization, rather than the cost being evenly spread across many small Lua calls."
+  }
+]

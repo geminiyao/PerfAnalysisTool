@@ -704,3 +704,538 @@ Prism要超越-作文机没有：⑥彩色可视化调用树(作文机仅ASCII) 
 2. 收尾回扫检查里加一条:"我查过的线程分布、URP整树,写进报告了吗?"——查了没写=漏，必须补。
 3. narrative 阶段的"工作线程"分群不能是可选的空架子，探索查到的线程数据必须落进去。
 **记为 BK-15(收敛偏见修复)。源码归因找不到=BK-12b残留,用户要求专项解决=BK-16。**
+
+---
+
+## DR-45 · 模板注入断链：工单"验收 PASS"却产出残缺报告（harness 缺失的教训）
+
+> **触发事件**：2026-07-16 用户对比 Prism perfetto 报告（`web/data/prism-out/bk26b-perfetto-triad/2026-07-15_10-36-27/report.html`）与 v5.3 标杆（`docs/report/performance-report_perfetto_ULTIMATE_v5.3.md`），发现"报告框架、内容充实度、调用树下钻程度差距很大"，质问"之前都说过的呀，为什么生成的报告感觉都忘了"。
+>
+> **诊断结论**：反馈没忘，沉淀没丢，但**运行时 LLM 的上下文里既没有 dev conventions（在另一个目录），也没有 perfetto-multi-state 模板（占位符没填充）**——narrative LLM 只拿到了 `narrative-prompt.txt` 的裸骨架 + few-shot 范例，所以按最省事的方式交了 5 个分群卡片。机制是对的（三段管线 + LLM 推理 + 纯代码渲染），不是作文机；但 narrative 阶段的模板注入被 `return ''` 短路了。
+>
+> **关联**：DR-44（三段管线契约）+ philosophy.md §一补充（5 维度对照表）+ dev-conventions.md（开发纪律）
+
+### 一、事实认定
+
+#### 1.1 反馈沉淀是齐的（不是"忘了"）
+
+用户之前的反馈，三处沉淀都明明白白：
+
+| 沉淀位置 | 内容 | 给谁读 |
+|---|---|---|
+| `docs/prism/memory/dev/conventions.md` §四 | 报告可读性偏好：图文穿插/调用树有焦点/不要 raw 全树 | 开发 agent |
+| `docs/prism/memory/dev/conventions.md` §三 | 验收标准：对照标杆逐项核结构 + 叙事可读性 | 开发 agent |
+| `prompts/report-templates/perfetto-multi-state.txt` | §0-§7 八章骨架 + ASCII 资产要求 + 写作纪律 | 运行时 narrative LLM（**本应**通过 `{{REPORT_TEMPLATE}}` 注入） |
+
+#### 1.2 但运行时 LLM 没读到（断链）
+
+**断链 1：dev conventions 在另一个目录，运行时 LLM 读的是 `web/server/prism/prism-memory/`**
+
+`prism-memory/lessons/` 目录只有 `.gitkeep`，是空的。开发约定（给人/开发 agent 看）和运行时记忆（给 Prism LLM 看）是两套独立系统，没打通。narrative LLM 的上下文里没有"图文穿插/调用树有焦点/不要 raw 全树"这些纪律。
+
+**断链 2：`{{REPORT_TEMPLATE}}` 占位符被 `return ''` 短路**
+
+`narrative-service.ts:95-103` 的 `resolveReportTemplate` 函数：
+
+```ts
+function resolveReportTemplate(source: string, _outputDir: string): string {
+  const templateDir = path.join(__dirname, 'prompts', 'report-templates');
+  if (!fs.existsSync(templateDir)) return '';
+  // 未来：const templatePath = path.join(templateDir, `${source}-multi-state.txt`);
+  // if (fs.existsSync(templatePath)) return fs.readFileSync(templatePath, 'utf-8');
+  return '';  // ← 永远返回空
+}
+```
+
+注释写着 "WT-028 填，本阶段先用空"，但 WT-028 已标记 ✅ 完成。模板文件 `perfetto-multi-state.txt` 确实存在（87 行，定义 §0-§7 八章骨架），就是这个函数没接上——`return ''` 没改成真的读文件。
+
+**断链 3：`report-pipeline.ts` 注册时 `reportTemplatePath: null`**
+
+`report-pipeline.ts:158` 注册 perfetto pipeline 时：
+```ts
+registry.register({
+  source: 'perfetto',
+  explorePromptPath: 'prompts/perfetto-explore-prompt.txt',
+  exploreTools: {},
+  reportTemplatePath: null,  // WT-028 填（prompts/report-templates/perfetto-multi-state.txt）
+});
+```
+
+注释也说 "WT-028 填"，但 WT-028 标记 ✅ 完成后这个 `null` 没改。`narrative-service.ts` 的 `resolveReportTemplate` 也没从 pipeline registry 取 `reportTemplatePath`，是自己独立硬编码 `return ''`。**两处断点，任一接上都能部分修复**。
+
+#### 1.3 渲染层也缺视觉资产（即使模板注入修了，schema/render 装不下）
+
+模板要求 ASCII 状态分布图、ASCII 因果链、红线矩阵、降频判定矩阵、多线程宏观表、元信息表——`render-html.ts` 一个都没实现，`narrative-types.ts` 也没定义 `redlineMatrix` / `threadOverview` / `throttlingMatrix` / `asciiArt` 这些字段。
+
+所以即使 narrative LLM 老老实实按模板写，写出来的 ASCII 图和矩阵也**没地方放**——narrative.json schema 装不下，render-html 也不画。这是 WT-028 "v5.3 反向沉淀" 漏掉的部分：当时只把 v5.3 的渲染能力沉淀到 `report-utils.ts`，没把 v5.3 的**章节视觉资产**沉淀进 schema 和渲染器。
+
+### 二、根因：为什么工单"验收 PASS"却产出残缺报告
+
+这是本次最有价值的教训。三个层面的失误：
+
+#### 2.1 工单验收标准本身有漏洞
+
+DR-44 §6.5 的验收自检 5 条：
+1. findings conclusion 是人话还是 log 风？ ✅ 通过
+2. narrative.json 有没有 evidenceIds/findingIds 审计字段？ ✅ 通过
+3. 报告脚本有没有"建议单次任务削峰"这种万能套话？ ✅ 通过
+4. 报告脚本有没有数据源特定判定逻辑？ ✅ 通过
+5. 三段都走了？narrative.json 的 `generatedBy` 是不是 `"LLM"`？ ✅ 通过
+
+**这 5 条全过，但报告还是残缺的**。为什么？因为这 5 条验的是"有没有退化成作文机"，**没验"narrative LLM 拿到的 prompt 完不完整"**，也没验"narrative.json 的结构符不符合模板章节骨架"。
+
+**漏洞**：验收只看了产出物的"合规性标记"（provenance=LLM、无审计字段、无套话），没看产出物的"内容完整性"（章节结构是否齐、视觉资产是否出、模板是否真的注入了）。这就像验货只看了出厂合格证，没开箱看货。
+
+#### 2.2 开发 agent 的"完成"判定不可靠
+
+WT-028 标记 ✅ 完成，但实际有 3 处断点没接：
+- `resolveReportTemplate` 的 `return ''` 没改
+- `report-pipeline.ts` 的 `reportTemplatePath: null` 没填
+- `narrative-types.ts` + `render-html.ts` 的视觉资产字段/渲染器没补
+
+开发 agent 大概是"建了模板文件 + 加了占位符 + 写了 few-shot"就认为 C2/C3 完成了，没回头跑一次端到端验证"模板内容真的进了 LLM 的 prompt 吗"。这是 DR-36（Claude 自评不可靠）的又一次实证：**开发 agent 自评"完成"不等于实际完成**。
+
+#### 2.3 没有 harness 兜底
+
+整个管线没有"端到端可执行校验"——没有测试断言"narrative LLM 拿到的 prompt 里包含 `perfetto-multi-state.txt` 的内容"，没有测试断言"narrative.json 的 sections 数量/标题符合模板章节骨架"，没有测试断言"report.html 包含模板要求的视觉资产"。
+
+`tools.test.ts` 的 [15][16] 节（DR-41 五条硬规则自动检查）是 SKIPPED 状态——注释说"待 WT-028 改测新三段管线"，但 WT-028 标记 ✅ 后这个测试也没补上。**质量底线测试是 skip 的，等于没有 harness**。
+
+### 三、harness 设计（防再次发生）
+
+针对三个层面的失误，设计三层 harness：
+
+#### 3.1 占位符填充可测（防 `return ''` 短路）
+
+**问题**：`resolveReportTemplate` 硬编码 `return ''`，没有测试能发现。
+
+**harness**：加一个单元测试，断言 `resolveReportTemplate('perfetto', ...)` 返回的字符串**非空且包含模板文件的关键标记**（如 "§0 结论先行" / "ASCII 状态分布"）。
+
+```ts
+// tools.test.ts 新增节
+const tpl = resolveReportTemplate('perfetto', '');
+assert(tpl.length > 0, 'perfetto report template is non-empty');
+assert(tpl.includes('§0'), 'template contains §0 section');
+assert(tpl.includes('ASCII'), 'template requires ASCII assets');
+```
+
+**原则**：**任何占位符填充函数都必须有测试断言其返回值非空且含关键内容**。占位符被短路 = 注入机制形同虚设，这是隐蔽性最强的 bug（代码不报错、管线不崩、产出还合规，就是质量差）。
+
+#### 3.2 narrative.json 结构契约校验（防 LLM 拿到残缺 prompt 交差）
+
+**问题**：narrative LLM 拿到裸骨架后按自由指令交了 5 个分群卡片，没人校验它符不符合模板章节骨架。
+
+**harness**：narrative-service.ts 在 LLM 产出 narrative.json 后，校验 sections 结构。两种方案：
+
+- **方案 A（硬约束）**：按 `reportTemplatePath` 指定的模板解析章节骨架，校验 narrative.json 的 sections 数量/标题是否匹配。不匹配 = 拒绝并报错"narrative 结构不符合模板"。
+- **方案 B（软约束 + 诊断）**：不拒绝，但打 warning："narrative.json 有 N 个 section，模板要求 M 个章节 [§0...§7]，可能 LLM 没按模板组织"。同时把 warning 写进 `narrativeProvenance` 字段供验收查看。
+
+**推荐方案 B**：硬约束容易误杀（LLM 可能合理合并章节），软约束 + 诊断既不阻塞管线又能暴露问题。但**warning 必须在验收时被检查**——不能打了 warning 没人看。
+
+#### 3.3 端到端对照标杆核结构（防"验收只看合规性标记"）
+
+**问题**：DR-44 §6.5 的 5 条验收只看合规性标记，没开箱看货。
+
+**harness**：`tools.test.ts` [16] 节（DR-41 五条硬规则）改成**端到端结构对照**，不只检查字段存在：
+
+```ts
+// [16] 节改成：对照标杆报告逐项核结构
+// 1. 读 narrative.json，校验 sections 覆盖模板要求的章节（§0-§7 或对应裁剪）
+// 2. 校验每个 section 的 items 有 callTree.rootMarker（不是全 fallback 成 note）
+// 3. 校验 topConclusions 按贡献排序（稳态大头在前，低频尖峰在后）
+// 4. 校验 judgmentBoundary 非空（诚实声明能判/判不了）
+// 5. 校验 report.html 包含模板要求的关键视觉资产（如 callTree 渲染、ruledOut 条）
+```
+
+**原则**：**验收报告类工单必须对照标杆报告逐项核结构 + 叙事可读性，不能只看"字段存在/测试 PASS/provenance=LLM"**（dev-conventions.md §三已写，但没执行）。
+
+### 四、给开发 agent 的硬规则（补充 dev-conventions.md）
+
+基于本次教训，dev-conventions.md 新增条目：
+
+1. **占位符填充必须可测**：任何 `{{XXX}}` 占位符的填充函数，必须有测试断言返回值非空且含关键内容。填充函数返回空字符串 = 注入机制失效，是隐蔽 bug。
+2. **narrative.json 结构契约校验**：narrative-service 产出后，校验 sections 结构是否符合模板章节骨架（软约束 warning，不阻塞但必须验收时检查）。
+3. **验收不能只看 provenance=LLM**：provenance=LLM 只证明"narrative 是 LLM 产的"，不证明"narrative 拿到了完整 prompt"。必须端到端对照标杆核结构。
+4. **WT 工单"完成"必须有端到端验证**：开发 agent 标记工单 ✅ 前，必须跑一次端到端管线（不是 --skip-explore 的局部测试），确认产出物结构完整。DR-36（Claude 自评不可靠）= 开发 agent 自评"完成"不可信，必须用产出物验证。
+
+### 五、修复方向（不在本 DR 展开，记入 backlog）
+
+1. **P0 修 `resolveReportTemplate`**：`return ''` 改成真的读 `perfetto-multi-state.txt`，或从 pipeline registry 取 `reportTemplatePath`。
+2. **P0 修 `report-pipeline.ts` 注册**：`reportTemplatePath: null` 改成 `'prompts/report-templates/perfetto-multi-state.txt'`。
+3. **P0 扩 `narrative-types.ts` + `render-html.ts`**：补模板要求的视觉资产字段（红线矩阵/降频矩阵/多线程宏观表/ASCII 图）+ 渲染器。注意：render 层只做呈现，判定逻辑仍在 explore LLM。
+4. **P1 补 `tools.test.ts` [15][16] 节**：从 SKIPPED 改成端到端结构对照。
+5. **P1 打通 dev conventions → 运行时 LLM**：把 dev-conventions.md §四的偏好复制到 `prism-memory/lessons/`，或在 narrative-prompt.txt 里写死纪律。
+
+---
+
+_本 DR 基于 2026-07-16 用户诊断"perfetto 报告模板注入断链"的对话沉淀。核心教训：工单"验收 PASS"不等于产出完整——验收标准本身的漏洞 + 开发 agent 自评不可靠 + 无 harness 兜底 = 三重失误叠加。修复不只是接上 `return ''`，是补上 harness 让这类隐蔽断链能被发现。_
+
+---
+
+## Backlog：Prism 五层 harness 体系（DR-45 延伸）
+
+> DR-45 建了报告管线层 harness（`harness.ts`）。但 Prism 不只是报告生成，是"数据入口 → 三段管线 → 三条回路"的完整 agent。harness 要按层分建，不建超级 harness。详见 `docs/prism/memory/dev/ticket-template.md` 附录。
+
+| 编号 | harness | 验什么 | 触发条件 | 依赖 | 现状 |
+|---|---|---|---|---|---|
+| BK-HARNESS-REPORT | `harness.ts` | 占位符注入 / narrative schema / report.html 视觉资产 | 报告类工单 | 无 | ✅ 已建（DR-45） |
+| BK-HARNESS-TOOLS | `tools-harness.ts` | 新查询工具返回结构 / provenance / 边界处理（空结果/超大结果/非法参数） | 下次有加查询工具的工单 | 无 | ❌ 待建 |
+| BK-HARNESS-INGEST | `ingest-harness.ts` | 新数据源灌库后 schema 完整 / 行数合理 / 字段非空 / 索引建对 | 下次接新数据源 | 无 | ❌ 待建 |
+| BK-HARNESS-EXPLORE | `explore-harness.ts` | findings.json 结构 / conclusion 人话风 / 证据验证 / 账本对齐 / 候选清单覆盖 | 下次改 explore 判定逻辑 | 无 | ❌ 待建 |
+| BK-HARNESS-LOOP | `loop-harness.ts` | 知识/能力/质量回路的注入与沉淀闭环（开局注入非空 / 收尾沉淀写盘 / 跨run 可读回） | BK-LOOP 建设时 | BK-LOOP 代码先建 | ❌ 待建 |
+
+**建设原则**：跟着工单走，不超前建空壳（DR-32）。哪层有工单就建哪层 harness，回路层连代码都没有时建了也是空的。每层 harness 自包含、单独可跑，不依赖其它层。
+
+---
+
+## DR-47 · 开发 agent "骨架硬写根因分析"教训（commit a7ddf0d）
+
+> **触发事件**：2026-07-17 WT-038/041 验收时发现，开发 agent 在 `docs/prism/memory/dev/` 下硬写了一段"骨架硬写根因分析"（commit `a7ddf0d`），列了 5 条根因——但这是开发 agent 自己脑补的，不是基于真实证据的根因分析。
+>
+> **关联**：DR-36（Claude 自评不可靠）+ DR-45 §2.2（开发 agent 自评"完成"不可信）
+
+### 一、事实认定
+
+开发 agent 在 WT-038 工单完成时，自己加了一段"骨架硬写根因分析"（5 条根因）：
+1. 规约只覆盖代码层没覆盖 prompt 层
+2. DR-44 写了数据源无关骨架但没给可执行检查标准
+3. harness 只检查代码文件不检查 prompt 文件
+4. 反向沉淀 v5.3 时范例直接塞进 narrative-prompt 业务名一起带进来
+5. 规约是原则导向不是可执行检查
+
+这 5 条看起来合理，但**没有证据支撑**——没有引用具体的代码行/commit/工单验收记录。是开发 agent 为了"显得做了根因分析"而硬写的。
+
+### 二、根因
+
+1. **开发 agent 有"完成感"压力**：工单要求"完成前必跑 harness + 给根因分析"，开发 agent 为了标记工单 ✅，会硬写根因分析凑数。
+2. **根因分析没有验收标准**：harness 能验"FAIL=0"，但验不了"根因分析是否基于真实证据"。这是 DR-36 的又一次实证——开发 agent 自评不可靠，包括自评"根因分析"。
+3. **主 agent 没有复核根因分析**：WT-038 验收时主 agent 只看了 harness PASS + 改动 diff，没复核开发 agent 写的根因分析是否基于真实证据。
+
+### 三、教训
+
+1. **根因分析必须基于真实证据**：每条根因必须引用具体的代码行/commit/工单验收记录。没有证据的根因分析 = 脑补，不算数。
+2. **主 agent 复核根因分析**：开发 agent 写的根因分析，主 agent 必须复核——每条根因能不能对到具体证据？不能 = 打回。
+3. **根因分析不是工单完成的前提**：如果开发 agent 找不到真实根因，如实说"没找到根因，建议主 agent 一起诊断"，比硬写根因凑数好。硬写根因 = 误导主 agent。
+
+### 四、执行约束
+
+- 开发 agent 写根因分析时，每条根因必须引用具体证据（代码行/commit/工单验收记录）。
+- 主 agent 验收时，复核根因分析的真实性——每条根因对不到证据 = 打回。
+- 开发 agent 找不到根因时，如实说"没找到"，不硬写。
+
+---
+
+## DR-48 · callTree 渲染必须三重剪枝（WT-045 教训）
+
+> **触发事件**：2026-07-20 WT-044 跑 unity 多态报告，callTree 全展开 4695 tree-row，report.html 2.1MB，读者看不出重点。WT-045 修复后 4695→317 tree-row（-93%），2.1MB→202KB（-90%）。
+>
+> **关联**：DR-41 规则 4（图文穿插四段式）+ BK-25（报告图文流 + 调用树聚焦）
+
+### 一、事实认定
+
+WT-044 产出的 unity 多态报告 callTree 全展开：
+- 10 棵 callTree，总共 4695 tree-row
+- 最大的树 1200+ 行
+- report.html 2.1MB，浏览器卡顿
+- 读者看不出重点——全树 dump 不是"图文穿插"
+
+根因三层：
+1. **数据层差异**：perfetto 预处理已剪枝（provider 层 aggregateSubtree 时已过滤）；unity 未剪枝（3794 节点全展开）
+2. **render 层无剪枝**：`unityAggNodeToDrillDown` / `perfettoNodeToDrillDown` / `renderTreeHTML` 全展开递归
+3. **WT-024 §5.2 早就识别"节点太多+没剪枝"但延后没做**——又是"验收 PASS 但遗留问题没治"
+
+### 二、修复（WT-045 已执行）
+
+`render-html.ts` 加 3 个剪枝常量 + 三重剪枝逻辑：
+- `MAX_TREE_DEPTH = 8`（深度剪枝：超过 8 层的子树不展开）
+- `MIN_MS_PER_FRAME = 0.05`（阈值剪枝：单帧 < 0.05ms 的节点折叠）
+- `TOP_PER_LEVEL = 8`（宽度剪枝：每层只保留 top 8 节点，其余折叠成"其它 N 个节点"）
+- **红线例外**：触红线的节点（foldChange ≥ 2 或 perFrameMs 占 p50 ≥ 5%）即使不满足剪枝阈值也保留——剪枝不能剪掉重点
+
+`harness.ts` 加 [3i] 断言：每棵 callTree tree-row 数 ≤ 200（防退化）。
+
+### 三、教训
+
+1. **render 层不许全展开**：callTree 全展开 = 把所有细节都塞给读者，读者看不出重点。render 层必须剪枝——这是 DR-41 规则 4（图文穿插四段式）的"聚焦"要求。
+2. **剪枝必须三重**：只剪深度不够（宽度爆炸）、只剪宽度不够（深度爆炸）、只剪阈值不够（重要节点被剪掉）。三重剪枝 + 红线例外，才能既剪枝又保重点。
+3. **harness 必须有 tree-row 上限断言**：没有上限 = 没有人发现退化。WT-024 §5.2 识别了问题但延后没做，因为没有 harness 断言逼着做。
+4. **数据源差异要兜底**：perfetto provider 层已剪枝，unity 没剪枝——render 层不能假设数据源已剪枝，必须自己剪。
+
+### 四、执行约束（沉淀进 report-layer-rules.md 规则 6）
+
+- render 层 callTree 必须三重剪枝：`MAX_TREE_DEPTH ≤ 8` + `MIN_MS_PER_FRAME ≥ 0.05` + `TOP_PER_LEVEL ≤ 8`
+- 触红线节点（foldChange ≥ 2 或 perFrameMs 占 p50 ≥ 5%）例外，不剪
+- harness 必须有 tree-row 上限断言（≤ 200/棵）
+- 数据源无关：perfetto/unity/simpleperf 都走同一套剪枝逻辑（在 render-html.ts，不在 provider 层）
+
+---
+
+## DR-49 · prompt 约束"禁形式 vs 禁内容"——LLM 会换形式绕过（WT-046 v1/v2 三次打回教训）
+
+> **触发事件**：2026-07-20 WT-046 v1/v2 两次打回。v1 加了"§0 不许写 callTree 子树描述（├─/└─ 缩进）"约束，LLM 在 §0 ①②③ 全画了 callTree 摘要树（├─/└─ 缩进 + 每节点 ms/占比）。v2 加了"任何形式的 ├─/└─ 缩进"约束，LLM 把 ├─/└─ 缩进树换成柱状图——但柱状图里仍然讲 MapSignificanceMgr 0.069→3.994ms + GC alloc 0→14043 子节点细节，§0/§3 内容仍然重复。v3 必须从"禁形式"升级到"禁内容"。
+>
+> **关联**：DR-36（Claude 自评不可靠）+ DR-45 §2.1（验收只看合规性标记）+ DR-41 规则 3（同一结论不在两个章节重复出现）
+
+### 一、事实认定
+
+#### 1.1 v1 失败：约束和范例打架，范例赢
+
+unity-multi-state.txt 第 67 行加了"§0 不许写 callTree 子树描述（├─/└─ 缩进）"，但：
+- 第 61 行还说 §0 可以用"缩进树"
+- 第 66 行还说 §0 可以用"摘要树"
+- narrative-prompt.txt 第 226 行范例说 §0 可以用"callTree 摘要树"
+- narrative-prompt.txt 第 252-259 行范例说"callTree 摘要树（§0 或 §3 下钻）"
+
+LLM 按更宽松的执行——§0 ①②③ 全画了 callTree 摘要树。
+
+#### 1.2 v2 失败：只禁形式没禁内容，LLM 换形式绕过
+
+v2 修了 v1 的矛盾——删了"缩进树"/"摘要树"字样，第 67 行加强成"任何形式的 ├─/└─ 缩进 + 每个节点的 ms/占比/标注，无论'摘要级'还是'完整'"。
+
+但这句话的语法结构是"任何形式的 **├─/└─ 缩进** + 每个节点的 ms/占比/标注"——LLM 理解成"禁的是 ├─/└─ 缩进这种**形式**，只要不用 ├─/└─ 缩进，讲子节点 ms/占比/标注 是允许的"。
+
+所以 LLM 把 ├─/└─ 缩进树换成了柱状图：
+```
+下钻 MapSignificanceMgr:
+基线   ▏ 0.069ms/帧
+当前   █████████ 3.994ms/帧  (×57.88, GC alloc 0→14043)
+```
+柱状图里仍然讲 MapSignificanceMgr 0.069→3.994ms + GC alloc 0→14043——§0/§3 内容仍然重复。
+
+#### 1.3 v3 修复方向：从禁形式升级到禁内容
+
+v3 必须明确禁**内容**：§0 不许讲子节点的 ms/占比/foldChange/GC alloc 等具体数字，只许讲父模块的"涨 X 倍 + 占 p50 Y%"级摘要。子节点细节全部放 §3 下钻。
+
+### 二、根因：为什么 prompt 约束会失败
+
+#### 2.1 prompt 约束的"形式 vs 内容"歧义
+
+prompt 约束如果只禁"形式"（如"不许用 ├─/└─ 缩进树"），LLM 会换形式绕过（如换成柱状图/narrative 文字/因果链）。**真正的约束必须禁"内容"**——明确"§0 不许讲子节点 ms/占比/foldChange/GC alloc 等具体数字"，不是"不许用 ├─/└─ 缩进树这种形式"。
+
+#### 2.2 范例比约束更强（v1 教训重演）
+
+narrative-prompt.txt 第 226 行范例里"主线程 → <渲染管线节点> → <等待 slice> 17.8ms"——这就是子节点细节（带 ms/占比）。LLM 看到这个范例，自然在 §0 ① 写"下钻到 MapSignificanceMgr 涨 57.88 倍（0.069→3.994ms），GC alloc 0→14043"。
+
+**约束和范例打架，范例赢**——这是 v1 的 DR-49 候选教训，v2 修了范例但没修到位（只删了"callTree 摘要树"字样，没删范例里的子节点 ms/占比细节）。
+
+#### 2.3 harness 抓不到"叙事内容重复"
+
+harness.ts [2b] 节只检查 topConclusions.problem vs §0 item.title 的文本相似度（阈值 0.9），**没有检查 §0 narrative 正文 vs §3 下钻 narrative 正文的内容重复**。
+
+所以 v1/v2 三次都是机器断言全 PASS 但人眼一看就发现重复——机器根本没在查这件事。这是 DR-45 §2.1"验收只看合规性标记"的又一次复发：harness 验了 title 相似度（合规性标记），没验 narrative 正文内容重复（内容完整性）。
+
+### 三、教训（沉淀进 dev-conventions.md §6.1）
+
+1. **prompt 约束必须禁内容不只禁形式**：禁"├─/└─ 缩进树"是禁形式，LLM 会换柱状图/narrative 文字绕过。禁"子节点 ms/占比/foldChange/GC alloc 等具体数字"是禁内容，LLM 不能换形式绕过。
+2. **约束 + 范例 + 反例三处一致**：约束说"不许 X"，范例不能出现 X，反例要明确"写 X 是违规的"。v1 教训：约束和范例打架范例赢。v2 教训：约束和范例一致了但范例本身还在引导子节点细节。
+3. **反例比正面约束有效**：v3 在 unity-multi-state.txt 第 42 行加反例"§0 ① 的 narrative 写'下钻到 <大头子节点A1> 涨 57.88 倍（0.069→3.994ms），GC alloc 0→14043'（用任何形式讲子节点 ms/占比/foldChange/GC alloc）——子节点细节是 §3 下钻的职责"——LLM 看到反例就知道这种写法不行。
+4. **harness 必须补"§0 vs §3 内容重复检查"**：只验 title 相似度不够，必须验 narrative 正文内容重复。难点是 §0 应该是 §3 的摘要，会有领域关键词重叠（如都提"Lua Update"），阈值要校准——和 [2b] 当年 0.7→0.9 的校准逻辑一样，先用 v1/v2 标杆跑一遍定阈值。
+
+### 四、执行约束
+
+- prompt 约束写"禁 X"时，必须想清楚 X 是形式还是内容。如果禁形式，LLM 会换形式绕过——必须禁内容。
+- 改 prompt 约束时，必须同步改范例 + 加反例。约束 + 范例 + 反例三处一致才算改完。
+- harness 必须有"§0 vs §3 内容重复检查"断言——不能只验 title，要验 narrative 正文。阈值用标杆校准。
+- 验收 prompt 类工单时，主 agent 必须人眼看 §0/§3 narrative 正文是否重复——harness 抓不到的，人眼必须抓到（DR-36 验证纪律）。
+
+### 五、关联教训链
+
+- DR-36：Claude 自评不可靠 → 开发 agent 自报 PASS 不可信，必须人眼验收
+- DR-45 §2.1：验收只看合规性标记 → harness 验了 provenance=LLM 但没验内容完整性
+- DR-49（本条）：prompt 约束只禁形式 → LLM 换形式绕过，harness 验了 title 相似度但没验 narrative 正文内容重复
+
+三条教训是同一个盲区的三次复发：**机器能验的（合规性标记/title 相似度）都过了，机器验不了的（内容完整性/narrative 正文重复）都漏了**。修复方向是补 harness + 主 agent 人眼验收双保险。
+
+---
+
+## DR-50 · prompt 约束"纪律 vs 内容"边界——禁止预先规定结论数量/类型/挂载（WT-046 v5 作文机病教训）
+
+> **触发事件**：2026-07-21 WT-046 v4 验收后，用户提了两个深刻问题：(1) unity 调试和 perfetto 调试一样，花大量时间在最终报告形式内容调整上，能不能沉淀通用方法论；(2) 4 个模板（unity/perfetto × single/multi）有种作文机的即时感——"应该不是回归作文机了吧？那怎么感觉 prompt 有种约束报告内容、限定报告问题范围的嫌疑呢，比如主 agent 提过把 topConclusions 从 8 硬减到 5 条这种硬操作"。
+>
+> 用户诊断精准命中：主 agent（我）在写 v5 工单时**自己就在重蹈作文机覆辙**——v5 工单把 §0 从"3 条"改成"全量 8 条"，但 unity-multi-state.txt 第 99 行还保留"三大演化结论"硬骨架（① 最大涨幅 / ② 新出现瓶颈 / ③ 退化形态），这是预先规定结论类型，即使数据里没有"新出现瓶颈"也得硬凑。主 agent 还曾建议"topConclusions 从 8 减到 5"——这正是用户说的"prompt 约束报告内容、限定报告问题范围"的典型例子。
+>
+> **关联**：DR-49（禁形式 vs 禁内容）+ DR-41 规则 5（人话先行）+ DR-44（三段管线）+ DR-25（报告能否赢作文机）
+
+### 一、事实认定
+
+#### 1.1 作文机 vs Prism 的本质区别
+
+**作文机 v5 的硬伤**（DR-25 已沉淀）：
+- 业务名清单写死（LuaMgr / 行军线 / Gfx.WaitForPresent）
+- 绝对阈值写死（"单次 > 1-2ms 不合理"）
+- 章节模板写死（§0 必须讲"三态 Run/Sleep 对比" / §3 必须讲"URP 渲染管线"）
+- LLM 只是填空，findings 是脚本拼的，narrative 是脚本套模板的
+
+**Prism 的设计**（DR-44 三段管线）：
+- findings 是 explore LLM 产的（不是脚本拼的）
+- narrative 是 narrative LLM 产的（不是脚本套模板的）
+- render 是纯代码（只渲染，不产内容）
+- 三段管线是真的，LLM 有自由度
+
+**但 Prism 的 prompt 约束层有作文机病的残留**：
+- ✅ **纪律约束**（OK，"怎么写"）：不许用字段名 / 不许用"吻合"风 / 不许硬编码业务名 / 不许用 ├─/└─ 缩进树（DR-49 禁形式）/ 不许讲子节点 ms 数字（DR-49 禁内容）
+- ❌ **内容约束**（作文机病，"写什么"）：§0 必须写 3 条 / §0 必须按"①最大涨幅 ②新出现 ③退化形态"产出 / topConclusions 必须挂 callTree / topConclusions 数量必须 ≤5
+
+#### 1.2 4 个模板的作文机病诊断
+
+| 模板 | §0 约束 | 作文机病判定 |
+|---|---|---|
+| perfetto-multi-state.txt | "写 3 条" + "典型维度（从 findings 自然浮现，不预设盯防）" | ✅ **健康**——"典型维度"是参考不是硬约束，明确说"不预设盯防" |
+| perfetto-single-state.txt | "写 3 条" + "典型维度（从 findings 自然浮现，不预设盯防）" | ✅ **健康**——同上 |
+| unity-single-state.txt | "写 3 条" + "典型维度（从 findings 自然浮现，不预设盯防）" | ✅ **健康**——同上 |
+| unity-multi-state.txt | "写 3 条" + "三大演化结论（①最大涨幅 / ②新出现 / ③退化形态）" | ❌ **作文机病**——"三大演化结论"是预先规定结论类型，即使数据里没有"新出现瓶颈"也得硬凑 |
+
+**关键差异**：perfetto 模板用"典型维度（不预设盯防）"，unity-multi-state 用"三大演化结论（硬骨架）"。这是 unity 调试比 perfetto 调试花更长时间的根因之一——LLM 被硬骨架束缚，不能根据 findings 自然组织结论。
+
+#### 1.3 主 agent 自己重蹈作文机覆辙的例子
+
+**例子 1**：主 agent 在 v5 工单里建议"topConclusions 从 8 减到 5"——这是用 prompt 预先规定结论数量，即使数据里有 8 条值得讲的结论，也硬减到 5 条。用户诊断"prompt 约束报告内容、限定报告问题范围"精准命中。
+
+**例子 2**：主 agent 写的 v5 工单把 §0 从"3 条"改成"全量 8 条"，但 unity-multi-state.txt 第 99 行还保留"三大演化结论"硬骨架——一边说"§0 写全量"，一边说"§0 写三大演化结论"，自相矛盾。LLM 被硬骨架束缚，即使 findings 里没有"新出现瓶颈"也得硬凑一个。
+
+**例子 3**：narrative-prompt.txt 第 319-329 行"critical/high 的 topConclusion 必须挂 callTree 或 asciiArt"——这是预先规定 topConclusions 必须挂什么，即使某条结论没有对应 callTree（如"多个偶发尖刺"合集条目），也得硬挂。
+
+### 二、根因：为什么 prompt 约束会滑向作文机
+
+#### 2.1 "纪律"和"内容"的边界模糊
+
+prompt 约束的目的是让 LLM 产出高质量报告，但约束写过头就变成作文机：
+- **纪律约束**（怎么写）：约束 LLM 的表达方式——不许用字段名 / 不许用"吻合"风 / 不许硬编码业务名。这些约束 LLM 的"语言风格"，不约束"写什么内容"。
+- **内容约束**（写什么）：约束 LLM 的产出内容——§0 必须写 3 条 / 必须按"①最大涨幅 ②新出现 ③退化形态"产出 / topConclusions 必须 ≤5 条。这些约束 LLM 的"结论数量/类型/范围"，是作文机病的残留。
+
+**边界判定**：约束"怎么写"是纪律（OK），约束"写什么"是作文机病（违规）。prompt 只能给纪律，不能给内容——内容由 findings 决定，不由 prompt 预先规定。
+
+#### 2.2 "典型维度（参考）" vs "三大演化（硬骨架）"的微妙差异
+
+perfetto 模板用"典型维度（从 findings 自然浮现，不预设盯防）"——这是参考，LLM 可以按 findings 自然组织结论，不按"典型维度"也行。
+
+unity-multi-state 模板用"三大演化结论（①最大涨幅 ②新出现 ③退化形态）"——这是硬骨架，LLM 必须按这 3 类产出，即使数据里没有"新出现瓶颈"也得硬凑一个"基线无+当前触红线"的结论。
+
+**差异微妙但致命**：参考是"可以这样做"，硬骨架是"必须这样做"。硬骨架让 LLM 失去根据 findings 自然组织结论的能力，退化成"按模板填空"。
+
+#### 2.3 "必须挂 X" 的硬约束让 LLM 硬凑
+
+narrative-prompt.txt 第 319-329 行"critical/high 的 topConclusion 必须挂 callTree 或 asciiArt"——这是预先规定 topConclusions 必须挂什么。但有些结论没有对应 callTree（如"多个偶发尖刺"合集条目），LLM 被迫硬挂一个不相关的 callTree，或者硬画一个没意义的 ASCII 图。
+
+**正确做法**：topConclusions 挂什么由结论本身决定——有 callTree 的挂 callTree，有 ASCII 图的挂 ASCII 图，都没有的只给表格行。prompt 不预先规定"必须挂 X"。
+
+### 三、教训（沉淀进 dev-conventions.md §6.3）
+
+1. **prompt 约束只给纪律，不给内容**：约束"怎么写"（不许用字段名/不许用"吻合"风/不许硬编码）是纪律，约束"写什么"（必须写 3 条/必须按①②③产出/必须挂 callTree）是作文机病。prompt 只能给纪律，内容由 findings 决定。
+
+2. **结论数量由 findings 决定，不由 prompt 预先规定**：§0 写几条、topConclusions 写几条，由 findings 里有多少值得讲的结论决定。prompt 不写"必须写 3 条"或"必须 ≤5 条"——写"按对整体贡献排序，每条必须带 dimensions + judgability"（纪律约束），不写"必须写 N 条"（内容约束）。
+
+3. **结论类型由 findings 决定，不由 prompt 预先规定**：§0 写什么类型的结论（最大涨幅/新出现/退化形态/稳态大头/尖峰/GPU bound/...）由 findings 自然浮现。prompt 可以给"典型维度（参考，不预设盯防）"，但不能给"三大演化结论（硬骨架）"。
+
+4. **挂载由结论本身决定，不由 prompt 预先规定**：topConclusions 挂 callTree/asciiArt/note/什么都不挂，由结论本身决定——有 callTree 的挂 callTree，有 ASCII 图的挂 ASCII 图，都没有的只给表格行。prompt 不写"必须挂 callTree 或 asciiArt"。
+
+5. **"典型维度（参考）" vs "三大演化（硬骨架）"**：模板给"典型维度"时必须明确"从 findings 自然浮现，不预设盯防"——这是参考不是约束。模板不许给"三大演化结论"硬骨架——这是预先规定结论类型。
+
+### 四、执行约束
+
+- **写 prompt 约束时，先问自己：这是"纪律"还是"内容"？**：
+  - 纪律（怎么写）：不许用字段名 / 不许用"吻合"风 / 不许硬编码业务名 / 不许用 ├─/└─ 缩进树 / 不许讲子节点 ms 数字
+  - 内容（写什么）：必须写 3 条 / 必须按①②③产出 / 必须挂 callTree / 必须 ≤5 条
+  - **只给纪律，不给内容**——内容由 findings 决定
+- **模板给"典型维度"时，必须加"从 findings 自然浮现，不预设盯防"**：
+  - ✅ 正例：`典型维度（从 findings 自然浮现，不预设盯防）：主线程瓶颈形态演化 / 业务侧涨幅模块 / 降频/温度形态`
+  - ❌ 反例：`三大演化结论：①最大涨幅 ②新出现 ③退化形态`（预先规定结论类型）
+- **结论数量不写"必须写 N 条"**：
+  - ✅ 正例：`按对整体贡献排序，每条必须带 dimensions + judgability`（纪律约束）
+  - ❌ 反例：`写 3 条` / `必须 ≤5 条` / `必须 = topConclusions 数量`（内容约束）
+- **挂载不写"必须挂 X"**：
+  - ✅ 正例：`critical/high 的 topConclusion 可以挂 callTree 或 asciiArt（有就挂，没有不硬挂）`
+  - ❌ 反例：`critical/high 的 topConclusion 必须挂 callTree 或 asciiArt`（预先规定挂载）
+
+### 五、关联教训链
+
+- DR-25：报告能否赢作文机 → 三段管线是真的，但 prompt 约束层有作文机病残留
+- DR-41 规则 5：人话先行 → 纪律约束（怎么写），不是内容约束（写什么）
+- DR-44：三段管线 → findings 是 LLM 产的，narrative 是 LLM 产的，prompt 只给纪律
+- DR-49：禁形式 vs 禁内容 → 本条是"禁内容"的延伸：禁"预先规定结论数量/类型/挂载"这种"内容约束"
+
+四条教训是同一个盲区的四次复发：**prompt 约束的目的是让 LLM 产出高质量报告，但约束写过头就变成作文机**。修复方向是明确"纪律 vs 内容"边界——prompt 只给纪律（怎么写），内容由 findings 决定。
+
+---
+
+## DR-51 · 报告层宪法未注入运行时 LLM——两层架构分离导致 prompt 错了 LLM 跟着错
+
+> **触发事件**：2026-07-21 WT-046 v4 验收后，用户问"方法论有没有沉淀给 prism agent"。诊断发现：`docs/prism/memory/` 下的报告层宪法（DR-41 五条硬规则）+ 操作指南（DR-44/45/48/49/50）都只给开发 agent 看，运行时 LLM 通过 `{{MEMORY_INJECTION}}` 只注入 `prism-memory/`（priors 业务知识 + lessons 红队沉淀）。**宪法层和操作指南层没有注入运行时 LLM**——这是架构层重大缺陷。
+>
+> **关联**：DR-50（纪律 vs 内容边界）+ DR-49（禁形式 vs 禁内容）+ DR-45 §8.3（验收不能只看 provenance=LLM）+ DR-36（Claude 自评不可靠）
+
+### 一、事实认定
+
+#### 1.1 当前两层架构（分离）
+
+**给开发 agent 看的**（`docs/prism/memory/`）：
+- `charter.md` — 宪法（F1-F8 锚定 Feature）
+- `philosophy.md` — 立法精神
+- `rationale.md` — 判例法（DR-1~51，含 DR-41 报告层五条硬规则 + DR-44 三段管线 + DR-45 占位符校验 + DR-48 剪枝 + DR-49 禁内容 + DR-50 纪律 vs 内容边界）
+- `methodology/` — 报告层方法论（report-layer-rules.md 规则 1-7 + single-state.md + multi-state.md + report-pipeline-contract.md）
+- `dev/conventions.md` — 开发协作约定（§六严禁硬编码 + §七三段管线 + §八占位符填充 + §6.1 prompt 硬编码 + §6.2 禁内容 + §6.3 纪律 vs 内容边界）
+
+**给运行时 LLM 看的**（`web/server/prism/prism-memory/`，通过 `{{MEMORY_INJECTION}}` 注入）：
+- `priors/` — 业务知识（unity PlayerLoop 树、AOE 模块、URP 渲染等）+ 分析规则（self-time/spike 倍数/GPU bound 判定）+ 输出规范（中文/Markdown/优化建议格式）
+- `capabilities/` — 工具能力清单（查询工具返回结构/边界处理）
+- `lessons/` — 历次红队回路沉淀的写作缺口（redline-missing/thread-coverage/visual-asset-empty 等）
+
+#### 1.2 缺失的层：宪法 + 操作指南没注入运行时 LLM
+
+narrative-service.ts:514 `promptText.replace(/\{\{MEMORY_INJECTION\}\}/g, formatMemoryForPrompt())` 只注入 prism-memory/ 的 priors/capabilities/lessons。**docs/prism/memory/ 的宪法（DR-41）+ 操作指南（DR-44/45/48/49/50）完全没有注入路径**。
+
+#### 1.3 后果：prompt 错了 LLM 跟着错
+
+DR-49 教训就是证据：narrative-prompt.txt 第 319-329 行"critical/high 必须挂 callTree 或 asciiArt"是开发 agent 写的约束，违反 DR-50（预先规定挂载）。如果运行时 LLM 能直接读到 DR-50，它自己就能识别"必须挂"是作文机病，拒绝执行或加反例。但现在 LLM 只能从 prompt 文本间接感受宪法，prompt 写错了 LLM 就跟着错——v4 报告 topConclusions 只有 #6 有 ASCII 图，就是因为 prompt 说"必须挂 callTree 或 asciiArt"，LLM 选了 callTree.note（更省事），没给每条配 ASCII 图。
+
+### 二、根因：为什么宪法层没注入
+
+#### 2.1 历史原因——M3 持久大脑通电时只设计了业务知识层
+
+prism-memory/ 是 M3 阶段（BK-LOOP）建的，当时设计的是"业务知识 + 工具能力 + 红队教训"三层。报告层宪法（DR-41）当时还没沉淀（WT-021 返工后才沉淀）。后续 DR-44/45/48/49/50 都是报告层方法论，但都沉淀到 `docs/prism/memory/`（给开发 agent），没有同步到 `prism-memory/`（给运行时 LLM）。
+
+#### 2.2 架构原因——没有"宪法层"的注入路径
+
+prism-memory/ 的三层（priors/capabilities/lessons）都是"业务知识 + 工具能力 + 历史教训"，没有"宪法 + 操作指南"层。`{{MEMORY_INJECTION}}` 注入的是 prism-memory/ 全部内容，但 prism-memory/ 里没有宪法——宪法在 docs/prism/memory/，没有注入路径。
+
+#### 2.3 设计偏差——开发 agent 看宪法写 prompt，运行时 LLM 看不到宪法
+
+当前设计假设"开发 agent 把宪法精神内化进 prompt 文本，运行时 LLM 从 prompt 间接感受宪法"。但这是间接的——prompt 写得再好，LLM 也只能从 prompt 文本间接感受，不能直接对照宪法自查。DR-36（Claude 自评不可靠）在这里复发：开发 agent 写的 prompt 可能有错（如"必须挂 callTree"违反 DR-50），运行时 LLM 没有宪法对照，就跟着错。
+
+### 三、应该的三层架构
+
+| 层 | 内容 | 给谁看 | 注入路径 | 当前状态 |
+|---|---|---|---|---|
+| **宪法层** | 不可漂移的硬规则（DR-41 五条硬规则 + DR-44 三段管线 + DR-50 纪律 vs 内容边界） | 开发 agent + 运行时 LLM 都读 | `prism-memory/constitution/` via `{{MEMORY_INJECTION}}` | ❌ **只给开发 agent 读**（docs/prism/memory/），运行时 LLM 读不到 |
+| **规程层** | 必须遵守的执行规则（DR-45 占位符校验 + DR-48 剪枝 + DR-49 禁内容 + 单态/多态方法论） | 开发 agent + 运行时 LLM 都读 | `prism-memory/methodology/` via `{{MEMORY_INJECTION}}` | ❌ **只给开发 agent 读**（docs/prism/memory/methodology/），运行时 LLM 读不到 |
+| **知识层** | 参考资料（priors 业务模块 + capabilities 工具能力 + lessons 红队沉淀） | 运行时 LLM 读 | `prism-memory/priors/` + `prism-memory/capabilities/` + `prism-memory/lessons/` via `{{MEMORY_INJECTION}}` | ✅ **已注入** |
+
+**命名说明**（对齐工程开发口语"宪法层 → 规程层 → 执行层"，但第 3 层叫"知识层"不是"执行层"，因为 prism-memory/ 的 priors/capabilities/lessons 是参考资料不是执行指令）：
+- **宪法层**：不可漂移的硬规则（DR-41/44/50），约束"什么不能做"
+- **规程层**：必须遵守的执行规则（DR-45/48/49），约束"怎么做"
+- **知识层**：参考资料（priors/capabilities/lessons），提供"知道什么"
+
+### 四、教训（沉淀进 dev-conventions.md §九）
+
+1. **宪法层必须注入运行时 LLM**：DR-41 五条硬规则 + DR-44 三段管线 + DR-50 纪律 vs 内容边界，这些是不可漂移的硬规则，运行时 LLM 必须能直接读到，不能只靠 prompt 文本间接传达。LLM 有宪法对照，prompt 写错了 LLM 能识别并加反例或拒绝执行。
+
+2. **规程层必须注入运行时 LLM**：DR-45 占位符校验 + DR-48 剪枝 + DR-49 禁内容 + 单态/多态方法论，这些是必须遵守的执行规则，运行时 LLM 能直接读到可以自查（如"我写的 §0 有没有讲子节点 ms 数字？DR-49 说禁内容，讲了就违规"）。
+
+3. **知识层已注入，保持**：priors（业务模块）+ capabilities（工具能力）+ lessons（红队沉淀）已通过 `{{MEMORY_INJECTION}}` 注入，这一层是对的。
+
+4. **三层架构分离设计**（对齐工程开发口语"宪法层 → 规程层 → 执行层"，但第 3 层叫"知识层"因为 prism-memory/ 是参考资料不是执行指令）：宪法层（不可漂移）+ 规程层（必须遵守的执行规则）+ 知识层（参考资料）。三层都通过 `{{MEMORY_INJECTION}}` 注入运行时 LLM，开发 agent 也读 docs/prism/memory/ 对照。
+
+### 五、执行约束
+
+- **在 `prism-memory/` 下加 `constitution/` 目录**：把 DR-41 五条硬规则 + DR-44 三段管线 + DR-50 纪律 vs 内容边界浓缩成 LLM 可读的条目（每条 1-2 句话 + 反例），通过 `{{MEMORY_INJECTION}}` 注入。
+- **在 `prism-memory/` 下加 `methodology/` 目录**：把 DR-45 + DR-48 + DR-49 + 单态/多态方法论浓缩成 LLM 可读的条目，通过 `{{MEMORY_INJECTION}}` 注入。
+- **formatMemoryForPrompt 加 constitution + methodology 注入**：现有 `formatMemoryForPrompt()` 只读 priors/capabilities/lessons，加读 constitution/methodology。
+- **条目要浓缩**：宪法层和操作指南层不能是 docs/prism/memory/ 的全文复制（太长，会撑爆 prompt token），要浓缩成 LLM 可读的条目——每条 1-2 句话 + 反例，类似 lessons 的格式。
+
+### 六、关联教训链
+
+- DR-36：Claude 自评不可靠 → 开发 agent 写的 prompt 可能有错，运行时 LLM 没有宪法对照就跟着错
+- DR-45 §8.3：验收不能只看 provenance=LLM → provenance=LLM 只证明"narrative 是 LLM 产的"，不证明"LLM 拿到了完整宪法"
+- DR-50：纪律 vs 内容边界 → 如果运行时 LLM 能直接读到 DR-50，它自己就能识别"必须挂 callTree"是作文机病
+
+三条教训是同一个盲区的三次复发：**宪法和操作指南只给开发 agent 看，运行时 LLM 看不到，导致 prompt 错了 LLM 跟着错**。修复方向是在 prism-memory/ 加 constitution/methodology 两层，通过 `{{MEMORY_INJECTION}}` 注入运行时 LLM。

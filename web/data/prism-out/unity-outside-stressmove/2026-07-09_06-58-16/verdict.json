@@ -1,0 +1,56 @@
+{
+  "rating": "fail",
+  "headline": "这次采集全程600帧，100%都超过16.67ms(60fps)预算，中位帧要41.95ms(约合24fps)，最慢一帧飙到113.56ms(约7倍预算)；这不是偶尔掉帧，而是从第一帧到最后一帧持续性地拖。根因是双重叠加：一是每帧都在燃烧的常驻基线成本(脚本调度Core.Update约12.9ms/帧+URP渲染管线约10.6ms/帧，二者合计已超预算本身)，二是叠加在基线之上的偶发尖峰(相机移动19次、单次代价43~53ms；一次孤立的同步Full GC炸出70.2ms破了全场最慢纪录)。即便挑一个'看起来正常'的中位数代表帧(frame 33，41.92ms)，也没有任何单一异常大头——超预算已经写进了每一帧的默认账本里。",
+  "frameBudgetMs": 16.67,
+  "observedP50Ms": 41.95,
+  "observedP99Ms": 95.51,
+  "pctFramesOverBudget": 100,
+  "primaryDrivers": [
+    "baseline.coreupdate.luamgr-mapmanager",
+    "baseline.urp.rendersinglecamera",
+    "camera.oncameramove.spike",
+    "gc.collect.frame519.sync"
+  ],
+  "verdictEvidence": [
+    {
+      "tool": "scanMetricOverFrames",
+      "args": { "runId": "unity-outside-stressmove", "markerName": "PlayerLoop", "metric": "totalMs" },
+      "resultDigest": { "presentFrames": 600, "mean": 44.53, "p50": 41.9, "p95": 59.31, "p99": 95.45, "max": 113.29, "maxFrameIndex": 519 }
+    },
+    {
+      "tool": "直接查询prism_frame_meta表(ms_frame字段, n=600)",
+      "args": { "runId": "unity-outside-stressmove" },
+      "resultDigest": { "p50": 41.95, "p95": 59.36, "p99": 95.51, "max": 113.56, "min": 33.48, "mean": 44.59 }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "runId": "unity-outside-stressmove", "setA": { "kind": "slowFrames", "thresholdMs": 16.67 }, "setB": { "kind": "slowFrames", "thresholdMs": 16.67 } },
+      "resultDigest": { "sizeA": 600, "sizeB": 600, "intersection": 600, "pctFramesOverBudget": 100 }
+    },
+    {
+      "tool": "aggregateSubtree",
+      "args": { "runId": "unity-outside-stressmove", "rootMarker": "Core.Update", "fanoutThreshold": 0.6, "minTotalMsPerFrame": 2 },
+      "resultDigest": { "subtreeMsPerFrame": 12.879, "ownSelfMsPerFrame": 0.043, "maxChildRatio": 0.53, "topChildren": ["CS:AOE.LuaMgr(6.822ms)", "CS:AOE.Outside.MapManager(4.837ms)"] }
+    },
+    {
+      "tool": "aggregateSubtree",
+      "args": { "runId": "unity-outside-stressmove", "rootMarker": "URP.RenderSingleCamera", "fanoutThreshold": 0.6, "minTotalMsPerFrame": 2 },
+      "resultDigest": { "subtreeMsPerFrame": 10.64, "maxChildRatio": 0.28, "note": "分散型无单一大头，四个渲染pass均摊(MainRenderingTransparent 2.976/AfterRendering 2.593/RendererSetup 2.337/BeforeRendering 1.849)" }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "runId": "unity-outside-stressmove", "frameIndex": 33, "maxDepth": 6, "minPct": 1 },
+      "resultDigest": { "msFrame": 41.92, "note": "中位数代表帧，无单一异常大头，Core.Update系(32.4%含LuaMgr15.3%+MapManager13.3%)与URP渲染(27.5%)共同构成超预算，证明基线常驻成本本身已让典型帧超预算约2.5倍" }
+    },
+    {
+      "tool": "getFrameCallTree",
+      "args": { "runId": "unity-outside-stressmove", "frameIndex": 519, "maxDepth": 12 },
+      "resultDigest": { "msFrame": 113.56, "path": "PostLateUpdate.PlayerSendFrameComplete>...>CS:AOE.LuaMgr>GC.Collect", "selfMs": 70.2, "pctOfFrame": 61.82 }
+    },
+    {
+      "tool": "correlateFrameSets",
+      "args": { "runId": "unity-outside-stressmove", "setA": { "kind": "markerSpike", "markerName": "OnCameraMove", "minSelfMs": 1 }, "setB": { "kind": "slowFrames" } },
+      "resultDigest": { "sizeA": 19, "sizeB": 29, "intersection": 19, "pctAinB": 100, "pctBinA": 65.52 }
+    }
+  ]
+}

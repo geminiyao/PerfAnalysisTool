@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gc.per-marker-alloc",
+    "want": "per-marker 的 GC 分配字节和分配调用栈，能回答哪个函数或 Lua marker 在持续分配",
+    "rationale": "queryFrameCounters 只有整帧 gc_allocated_in_frame 总量；frame 194 的 LuaMtGc.ExecuteMtGc 21.59ms 不是当帧分配尖峰触发（该帧 gc_allocated_in_frame 不高），是累积达阈值触发的 full GC，要定位是哪个 Lua 函数/C# 函数在长期累积分配需要到函数级。burstFrames [343,350,351,352] 连续四帧 GC 可能与某段密集分配有关，需 per-marker 分配源才能定位。",
+    "suspectedAxis": "memory",
+    "closestExistingTool": "queryFrameCounters（只有整帧 gc_allocated_in_frame，到不了函数级）"
+  },
+  {
+    "id": "camera-move.entity-count-and-refresh-cost",
+    "want": "OnCameraMove 单次调用时遍历的 entity 总数 + RefreshDistancePriority 单次平均耗时",
+    "rationale": "OnCameraMove 源码显示双重循环遍历 battleHeadQueue.buckets 全量 entity 调 RefreshDistancePriority()，单次 43ms。需要知道是 entity 数量大（如 500 个 × 0.08ms）还是单次 RefreshDistancePriority 贵（如 50 个 × 0.86ms），才能定具体分桶数/降采样策略。现有工具只给 marker 总 selfMs，给不了单帧内调用次数和单次耗时分布。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "scanMetricOverFrames（只给 marker 跨帧时序，给不了单帧内调用次数和单次耗时）"
+  },
+  {
+    "id": "network-msg.payload-size",
+    "want": "YzEntityMoveLineNtf 消息的 payload 大小/携带实体数量",
+    "rationale": "YzEntityMoveLineNtf frame 273 炸到 14.9ms（常规 <1ms），需要知道该消息携带了多少实体的移动线更新数据，判断 14.9ms 是否与消息体大小成正比。现有 Profiler Timeline 只记录 marker 耗时，不含业务层消息 payload 内容，需网络层日志或消息层 instrumentation。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "scanMetricOverFrames（只给 marker 耗时，给不了 payload 大小）"
+  },
+  {
+    "id": "resource-unload.per-frame-call-count",
+    "want": "TryUnloadPending.TryUnload 单帧内的调用次数（当帧卸载了多少个资源对象）",
+    "rationale": "TryUnloadPending.TryUnload frame 80 单帧 14.59ms，但 capabilities 记录显示 TryUnload 方法体简单（4 行代码：CanUnload 判断 + DoUnload 执行），单次应该很便宜。需要知道 frame 80 调用了多少次（即当帧批量卸载了多少资源），才能确认是批量卸载导致而非单次贵。现有工具只给 marker 汇总 selfMs，给不了单帧调用次数。",
+    "suspectedAxis": "cpu",
+    "closestExistingTool": "queryMarkers（只给 sampleCount 和 sumSelfMs，sampleCount 是采样次数不等于逻辑调用次数）"
+  }
+]

@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.534Z
 source: unity-cpu
 title: "AOE 已知问题：MapSignificanceMgr 高耗时"
 tags: ["aoe","已知问题","lua","aoi","热点"]
+dataSource: unity
 ---
 
 **触发场景**：战斗/行军压测。

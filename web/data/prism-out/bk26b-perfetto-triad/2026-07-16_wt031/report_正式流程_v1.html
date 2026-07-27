@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prism 性能报告 · bk26b-perfetto-triad/2026-07-16_wt031</title>
+<style>
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --surface3: #0f3460;
+  --border: #2a2a4a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #7c4dff;
+  --accent2: #00e5ff;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 28px 32px;
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+a { color: var(--accent2); }
+
+/* ── Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.header-left { flex: 1; min-width: 200px; }
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.run-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.rating-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-radius: var(--radius);
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.rating-emoji { font-size: 26px; line-height: 1; }
+.rating-label { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+
+/* Overview lead paragraph */
+.overview-block {
+  font-size: 15px;
+  color: #c5cae9;
+  line-height: 1.75;
+  margin: 0 0 20px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  max-width: 960px;
+}
+
+/* Metrics strip */
+.metrics-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.metric-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  min-width: 110px;
+  text-align: center;
+}
+.metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--accent2);
+}
+
+/* ── Table of contents ── */
+.toc-block {
+  margin-bottom: 28px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-width: 960px;
+}
+.toc-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.toc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.toc-list a {
+  color: var(--accent2);
+  text-decoration: none;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.toc-list a:hover { text-decoration: underline; }
+
+/* ── Section headers ── */
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin: 36px 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Top conclusions table ── */
+.top-conclusions {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+}
+.top-conclusions th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.top-conclusions td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  background: var(--surface);
+}
+.top-conclusions tr:last-child td { border-bottom: none; }
+.tc-rank { color: var(--accent); font-weight: 700; width: 36px; text-align: center; }
+.tc-problem { font-weight: 600; color: #e8eaf6; }
+.tc-kind { color: #90a4ae; white-space: nowrap; }
+.tc-contribution { color: #b0bec5; }
+.tc-severity { white-space: nowrap; }
+
+/* WT-032: topConclusions 行下挂的 callTree / asciiArt 容器 */
+.tc-tree-section {
+  padding: 0 !important;
+  background: #080d14;
+  border-left: 3px solid var(--border);
+}
+.tc-tree-section .tree-container { padding: 10px 12px; }
+.tc-tree-section .tree-header {
+  padding: 8px 12px;
+  background: #0f1b2d;
+  border-bottom: 1px solid var(--border);
+}
+.tc-ascii-section {
+  padding: 10px 14px !important;
+  background: #080d14;
+  border-left: 3px solid var(--accent2);
+}
+.tc-ascii-section .ascii-art-content { margin: 0; }
+.tc-ascii-section .ascii-art-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Ruled-out strip ── */
+.ruled-out-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 10px 14px;
+  background: #12181e;
+  border: 1px solid #1e2a3a;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.ruled-out-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #546e7a;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.ruled-out-item {
+  font-size: 12.5px;
+  color: #607d8b;
+}
+.ruled-out-item em { color: #546e7a; font-style: normal; }
+
+/* ── Narrative section ── */
+.narrative-section {
+  margin-bottom: 32px;
+}
+.section-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8eaf6;
+  margin: 24px 0 10px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.section-intro {
+  color: #90a4ae;
+  font-size: 13.5px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #37474f;
+}
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Item card ── */
+.item-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.sev-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+  min-width: 200px;
+}
+.chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.item-body { padding: 14px 16px; }
+.narrative-text {
+  color: #cfd8dc;
+  line-height: 1.75;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+}
+
+/* ── Tree visualization ── */
+.tree-section {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.tree-section.fallback { border-color: #37474f; }
+.tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #0f1b2d;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tree-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent2);
+}
+.tree-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+.legend-item { font-size: 11px; }
+.tree-container {
+  padding: 10px 12px;
+  background: #080d14;
+  overflow-x: auto;
+  --tree-full-width: 1080px;
+}
+.tree-note {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #78909c;
+  background: #080d14;
+  font-style: italic;
+}
+.tree-row {
+  margin-bottom: 4px;
+  margin-left: var(--tree-indent);
+  min-width: calc(var(--tree-full-width) - var(--tree-indent));
+}
+.tree-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-left: 3px solid var(--tree-border);
+  border-radius: 3px;
+  min-width: 520px;
+  width: calc(var(--tree-full-width) - var(--tree-indent));
+  overflow: visible;
+  cursor: default;
+  transition: filter 0.12s;
+}
+.tree-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--tree-width);
+  min-width: 8px;
+  max-width: 100%;
+  border-radius: 3px;
+  background: var(--tree-bg);
+  pointer-events: none;
+}
+.tree-bar:hover { filter: brightness(1.2); }
+.tree-label,
+.tree-ms,
+.tree-pct {
+  position: relative;
+  z-index: 1;
+}
+.tree-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: 0;
+}
+.tree-ms {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tree-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* WT-033: callTree 节点红线/涨幅/严重度标注 */
+.tree-redline {
+  color: #ff7961;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tree-fold {
+  color: #ffb74d;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* severityTag 通过 tree-bar 的 data-sev 属性 + CSS 左边框色体现 */
+.tree-bar[data-sev="critical"] { border-left-color: #f44336 !important; box-shadow: inset 3px 0 0 #f44336; }
+.tree-bar[data-sev="high"]     { border-left-color: #ff9800 !important; box-shadow: inset 3px 0 0 #ff9800; }
+.tree-bar[data-sev="medium"]   { border-left-color: #ffc107 !important; }
+.tree-bar[data-sev="low"]      { border-left-color: #4caf50 !important; }
+.tree-bar[data-sev="healthy"]  { border-left-color: #4caf50 !important; }
+
+/* ── Source insight callout ── */
+.source-insight {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: #0a1628;
+  border: 1px solid #1e3050;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: #90caf9;
+  line-height: 1.65;
+  font-family: var(--font-mono);
+}
+.insight-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #42a5f5;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+}
+
+/* ── Recommendations ── */
+.rec-section { margin: 12px 0; }
+.rec-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7986cb;
+  margin-bottom: 8px;
+}
+.rec-list {
+  padding-left: 22px;
+  color: #b0bec5;
+  line-height: 1.8;
+}
+.rec-list li { margin-bottom: 4px; font-size: 13.5px; }
+
+/* ── Priority table ── */
+.priority-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.priority-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.priority-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  vertical-align: top;
+}
+.priority-table tr:last-child td { border-bottom: none; }
+.priority-p0 td { background: #1a1020; border-left: 3px solid #f44336; }
+.pri-priority { font-weight: 700; color: var(--accent2); width: 60px; }
+.pri-action { color: #e8eaf6; }
+.pri-benefit { color: #90a4ae; }
+
+/* ── 可选视觉资产（DR-45 §1.3）── */
+.asset-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.asset-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+.asset-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  vertical-align: top;
+}
+.asset-table tr:last-child td { border-bottom: none; }
+.asset-label { color: var(--text-muted); font-weight: 600; white-space: nowrap; width: 140px; }
+.asset-value { color: #e0e0e0; font-family: var(--font-mono); }
+.ao-thread { font-weight: 600; color: #e8eaf6; white-space: nowrap; }
+
+/* 降频判定矩阵：confirmed/likely/suspected 三档配色 */
+.tm-confirmed td { background: #1a1020; }
+.tm-confirmed .tm-level { color: #f44336; font-weight: 700; }
+.tm-likely td { background: #1a1a1020; }
+.tm-likely .tm-level { color: #ff9800; font-weight: 700; }
+.tm-suspected td { background: var(--surface); }
+.tm-suspected .tm-level { color: #ffc107; font-weight: 700; }
+
+/* 红线矩阵 */
+.rm-module { font-weight: 600; color: #ff7961; }
+
+/* ASCII 图块（LLM 产文本，render 原样渲染在等宽 <pre>） */
+.ascii-art-block {
+  margin: 14px 0 20px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--accent2);
+}
+.ascii-art-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ascii-art-content {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cfd8dc;
+  background: #080d14;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+.ascii-art-caption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Footer ── */
+.page-footer {
+  margin-top: 48px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.footer-item { display: flex; gap: 6px; align-items: center; }
+.footer-label { color: #546e7a; }
+.muted { color: var(--text-muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ Header ═══════════════════ -->
+<div class="page-header">
+  <div class="header-left">
+    <div class="report-title">Prism 性能分析报告</div>
+    <div class="run-id">bk26b-perfetto-triad/2026-07-16_wt031</div>
+  </div>
+  <div class="rating-badge" style="color:#f44336;background:#f4433620;border-color:#f4433640">
+    <div class="rating-emoji">🔴</div>
+    <div class="rating-label" style="color:#f44336">不合格</div>
+  </div>
+</div>
+
+<!-- Overview lead -->
+<div class="overview-block">这不是单一元凶，是&#39;GPU 撑爆 + SoC 降频 + 业务脚本稳态税&#39;三重压力的级联塌陷：base 态还稳在 60fps（p50 16.69ms，刚好踩线），进入战斗行军压测的 cur 态立刻跌到 33fps（p50 30.15ms），持续压测到 throttle 态彻底崩到 21fps（p50 45.94ms，98.83% 帧超预算）——throttle 态主线程 39% 时间在 Sleeping 等 GPU（单次等 17.8ms 已超过一个 vsync 周期），大核频率被 SoC 热保护压到 59%，业务侧 Core.Update 每帧稳吃 7.32ms（占 p50 的 24%）是第二成本。GC.Collect 虽单次 18-33ms 但全 trace 仅 4 次，是偶发尖峰不是主因；Audio/AsyncWorker 线程池 Sleep ≥94%，已排除。</div>
+
+<!-- ═══════════════════ Metrics strip ═══════════════════ -->
+<div class="metrics-strip">
+
+  <div class="metric-box">
+    <div class="metric-label">帧预算</div>
+    <div class="metric-value">16.7ms / 60fps</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P50</div>
+    <div class="metric-value">45.9ms</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P95</div>
+    <div class="metric-value">—</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">P99</div>
+    <div class="metric-value">66.3ms</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">最差帧</div>
+    <div class="metric-value">—</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-label">超预算%</div>
+    <div class="metric-value">98.8%</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOC ═══════════════════ -->
+
+<div class="toc-block">
+  <div class="toc-title">目录</div>
+  <ul class="toc-list">
+    <li><a href="#sec-core-conclusions">核心结论</a></li><li><a href="#sec-section-0">§1 采集元信息：三态从踩线到崩盘</a></li><li><a href="#sec-section-1">§2 多线程宏观：线程类型简单，UnityGfxRenderS 反向印证 GPU-bound</a></li><li><a href="#sec-section-2">§3 主线程 off-CPU 归因：throttle 39% Sleeping，89% 是等 GPU</a></li><li><a href="#sec-section-3">§4 降频时序：大核 59% + 中核 max 被压，likely 档降频</a></li><li><a href="#sec-section-4">§5 主线程一帧时间去向：Core.Update 24% 是稳态业务大头</a></li><li><a href="#sec-section-5">§6 GPU-bound 判定矩阵：四信号同向，强 GPU-bound 但无硬证</a></li><li><a href="#sec-section-6">§7 ROI 优化方向：按 severity + 贡献排序</a></li><li><a href="#sec-priority">优化优先级</a></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════ § 核心结论 ═══════════════════ -->
+<div class="section-title" id="sec-core-conclusions">核心结论</div>
+<table class="top-conclusions">
+  <thead>
+    <tr>
+      <th>#</th><th>问题</th><th>类型</th><th>对整体贡献</th><th>严重度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="tc-rank">1</td>
+      <td class="tc-problem">throttle 态 GPU-bound：主线程 39% 时间在等 GPU，单次等待 17.8ms 已超过 vsync 周期</td>
+      <td class="tc-kind">稳态大头 + 形态演化</td>
+      <td class="tc-contribution">throttle 态 Gfx.WaitForPresentOnGfxThread 单次 avg 17.8ms × 427 帧 = 累计 7600ms 等待，占 throttle 主线程 off-CPU 的 89.34%；三态演化 base 0.9ms → cur 5.8ms → throttle 17.8ms（cur→throttle 涨 ×2.7，增量 +12ms/帧），是 throttle 从 33fps 跌到 21fps 的第一主因</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span></td>
+    </tr><tr><td colspan="5"><div class="tc-ascii-section">
+        <div class="ascii-art-title">三态主线程 Run/Sleep 演化 + GPU 等待 avg 演化</div>
+        <pre class="ascii-art-content">主线程 Run/Sleep 三态对照（throttle 半睡型）
+  base       ████████████████████████████████ ░░░    Run 86.94% / Sleep 12.04%
+  cur        ██████████████████████████ ░░░░░░     Run 77.82% / Sleep 20.40%
+  throttle   ███████████████████ ░░░░░░░░░░       Run 56.99% / Sleep 38.99%
+
+Gfx.WaitForPresent 单次 avg 演化（红线 = vsync 16.66ms）
+  base     ░░░░░░░░░░░░░░░░░░  0.9 ms
+  cur      ████░░░░░░░░░░░░░░  5.8 ms
+  throttle ████████████████░░  17.8 ms  ← 超过 vsync 周期
+
+  ── vsync 16.66ms 红线 ──
+  Sleep 增量几乎 100% 是等 GPU（byState.S 占 off-CPU 89.34%）</pre>
+        <div class="ascii-art-caption">Sleep 占比从 base 12% 单调涨到 throttle 39%，增量几乎全部是 Gfx.WaitForPresent；单次 avg 在 throttle 超过 vsync 周期 = GPU 已撑爆 swapchain 排队</div>
+      </div></td></tr><tr>
+      <td class="tc-rank">2</td>
+      <td class="tc-problem">业务脚本 Core.Update 稳态占 p50 的 24%：LuaMgr + MapManager 是大头，每帧 7.32ms 雷打不动</td>
+      <td class="tc-kind">稳态大头</td>
+      <td class="tc-contribution">cur 态 Core.Update avg 7.32ms/帧 × 483 帧 = 累计 3534ms，占 PlayerLoop p50 的 24.11%（远超 5% 红线）；其中 LuaMgr 12.5% + MapManager 9.5%（含 OutSideViewArmyLineMgr 行军线 5.19%，cur→throttle 涨 ×1.37）+ BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%。是仅次于 GPU 等待的第二成本，且每帧都在跑（count=483/427 与帧数一致）</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span></td>
+    </tr><tr><td colspan="5"><div class="tc-tree-section">
+        <div class="tree-header">
+          <span class="tree-title">调用树（per-frame avg）</span>
+          <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+        </div>
+        <div class="tree-container">
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Core.Update">Core.Update</span>
+      <span class="tree-ms">7.32ms</span>
+      <span class="tree-pct">24.1%</span>
+      <span class="tree-redline" title="占 p50 的 24.1%（&gt;5%阈值）">🔴 占 p50 的 24.1%（&gt;5%阈值）</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:51.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.LuaMgr">CS:AOE.LuaMgr</span>
+      <span class="tree-ms">3.80ms</span>
+      <span class="tree-pct">12.5%</span>
+      <span class="tree-redline" title="占 p50 的 12.5%">🔴 占 p50 的 12.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:51.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LuaMgr.OnTick&amp;UpdateSchedule">LuaMgr.OnTick&amp;UpdateSchedule</span>
+      <span class="tree-ms">3.75ms</span>
+      <span class="tree-pct">12.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:20.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr">BattleHeadMgr</span>
+      <span class="tree-ms">1.51ms</span>
+      <span class="tree-pct">5.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:20.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr.OnUpdate">BattleHeadMgr.OnUpdate</span>
+      <span class="tree-ms">1.50ms</span>
+      <span class="tree-pct">4.9%</span>
+      <span class="tree-redline" title="占 p50 的 4.92%">🔴 占 p50 的 4.92%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:17.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr">MapSignificanceMgr</span>
+      <span class="tree-ms">1.30ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:17.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr.sampler_OnUpdate">MapSignificanceMgr.sampler_OnUpdate</span>
+      <span class="tree-ms">1.29ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:39.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.MapManager">CS:AOE.Outside.MapManager</span>
+      <span class="tree-ms">2.90ms</span>
+      <span class="tree-pct">9.5%</span>
+      <span class="tree-redline" title="占 p50 的 9.5%">🔴 占 p50 的 9.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:21.5%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.OutSideViewArmyLineMgr">CS:AOE.Outside.OutSideViewArmyLineMgr</span>
+      <span class="tree-ms">1.58ms</span>
+      <span class="tree-pct">5.2%</span>
+      <span class="tree-redline" title="占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37">🔴 占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37</span><span class="tree-fold" title="涨幅 ×1.37">📈 ×1.37</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:1.0%;--tree-bg:#9c27b01a;--tree-border:#9c27b0;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#ce93d8" title="OutsideLineCtrl:CalculateVertexJob (Burst)">OutsideLineCtrl:CalculateVertexJob (Burst)</span>
+      <span class="tree-ms">0.00ms</span>
+      <span class="tree-pct">1.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:9.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Battle.BattleUIManager">CS:AOE.Battle.BattleUIManager</span>
+      <span class="tree-ms">0.72ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:9.8%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="*** BattleUIUpdate ***">*** BattleUIUpdate ***</span>
+      <span class="tree-ms">0.71ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:8.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MUI_UpdateUIPos">MUI_UpdateUIPos</span>
+      <span class="tree-ms">0.61ms</span>
+      <span class="tree-pct">2.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:4.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.TServerManager">CS:AOE.TServerManager</span>
+      <span class="tree-ms">0.30ms</span>
+      <span class="tree-pct">1.0%</span>
+      
+    </div>
+  </div></div>
+      </div></td></tr><tr>
+      <td class="tc-rank">3</td>
+      <td class="tc-problem">throttle 态 SoC 降频：大核频率被压到 59%，中核 max 频率从 2342→2227MHz</td>
+      <td class="tc-kind">形态演化</td>
+      <td class="tc-contribution">throttle 态 bigCoreReach 59.2%（跌破 65% 严重低频线），三态单调下降 74.9%→75.6%→59.2%；中核 cpu4-6 观测 max 从 cur 2342MHz 降到 2227MHz（cpuinfo 上限 2419MHz 不变 = SoC 主动压低 max-freq）；R+（被抢占）从 base 0.42% 涨到 throttle 2.78%（×6.6）。降频本身是症状不是独立瓶颈，但加剧了 GPU 等待</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span></td>
+    </tr><tr><td colspan="5"><div class="tc-ascii-section">
+        <div class="ascii-art-title">bigCoreReach 三态演化 + per-CPU reach% 对照</div>
+        <pre class="ascii-art-content">bigCoreReach 三态（红线 = 65% 严重低频线）
+  base     ████████████████████████████░░░  74.9%
+  cur      █████████████████████████████░░░  75.6%
+  throttle ███████████████████░░░░░░░░░░░░  59.2%  ← 跌破严重低频线
+  ── 65% 严重低频红线 ──
+
+per-CPU reach% 对照（throttle）
+  cpu7 (大核)   ████████████████░░░░░░░░  61.4%
+  cpu4 (中核)   ███████████████░░░░░░░░░░  57.0%  (max 2227 &lt; cpuinfo 2419)
+  small cluster █████████████████░░░░░░░░  67.9%
+
+  形态：压测持续后 SoC 主动压频压温度（中核集群已介入）</pre>
+        <div class="ascii-art-caption">throttle 态大核 + 中核 reach 双双跌破 65%，中核观测 max 低于 cpuinfo max 是 SoC 主动压频的间接证据；本次无 thermal sidecar，定 likely 档</div>
+      </div></td></tr><tr>
+      <td class="tc-rank">4</td>
+      <td class="tc-problem">GC.Collect 罕见但单次 18-33ms：cur 3 次/throttle 1 次，是偶发尖峰不是稳态主因</td>
+      <td class="tc-kind">偶发尖峰</td>
+      <td class="tc-contribution">cur 3 次 × 18ms = 54ms / 483 帧（0.6% 帧触发），throttle 1 次 × 32.9ms / 427 帧（0.23% 帧触发）；单次 32.9ms 会制造一个 p99 尖峰但不是 p50 主因。分配大头是渲染层 URP.BeforeRendering 130/帧 + Inl_OpaquePass 130/帧（引擎内部），业务侧 MeshUIManager 61/帧、TimeText 24/帧、BattleHeadMgr 21/帧</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span></td>
+    </tr><tr>
+      <td class="tc-rank">5</td>
+      <td class="tc-problem">Audio/AsyncWorker 线程池 Sleep ≥94%，已排除非瓶颈；无 ECS/LuaMtGC/RHI 独立线程</td>
+      <td class="tc-kind">已排除项</td>
+      <td class="tc-contribution">Audio 线程池 5 个线程 runningPct 全 &lt;4%，AsyncWorker running 0.05%；本次 trace 无独立 ECS Worker 线程、无 LuaMtGC 线程、无 RHI Thread（Render/RHI 合并到 UnityGfxRenderS）。UnityGfxRenderS running 三态单调下降 25.98%→22.3%→16.71%，throttle 最闲，反向印证 GPU 在拖</td>
+      <td class="tc-severity"><span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span></td>
+    </tr>
+  </tbody>
+</table>
+<div class="ruled-out-strip">
+        <span class="ruled-out-label">已排除</span>
+        <span class="ruled-out-item" title="throttle 主线程 byState 中 D 状态（不可中断睡眠，含 binder/IO/锁）仅占 off-CPU 的 1.3%，排除 binder 阻塞和锁等待">binder IPC 阻塞: <em>throttle 主线程 byState 中 D 状态（不可中断睡眠，含 binder/IO/锁）仅占 off-CPU 的 1.3%，排除 binder 阻塞和锁等待</em></span><span class="ruled-out-item" title="Choreographer 三态都稳在 60.1fps、slowFrameRate=0，排除 SurfaceFlinger/vsync 问题">SurfaceFlinger/vsync 问题: <em>Choreographer 三态都稳在 60.1fps、slowFrameRate=0，排除 SurfaceFlinger/vsync 问题</em></span><span class="ruled-out-item" title="UnityGfxRenderS running 三态单调下降 25.98%→22.3%→16.71%，throttle 最闲，说明 CPU 渲染命令录制不是瓶颈，GPU 在拖">CPU 渲染命令录制瓶颈: <em>UnityGfxRenderS running 三态单调下降 25.98%→22.3%→16.71%，throttle 最闲，说明 CPU 渲染命令录制不是瓶颈，GPU 在拖</em></span><span class="ruled-out-item" title="AAudio_1/AudioTrack/Audio Mixer/Audio Stream/GVoiceRender 全部 Sleep ≥94%，runningPct &lt;4%，非瓶颈">Audio 线程池: <em>AAudio_1/AudioTrack/Audio Mixer/Audio Stream/GVoiceRender 全部 Sleep ≥94%，runningPct &lt;4%，非瓶颈</em></span><span class="ruled-out-item" title="running 0.05%，几乎不工作，非瓶颈">AsyncWorker 线程: <em>running 0.05%，几乎不工作，非瓶颈</em></span><span class="ruled-out-item" title="本次 trace 无独立 LuaMtGC 线程，无 LuaMtGc.ExecuteMtGc marker，排除 Lua GC spike（但建议下次采集补 LuaMtGC marker 确认）">Lua GC spike: <em>本次 trace 无独立 LuaMtGC 线程，无 LuaMtGc.ExecuteMtGc marker，排除 Lua GC spike（但建议下次采集补 LuaMtGC marker 确认）</em></span><span class="ruled-out-item" title="GC.Collect 全 trace 仅 4 次（cur 3 + throttle 1），是罕见尖峰不是稳态成本，不构成主因">GC.Collect 稳态瓶颈: <em>GC.Collect 全 trace 仅 4 次（cur 3 + throttle 1），是罕见尖峰不是稳态成本，不构成主因</em></span>
+      </div>
+
+<!-- ═══════════════════ § 可选视觉资产（元信息/多线程宏观/降频矩阵/红线矩阵/ASCII 图） ═══════════════════ -->
+
+
+<!-- ═══════════════════ § 主题分群 ═══════════════════ -->
+<div class="section-title">主题分群</div>
+
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-0" style="border-left:4px solid #2196f3;background:#2196f318">
+      §1 采集元信息：三态从踩线到崩盘
+    </div>
+    <p class="section-intro">一张表说清三态采集窗口和帧预算对照。base 刚好踩 60fps 线，cur 跌到 33fps，throttle 崩到 21fps 且 98.83% 帧超预算。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">三态帧时/fps/超预算比例对照</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">base p50 16.69ms（刚好踩 60fps 线，p99 21.37ms，0% 慢帧）→ cur p50 30.15ms（33fps，11.18% 慢帧）→ throttle p50 45.94ms（21fps，98.83% 慢帧）。Choreographer 三态都稳在 60.1fps 说明 SurfaceFlinger/vsync 没问题，是 PlayerLoop 自己在拖。throttle p99 66.32ms 已接近 4 个 vsync 周期。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="PlayerLoop">PlayerLoop</span>
+      <span class="tree-ms">30.25ms</span>
+      <span class="tree-pct">99.6%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:43.2%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="PostLateUpdate.FinishFrameRendering">PostLateUpdate.FinishFrameRendering</span>
+      <span class="tree-ms">13.07ms</span>
+      <span class="tree-pct">43.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:40.2%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.Render">URP.Render</span>
+      <span class="tree-ms">12.15ms</span>
+      <span class="tree-pct">40.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:19.9%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.RenderCameraStack">URP.RenderCameraStack</span>
+      <span class="tree-ms">6.01ms</span>
+      <span class="tree-pct">39.6%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:19.5%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.RenderSingleCamera">URP.RenderSingleCamera</span>
+      <span class="tree-ms">5.90ms</span>
+      <span class="tree-pct">38.9%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:11.3%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.AfterRendering">URP.AfterRendering</span>
+      <span class="tree-ms">3.42ms</span>
+      <span class="tree-pct">22.5%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:4.3%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.Submit">URP.Submit</span>
+      <span class="tree-ms">1.31ms</span>
+      <span class="tree-pct">21.6%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:3.9%;--tree-bg:#9e9e9e1a;--tree-border:#757575;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#bdbdbd" title="URP.WaitForPresent">URP.WaitForPresent</span>
+      <span class="tree-ms">1.17ms</span>
+      <span class="tree-pct">19.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:1.0%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.MakeTranscriptRenderContext">URP.MakeTranscriptRenderContext</span>
+      <span class="tree-ms">0.11ms</span>
+      <span class="tree-pct">1.8%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:3.1%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.BeforeRendering">URP.BeforeRendering</span>
+      <span class="tree-ms">0.92ms</span>
+      <span class="tree-pct">6.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:1.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CullScriptable">CullScriptable</span>
+      <span class="tree-ms">0.23ms</span>
+      <span class="tree-pct">1.5%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:1.0%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="SceneCulling">SceneCulling</span>
+      <span class="tree-ms">0.16ms</span>
+      <span class="tree-pct">1.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:3.0%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.MainRenderingTransparent">URP.MainRenderingTransparent</span>
+      <span class="tree-ms">0.90ms</span>
+      <span class="tree-pct">5.9%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:2.7%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="Inl_OpaquePass">Inl_OpaquePass</span>
+      <span class="tree-ms">0.82ms</span>
+      <span class="tree-pct">2.7%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:1.2%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.RendererSetup">URP.RendererSetup</span>
+      <span class="tree-ms">0.37ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:1.2%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.RenderGraphSetup">URP.RenderGraphSetup</span>
+      <span class="tree-ms">0.36ms</span>
+      <span class="tree-pct">2.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:26.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Update.ScriptRunBehaviourUpdate">Update.ScriptRunBehaviourUpdate</span>
+      <span class="tree-ms">7.92ms</span>
+      <span class="tree-pct">26.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:26.1%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BehaviourUpdate">BehaviourUpdate</span>
+      <span class="tree-ms">7.91ms</span>
+      <span class="tree-pct">26.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:24.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Core.Update">Core.Update</span>
+      <span class="tree-ms">7.32ms</span>
+      <span class="tree-pct">24.1%</span>
+      <span class="tree-redline" title="占 p50 的 24.1%（&gt;5%阈值）">🔴 占 p50 的 24.1%（&gt;5%阈值）</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:12.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.LuaMgr">CS:AOE.LuaMgr</span>
+      <span class="tree-ms">3.80ms</span>
+      <span class="tree-pct">12.5%</span>
+      <span class="tree-redline" title="占 p50 的 12.5%">🔴 占 p50 的 12.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:12.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LuaMgr.OnTick&amp;UpdateSchedule">LuaMgr.OnTick&amp;UpdateSchedule</span>
+      <span class="tree-ms">3.75ms</span>
+      <span class="tree-pct">12.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:5.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr">BattleHeadMgr</span>
+      <span class="tree-ms">1.51ms</span>
+      <span class="tree-pct">5.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:4.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr.OnUpdate">BattleHeadMgr.OnUpdate</span>
+      <span class="tree-ms">1.50ms</span>
+      <span class="tree-pct">4.9%</span>
+      <span class="tree-redline" title="占 p50 的 4.92%">🔴 占 p50 的 4.92%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:4.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr">MapSignificanceMgr</span>
+      <span class="tree-ms">1.30ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:4.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr.sampler_OnUpdate">MapSignificanceMgr.sampler_OnUpdate</span>
+      <span class="tree-ms">1.29ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:9.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.MapManager">CS:AOE.Outside.MapManager</span>
+      <span class="tree-ms">2.90ms</span>
+      <span class="tree-pct">9.5%</span>
+      <span class="tree-redline" title="占 p50 的 9.5%">🔴 占 p50 的 9.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:5.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.OutSideViewArmyLineMgr">CS:AOE.Outside.OutSideViewArmyLineMgr</span>
+      <span class="tree-ms">1.58ms</span>
+      <span class="tree-pct">5.2%</span>
+      <span class="tree-redline" title="占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37">🔴 占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37</span><span class="tree-fold" title="涨幅 ×1.37">📈 ×1.37</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:1.0%;--tree-bg:#9c27b01a;--tree-border:#9c27b0;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#ce93d8" title="OutsideLineCtrl:CalculateVertexJob (Burst)">OutsideLineCtrl:CalculateVertexJob (Burst)</span>
+      <span class="tree-ms">0.00ms</span>
+      <span class="tree-pct">1.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:2.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Battle.BattleUIManager">CS:AOE.Battle.BattleUIManager</span>
+      <span class="tree-ms">0.72ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:120px;--tree-width:2.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="*** BattleUIUpdate ***">*** BattleUIUpdate ***</span>
+      <span class="tree-ms">0.71ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:140px;--tree-width:2.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MUI_UpdateUIPos">MUI_UpdateUIPos</span>
+      <span class="tree-ms">0.61ms</span>
+      <span class="tree-pct">2.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:1.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.TServerManager">CS:AOE.TServerManager</span>
+      <span class="tree-ms">0.30ms</span>
+      <span class="tree-pct">1.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:9.5%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="PreLateUpdate.ScriptRunBehaviourLateUpdate">PreLateUpdate.ScriptRunBehaviourLateUpdate</span>
+      <span class="tree-ms">2.87ms</span>
+      <span class="tree-pct">9.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:9.5%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LateBehaviourUpdate">LateBehaviourUpdate</span>
+      <span class="tree-ms">2.87ms</span>
+      <span class="tree-pct">9.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:7.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Core.LateUpdate">Core.LateUpdate</span>
+      <span class="tree-ms">2.12ms</span>
+      <span class="tree-pct">7.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:3.4%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="CS:AOE.MeshUIManager">CS:AOE.MeshUIManager</span>
+      <span class="tree-ms">1.02ms</span>
+      <span class="tree-pct">3.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:1.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.MapManager">CS:AOE.Outside.MapManager</span>
+      <span class="tree-ms">0.51ms</span>
+      <span class="tree-pct">1.7%</span>
+      <span class="tree-redline" title="占 p50 的 9.5%">🔴 占 p50 的 9.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:1.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.LuaMgr">CS:AOE.LuaMgr</span>
+      <span class="tree-ms">0.44ms</span>
+      <span class="tree-pct">1.4%</span>
+      <span class="tree-redline" title="占 p50 的 12.5%">🔴 占 p50 的 12.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:100px;--tree-width:1.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LuaMgr.OnLateUpdateSchedule">LuaMgr.OnLateUpdateSchedule</span>
+      <span class="tree-ms">0.39ms</span>
+      <span class="tree-pct">1.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:3.1%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="PostLateUpdate.PlayerUpdateCanvases">PostLateUpdate.PlayerUpdateCanvases</span>
+      <span class="tree-ms">0.94ms</span>
+      <span class="tree-pct">3.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:3.1%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="UIEvents.WillRenderCanvases">UIEvents.WillRenderCanvases</span>
+      <span class="tree-ms">0.93ms</span>
+      <span class="tree-pct">3.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:3.1%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="UGUI.Rendering.UpdateBatches">UGUI.Rendering.UpdateBatches</span>
+      <span class="tree-ms">0.93ms</span>
+      <span class="tree-pct">3.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:2.8%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="SimulationSystemGroup">SimulationSystemGroup</span>
+      <span class="tree-ms">0.84ms</span>
+      <span class="tree-pct">2.8%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:2.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Default World Unity.Entities.SimulationSystemGroup">Default World Unity.Entities.SimulationSystemGroup</span>
+      <span class="tree-ms">0.83ms</span>
+      <span class="tree-pct">2.7%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:2.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="PostLateUpdate.PlayerSendFrameComplete">PostLateUpdate.PlayerSendFrameComplete</span>
+      <span class="tree-ms">0.70ms</span>
+      <span class="tree-pct">2.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:2.3%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="PlayerEndOfFrame">PlayerEndOfFrame</span>
+      <span class="tree-ms">0.70ms</span>
+      <span class="tree-pct">2.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:2.3%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="CoroutinesDelayedCalls">CoroutinesDelayedCalls</span>
+      <span class="tree-ms">0.69ms</span>
+      <span class="tree-pct">2.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:1.5%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="Core.EndOfFrame">Core.EndOfFrame</span>
+      <span class="tree-ms">0.44ms</span>
+      <span class="tree-pct">1.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:2.1%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="InitializationSystemGroup">InitializationSystemGroup</span>
+      <span class="tree-ms">0.64ms</span>
+      <span class="tree-pct">2.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:2.1%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Default World Unity.Entities.InitializationSystemGroup">Default World Unity.Entities.InitializationSystemGroup</span>
+      <span class="tree-ms">0.64ms</span>
+      <span class="tree-pct">2.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:1.1%;--tree-bg:#9e9e9e1a;--tree-border:#757575;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#bdbdbd" title="PresentationSystemGroup">PresentationSystemGroup</span>
+      <span class="tree-ms">0.32ms</span>
+      <span class="tree-pct">1.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:1.0%;--tree-bg:#9e9e9e1a;--tree-border:#757575;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#bdbdbd" title="Default World Unity.Entities.PresentationSystemGroup">Default World Unity.Entities.PresentationSystemGroup</span>
+      <span class="tree-ms">0.31ms</span>
+      <span class="tree-pct">1.0%</span>
+      
+    </div>
+  </div>
+      </div>
+    </div>
+      
+      
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-1" style="border-left:4px solid #ff9800;background:#ff980018">
+      §2 多线程宏观：线程类型简单，UnityGfxRenderS 反向印证 GPU-bound
+    </div>
+    <p class="section-intro">本次 trace 线程类型简单：UnityMain + UnityGfxRenderS + Audio 线程池 + AsyncWorker。无 ECS/LuaMtGC/RHI 独立线程。UnityGfxRenderS running 三态单调下降是 GPU-bound 的反向辅证（CPU 渲染命令录制越来越闲 = GPU 在拖）。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#2196f3" title="信息"></span>
+      <span class="item-title">所有识别线程三态健康度表</span>
+      <span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">UnityMain（主线程，业务/Lua/ECS 调度主入口）：running 86.94%→77.82%→56.99% 单调下降，sleeping 12.04%→20.40%→38.99% 单调上升——throttle 半睡型，Sleep 增量几乎全部是等 GPU。UnityGfxRenderS（渲染命令录制层，等主线程发命令）：running 25.98%→22.3%→16.71% 单调下降，throttle 最闲——CPU 渲染命令录制不是瓶颈，GPU 在拖。Audio 线程池（AAudio_1/AudioTrack/Audio Mixer/Audio Stream/GVoiceRender）：Sleep 全 ≥94%，running &lt;4%，非瓶颈。AsyncWorker：Sleep 99.88%，running 0.05%，非瓶颈。</p>
+      
+      
+      
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-2" style="border-left:4px solid #9c27b0;background:#9c27b018">
+      §3 主线程 off-CPU 归因：throttle 39% Sleeping，89% 是等 GPU
+    </div>
+    <p class="section-intro">wait slice 重叠法是核心证据：throttle 主线程 Sleeping 38.99%，byState.S 占 off-CPU 的 89.34%（宏观归因）；微观层 Gfx.WaitForPresentOnGfxThread 单次 avg 17.8ms（超 vsync），count=427 与 PlayerLoop 帧数一致（每帧都在等）。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">byState 分布 + wait slice 重叠 + 因果链</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">throttle 主线程 off-CPU 归因：S 状态 89.34%（宏观层归因到等 GPU）+ D 状态 1.3%（binder/IO/锁，排除）+ R 状态 6.58%（就绪但未跑到，与大核频率不足有关）+ R+ 2.78%（被抢占，×6.6 涨）。wait slice 微观层：Gfx.WaitForPresentOnGfxThread avg 17.8ms / count 427（每帧都在等，单次超 vsync）⊂ URP.WaitForPresent avg 3.56ms / count 2135（父 slice，父子重叠所以 totalMs 口径 &gt;100%）。因果链：主线程发起渲染 → URP.Render → URP.AfterRendering（throttle 占 41.36%，cur 22.5%，foldChange 2.5）→ URP.WaitForPresent → Gfx.WaitForPresentOnGfxThread → 等 swapchain → GPU 完成。注意 waitSliceTotalMs/sleepingMs 口径 691% 是因为父子 slice 重叠，用已剥洋葱的 byState.S pctOfOffCpu=89.34% 做宏观归因。</p>
+      
+      
+      
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-3" style="border-left:4px solid #78909c;background:#78909c18">
+      §4 降频时序：大核 59% + 中核 max 被压，likely 档降频
+    </div>
+    <p class="section-intro">三态 bigCoreReach 74.9%→75.6%→59.2%，throttle 跌破 65% 严重低频线。中核 cpu4-6 观测 max 从 2419/2342 降到 2227MHz（cpuinfo 上限 2419 不变 = SoC 主动压低 max-freq）。无 thermal sidecar，定 likely 档。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">per-CPU reach% + 形态 + 判定矩阵</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">降频形态：base/cur bigCoreReach 74-76%（弱信号，负载-频率背离但未严重），throttle 跌到 59.2%（严重低频）——形态是&#39;压测持续后 SoC 主动压频压温度&#39;。per-CPU 实测：cpu7 (大核) avg 1744 / max 2841 / reach 61.4%；cpu4 (中核) avg 1268 / max 2227 / reach 57% (cpuinfo 2419，reachVsCpuinfo 52.4%)。中核集群 max 被压到 2227 &lt; cpuinfo 2419 = SoC 热管理已介入中核集群，不只是大核。R+（被抢占）从 base 0.42% 涨到 throttle 2.78%（×6.6），与降频期间大核频率不足、任务排队增多一致。判定矩阵：bigCoreReach 跌破 65% (confirmed signal) + 中核 max 下降 (confirmed signal) + 温度信号缺失 (missing) = likely 档降频，confidence medium。</p>
+      
+      
+      
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-4" style="border-left:4px solid #4caf50;background:#4caf5018">
+      §5 主线程一帧时间去向：Core.Update 24% 是稳态业务大头
+    </div>
+    <p class="section-intro">cur 态 PlayerLoop p50 30.15ms，Core.Update avg 7.32ms 占 24.11%（远超 5% 红线）。下钻：LuaMgr 12.5% + MapManager 9.5%（含行军线 5.19%，唯一涨幅显著 ×1.37）+ BattleHeadMgr 4.92% + MapSignificanceMgr 3.99%。base 是空场景无业务模块，foldChange 不可用，用 cur 占 p50 百分比判定。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">Core.Update callTree 缩进树 + 红线模块下钻</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">cur 态 Core.Update 7.32ms/帧（占 p50 24%）：CS:AOE.LuaMgr 3.80ms（12.5%，Lua 业务主入口 OnTick&amp;UpdateSchedule）/ CS:AOE.Outside.MapManager 2.90ms（9.5%，含 OutSideViewArmyLineMgr 1.575ms 行军线管理 cur→throttle 涨 ×1.37 + BattleUIManager 0.72ms + MapEntityEffectMgr 0.24ms）/ BattleHeadMgr 1.51ms（4.92%，战斗头部管理 OnUpdate）/ MapSignificanceMgr 1.21ms（3.99%，地图 AOI，ProcessTasks → ProcessTask_MapObjRefresh 2.06% + ProcessTask_MapEntityAdd 0.67%）。OutSideViewArmyLineMgr 是 cur→throttle 唯一涨幅显著的业务模块（+0.865ms/帧），但该节点是叶子无子 marker，queryCallTreeSubtree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)（count=57820，totalMs 206.86）——顶点计算是子任务之一，但无法拆分是顶点/线段/渲染提交哪个贵。MapSignificanceMgr.ProcessTasks 已钻到 ProcessTask_MapObjRefresh 叶子（count=2379，avgMs 0.127，每帧调用 4.9 次）——刷新频率可评估是否过高。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="Core.Update">Core.Update</span>
+      <span class="tree-ms">7.32ms</span>
+      <span class="tree-pct">24.1%</span>
+      <span class="tree-redline" title="占 p50 的 24.1%（&gt;5%阈值）">🔴 占 p50 的 24.1%（&gt;5%阈值）</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:51.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="high">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.LuaMgr">CS:AOE.LuaMgr</span>
+      <span class="tree-ms">3.80ms</span>
+      <span class="tree-pct">12.5%</span>
+      <span class="tree-redline" title="占 p50 的 12.5%">🔴 占 p50 的 12.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:51.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="LuaMgr.OnTick&amp;UpdateSchedule">LuaMgr.OnTick&amp;UpdateSchedule</span>
+      <span class="tree-ms">3.75ms</span>
+      <span class="tree-pct">12.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:20.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr">BattleHeadMgr</span>
+      <span class="tree-ms">1.51ms</span>
+      <span class="tree-pct">5.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:20.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="BattleHeadMgr.OnUpdate">BattleHeadMgr.OnUpdate</span>
+      <span class="tree-ms">1.50ms</span>
+      <span class="tree-pct">4.9%</span>
+      <span class="tree-redline" title="占 p50 的 4.92%">🔴 占 p50 的 4.92%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:17.7%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr">MapSignificanceMgr</span>
+      <span class="tree-ms">1.30ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:17.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MapSignificanceMgr.sampler_OnUpdate">MapSignificanceMgr.sampler_OnUpdate</span>
+      <span class="tree-ms">1.29ms</span>
+      <span class="tree-pct">4.3%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:39.6%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.MapManager">CS:AOE.Outside.MapManager</span>
+      <span class="tree-ms">2.90ms</span>
+      <span class="tree-pct">9.5%</span>
+      <span class="tree-redline" title="占 p50 的 9.5%">🔴 占 p50 的 9.5%</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:21.5%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" data-sev="medium">
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Outside.OutSideViewArmyLineMgr">CS:AOE.Outside.OutSideViewArmyLineMgr</span>
+      <span class="tree-ms">1.58ms</span>
+      <span class="tree-pct">5.2%</span>
+      <span class="tree-redline" title="占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37">🔴 占 p50 的 5.19%，cur-&gt;throttle 涨 ×1.37</span><span class="tree-fold" title="涨幅 ×1.37">📈 ×1.37</span>
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:1.0%;--tree-bg:#9c27b01a;--tree-border:#9c27b0;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#ce93d8" title="OutsideLineCtrl:CalculateVertexJob (Burst)">OutsideLineCtrl:CalculateVertexJob (Burst)</span>
+      <span class="tree-ms">0.00ms</span>
+      <span class="tree-pct">1.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:9.9%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.Battle.BattleUIManager">CS:AOE.Battle.BattleUIManager</span>
+      <span class="tree-ms">0.72ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:60px;--tree-width:9.8%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="*** BattleUIUpdate ***">*** BattleUIUpdate ***</span>
+      <span class="tree-ms">0.71ms</span>
+      <span class="tree-pct">2.4%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:80px;--tree-width:8.3%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="MUI_UpdateUIPos">MUI_UpdateUIPos</span>
+      <span class="tree-ms">0.61ms</span>
+      <span class="tree-pct">2.0%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:4.2%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CS:AOE.TServerManager">CS:AOE.TServerManager</span>
+      <span class="tree-ms">0.30ms</span>
+      <span class="tree-pct">1.0%</span>
+      
+    </div>
+  </div>
+      </div>
+    </div>
+      <div class="source-insight"><span class="insight-label">源码归因</span>OutSideViewArmyLineMgr 是叶子无子 marker，无法拆分是顶点计算/线段更新/渲染提交哪个贵；queryCallTreeSubtree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)（count=57820，totalMs 206.86）。MapSignificanceMgr.ProcessTasks 已钻到 ProcessTask_MapObjRefresh 叶子（count=2379，avgMs 0.127，每帧调用 4.9 次）。BattleHeadMgr.OnUpdate 含 BattleHead.Init/LoadUI（316次，可能是战斗初始化阶段），需确认是否在战斗中重复初始化。未读 Lua/C# 源码，行级归因未能定位。</div>
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>给 OutSideViewArmyLineMgr 加更细的 Profiler marker（顶点计算/线段更新/渲染提交分开），目前是叶子无法拆分</li><li>评估 MapSignificanceMgr.ProcessTasks 每帧 4.9 次 ProcessTask_MapObjRefresh 的刷新频率是否过高，考虑脏标记增量刷新</li><li>确认 BattleHeadMgr 的 Init/LoadUI（316次）是否在战斗中重复初始化，若是改单次初始化</li><li>给 BattleUIManager/MeshUIManager 加子 marker，目前是叶子无法拆分</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ffc107" title="中"></span>
+      <span class="item-title">GC 分配归因：渲染层 130/帧 + 业务侧 MeshUI 61/帧，但 GC.Collect 罕见</span>
+      <span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">cur 态 GC 分配 top：URP.BeforeRendering 130.54/帧（63050 次）+ Inl_OpaquePass 129.53/帧（62565 次）是引擎内部渲染 Pass marker，业务侧难优化。业务侧可控分配源：MeshUIManager 61.33/帧、TimeText.7 24.43/帧、BattleHeadMgr.OnUpdate 20.74/帧。但 GC.Collect 频率极低：cur 3 次/483 帧（0.6%）、throttle 1 次/427 帧（0.23%），是罕见尖峰。GC.Collect avg 18ms（cur）/32.9ms（throttle）单次卡顿但不是 p50 主因。注意 queryGcAllocByModule 的 totalMs 是 GC.Alloc slice 累计耗时（不是 GC.Collect 耗时），URP.BeforeRendering totalMs 76.34ms 分散在 63050 次调用中（avg 0.0012ms/次），单次极小不构成卡顿。</p>
+      
+    <div class="tree-section">
+      <div class="tree-header">
+        <span class="tree-title">调用树（per-frame avg）</span>
+        <span class="tree-legend">
+  <span class="legend-item" style="color:#81c784">■ 渲染</span>
+  <span class="legend-item" style="color:#64b5f6">■ 脚本</span>
+  <span class="legend-item" style="color:#ff7961">■ GC/内存</span>
+  <span class="legend-item" style="color:#bdbdbd">■ 等待</span>
+  <span class="legend-item" style="color:#ce93d8">■ Job</span>
+  <span class="legend-item" style="color:#4db6ac">■ 网络</span></span>
+      </div>
+      <div class="tree-container">
+        
+  <div class="tree-row" style="--tree-indent:0px;--tree-width:100.0%;--tree-bg:#4caf501a;--tree-border:#4caf50;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#81c784" title="URP.BeforeRendering">URP.BeforeRendering</span>
+      <span class="tree-ms">0.92ms</span>
+      <span class="tree-pct">6.1%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:20px;--tree-width:24.4%;--tree-bg:#2196f31a;--tree-border:#2196f3;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#64b5f6" title="CullScriptable">CullScriptable</span>
+      <span class="tree-ms">0.23ms</span>
+      <span class="tree-pct">1.5%</span>
+      
+    </div>
+  </div>
+  <div class="tree-row" style="--tree-indent:40px;--tree-width:17.2%;--tree-bg:#78909c1a;--tree-border:#546e7a;">
+    <div class="tree-bar" >
+      <span class="tree-fill" aria-hidden="true"></span>
+      <span class="tree-label" style="color:#90a4ae" title="SceneCulling">SceneCulling</span>
+      <span class="tree-ms">0.16ms</span>
+      <span class="tree-pct">1.1%</span>
+      
+    </div>
+  </div>
+      </div>
+    </div>
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>业务侧 MeshUIManager 61/帧 + TimeText 24/帧 + BattleHeadMgr 21/帧排查是否有不必要的每帧分配（字符串拼接、临时 List）</li><li>考虑设置 GC.latencyMode=LatencyMode.LowLatency 减少同步 GC 触发（throttle 单次 32.9ms 是实打实尖峰）</li><li>渲染层 URP.BeforeRendering/Inl_OpaquePass 是 Unity 引擎内部，升级 Unity 版本或调整 URP 配置可能改善</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-5" style="border-left:4px solid #009688;background:#00968818">
+      §6 GPU-bound 判定矩阵：四信号同向，强 GPU-bound 但无硬证
+    </div>
+    <p class="section-intro">多信号同向判定 GPU-bound：wait slice 单次 &gt; vsync + Render 线程变闲 + Choreographer 稳定 + binder 低。诚实声明：本次无 GPU busy/freq counter，&#39;GPU 100% 满载&#39;硬证给不出，停在间接强信号档。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">Gfx.WaitForPresent 单次 avg 演化 + 判定矩阵</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">Gfx.WaitForPresentOnGfxThread 单次 avg 三态演化：base 0.9ms → cur 5.8ms → throttle 17.8ms（cur→throttle foldChange 2.7，增量 +12ms/帧）。throttle 单次 17.8ms &gt; vsync 16.66ms = GPU 一帧渲染时间已超 60Hz 预算，swapchain 排队。URP.AfterRendering 占比从 cur 22.5% 涨到 throttle 41.36%（foldChange 2.5），其中 URP.Submit 40.43% + URP.WaitForPresent 38.12%——渲染等待是 throttle 帧时增量的核心。判定矩阵（四信号同向）：(1) wait slice 单次 17.8ms &gt; vsync ✓；(2) Render 线程 running 三态单调下降 25.98%→22.3%→16.71%，throttle 最闲 ✓；(3) Choreographer 三态都稳 60.1fps、slowFrameRate=0 ✓；(4) byState D 仅 1.3%，排除 binder/锁 ✓。诚实声明：无 GPU busy/freq counter，&#39;GPU 100% 满载&#39;硬结论给不出，但四信号同向已构成强 GPU-bound 判定。</p>
+      
+      
+      
+    </div>
+  </div></div>
+  </div>
+  <div class="narrative-section">
+    <div class="section-heading" id="sec-section-6" style="border-left:4px solid #2196f3;background:#2196f318">
+      §7 ROI 优化方向：按 severity + 贡献排序
+    </div>
+    <p class="section-intro">优化方向按 severity + 对整体帧率贡献排序。第一优先级是 GPU 侧降负载（throttle 主因），第二是业务脚本 Core.Update 稳态降本（第二成本），第三是降频治本（其实是症状，要降负载治本），第四是 GC 预防性优化。</p>
+    <div class="items-list">
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#f44336" title="严重"></span>
+      <span class="item-title">P0：GPU 侧降负载——throttle 单次 wait 17.8ms 超 vsync，GPU 撑爆 swapchain</span>
+      <span class="chip sev-chip" style="color:#f44336;background:#f4433620">严重</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">throttle 态单次 Gfx.WaitForPresent 17.8ms 远超 vsync 16.66ms，说明 GPU 一帧渲染时间已超 60Hz 预算。base 态 URP.Render 已占 36% 但 GPU 跟得上（wait 仅 0.9ms），cur/throttle 场景加了战斗/行军实体后 GPU 负载溢出。URP.AfterRendering throttle 占 41% 是渲染等待集中点，但该节点是叶子无子 marker，需要看 URP AfterRendering 的具体 Pass 配置才能给更细建议——是 PostProcessing、Blit 还是 FinalBlit 在贵。</p>
+      
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>检查 DrawCall 数量、Shader 复杂度、渲染分辨率（AOE3D 移动端默认 900p，可考虑降档）、overdraw</li><li>看 URP AfterRendering 的具体 Pass 配置——是 PostProcessing、Blit 还是 FinalBlit 在贵，目前是叶子无法拆分</li><li>看战斗场景的渲染对象增量（部队模型、特效、行军线）相对 base 空场景的增量，定位 GPU 负载溢出源</li><li>补 GPU counter 采集（GPU busy/freq），把 GPU-bound 判定从间接强信号升到硬证档</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">P1：业务脚本 Core.Update 稳态降本——24% 是第二成本，OutSideViewArmyLineMgr 唯一涨幅显著</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">Core.Update 24% 是稳态业务大头，每帧 7.32ms 雷打不动。OutSideViewArmyLineMgr 是 cur→throttle 唯一涨幅显著的业务模块（×1.37，+0.865ms/帧），行军线管理在 throttle 态更贵——但该节点是叶子，queryCallTreeSubtree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)（count=57820，totalMs 206.86），顶点计算是子任务之一。MapSignificanceMgr.ProcessTasks 每帧调用 4.9 次 ProcessTask_MapObjRefresh，刷新频率可评估是否过高。</p>
+      
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>给 OutSideViewArmyLineMgr 加更细的 Profiler marker（顶点计算/线段更新/渲染提交分开），目前是叶子无法拆分</li><li>评估 MapSignificanceMgr.ProcessTasks 每帧 4.9 次 ProcessTask_MapObjRefresh 的刷新频率，考虑脏标记增量刷新</li><li>确认 BattleHeadMgr 的 Init/LoadUI（316次）是否在战斗中重复初始化，若是改单次初始化</li><li>给 BattleUIManager/MeshUIManager 加子 marker，目前是叶子无法拆分</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ff9800" title="高"></span>
+      <span class="item-title">P2：降频治本——降负载是根因，降频是症状；补 thermal sidecar 升 confirmed</span>
+      <span class="chip sev-chip" style="color:#ff9800;background:#ff980020">高</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">降频是 SoC 热保护行为，根因是持续高负载导致温度累积。降低整体 CPU/GPU 负载是治本——见 P0 GPU 降负载 + P1 业务脚本降本，把帧时压回预算内温度就不会触发降频。中核 max-freq 被压到 2227MHz（cpuinfo 2419MHz）说明 SoC 热管理已介入中核集群，不只是大核——优化时不能只盯大核负载，中核集群的 ECS/Job 调度也要均衡。</p>
+      
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>降低整体 CPU/GPU 负载是治本（见 P0 + P1），帧时压回预算内温度就不会触发降频</li><li>下次采集补 thermal_before/after.txt 和 scaling_max_freq（需 root），把降频判定从 likely 升到 confirmed</li><li>中核集群已介入降频，优化时不能只盯大核负载，中核集群的 ECS/Job 调度也要均衡</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#ffc107" title="中"></span>
+      <span class="item-title">P3：GC 预防性优化——罕见但单次 32.9ms 尖峰，分配大头在渲染层</span>
+      <span class="chip sev-chip" style="color:#ffc107;background:#ffc10720">中</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">GC 不是当前主瓶颈（全 trace 仅 4 次 GC.Collect），但 throttle 单次 32.9ms 是实打实的卡顿尖峰。分配大头是渲染层 URP.BeforeRendering 130/帧 + Inl_OpaquePass 130/帧（引擎内部，业务侧难优化）。业务侧可控分配源：MeshUIManager 61/帧、TimeText 24/帧、BattleHeadMgr 21/帧。本次 trace 无 per-marker 的 GC 字节数（只有次数），无法判断哪个模块分配字节最多。</p>
+      
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>业务侧 MeshUIManager 61/帧 + TimeText 24/帧 + BattleHeadMgr 21/帧排查是否有不必要的每帧分配（字符串拼接、临时 List）</li><li>考虑设置 GC.latencyMode=LatencyMode.LowLatency 减少同步 GC 触发</li><li>渲染层 URP.BeforeRendering/Inl_OpaquePass 是 Unity 引擎内部，升级 Unity 版本或调整 URP 配置可能改善</li><li>补 per-marker 的 GC 字节数采集，本次只有次数无法判断分配字节大头</li></ol>
+      </div>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="item-header">
+      <span class="sev-dot" style="background:#2196f3" title="信息"></span>
+      <span class="item-title">P4：下次采集补三项——ECS Job 调度 + LuaMtGC + RHI Thread</span>
+      <span class="chip sev-chip" style="color:#2196f3;background:#2196f320">信息</span>
+    </div>
+    <div class="item-body">
+      <p class="narrative-text">本次 trace 无独立 ECS Worker 线程（AOE3D 用 DOTS/ECS，但 ECS Job 可能在主线程同步执行）、无 LuaMtGC 线程（AOE3D 用 xLua，Lua GC 可能是隐藏卡顿源）、无 RHI Thread（Render/RHI 合并到 UnityGfxRenderS）。这三项缺失影响归因深度。</p>
+      
+      
+      <div class="rec-section">
+        <div class="rec-label">优化建议</div>
+        <ol class="rec-list"><li>确认 ECS Job 是否在主线程同步执行——如果是，ECS 的并行优势没发挥，可优化 Job Scheduler 配置</li><li>补 LuaMtGC marker 采集——AOE3D 用 xLua，Lua GC 可能是隐藏卡顿源，本次看不到</li><li>补 RHI Thread 采集——区分 Render 命令录制和 RHI driver 调用，能更精确定位渲染瓶颈在 CPU 侧还是 GPU 侧</li></ol>
+      </div>
+    </div>
+  </div></div>
+  </div>
+
+<!-- ═══════════════════ § 优化优先级 ═══════════════════ -->
+<div class="section-title" id="sec-priority">优化优先级</div>
+<table class="priority-table">
+  <thead>
+    <tr><th>优先级</th><th>动作</th><th>收益</th></tr>
+  </thead>
+  <tbody>
+    <tr class="priority-p0">
+      <td class="pri-priority">P0</td>
+      <td class="pri-action">GPU 侧降负载：检查 DrawCall/Shader/分辨率（900p 可降档）/overdraw + 看 URP AfterRendering 具体 Pass 配置 + 补 GPU counter 采集</td>
+      <td class="pri-benefit">throttle 主因，单次 wait 17.8ms 超 vsync，降 GPU 负载是治本</td>
+    </tr><tr class="">
+      <td class="pri-priority">P1</td>
+      <td class="pri-action">业务脚本 Core.Update 稳态降本：给 OutSideViewArmyLineMgr 加子 marker + 评估 MapSignificanceMgr 刷新频率（每帧 4.9 次）+ 确认 BattleHeadMgr Init/LoadUI 是否重复初始化</td>
+      <td class="pri-benefit">稳态第二成本，每帧 7.32ms × 全部帧 = 累计 3.5s+，降本直接拉低 p50</td>
+    </tr><tr class="">
+      <td class="pri-priority">P2</td>
+      <td class="pri-action">降频治本：降负载（P0+P1）是根因，补 thermal sidecar + scaling_max_freq 把判定升 confirmed</td>
+      <td class="pri-benefit">降频是症状不是独立瓶颈，降负载治本；中核集群已介入，优化要均衡大核+中核</td>
+    </tr><tr class="">
+      <td class="pri-priority">P3</td>
+      <td class="pri-action">GC 预防性优化：MeshUIManager/TimeText/BattleHeadMgr 排查每帧分配 + GC.latencyMode=LowLatency + 补 per-marker GC 字节数采集</td>
+      <td class="pri-benefit">罕见但单次 32.9ms 尖峰，预防性优化避免尖峰恶化</td>
+    </tr><tr class="">
+      <td class="pri-priority">P4</td>
+      <td class="pri-action">下次采集补三项：ECS Job 调度确认 + LuaMtGC marker + RHI Thread 分离</td>
+      <td class="pri-benefit">补齐归因深度，避免 ECS/Lua GC/RHI 隐藏卡顿源漏判</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ Footer ═══════════════════ -->
+<div class="page-footer">
+  <span class="footer-item"><span class="footer-label">runId</span>bk26b-perfetto-triad/2026-07-16_wt031</span>
+  <span class="footer-item"><span class="footer-label">生成时间</span>2026/7/16 15:50:37</span>
+  <span class="footer-item"><span class="footer-label">生成工具</span>Prism render-html (deterministic)</span>
+</div>
+
+</body>
+</html>

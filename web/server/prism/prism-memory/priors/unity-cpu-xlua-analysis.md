@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.338Z
 source: unity-cpu
 title: "xLua 性能分析要点"
 tags: ["xlua","分析要点","跨语言开销"]
+dataSource: unity
 ---
 
 1. `ScriptRunBehaviourUpdate` 高时，优先检查 `xlua.call` 子节点。

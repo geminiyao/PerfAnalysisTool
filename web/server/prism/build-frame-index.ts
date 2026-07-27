@@ -66,6 +66,7 @@ console.error(`[build-frame-index] parsed ${data.frames.length} frames, ${data.m
 const db = new Database(dbPath)
 db.pragma('journal_mode = WAL')
 db.pragma('synchronous = NORMAL')
+db.pragma('busy_timeout = 30000')
 
 // Apply schema
 const schemaSql = fs.readFileSync(schemaPath, 'utf8')

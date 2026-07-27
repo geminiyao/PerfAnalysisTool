@@ -1,0 +1,375 @@
+{
+  "runId": "bk26b-perfetto-triad/2026-07-16_wt030-035-v3",
+  "overview": "这不是单一元凶——throttle 态是 GPU 撑爆 swapchain（主线程 39% 时间在等 GPU，单次等 17.8ms 超过一个 vsync）、SoC 大核被压到 59% 降频、业务脚本 Core.Update 稳态占 24% 三股力量叠加，把帧率从 base 的 60fps 一路压到 throttle 的 21fps；前两者是 throttle 态主因，后者是每帧雷打不动的稳态税。",
+  "rating": "fail",
+  "topConclusions": [
+    {
+      "rank": 1,
+      "problem": "throttle 态 GPU-bound：主线程 39% 时间在等 GPU，单次等 17.8ms 超过一个 vsync 周期",
+      "kind": "稳态瓶颈（throttle 态每帧都在等）",
+      "contribution": "throttle 态主线程 Sleeping 38.99%（vs base 12.04%），其中 Gfx.WaitForPresentOnGfxThread 单次 avg 17.8ms、count=427 与帧数一致（每帧都等），占 throttle 帧时 ~38.7%（17.8/45.94），是 throttle 态第一主因",
+      "dimensions": ["absoluteCost", "shareHigh", "outlier"],
+      "judgability": "judgable",
+      "severity": "critical",
+      "asciiArt": {
+        "title": "主线程三态状态分布 + Gfx.WaitForPresent 单次 avg 演化",
+        "content": "Run/Sleep 三态对照（UnityMain）\n  base       ███████████████████████████████░░░    Run 86.94% / Sleep 12.04%\n  cur        ██████████████████████████░░░░░░      Run 77.82% / Sleep 20.40%\n  throttle   ███████████████████░░░░░░░░░░░        Run 56.99% / Sleep 38.99%\n\nGfx.WaitForPresent 单次 avg 演化（ms）\n  base      █                                            0.905 ms\n  cur       █████                                         5.834 ms  (×6.4 vs base)\n  throttle █████████████████                            17.799 ms (×2.7 vs cur / ×19.6 vs base)\n  vsync线   ██                                            16.66 ms (60Hz 周期)\n  ─────────────────────────────────────────\n  ↑ throttle 单次 wait 已超过 vsync 周期 = GPU 一帧渲染超预算",
+        "caption": "Sleep 增量几乎 100% 是等 GPU；单次 wait 从 base 0.9ms 涨到 throttle 17.8ms，已超过 60Hz vsync 周期 16.66ms，构成 GPU 撑爆 swapchain 的强信号。"
+      }
+    },
+    {
+      "rank": 2,
+      "problem": "throttle 态 SoC 降频：大核频率被压到 59%，中核 max 频率从 2419→2227MHz",
+      "kind": "降频形态（SoC 热保护）",
+      "contribution": "bigCoreReach 三态 74.9%→75.6%→59.2% 单调下降，throttle 跌破 65% 严重低频线；中核 cpu4-6 observed max 从 cur 2342MHz 降到 2227MHz（cpuinfo 上限 2419MHz）——observed max 低于 cpuinfo max 是 SoC 主动压频的间接证据；与主线程 Sleep 暴涨同向，加剧 GPU 等待",
+      "dimensions": ["absoluteCost", "outlier"],
+      "judgability": "needsBaseline",
+      "severity": "high",
+      "asciiArt": {
+        "title": "bigCoreReach 三态 + 中核 max 频率对照",
+        "content": "big 核 cpu7 reach% 三态对照\n  base      ██████████████████████████████░░░░        73.7%\n  cur       ████████████████████████████████░░        77.0%\n  throttle  ████████████████████░░░░░░░░░░░░░░        61.4%  ← 跌破 65% 严重低频线\n\n中核 cpu4-6 observed max MHz（cpuinfo 上限 2419MHz 虚线）\n  base      ████████████████████████████████          2419.2  (达上限)\n  cur       ██████████████████████████████░          2342.4  (略低)\n  throttle  ████████████████████████████░░░           2227.2  ← 主动压频\n  ─────────────────────────────────────────\n  cpuinfo_max 2419.2 MHz (虚线)",
+        "caption": "降频信号同向：bigCoreReach 三态单调下降 + 中核 max 频率被压，构成 likely 档降频判定（缺 thermal sidecar，未升到 confirmed）。"
+      }
+    },
+    {
+      "rank": 3,
+      "problem": "业务脚本 Core.Update 稳态占 24%：LuaMgr + MapManager 是大头（行军线管理 cur→throttle 涨 ×1.37）",
+      "kind": "稳态业务大头（每帧都在的常驻税）",
+      "contribution": "cur 态 Core.Update 每帧 7.32ms、占 PlayerLoop p50 的 24.11%（远超 5% 红线），是稳态业务成本第一大头；子模块 LuaMgr 12.51% + MapManager 9.54%（含行军线管理 5.19%）；行军线管理是 cur→throttle 唯一涨幅显著的业务模块（×1.37，+0.865ms/帧）",
+      "dimensions": ["absoluteCost", "shareHigh"],
+      "judgability": "needsBaseline",
+      "severity": "high",
+      "callTree": {
+        "rootMarker": "Core.Update",
+        "note": "cur 态 7.32ms/帧（占 p50 24.11%）；子树大头：LuaMgr 12.51% + MapManager 9.54%（含行军线管理 5.19%）；行军线管理 cur→throttle 涨 ×1.37。"
+      }
+    },
+    {
+      "rank": 4,
+      "problem": "渲染层 GC 分配大头（URP.BeforeRendering 130/帧 + Inl_OpaquePass 130/帧），但 GC.Collect 罕见不构成主因",
+      "kind": "罕见尖峰（非稳态瓶颈）",
+      "contribution": "cur 态 GC.Collect 仅 3 次/483 帧（0.6%帧触发，avg 18ms）、throttle 仅 1 次/427 帧（0.23%帧触发，avg 32.9ms）——是罕见尖峰不是稳态成本，对 p50 贡献小，排在 GPU/降频/稳态脚本之后",
+      "dimensions": ["outlier"],
+      "judgability": "judgable",
+      "severity": "medium"
+    }
+  ],
+  "judgmentBoundary": {
+    "canJudge": [
+      "整体帧时三态退化：base p50 16.69ms（达 60fps 预算）→ cur 30.15ms（33fps）→ throttle 45.94ms（21fps），98.83% 帧超预算——整体性能 fail",
+      "throttle 态主线程 Sleeping 38.99% 中绝大多数是等 GPU（Gfx.WaitForPresent 单次 17.8ms > vsync 16.66ms），是本次采集内离群最严重的稳态瓶颈源",
+      "降频是本次采集内的同向信号（bigCoreReach 三态单调下降 + 中核 max 被压），但缺 thermal sidecar 无法升到 confirmed",
+      "Core.Update 24.11% 是本次采集内稳态业务成本第一大头，行军线管理是 cur→throttle 唯一涨幅显著的业务模块",
+      "GC.Collect 是罕见尖峰（0.6%/0.23% 帧触发），不是稳态主因",
+      "Audio 线程池 / AsyncWorker Sleep ≥94%，已排除非瓶颈",
+      "Choreographer 三态稳在 60fps、slowFrameRate=0，排除 SurfaceFlinger/vsync 问题",
+      "byState D 状态仅占 off-CPU 的 1.3%，排除 binder IPC 阻塞和锁等待"
+    ],
+    "cannotJudge": [
+      "GPU 是否 100% 满载——本 trace 无 GPU busy/freq counter，只能停在间接强信号档（单次 wait > vsync + Render 线程变闲 + Choreographer 稳定 + binder 低，四信号同向），硬证给不出",
+      "行军线管理每帧 1.575ms 在本游戏压测下算不算正常——需历史基线或业务知识，单源判不了",
+      "降频是否触发——缺 thermal_before/after.txt，无法用温度 Δ≥5°C 做第二信号确认，停在 likely 档",
+      "URP.AfterRendering 占 41% 是哪个 Pass 在贵（PostProcessing/Blit/FinalBlit）——该节点是叶子无子 marker，需看 URP 配置",
+      "ECS Job 是否在主线程同步执行——本次 trace 无独立 ECS Worker 线程，可能是 Job Scheduler 配置问题或未采集到",
+      "throttle 多出的 AAudio_1/AsyncWorker 是否是状态差异——base/cur 采集窗口短（11.4s/14.7s）未采集到这些线程，可能是窗口差异不是状态差异"
+    ]
+  },
+  "ruledOut": [
+    {"name": "Audio 线程池（AudioTrack/AAudio_1/Audio Mixer/Audio Stream/GVoiceRender）", "why": "Sleep 全 ≥94%，runningPct <4%，非瓶颈"},
+    {"name": "AsyncWorker", "why": "running 0.05%，几乎不工作，非瓶颈"},
+    {"name": "SurfaceFlinger/vsync", "why": "Choreographer 三态都稳在 60fps、slowFrameRate=0，排除显示侧问题"},
+    {"name": "binder IPC 阻塞", "why": "byState D 状态（不可中断睡眠，含 binder/IO/锁）仅占 off-CPU 的 1.3%"},
+    {"name": "锁等待", "why": "D 状态 1.3% + R+（被抢占）仅 2.78%，无显著锁竞争"},
+    {"name": "ECS Worker 不均", "why": "本次 trace 无独立 ECS Worker 线程"},
+    {"name": "LuaMtGC spike", "why": "本次 trace 无独立 LuaMtGC 线程，xLua GC 可能是隐藏卡顿源但本次看不到"},
+    {"name": "RHI Thread 瓶颈", "why": "本次无 RHI Thread，Thread-XXX 直调 GLES driver，Render/RHI 合并在 UnityGfxRenderS"}
+  ],
+
+  "sections": [
+    {
+      "heading": "§0 结论先行",
+      "intro": "三态从 60fps 退化到 21fps，三股力量叠加：GPU 撑爆 swapchain（throttle 主因）、SoC 大核降频（加剧 GPU 等待）、业务脚本 Core.Update 稳态占 24%（每帧常驻税）。以下三条按对整体帧率的贡献排序——稳态大头和高频瓶颈排前，罕见尖峰（GC）排后。",
+      "items": [
+        {
+          "findingIds": ["gpu.bound.wait.slice"],
+          "title": "① GPU-bound：throttle 态主线程 39% 时间在等 GPU，单次等 17.8ms 超过一个 vsync 周期",
+          "narrative": "throttle 态主线程 Sleeping 38.99%（vs base 12.04%），其中绝大多数是在等 GPU 完成渲染——单次 Gfx.WaitForPresentOnGfxThread 平均等 17.8ms，已经超过一个 60Hz vsync 周期（16.66ms），说明 GPU 一帧渲染时间已超预算，撑爆了 swapchain 排队。这是 throttle 态从 33fps 进一步跌到 21fps 的主因。三态演化：base avg 0.9ms → cur 5.8ms → throttle 17.8ms，cur→throttle 涨 ×2.7。多信号同向验证：Render 线程 UnityGfxRenderS running 三态单调下降 25.98%→22.3%→16.71%（throttle 最闲，CPU 渲染命令录制不是瓶颈，GPU 在拖）；Choreographer 三态稳在 60fps 排除 SurfaceFlinger；D 状态仅 1.3% 排除 binder/锁；无 ECS/LuaMtGC 线程排除 Job 不均和 Lua GC spike。",
+          "asciiArt": {
+            "title": "主线程三态状态分布 + Gfx.WaitForPresent 单次 avg 演化",
+            "content": "Run/Sleep 三态对照（UnityMain）\n  base       ███████████████████████████████░░░    Run 86.94% / Sleep 12.04%\n  cur        ██████████████████████████░░░░░░      Run 77.82% / Sleep 20.40%\n  throttle   ███████████████████░░░░░░░░░░░        Run 56.99% / Sleep 38.99%\n\nGfx.WaitForPresent 单次 avg 演化（ms）\n  base      █                                            0.905 ms\n  cur       █████                                         5.834 ms  (×6.4 vs base)\n  throttle █████████████████                            17.799 ms (×2.7 vs cur / ×19.6 vs base)\n  vsync线   ██                                            16.66 ms (60Hz 周期)\n  ─────────────────────────────────────────\n  ↑ throttle 单次 wait 已超过 vsync 周期 = GPU 一帧渲染超预算",
+            "caption": "Sleep 增量几乎 100% 是等 GPU；单次 wait 从 base 0.9ms 涨到 throttle 17.8ms，已超过 60Hz vsync 周期 16.66ms。"
+          },
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["freq.throttle.bigcore"],
+          "title": "② SoC 降频：throttle 态大核频率被压到 59%，中核 max 频率从 2419→2227MHz",
+          "narrative": "throttle 态 SoC 大核频率仅达理论上限的 59.2%（严重低频），中核 cpu4-6 的观测 max 频率从 cur 的 2342MHz 降到 2227MHz（低于 cpuinfo 上限 2419MHz），是 SoC 主动压低 max-freq 的间接证据。三态 bigCoreReach 74.9%→75.6%→59.2% 单调下降，配合主线程 Sleeping 暴涨，构成 likely 档降频判定。R+（被抢占）从 base 0.42% 涨到 throttle 2.78%（×6.6），与降频期间大核频率不足、任务排队增多一致。降频是 SoC 热保护行为，根因是持续高负载导致温度累积——降低整体 CPU/GPU 负载是治本（见 ① 和 ③ 的优化方向）。缺 thermal sidecar，无法升到 confirmed。",
+          "asciiArt": {
+            "title": "bigCoreReach 三态 + 中核 max 频率对照",
+            "content": "big 核 cpu7 reach% 三态对照\n  base      ██████████████████████████████░░░░        73.7%\n  cur       ████████████████████████████████░░        77.0%\n  throttle  ████████████████████░░░░░░░░░░░░░░        61.4%  ← 跌破 65% 严重低频线\n\n中核 cpu4-6 observed max MHz（cpuinfo 上限 2419MHz 虚线）\n  base      ████████████████████████████████          2419.2  (达上限)\n  cur       ██████████████████████████████░          2342.4  (略低)\n  throttle  ████████████████████████░░░░░░░           2227.2  ← 主动压频\n  ─────────────────────────────────────────\n  cpuinfo_max 2419.2 MHz (虚线)",
+            "caption": "降频信号同向：bigCoreReach 三态单调下降 + 中核 max 频率被压，构成 likely 档降频判定。"
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": ["script.core.update.hotpath"],
+          "title": "③ 业务脚本 Core.Update 稳态占 24%：LuaMgr + MapManager 是大头（行军线管理 cur→throttle 涨 ×1.37）",
+          "narrative": "cur 态 Core.Update 每帧平均 7.32ms、占 PlayerLoop p50 的 24.11%（远超 5% 红线），是稳态业务成本第一大头。其中 LuaMgr（Lua 业务主入口）占 12.5%、MapManager 占 9.5%（含行军线管理 OutSideViewArmyLineMgr 5.19%）。这些不是尖峰而是每帧都跑的持续成本。行军线管理是 cur→throttle 唯一涨幅显著的业务模块（×1.37，+0.865ms/帧），throttle 态因帧时拉长占比略降但绝对量仍在。base 是空场景无业务模块，cur/throttle 才进入战斗/行军压测场景，业务模块从无到有，foldChange 不可用，用 cur 态占比判定。",
+          "callTree": {
+            "rootMarker": "Core.Update",
+            "note": "cur 态 7.32ms/帧（占 p50 24.11%）；子树大头：LuaMgr 12.51% + MapManager 9.54%（含行军线管理 5.19%）；行军线管理 cur→throttle 涨 ×1.37。"
+          },
+          "severity": "high"
+        },
+        {
+          "findingIds": ["gc.alloc.render.heavy"],
+          "title": "④ 渲染层 GC 分配大头但 GC.Collect 罕见——不构成主因",
+          "narrative": "cur 态 GC 分配按模块看，渲染层 URP.BeforeRendering 每帧 130 次、Inl_OpaquePass 每帧 130 次，是分配次数最多的两个模块，但这两个是 Unity 引擎内部渲染 Pass marker，业务侧可优化空间有限。业务侧 MeshUIManager 61/帧、TimeText.7 24/帧、BattleHeadMgr.OnUpdate 21/帧是可控分配源。但关键判定是 GC.Collect 频率：cur 3 次/483 帧（0.6%帧触发）、throttle 1 次/427 帧（0.23%帧触发），是罕见事件。GC.Collect avg 18ms（cur）/32.9ms（throttle）单次确实卡顿（超 vsync），但因为是罕见尖峰，对整体 p50/p99 帧时贡献小，不构成主因——排在 GPU/降频/稳态脚本之后。",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "heading": "§1 采集元信息",
+      "intro": "三态采集元信息对照：base 是空场景基准（60fps 达预算），cur 是战斗/行军压测（33fps 跌破预算），throttle 是持续压测后 SoC 热保护（21fps 严重 fail）。",
+      "items": [
+        {
+          "findingIds": ["thread.coverage.summary"],
+          "title": "采集元信息表（三态对照）",
+          "narrative": "三态采集窗口：base 11.4s / cur 14.7s / throttle 19.9s。帧数 base 683 / cur 483 / throttle 427。fps 从 59.8 → 33.1 → 21.4 单调下降。p50 从 16.69ms → 30.15ms → 45.94ms，p99 从 21.37ms → 42.54ms → 66.32ms。slowFrameRate 从 0 → 11.18% → 98.83%。Choreographer 三态都稳在 60.1fps、slowFrameRate=0（排除显示侧问题，瓶颈在 PlayerLoop 侧）。",
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§2 多线程宏观",
+      "intro": "本次 trace 线程类型简单：UnityMain（主线程）、UnityGfxRenderS（渲染线程）、Audio 线程池、AsyncWorker。无 ECS Worker、无 LuaMtGC、无 RHI Thread——本次是非典型 Unity 采集（atrace marker 少，只有 PlayerLoop/BehaviourUpdate/Coroutines/GC.Collect 几个顶层 marker，但 callTree 子树完整）。",
+      "items": [
+        {
+          "findingIds": ["thread.coverage.summary"],
+          "title": "所有线程三态健康度表 + 一句话定位",
+          "narrative": "UnityMain：主线程，业务/Lua/ECS 调度主入口，running 三态 86.94%→77.82%→56.99% 单调下降，sleeping 12.04%→20.40%→38.99% 单调上升——throttle 态变闲是因为在等 GPU。UnityGfxRenderS：Unity 渲染命令录制层，running 25.98%→22.3%→16.71% 单调下降，throttle 最闲——CPU 渲染命令录制不是瓶颈，GPU 在拖。Audio 线程池（AudioTrack/AAudio_1/Audio Mixer/Audio Stream/GVoiceRender）：Sleep 全 ≥94%，非瓶颈（已排除）。AsyncWorker：running 0.05%，几乎不工作，非瓶颈（已排除）。",
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "heading": "§3 主线程 off-CPU 归因",
+      "intro": "throttle 态主线程 38.99% 时间在 Sleeping，用 wait slice 重叠法归因：绝大多数是等 GPU。byState 显示 S 状态占 off-CPU 的 89.34%（宏观归因），D 状态（含 binder/IO/锁）仅 1.3% 排除其它阻塞。",
+      "items": [
+        {
+          "findingIds": ["gpu.bound.wait.slice"],
+          "title": "byState 分布 + wait slice 重叠 + ASCII 状态分布 + 因果链",
+          "narrative": "byState 分布（throttle UnityMain off-CPU 归因）：S 状态 89.34%（绝大多数是可中断睡眠，等 GPU）、D 状态 1.3%（不可中断睡眠，含 binder/IO/锁，占比极小排除）、R 状态 6.58%（ runnable 但没跑，大核频率不足排队）、R+ 状态 2.78%（被抢占，throttle 涨 ×6.6 与降频同向）。\n\nwait slice 重叠法（核心证据）：throttle 主线程 Sleeping totalMs 3345.7ms，其中 Gfx.WaitForPresentOnGfxThread totalMs 7600.06ms（count=427 与帧数一致，每帧都在等）——waitSliceTotalMs/sleepingMs 口径>100%（691%）是因为 Gfx.WaitForPresentOnGfxThread ⊂ URP.WaitForPresent 父子重叠，用已剥洋葱的 self 值：单次 avg 17.8ms 做微观强度判定，byState.S pctOfOffCpu=89.34% 做宏观归因。\n\n因果链（throttle 一帧的等待因果链）：主线程 PlayerLoop → URP.AfterRendering（占 41%）→ URP.WaitForPresent（单次 3.6ms）→ Gfx.WaitForPresentOnGfxThread（单次 17.8ms）→ 等 GPU 完成 swapchain → GPU 一帧渲染超 16.67ms 预算 → 主线程 Sleeping。URP.AfterRendering 占比从 cur 22.5% 涨到 throttle 41.36%（foldChange 2.501），其中 URP.Submit 40.43%、URP.WaitForPresent 38.12%——渲染等待是 throttle 帧时增量的核心。",
+          "asciiArt": {
+            "title": "主线程三态状态分布 + 因果链",
+            "content": "Run/Sleep/Runnable 三态对照（UnityMain）\n  base       ███████████████████████████████░░░    Run 86.94% / Sleep 12.04% / Runnable 0.62%\n  cur        ██████████████████████████░░░░░░      Run 77.82% / Sleep 20.40% / Runnable 1.38%\n  throttle   ███████████████████░░░░░░░░░░░        Run 56.99% / Sleep 38.99% / Runnable 2.83%\n  ─────────────────────────────────────────\n  ↑ Run 单调下降 / Sleep 单调上升 / Runnable 涨 ×4.6（降频排队）\n\nthrottle 一帧等待因果链\n  UnityMain PlayerLoop\n    └─ URP.AfterRendering (占 41%, foldChange ×2.5)\n       ├─ URP.Submit 40.43%\n       └─ URP.WaitForPresent 38.12%\n          └─ Gfx.WaitForPresentOnGfxThread (单次 17.8ms > vsync 16.66ms)\n             └─ 等 GPU 完成 swapchain ← GPU 一帧渲染超预算\n  ↑ 主线程 Sleeping 增量几乎 100% 来自这条链",
+            "caption": "Sleep 增量几乎 100% 是等 GPU；因果链从主线程发起渲染 → 等 swapchain → GPU。"
+          },
+          "severity": "critical"
+        }
+      ]
+    },
+    {
+      "heading": "§4 降频时序",
+      "intro": "三态降频信号对照：base/cur bigCoreReach 74-76%（弱信号），throttle 跌到 59.2%（严重低频）——形态是'压测持续后 SoC 主动压频压温度'。判定档位 likely（缺 thermal sidecar 无法升到 confirmed）。",
+      "items": [
+        {
+          "findingIds": ["freq.throttle.bigcore"],
+          "title": "per-CPU + 形态 ASCII + 判定矩阵",
+          "narrative": "三份对照表：(1) big 核 cpu7 reach% 73.7%→77%→61.4%，throttle 跌幅最大；(2) 中核 cpu4-6 observed max MHz 2419→2342→2227（cpuinfo 上限 2419），throttle 主动压频；(3) 主线程 run% 86.94%→77.82%→56.99% 单调下降，与降频趋势同向（频率被压→主线程更多时间在等→running 下降 sleep 上升）。p50 从 16.69→30.15→45.94ms，p99 从 21.37→42.54→66.32ms——降频与帧时退化同向。\n\n形态识别：base/cur bigCoreReach 74-76%（弱信号，负载-频率背离但未严重），throttle 跌到 59.2%（严重低频）——形态是'压测持续后 SoC 主动压频压温度'。R+（被抢占）从 base 0.42% 涨到 throttle 2.78%（×6.6），与降频期间大核频率不足、任务排队增多一致，是弱辅助信号。\n\n判定矩阵：bigCoreReach 三态单调下降 + 中核 max 被压 = likely 档降频；缺 thermal sidecar（thermal_before/after.txt 实际不存在），无法用温度 Δ≥5°C 做第二信号确认，停在 likely 档，confidence 降到 medium。降频是 SoC 热保护行为，根因是持续高负载导致温度累积——降低整体 CPU/GPU 负载是治本。",
+          "asciiArt": {
+            "title": "bigCoreReach 三态 + 中核 max 频率对照",
+            "content": "big 核 cpu7 reach% 三态对照\n  base      ██████████████████████████████░░░░        73.7%\n  cur       ████████████████████████████████░░        77.0%\n  throttle  ████████████████████░░░░░░░░░░░░░░        61.4%  ← 跌破 65% 严重低频线\n\n中核 cpu4-6 observed max MHz（cpuinfo 上限 2419MHz 虚线）\n  base      ████████████████████████████████          2419.2  (达上限)\n  cur       ██████████████████████████████░          2342.4  (略低)\n  throttle  ████████████████████████░░░░░░░           2227.2  ← 主动压频\n  ─────────────────────────────────────────\n  cpuinfo_max 2419.2 MHz (虚线)\n\nper-CPU 实测（throttle 态）\n  cpu7  (big)   avg 1744 MHz / max 2841.6 MHz / reach 61.4%\n  cpu4  (mid)   avg 1268.6 MHz / max 2227.2 MHz / reach 57% (vs cpuinfo 2419.2 = 52.4%)\n  cluster: small 67.9% / mid 57% / big 61.4%",
+            "caption": "降频信号同向：bigCoreReach 三态单调下降 + 中核 max 频率被压，构成 likely 档降频判定。"
+          },
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "heading": "§5 主线程一帧时间去向",
+      "intro": "cur 态 PlayerLoop p50=30.15ms（超预算 81%），Core.Update 占 24.11% 是稳态业务大头。下钻 Core.Update 子树：LuaMgr 12.51% + MapManager 9.54%（含行军线管理 5.19%，cur→throttle 涨 ×1.37）。",
+      "items": [
+        {
+          "findingIds": ["script.core.update.hotpath"],
+          "title": "PlayerLoop 帧分位数对比 + callTree 缩进树 + Top 模块下钻 + 红线清单",
+          "narrative": "PlayerLoop 帧分位数对比表（三态）：base p50 16.69 / p95 ~18 / p99 21.37 / fps 59.8 / 帧数 683；cur p50 30.15 / p95 ~36 / p99 42.54 / fps 33.1 / 帧数 483 / slowFrameRate 11.18%；throttle p50 45.94 / p95 ~58 / p99 66.32 / fps 21.4 / 帧数 427 / slowFrameRate 98.83%。\n\n主线程 callTree 缩进树（cur 态 Core.Update 子树，├─/└─ + [ms/帧] + 涨幅% + 严重程度标注）：\n  Core.Update  cur 7.32ms/帧 (占 p50 24.11%, 🔴 红线)  throttle 8.05ms/帧\n  ├─ CS:AOE.LuaMgr  cur 3.80ms/帧 (12.51%, 🔴 红线)  throttle 3.47ms/帧\n  │  ├─ LuaMgr.OnTick&UpdateSchedule  cur 3.74ms/帧 (12.34%)\n  │  │  ├─ BattleHeadMgr.OnUpdate  cur 1.51ms/帧 (4.92%, 🟡 临近红线)\n  │  │  └─ MapSignificanceMgr  cur 1.30ms/帧 (3.99%, 🟡)\n  │  │     └─ ProcessTasks → ProcessTask_MapObjRefresh 0.66ms/帧 (2.06%)\n  └─ CS:AOE.Outside.MapManager  cur 2.90ms/帧 (9.54%, 🔴 红线)  throttle 3.99ms/帧\n     ├─ OutSideViewArmyLineMgr  cur 1.575ms/帧 (5.19%, 🟡, cur→throttle 涨 ×1.37)\n     ├─ BattleUIManager  cur 0.72ms/帧 (2.38%)\n     └─ MapEntityEffectMgr  cur 0.24ms/帧 (0.79%)\n\nTop 红线热点子函数下钻：\n  (1) Core.Update（父统筹）：7.32ms/帧，子树大头 LuaMgr 12.51% + MapManager 9.54%，子节点无单一绝对大头（LuaMgr 3.8 + MapManager 2.9 各占近半），统筹在父模块，hotspot 列前 2 个子节点。\n  (2) OutSideViewArmyLineMgr（行军线管理）：cur 1.575ms/帧（5.19%），cur→throttle 涨 ×1.37（+0.865ms/帧）——是唯一涨幅显著的业务模块；该节点是叶子（无子 marker），但 queryCallTreeSubtree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)（count=57820，totalMs 206.86），顶点计算是子任务之一。优化方向：看 OutSideViewArmyLineMgr 的实现判断是顶点计算、线段更新还是渲染提交在贵。\n  (3) MapSignificanceMgr.ProcessTasks：cur 1.30ms/帧（3.99%），已钻到 ProcessTask_MapObjRefresh（count=2379，avgMs 0.127，总 2.06%）——每帧调用 4.9 次（2379/483），刷新地图对象的频率可评估是否过高。\n  (4) BattleHeadMgr.OnUpdate：cur 1.51ms/帧（4.92%），含 BattleHead.Init/LoadUI（316次，可能是战斗初始化阶段），需确认是否在战斗中重复初始化。\n\n红线触发清单（按 cur ms/帧排序，子树归并原则：父子不同时列）：\n  | 模块 | cur ms/帧 | 占 p50% | 红线类型 | hotspot |\n  | Core.Update（统筹） | 7.32 | 24.11% | 涨幅显著 占比超 5% | LuaMgr 12.51% + MapManager 9.54% |\n  | CS:AOE.LuaMgr（大头拆出） | 3.80 | 12.51% | 占比超 5% | OnTick&UpdateSchedule 12.34% |\n  | CS:AOE.Outside.MapManager（大头拆出） | 2.90 | 9.54% | 占比超 5% | OutSideViewArmyLineMgr 5.19% + BattleUIManager 2.38% |\n  | OutSideViewArmyLineMgr | 1.575 | 5.19% | cur→throttle 涨 ×1.37 | 叶子无子 marker（建议加） |\n  | BattleHeadMgr.OnUpdate | 1.51 | 4.92% | 临近红线 | Init/LoadUI 316次 |\n  | MapSignificanceMgr.ProcessTasks | 1.30 | 3.99% | 临近红线 | ProcessTask_MapObjRefresh 2.06% |\n\n慢帧形态差异：cur p95-p50 ≈ 6ms（匀慢型，业务负载稳定，尖峰不显著）；throttle p95-p50 ≈ 12ms（尖峰型，GPU 等待 + 降频叠加导致偶发更慢帧）。",
+          "callTree": {
+            "rootMarker": "Core.Update",
+            "note": "cur 7.32ms/帧（24.11%）；子树：LuaMgr 3.80ms（12.51%）+ MapManager 2.90ms（9.54%，含行军线管理 1.575ms 涨 ×1.37）。"
+          },
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "heading": "§6 GPU-bound 判定矩阵",
+      "intro": "多信号同向判定 GPU-bound：wait slice 重叠 + Render 线程变闲 + Choreographer 稳定 + binder 低 + 无 ECS/LuaMtGC 干扰。诚实声明：无 GPU busy/freq counter，'GPU 100% 满载'硬证给不出，停在间接强信号档。",
+      "items": [
+        {
+          "findingIds": ["gpu.bound.wait.slice"],
+          "title": "Gfx.WaitForPresent 单次 avg 演化 + Render/RHI 顶层辅证 + 判定矩阵 + 结论",
+          "narrative": "Gfx.WaitForPresent 单次 avg 演化表（三态 + vsync 周期对照）：base 0.905ms / cur 5.834ms（×6.4 vs base）/ throttle 17.799ms（×2.7 vs cur / ×19.6 vs base）；vsync 周期 16.66ms（60Hz）。throttle 单次 wait 已超过 vsync 周期，说明 GPU 一帧渲染时间超预算。\n\nRHI/Render 顶层辅证（UnityGfxRenderS 三态 run/sleep 演化）：base run 25.98% / sleep 70.32%；cur run 22.3% / sleep ~75%；throttle run 16.71% / sleep 79.85%——running 三态单调下降，throttle 最闲，说明 CPU 渲染命令录制不是瓶颈，GPU 在拖。\n\nGPU bound 判定矩阵（多信号同向）：\n  | 信号 | 判定 | evidence |\n  | wait slice 重叠 | 强信号 | Gfx.WaitForPresentOnGfxThread 单次 17.8ms > vsync 16.66ms，count=427 与帧数一致（每帧都在等） |\n  | Render 线程变闲 | 强信号 | UnityGfxRenderS running 三态 25.98%→22.3%→16.71% 单调下降，throttle 最闲 |\n  | Choreographer 稳定 | 排除显示侧 | 三态都稳在 60.1fps、slowFrameRate=0 |\n  | binder 低 | 排除 IPC | byState D 状态仅占 off-CPU 的 1.3% |\n  | ECS 均衡 | 无干扰 | 本次无独立 ECS Worker 线程 |\n\n判定结论：throttle 强 GPU-bound（单次 wait > vsync + Render 线程变闲 + Choreographer 稳定 + binder 低，四信号同向）；cur 中等 GPU-bound（单次 wait 5.8ms < vsync 但已 ×6.4 vs base）；base 健康（单次 wait 0.9ms，GPU 跟得上）。诚实声明：本 trace 无 GPU busy/freq counter，'GPU 100% 满载'的硬结论给不出，只能停在间接强信号档——但四信号同向已构成强 GPU-bound 判定。URP.AfterRendering 占 41% 是渲染等待的集中点，但该节点是叶子（无子 marker），需要看 URP AfterRendering 的具体 Pass 配置才能给更细建议（是 PostProcessing、Blit 还是 FinalBlit 在贵）。",
+          "asciiArt": {
+            "title": "Gfx.WaitForPresent 单次 avg 演化 + Render 线程三态对照",
+            "content": "Gfx.WaitForPresent 单次 avg 演化（ms）\n  base      █                                            0.905 ms\n  cur       █████                                         5.834 ms  (×6.4 vs base)\n  throttle █████████████████                            17.799 ms (×2.7 vs cur / ×19.6 vs base)\n  vsync线   ██                                            16.66 ms (60Hz 周期)\n  ─────────────────────────────────────────\n  ↑ throttle 单次 wait 已超过 vsync 周期 = GPU 一帧渲染超预算\n\nUnityGfxRenderS running% 三态对照（CPU 渲染命令录制层）\n  base      ████████████████████████████░░░░░           25.98%\n  cur       ██████████████████████████░░░░░░░           22.30%\n  throttle  ██████████████████░░░░░░░░░░░░░░░           16.71%  ← 最闲\n  ─────────────────────────────────────────\n  ↑ running 三态单调下降 = CPU 渲染命令录制不是瓶颈，GPU 在拖",
+            "caption": "GPU bound 判定矩阵：wait slice + Render 变闲 + Choreographer 稳定 + binder 低，四信号同向。"
+          },
+          "severity": "critical"
+        }
+      ]
+    },
+    {
+      "heading": "§7 ROI 优化方向",
+      "intro": "按 severity + 贡献排序的优化方向列表。每条基于代码/数据推理，不许套话。优化方向要具体（不是'建议优化'，是具体到模块/子函数/优化手法）。",
+      "items": [
+        {
+          "findingIds": ["gpu.bound.wait.slice"],
+          "title": "P0：降低 GPU 负载（throttle 态第一主因，单次 wait 17.8ms 超 vsync）",
+          "narrative": "throttle 态单次 Gfx.WaitForPresent 17.8ms 远超 vsync 16.66ms，说明 GPU 一帧渲染时间已超 16.67ms 预算。优化方向（基于数据推理，未看渲染源码）：(1) 检查 DrawCall 数量、Shader 复杂度、渲染分辨率（AOE3D 移动端默认 900p，可考虑降档）、overdraw；(2) URP.AfterRendering 占 41% 是渲染等待集中点，但该节点是叶子无子 marker，需看 URP AfterRendering 的具体 Pass 配置——是 PostProcessing、Blit 还是 FinalBlit 在贵；(3) base 态 URP.Render 已占 36% 但 GPU 跟得上（wait 仅 0.9ms），说明渲染负载本身就不轻，cur/throttle 场景加了战斗/行军实体后 GPU 负载溢出——需要看战斗场景的渲染对象增量（部队模型、特效、行军线）才能给具体优化点。",
+          "recommendations": [
+            "检查 DrawCall 数量、Shader 复杂度、渲染分辨率（AOE3D 移动端默认 900p，可考虑降档）、overdraw",
+            "看 URP AfterRendering 的具体 Pass 配置——是 PostProcessing、Blit 还是 FinalBlit 在贵",
+            "看战斗场景的渲染对象增量（部队模型、特效、行军线），定位 cur/throttle 场景 GPU 负载溢出来源"
+          ],
+          "severity": "critical"
+        },
+        {
+          "findingIds": ["freq.throttle.bigcore"],
+          "title": "P1：降低整体 CPU/GPU 负载以避免 SoC 降频（降频是热保护，治本是降负载）",
+          "narrative": "降频是 SoC 热保护行为，根因是持续高负载导致温度累积。治本：(1) 降低整体 CPU/GPU 负载（见 P0 GPU 优化和 P2 业务脚本优化），把帧时压回预算内温度就不会触发降频；(2) 如需确认降频，下次采集补 thermal_before/after.txt 和 scaling_max_freq（需 root），把判定从 likely 升到 confirmed；(3) 中核 max-freq 被压到 2227MHz（cpuinfo 2419MHz）说明 SoC 热管理已介入中核集群，不只是大核——优化时不能只盯大核负载，中核集群的 ECS/Job 调度也要均衡。",
+          "recommendations": [
+            "降低整体 CPU/GPU 负载（见 P0/P2），把帧时压回预算内温度就不会触发降频",
+            "下次采集补 thermal_before/after.txt 和 scaling_max_freq（需 root），把降频判定从 likely 升到 confirmed",
+            "中核集群的 ECS/Job 调度也要均衡——SoC 热管理已介入中核（max 被压到 2227MHz），不只大核"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["script.core.update.hotpath"],
+          "title": "P2：业务脚本 Core.Update 稳态占 24%——行军线管理/LuaMgr/MapManager 下钻",
+          "narrative": "Core.Update 24.11% 是稳态业务大头（每帧都在的常驻税）。优化方向（基于 callTree 数据，未看 Lua 源码）：(1) OutSideViewArmyLineMgr 是 cur→throttle 唯一涨幅显著的业务模块（×1.37），行军线管理在 throttle 态更贵——该节点是叶子（无子 marker），需要看 OutSideViewArmyLineMgr 的实现判断是顶点计算、线段更新还是渲染提交在贵；queryCallTreeSubtree 显示它调用 OutsideLineCtrl:CalculateVertexJob (Burst)（count=57820，totalMs 206.86），顶点计算是子任务之一。(2) MapSignificanceMgr.ProcessTasks 已钻到 ProcessTask_MapObjRefresh（count=2379，avgMs 0.127，总 2.06%）——每帧调用 4.9 次（2379/483），刷新地图对象的频率可评估是否过高。(3) LuaMgr.OnTick&UpdateSchedule 12.5% 是所有 Lua 业务的调度层，本身开销可能不大但子模块多——建议给 LuaMgr 的子业务模块加更细的 Profiler marker，目前 MapSignificanceMgr/BattleHeadMgr 有 marker，但 OutSideViewArmyLineMgr/BattleUIManager 等是叶子无法拆分。(4) BattleHeadMgr.OnUpdate 4.92% 含 BattleHead.Init/LoadUI（316次，可能是战斗初始化阶段），需确认是否在战斗中重复初始化。",
+          "recommendations": [
+            "OutSideViewArmyLineMgr：看实现判断是顶点计算、线段更新还是渲染提交在贵；OutsideLineCtrl:CalculateVertexJob (Burst) 是子任务之一（count=57820）",
+            "MapSignificanceMgr.ProcessTasks：每帧调用 4.9 次 ProcessTask_MapObjRefresh（2379/483），评估刷新频率是否过高",
+            "LuaMgr.OnTick&UpdateSchedule：给子业务模块加更细的 Profiler marker（OutSideViewArmyLineMgr/BattleUIManager 目前是叶子无法拆分）",
+            "BattleHeadMgr.OnUpdate：含 Init/LoadUI 316次，确认是否在战斗中重复初始化"
+          ],
+          "severity": "high"
+        },
+        {
+          "findingIds": ["gc.alloc.render.heavy"],
+          "title": "P3：GC 预防性优化（当前非主因，但可预防）",
+          "narrative": "GC 不是当前主瓶颈，但可预防性优化：(1) 渲染层分配（URP.BeforeRendering/Inl_OpaquePass）是 Unity 引擎内部，业务侧难优化，升级 Unity 版本或调整 URP 配置可能改善；(2) 业务侧 MeshUIManager 61/帧、TimeText.7 24/帧可排查是否有不必要的每帧分配（如字符串拼接、临时 List），但需看源码；(3) GC.Collect 虽罕见但 throttle 单次 32.9ms 是实打实的卡顿尖峰，可考虑设置 GC.latencyMode=LatencyMode.LowLatency 减少同步 GC 触发；(4) 本次 trace 无 per-marker 的 GC 字节数（只有次数），无法判断哪个模块分配字节最多。",
+          "recommendations": [
+            "业务侧 MeshUIManager 61/帧、TimeText.7 24/帧：排查是否有不必要的每帧分配（字符串拼接、临时 List）",
+            "GC.Collect throttle 单次 32.9ms 是卡顿尖峰：可考虑设置 GC.latencyMode=LatencyMode.LowLatency 减少同步 GC 触发",
+            "渲染层分配（URP.BeforeRendering/Inl_OpaquePass）是 Unity 引擎内部：升级 Unity 版本或调整 URP 配置可能改善",
+            "下次采集补 per-marker GC 字节数（本次只有次数，无法判断哪个模块分配字节最多）"
+          ],
+          "severity": "medium"
+        },
+        {
+          "findingIds": ["thread.coverage.summary"],
+          "title": "P4：下次采集补全线程覆盖（ECS/LuaMtGC/RHI）",
+          "narrative": "无线程瓶颈需要优化，但本次采集有线程覆盖缺口，影响后续判定。建议下次采集：(1) 确认 ECS Job 是否在主线程同步执行——如果是，ECS 的并行优势没发挥，可优化 Job Scheduler 配置；(2) 补 LuaMtGC marker 采集——AOE3D 用 xLua，Lua GC 可能是隐藏卡顿源，本次看不到；(3) 补 RHI Thread 采集——区分 Render 命令录制和 RHI driver 调用，能更精确定位渲染瓶颈在 CPU 侧还是 GPU 侧。",
+          "recommendations": [
+            "确认 ECS Job 是否在主线程同步执行——如果是，ECS 的并行优势没发挥，可优化 Job Scheduler 配置",
+            "补 LuaMtGC marker 采集——AOE3D 用 xLua，Lua GC 可能是隐藏卡顿源，本次看不到",
+            "补 RHI Thread 采集——区分 Render 命令录制和 RHI driver 调用，精确定位渲染瓶颈在 CPU 侧还是 GPU 侧"
+          ],
+          "severity": "info"
+        }
+      ]
+    }
+  ],
+
+  "prioritySummary": [
+    {"priority": "P0", "action": "降低 GPU 负载：检查 DrawCall/Shader/分辨率/overdraw + URP AfterRendering Pass 配置 + 战斗场景渲染对象增量", "benefit": "throttle 态第一主因（单次 wait 17.8ms 超 vsync），治本可把帧率从 21fps 拉回"},
+    {"priority": "P1", "action": "降低整体负载避免 SoC 降频 + 下次补 thermal sidecar 确认降频 + 中核集群 ECS/Job 调度均衡", "benefit": "降频是热保护，治本是降负载；当前 likely 档，补温度可升 confirmed"},
+    {"priority": "P2", "action": "业务脚本 Core.Update 下钻：OutSideViewArmyLineMgr 顶点计算/线段更新 + MapSignificanceMgr 刷新频率 + LuaMgr 子模块加 marker + BattleHeadMgr 重复初始化", "benefit": "稳态业务大头 24%，每帧都在的常驻税；行军线管理是 cur→throttle 唯一涨幅显著业务模块"},
+    {"priority": "P3", "action": "GC 预防性优化：MeshUIManager/TimeText 每帧分配排查 + GC.latencyMode=LowLatency + 下次补 per-marker GC 字节数", "benefit": "当前非主因（罕见尖峰），但 throttle 单次 32.9ms 是实打实卡顿"},
+    {"priority": "P4", "action": "下次采集补 ECS Job/LuaMtGC/RHI Thread 覆盖", "benefit": "本次有线程覆盖缺口，影响后续判定"}
+  ],
+
+  "metaInfo": [
+    {"label": "采集状态", "value": "base（空场景基准）→ cur（战斗/行军压测）→ throttle（持续压测后 SoC 热保护）"},
+    {"label": "采集窗口", "value": "11.4s → 14.7s → 19.9s"},
+    {"label": "帧数", "value": "683 → 483 → 427"},
+    {"label": "fps", "value": "59.8 → 33.1 → 21.4"},
+    {"label": "p50", "value": "16.69 → 30.15 → 45.94 ms"},
+    {"label": "p95", "value": "~18 → ~36 → ~58 ms"},
+    {"label": "p99", "value": "21.37 → 42.54 → 66.32 ms"},
+    {"label": "slowFrameRate", "value": "0% → 11.18% → 98.83%"},
+    {"label": "Choreographer fps", "value": "60.1 → 60.1 → 60.1（三态稳定，排除显示侧）"},
+    {"label": "帧预算", "value": "16.67 ms（60 FPS）"},
+    {"label": "超预算帧比例", "value": "throttle 98.83% 帧超预算"},
+    {"label": "主线程 Sleeping%", "value": "12.04% → 20.40% → 38.99%"},
+    {"label": "Gfx.WaitForPresent 单次 avg", "value": "0.905 → 5.834 → 17.799 ms（throttle 超 vsync 16.66ms）"},
+    {"label": "bigCoreReach%", "value": "74.9% → 75.6% → 59.2%（throttle 跌破 65% 严重低频线）"},
+    {"label": "中核 max MHz", "value": "2419.2 → 2342.4 → 2227.2（cpuinfo 上限 2419.2）"},
+    {"label": "Core.Update 占 p50%", "value": "base 10.3% → cur 24.11% → throttle ~24%"},
+    {"label": "GC.Collect 次数", "value": "cur 3 次/483 帧（0.6%）→ throttle 1 次/427 帧（0.23%）"}
+  ],
+
+  "threadOverview": [
+    {"thread": "UnityMain", "runPct": "86.94% → 77.82% → 56.99%", "sleepPct": "12.04% → 20.40% → 38.99%", "runnablePct": "0.62% → 1.38% → 2.83%", "feature": "PlayerLoop / Core.Update / Gfx.WaitForPresent / URP.AfterRendering", "note": "主线程，业务/Lua/ECS 调度主入口；throttle 态变闲是因为在等 GPU（Sleep 增量几乎 100% 是等 GPU）"},
+    {"thread": "UnityGfxRenderS", "runPct": "25.98% → 22.3% → 16.71%", "sleepPct": "70.32% → ~75% → 79.85%", "runnablePct": "~1% → ~1.5% → ~2%", "feature": "URP.Submit / URP.WaitForPresent / Gfx.WaitForPresentOnGfxThread", "note": "Unity 渲染命令录制层；running 三态单调下降，throttle 最闲——CPU 渲染命令录制不是瓶颈，GPU 在拖"},
+    {"thread": "AAudio_1", "runPct": "— / — / 3.84%", "sleepPct": "— / — / 94.59%", "runnablePct": "— / — / 低", "feature": "Audio（throttle 才出现）", "note": "音频线程，非瓶颈（Sleep ≥94%）；base/cur 采集窗口短未采集到，是窗口差异不是状态差异"},
+    {"thread": "AudioTrack", "runPct": "— / — / 0.42%", "sleepPct": "— / — / 99.11%", "runnablePct": "— / — / 低", "feature": "Audio（throttle 才出现）", "note": "音频线程，非瓶颈（Sleep ≥99%）"},
+    {"thread": "Audio Mixer Thr", "runPct": "— / — / 0.37%", "sleepPct": "— / — / 99.38%", "runnablePct": "— / — / 低", "feature": "Audio（throttle 才出现）", "note": "音频混音线程，非瓶颈（Sleep ≥99%）"},
+    {"thread": "Audio Stream Thr", "runPct": "— / — / 0.23%", "sleepPct": "— / — / 99.49%", "runnablePct": "— / — / 低", "feature": "Audio（throttle 才出现）", "note": "音频流线程，非瓶颈（Sleep ≥99%）"},
+    {"thread": "GVoiceRender", "runPct": "— / — / 0.2%", "sleepPct": "— / — / 99.62%", "runnablePct": "— / — / 低", "feature": "Audio（throttle 才出现）", "note": "语音渲染线程，非瓶颈（Sleep ≥99%）"},
+    {"thread": "AsyncWorker", "runPct": "— / — / 0.05%", "sleepPct": "— / — / 99.88%", "runnablePct": "— / — / 低", "feature": "异步任务（throttle 才出现）", "note": "异步工作线程，几乎不工作，非瓶颈"}
+  ],
+
+  "throttlingMatrix": [
+    {"signal": "big 核 cpu7 reach% 三态单调下降（73.7%→77%→61.4%）", "level": "likely", "evidence": "throttle 跌破 65% 严重低频线（DR-42 单态阈值 <65%），降频形态明显"},
+    {"signal": "中核 cpu4-6 observed max MHz 被压（2419→2342→2227）", "level": "likely", "evidence": "observed max 低于 cpuinfo max 2419MHz 是 SoC 主动压低 max-freq 的间接证据（非 root 看不到 scaling_max_freq，但 max 下降是 same signal）"},
+    {"signal": "bigCoreReach 三态 74.9%→75.6%→59.2% 单调下降", "level": "likely", "evidence": "throttle 跌到 59.2% 严重低频，与主线程 Sleep 暴涨同向"},
+    {"signal": "主线程 runningPct 三态 86.94%→77.82%→56.99% 单调下降", "level": "弱辅助", "evidence": "频率被压→主线程更多时间在等→running 下降 sleep 上升，与降频趋势同向"},
+    {"signal": "R+（被抢占）从 base 0.42% 涨到 throttle 2.78%（×6.6）", "level": "弱辅助", "evidence": "降频期间大核频率不足、任务排队增多一致"},
+    {"signal": "温度 Δ", "level": "缺失", "evidence": "thermal_before/after.txt 实际不存在，无法用温度 Δ≥5°C 或采后≥75°C 做第二信号确认，停在 likely 档无法升 confirmed"}
+  ],
+
+  "redlineMatrix": [
+    {"module": "Core.Update（统筹）", "perFrameMs": "7.32 ms/帧（cur）", "redlineType": "占比超 5% 红线（24.11%）", "hotspot": "LuaMgr 12.51% + MapManager 9.54%（子节点无单一绝对大头，统筹在父）"},
+    {"module": "CS:AOE.LuaMgr（大头拆出）", "perFrameMs": "3.80 ms/帧（cur）", "redlineType": "占比超 5% 红线（12.51%）", "hotspot": "OnTick&UpdateSchedule 12.34%（MapSignificanceMgr 3.99% + BattleHeadMgr 4.92%）"},
+    {"module": "CS:AOE.Outside.MapManager（大头拆出）", "perFrameMs": "2.90 ms/帧（cur）", "redlineType": "占比超 5% 红线（9.54%）", "hotspot": "OutSideViewArmyLineMgr 5.19% + BattleUIManager 2.38%"},
+    {"module": "OutSideViewArmyLineMgr", "perFrameMs": "1.575 ms/帧（cur）→ 2.44 ms/帧（throttle）", "redlineType": "cur→throttle 涨 ×1.37（+0.865ms/帧）", "hotspot": "叶子无子 marker（建议加）；调用 OutsideLineCtrl:CalculateVertexJob (Burst) count=57820"},
+    {"module": "BattleHeadMgr.OnUpdate", "perFrameMs": "1.51 ms/帧（cur）", "redlineType": "临近红线（4.92%）", "hotspot": "含 Init/LoadUI 316次，可能是战斗初始化阶段，需确认是否重复初始化"},
+    {"module": "MapSignificanceMgr.ProcessTasks", "perFrameMs": "1.30 ms/帧（cur）", "redlineType": "临近红线（3.99%）", "hotspot": "ProcessTask_MapObjRefresh 2.06%（count=2379，每帧调用 4.9 次）"},
+    {"module": "URP.AfterRendering（throttle 渲染等待集中点）", "perFrameMs": "占 throttle 41.36%（foldChange ×2.5）", "redlineType": "涨幅显著（cur 22.5% → throttle 41.36%）", "hotspot": "叶子无子 marker（URP.Submit 40.43% + URP.WaitForPresent 38.12%）；需看 URP Pass 配置"}
+  ],
+
+  "asciiArt": [
+    {
+      "title": "主线程三态状态分布 + Gfx.WaitForPresent 单次 avg 演化",
+      "content": "Run/Sleep 三态对照（UnityMain）\n  base       ███████████████████████████████░░░    Run 86.94% / Sleep 12.04%\n  cur        ██████████████████████████░░░░░░      Run 77.82% / Sleep 20.40%\n  throttle   ███████████████████░░░░░░░░░░░        Run 56.99% / Sleep 38.99%\n\nGfx.WaitForPresent 单次 avg 演化（ms）\n  base      █                                            0.905 ms\n  cur       █████                                         5.834 ms  (×6.4 vs base)\n  throttle █████████████████                            17.799 ms (×2.7 vs cur / ×19.6 vs base)\n  vsync线   ██                                            16.66 ms (60Hz 周期)\n  ─────────────────────────────────────────\n  ↑ throttle 单次 wait 已超过 vsync 周期 = GPU 一帧渲染超预算",
+      "caption": "Sleep 增量几乎 100% 是等 GPU；单次 wait 从 base 0.9ms 涨到 throttle 17.8ms，已超过 60Hz vsync 周期 16.66ms。"
+    },
+    {
+      "title": "bigCoreReach 三态 + 中核 max 频率对照",
+      "content": "big 核 cpu7 reach% 三态对照\n  base      ██████████████████████████████░░░░        73.7%\n  cur       ████████████████████████████████░░        77.0%\n  throttle  ████████████████████░░░░░░░░░░░░░░        61.4%  ← 跌破 65% 严重低频线\n\n中核 cpu4-6 observed max MHz（cpuinfo 上限 2419MHz 虚线）\n  base      ████████████████████████████████          2419.2  (达上限)\n  cur       ██████████████████████████████░          2342.4  (略低)\n  throttle  ████████████████████████░░░░░░░           2227.2  ← 主动压频\n  ─────────────────────────────────────────\n  cpuinfo_max 2419.2 MHz (虚线)",
+      "caption": "降频信号同向：bigCoreReach 三态单调下降 + 中核 max 频率被压，构成 likely 档降频判定（缺 thermal sidecar，未升到 confirmed）。"
+    },
+    {
+      "title": "主线程三态状态分布 + 因果链",
+      "content": "Run/Sleep/Runnable 三态对照（UnityMain）\n  base       ███████████████████████████████░░░    Run 86.94% / Sleep 12.04% / Runnable 0.62%\n  cur        ██████████████████████████░░░░░░      Run 77.82% / Sleep 20.40% / Runnable 1.38%\n  throttle   ███████████████████░░░░░░░░░░░        Run 56.99% / Sleep 38.99% / Runnable 2.83%\n  ─────────────────────────────────────────\n  ↑ Run 单调下降 / Sleep 单调上升 / Runnable 涨 ×4.6（降频排队）\n\nthrottle 一帧等待因果链\n  UnityMain PlayerLoop\n    └─ URP.AfterRendering (占 41%, foldChange ×2.5)\n       ├─ URP.Submit 40.43%\n       └─ URP.WaitForPresent 38.12%\n          └─ Gfx.WaitForPresentOnGfxThread (单次 17.8ms > vsync 16.66ms)\n             └─ 等 GPU 完成 swapchain ← GPU 一帧渲染超预算\n  ↑ 主线程 Sleeping 增量几乎 100% 来自这条链",
+      "caption": "Sleep 增量几乎 100% 是等 GPU；因果链从主线程发起渲染 → 等 swapchain → GPU。"
+    },
+    {
+      "title": "Gfx.WaitForPresent 单次 avg 演化 + Render 线程三态对照",
+      "content": "Gfx.WaitForPresent 单次 avg 演化（ms）\n  base      █                                            0.905 ms\n  cur       █████                                         5.834 ms  (×6.4 vs base)\n  throttle █████████████████                            17.799 ms (×2.7 vs cur / ×19.6 vs base)\n  vsync线   ██                                            16.66 ms (60Hz 周期)\n  ─────────────────────────────────────────\n  ↑ throttle 单次 wait 已超过 vsync 周期 = GPU 一帧渲染超预算\n\nUnityGfxRenderS running% 三态对照（CPU 渲染命令录制层）\n  base      ████████████████████████████░░░░░           25.98%\n  cur       ██████████████████████████░░░░░░░           22.30%\n  throttle  ██████████████████░░░░░░░░░░░░░░░           16.71%  ← 最闲\n  ─────────────────────────────────────────\n  ↑ running 三态单调下降 = CPU 渲染命令录制不是瓶颈，GPU 在拖",
+      "caption": "GPU bound 判定矩阵：wait slice + Render 变闲 + Choreographer 稳定 + binder 低，四信号同向。"
+    }
+  ],
+
+  "narrativeProvenance": {
+    "stage": "narrative-llm",
+    "promptVersion": "narrative-prompt.txt@v1",
+    "generatedBy": "LLM"
+  }
+}

@@ -4,11 +4,15 @@ import fs from 'fs';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { v4 as uuid } from 'uuid';
+import { fileURLToPath } from 'url';
 import { assetService } from './asset-service.js';
 import { saveRun, getRun } from './run-store.js';
 import { getConfig } from '../utils/config.js';
 import type { DeviceTier, FrameStat, Metric, PerfProfile, Run, SourceId, SystemStat, ThreadStat } from '../../shared/perf-model.js';
 import { DEFAULT_TARGET_FPS } from './unity-preprocess-runner.js';
+
+const __filename_ingest = fileURLToPath(import.meta.url);
+const __dirname_ingest = path.dirname(__filename_ingest);
 
 export interface IngestMeta {
   runId?: string;
@@ -164,6 +168,83 @@ function seedProfileArtifacts(
 /** @deprecated 使用 seedProfileArtifacts */
 function seedPreprocessArtifacts(workDir: string, runId: string): void {
   seedProfileArtifacts(workDir, runId, 'unity_profiler');
+}
+
+/**
+ * 构建 Prism 索引 (帧索引 + 计数器索引)。
+ * 入库时调用, 让 explore 阶段的工具能直接查 prism.sqlite。
+ *
+ * - build-frame-index: .pdata → prism_frame_marker_samples (全量 marker, 无过滤)
+ * - build-counters-index: .counters.json → prism_frame_counters (draw calls/GC alloc/内存等)
+ *
+ * 失败不阻断入库 (Run 仍然可用, 只是 Prism 分析时需手动补建)。
+ */
+function buildPrismIndexes(runId: string, pdataPath: string, onLog?: (line: string) => void): void {
+  const prismDir = path.join(__dirname_ingest, '..', 'prism');
+  const webDir = path.join(__dirname_ingest, '..', '..');
+
+  // 0. 清空 prism.sqlite（防止旧 run 的残留数据污染当前分析）
+  //    prism.sqlite 是单次分析用的共享数据库，每次索引只应包含当前 run 的数据
+  const dbPath = path.join(webDir, 'data', 'prism.sqlite');
+  try {
+    if (fs.existsSync(dbPath)) {
+      fs.unlinkSync(dbPath);
+      // 同时删除 WAL 和 SHM 文件
+      for (const suffix of ['-wal', '-shm']) {
+        const walPath = dbPath + suffix;
+        if (fs.existsSync(walPath)) fs.unlinkSync(walPath);
+      }
+      onLog?.(`[prism-index] 已清空旧的 prism.sqlite`);
+    }
+  } catch (e: any) {
+    onLog?.(`[prism-index] 清空 prism.sqlite 失败 (继续): ${e.message?.slice(0, 100)}`);
+  }
+
+  // 1. build-frame-index
+  onLog?.(`[prism-index] 构建帧索引 (runId=${runId}, 可能需要数分钟)...`);
+  const frameIndexScript = path.join(prismDir, 'build-frame-index.ts');
+  try {
+    const stdout = execSync(`npx tsx "${frameIndexScript}" --input "${pdataPath}" --run-id "${runId}"`, {
+      cwd: webDir,
+      timeout: 20 * 60 * 1000,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    // 脚本 stdout 输出 JSON summary
+    try {
+      const summary = JSON.parse(stdout.trim().split('\n').pop() || '{}');
+      onLog?.(`[prism-index] 帧索引完成: ${summary.frameCount ?? '?'} 帧, ${summary.sampleRows ?? '?'} 行 marker`);
+    } catch {
+      onLog?.(`[prism-index] 帧索引完成`);
+    }
+  } catch (e: any) {
+    onLog?.(`[prism-index] 帧索引构建失败 (不阻断入库): ${e.message?.slice(0, 200)}`);
+  }
+
+  // 2. build-counters-index (如果 .counters.json 存在)
+  const countersPath = pdataPath.replace(/\.pdata$/i, '.counters.json');
+  if (fs.existsSync(countersPath)) {
+    onLog?.(`[prism-index] 构建计数器索引...`);
+    const countersScript = path.join(prismDir, 'build-counters-index.ts');
+    try {
+      const stdout = execSync(`npx tsx "${countersScript}" --input "${countersPath}" --run-id "${runId}"`, {
+        cwd: webDir,
+        timeout: 5 * 60 * 1000,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      try {
+        const summary = JSON.parse(stdout.trim().split('\n').pop() || '{}');
+        onLog?.(`[prism-index] 计数器索引完成: ${summary.rowsInserted ?? '?'} 帧, 字段: ${(summary.nonNullFields ?? []).join(', ')}`);
+      } catch {
+        onLog?.(`[prism-index] 计数器索引完成`);
+      }
+    } catch (e: any) {
+      onLog?.(`[prism-index] 计数器索引构建失败 (不阻断入库): ${e.message?.slice(0, 200)}`);
+    }
+  } else {
+    onLog?.(`[prism-index] 未找到 .counters.json, 跳过计数器索引`);
+  }
 }
 
 function readProfileJson(profilePath: string): ProfileWithMeta {
@@ -469,6 +550,8 @@ export async function ingestUnifiedFiles(
     const unityDir = path.join(workRoot, 'unity');
     profiles.push(await buildUnityProfile(detected.unity, meta, unityDir, onLog));
     seedProfileArtifacts(unityDir, runId, 'unity_profiler');
+    // ★ 构建 Prism 索引 (帧索引 + 计数器索引)
+    buildPrismIndexes(runId, detected.unity, onLog);
   }
   if (detected.simpleperf) {
     onLog?.('[unified] 构建 simpleperf…');
@@ -511,6 +594,8 @@ export async function buildAndIngestUnity(
   const ingestMeta = { ...meta, runId, targetFps: meta.targetFps ?? DEFAULT_TARGET_FPS };
   const profile = await buildUnityProfile(pdataPath, ingestMeta, workDir, onLog);
   seedPreprocessArtifacts(workDir, runId);
+  // ★ 构建 Prism 索引 (帧索引 + 计数器索引), 让 explore 工具能直接查 prism.sqlite
+  buildPrismIndexes(runId, pdataPath, onLog);
   return ingestProfile(profile, { ...ingestMeta, scene: ingestMeta.scene ?? (profile.meta?.scene as string | undefined) });
 }
 

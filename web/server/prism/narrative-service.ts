@@ -50,6 +50,8 @@ export interface RunPrismNarrativeOpts {
    * 同步语义：runner 必须等 LLM 退出后再 resolve（等价于 child.on('close')）。
    */
   llmRunner?: (promptText: string, ctx: LlmRunnerCtx) => Promise<LlmRunnerResult>;
+  /** 进度回调（实时推送 LLM 事件到 UI） */
+  onProgress?: (msg: string) => void;
 }
 
 /** WT-049: llmRunner 调用上下文，给测试用 mock 检查修复 prompt 内容 */
@@ -85,12 +87,17 @@ const NARRATIVE_CLI_PROVIDERS: Record<string, (prompt: string) => string[]> = {
     '-p',
     '--output-format', 'stream-json',
     '-y',
-    '--allowedTools', 'Read,Write',
+    // ★ 排他限制：只加载 Read+Write 工具定义 + 禁用所有 MCP（省 ~24KB 上下文）
+    '--tools', 'Read,Write',
+    '--mcp-config', '{}',
+    '--strict-mcp-config',
   ],
   claude: (_prompt) => [
     '-p',
     '--output-format', 'stream-json',
-    '--allowedTools', 'Read,Write',
+    '--tools', 'Read,Write',
+    '--mcp-config', '{}',
+    '--strict-mcp-config',
   ],
 };
 
@@ -552,7 +559,7 @@ function runLlmOnce(
   cliCommand: string,
   args: string[],
   promptText: string,
-  ctx: { cwd?: string; env?: NodeJS.ProcessEnv; windowsHide?: boolean; stdio?: 'pipe'; timeoutMs: number; outputDir: string; narrativePath: string },
+  ctx: { cwd?: string; env?: NodeJS.ProcessEnv; windowsHide?: boolean; stdio?: 'pipe'; timeoutMs: number; outputDir: string; narrativePath: string; onProgress?: (msg: string) => void },
   injectedRunner?: RunPrismNarrativeOpts['llmRunner'],
 ): Promise<LlmRunnerResult> {
   if (injectedRunner) {
@@ -567,11 +574,18 @@ function runLlmOnce(
   return new Promise((resolve) => {
     let stdoutBuffer = '';
     let stderrBuffer = '';
+    let settled = false;
+    let gracePollHandle: ReturnType<typeof setInterval> | null = null;
+
     const child = spawnCliProcess(cliCommand, args, {
       cwd: ctx.cwd,
       env: ctx.env ?? process.env,
       windowsHide: ctx.windowsHide ?? true,
       stdio: 'pipe',
+    });
+    child.stdin?.on('error', (e: Error) => {
+      // Prevent unhandled 'error' event crash when CLI exits before stdin write completes
+      console.error(`[narrative] stdin error event: ${e.message}`);
     });
     try {
       child.stdin?.write(promptText);
@@ -579,19 +593,92 @@ function runLlmOnce(
     } catch (e: any) {
       console.error(`[narrative] stdin write failed: ${e?.message || e}`);
     }
+
+    const safeResolve = (result: LlmRunnerResult) => {
+      if (!settled) {
+        settled = true;
+        if (gracePollHandle) clearInterval(gracePollHandle);
+        resolve(result);
+      }
+    };
+
     const timeoutHandle = setTimeout(() => {
-      if (child.exitCode === null) child.kill('SIGTERM');
-      resolve({ exitCode: null, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+      // ★ Immediate check: narrative.json already written?
+      if (fs.existsSync(ctx.narrativePath)) {
+        console.log('[narrative] Timeout fired but narrative.json exists. Treating as success.');
+        safeResolve({ exitCode: 0, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+        return;
+      }
+
+      // ★ Grace polling: LLM may be seconds away from writing narrative.json.
+      // Same pattern as explore-service: poll every 10s for up to 3 min.
+      console.log('[narrative] Timeout fired, narrative.json not yet written. Starting 3-min grace polling...');
+
+      const graceMs = 3 * 60 * 1000;
+      const pollMs = 10 * 1000;
+      const graceStart = Date.now();
+
+      gracePollHandle = setInterval(() => {
+        if (fs.existsSync(ctx.narrativePath)) {
+          console.log('[narrative] Grace polling: narrative.json appeared. Treating as success.');
+          if (child.exitCode === null) { try { child.kill(); } catch { /* best effort */ } }
+          safeResolve({ exitCode: 0, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+          return;
+        }
+        if (Date.now() - graceStart >= graceMs) {
+          // Grace expired — force-kill the process tree and return failure
+          if (child.exitCode === null) {
+            try {
+              if (process.platform === 'win32') {
+                spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)]);
+              } else {
+                child.kill('SIGTERM');
+              }
+            } catch { /* best effort */ }
+          }
+          safeResolve({ exitCode: null, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+        }
+      }, pollMs);
     }, ctx.timeoutMs);
-    child.stdout?.on('data', (data: Buffer) => { stdoutBuffer += data.toString(); });
+    // ★ 解析 stream-json 事件，发送进度 + 存 raw stream 文件
+    let narrativeLineBuffer = '';
+    const rawStreamPath = path.join(ctx.outputDir, 'narrative-raw-stream.jsonl');
+    child.stdout?.on('data', (data: Buffer) => {
+      const text = data.toString();
+      stdoutBuffer += text;
+      narrativeLineBuffer += text;
+      const lines = narrativeLineBuffer.split('\n');
+      narrativeLineBuffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        // 存到 raw stream 文件（供离线 profile 调优）
+        try { fs.appendFileSync(rawStreamPath, trimmed + '\n'); } catch { /* best effort */ }
+        // 解析事件，发送实时进度
+        try {
+          const evt = JSON.parse(trimmed);
+          const elapsed = Math.round((Date.now() - (ctx as any)._startTime) / 1000);
+          if (evt.type === 'assistant' && evt.message?.role === 'assistant') {
+            ctx.onProgress?.(`LLM 推理中 (${elapsed}s)`);
+          } else if (evt.type === 'tool_use' && evt.name === 'Write') {
+            const fp = String(evt.input?.file_path || '');
+            ctx.onProgress?.(`写入 ${fp.split('/').pop()} (${elapsed}s)`);
+          } else if (evt.type === 'tool_use' && evt.name) {
+            ctx.onProgress?.(`调用 ${evt.name} (${elapsed}s)`);
+          } else if (evt.type === 'result') {
+            ctx.onProgress?.(`LLM 返回结果 (${elapsed}s)`);
+          }
+        } catch { /* 非 JSON 行 */ }
+      }
+    });
     child.stderr?.on('data', (data: Buffer) => { stderrBuffer += data.toString(); });
     child.on('close', (exitCode: number | null) => {
       clearTimeout(timeoutHandle);
-      resolve({ exitCode, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
+      safeResolve({ exitCode, stdoutTail: stdoutBuffer.slice(-500), stderrTail: stderrBuffer.slice(-500) });
     });
     child.on('error', (err: Error) => {
       clearTimeout(timeoutHandle);
-      resolve({ exitCode: -1, stdoutTail: stdoutBuffer.slice(-500), stderrTail: `spawn error: ${err.message}` });
+      safeResolve({ exitCode: -1, stdoutTail: stdoutBuffer.slice(-500), stderrTail: `spawn error: ${err.message}` });
     });
   });
 }
@@ -726,7 +813,7 @@ export async function runPrismNarrative(
   console.log(`[narrative] Spawning ${provider} CLI (${cliCommand})...`);
   console.log(`[narrative] source=${source}, runId=${runId}, outputDir=${outputDirPosix}`);
 
-  const timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000;
+  const timeoutMs = opts.timeoutMs ?? 20 * 60 * 1000;
 
   // WT-049: llmRunner 上下文（真实 spawn 和注入 runner 共用）
   const llmCtx = {
@@ -737,6 +824,8 @@ export async function runPrismNarrative(
     timeoutMs,
     outputDir,
     narrativePath,
+    onProgress: opts.onProgress,
+    _startTime: Date.now(),
   };
 
   // 环节 4：LLM 调用（大头？）

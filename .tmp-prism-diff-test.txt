@@ -1,0 +1,116 @@
+web/server/prism/tools.test.ts | 103 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 103 insertions(+)
+
+--- Changes ---
+
+web/server/prism/tools.test.ts
+  @@ -30,6 +30,8 @@ import {
+  +import { runExploreMvp } from '../scripts/perfetto-explore-mvp.js';
+  +// DR-44 WT-027: runReportMvp import removed — [15][16] sections skipped (旧脚本基座已废弃)
+   import fs from 'fs';
+   import path from 'path';
+   import { fileURLToPath } from 'url';
+  @@ -870,6 +872,107 @@ console.log('\n[13] WT-022 PlayerLoop percentiles + GC.Alloc byModule + offCpu b
+  +// ─────────────────────────── 14. WT-020 Perfetto explore reasoning layer ─
+  +
+  +console.log('\n[14] WT-020 Perfetto explore reasoning layer');
+  +{
+  +  // writeFiles=true refreshes bk26b-perfetto-explore-mvp products for acceptance.
+  +  const { ledger, findings, verdict, outDir } = runExploreMvp({ writeFiles: true });
+  +
+  +  assert(Array.isArray(ledger) && ledger.length > 0, `explore ledger non-empty (got ${ledger.length})`);
+  +  assert(findings.length >= 10, `explore findings >= 10 (got ${findings.length})`);
+  +
+  +  const evidenceIds = new Set(ledger.map(e => e.id));
+  +  const allLinked = findings.every(f => f.evidenceIds.every(id => evidenceIds.has(id)));
+  +  assert(allLinked, 'every finding evidenceIds link to ledger');
+  +
+  +  const withRb = findings.filter(
+  +    f =>
+  +      f.relativeBaseline != null &&
+  +      typeof f.relativeBaseline.baselineRole === 'string' &&
+  +      typeof f.relativeBaseline.compareRole === 'string' &&
+  +      typeof f.relativeBaseline.absoluteValue === 'string' &&
+  +      typeof f.relativeBaseline.baselineValue === 'string' &&
+  +      'foldChange' in f.relativeBaseline &&
+  +      'deltaPct' in f.relativeBaseline &&
+  +      typeof f.relativeBaseline.relativeJudgment === 'string'
+  +  );
+  +  assert(withRb.length >= 5, `findings with relativeBaseline >= 5 (got ${withRb.length})`);
+  +
+  +  const withCausal = findings.filter(
+  +    f =>
+  +      f.causalChain != null &&
+  +      typeof f.causalChain.premise === 'string' &&
+  +      typeof f.causalChain.inference === 'string' &&
+  +      typeof f.causalChain.conclusion === 'string' &&
+  +      (f.causalChain.confidence === 'high' ||
+  +        f.causalChain.confidence === 'medium' ||
+  +        f.causalChain.confidence === 'low')
+  +  );
+  +  assert(withCausal.length >= 1, `findings with causalChain >= 1 (got ${withCausal.length})`);
+  +
+  +  const topBiz = findings.filter(
+  +    f => f.kind === 'top-business-module' || f.title.startsWith('top 业务模块:')
+  +  );
+  +  assert(topBiz.length >= 1, `top 业务模块 findings >= 1 (got ${topBiz.length})`);
+  +
+  +  const foldMods = findings.filter(
+  +    f =>
+  +      f.kind === 'fold-change-module' &&
+  +      typeof f.relativeBaseline?.foldChange === 'number' &&
+  +      f.relativeBaseline.foldChange > 2
+  +  );
+  +  assert(foldMods.length >= 1, `涨幅最大模块 foldChange>2 >= 1 (got ${foldMods.length})`);
+  +
+  +  const gcMods = findings.filter(
+  +    f => f.kind === 'gc-pressure-module' && /perFrame=\d/.test(f.claim)
+  +  );
+  +  assert(gcMods.length >= 1, `GC 压力最大模块 perFrame>0 >= 1 (got ${gcMods.length})`);
+  +
+  +  assert(typeof verdict.triadTrend === 'string' && verdict.triadTrend.length > 0, 'verdict.triadTrend present');
+  +  assert(
+  +    typeof verdict.topBusinessHotspot === 'string' && verdict.topBusinessHotspot.length > 0,
+  +    'verdict.topBusinessHotspot present'
+  +  );
+  +  assert(
+  +    typeof verdict.gpuBoundJudgment === 'string' && verdict.gpuBoundJudgment.length > 0,
+  +    'verdict.gpuBoundJudgment present'
+  +  );
+  +  assert(
+  +    typeof verdict.freqMorphologyJudgment === 'string' && verdict.freqMorphologyJudgment.length > 0,
+  +    'verdict.freqMorphologyJudgment present'
+  +  );
+  +  assert(Array.isArray(verdict.boundaries) && verdict.boundaries.length >= 1, 'verdict.boundaries non-empty');
+  +
+  +  const findingsPath = path.join(outDir, 'findings.json');
+  +  const ledgerPath = path.join(outDir, 'ledger.json');
+  +  const verdictPath = path.join(outDir, 'verdict.json');
+  +  assert(fs.existsSync(findingsPath), 'findings.json written');
+  +  assert(fs.existsSync(ledgerPath), 'ledger.json written');
+  +  assert(fs.existsSync(verdictPath), 'verdict.json written');
+  +  const findingsDoc = JSON.parse(fs.readFileSync(findingsPath, 'utf8'));
+  +  const ledgerDoc = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+  +  const verdictDoc = JSON.parse(fs.readFileSync(verdictPath, 'utf8'));
+  +  assert(Array.isArray(findingsDoc.findings) && findingsDoc.findings.length >= 10, 'findings.json findings>=10');
+  +  assert(Array.isArray(ledgerDoc.evidence) && ledgerDoc.evidence.length > 0, 'ledger.json evidence non-empty');
+  +  assert(typeof verdictDoc.triadTrend === 'string', 'verdict.json triadTrend');
+  +}
+  +
+  +// ─────────────────────────── 15. WT-021 Perfetto narrative layer ─────
+  +// DR-44 WT-027: 旧脚本基座（runReportMvp）已废弃，改走三段管线（narrative-service.ts）。
+  +// 本节原测旧脚本产物的 findings/roiOptimizations/triadTrend 结构，新 NarrativeReport 结构不同。
+  +// TODO(WT-028): 新三段管线跑通后，改成测 runPrismNarrative 产出的 NarrativeReport。
+  +console.log('\n[15] WT-021 Perfetto narrative layer — SKIPPED (DR-44 WT-027: 旧脚本基座已废弃，待 WT-028 改测新三段管线)');
+  +// 原 [15] 节测试代码已移除——runReportMvp 产出的旧结构（findings/roiOptimizations/triadTrend）
+  +// 不再适用新 NarrativeReport（overview/topConclusions/sections/prioritySummary）。
+  +
+  +// ─────────────────────────── 16. WT-025 DR-41 五条硬规则自动检查 ─────
+  +// DR-44 WT-027: 原测旧脚本产物的 redlineMatrix/topConclusionBlocks 结构。
+  +// TODO(WT-028): 新三段管线跑通后，改成测新 NarrativeReport 渲染产出的 report.html。
+  +console.log('\n[16] WT-025 DR-41 五条硬规则自动检查 — SKIPPED (DR-44 WT-027: 旧脚本基座已废弃，待 WT-028 改测新三段管线)');
+  +// 原 [16] 节测试代码已移除——依赖旧脚本的 redlineMatrix/topConclusionBlocks 字段，
+  +// 新 NarrativeReport 无这些字段。WT-028 跑通后补完整 DR-41 检查。
+  ... (1 lines truncated)
+  +103 -0
+[full diff: rtk git diff --no-compact]

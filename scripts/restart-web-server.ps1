@@ -57,12 +57,51 @@ function Stop-PortProcess([int]$LocalPort) {
   Start-Sleep -Milliseconds 500
 }
 
+function Stop-WebDevProcesses([string]$WebRoot) {
+  $escaped = [Regex]::Escape($WebRoot)
+  $procs = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.CommandLine -and (
+        $_.CommandLine -match $escaped -or
+        $_.CommandLine -match 'tsx\\dist\\cli\.mjs"\s+watch\s+server/index\.ts' -or
+        $_.CommandLine -match 'tsx\s+server/index\.ts'
+      )
+    }
+
+  foreach ($proc in $procs) {
+    Write-Host "Stopping web dev process: node($($proc.ProcessId))"
+    Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+
+  if ($procs) {
+    Start-Sleep -Seconds 2
+  }
+}
+
 function Ensure-BetterSqlite3 {
   Write-Host 'Rebuilding better-sqlite3 for current Node...'
-  & $npmCmd rebuild better-sqlite3
-  if ($LASTEXITCODE -ne 0) {
-    throw "better-sqlite3 rebuild failed with exit code $LASTEXITCODE (port may still be in use)"
+  $buildDir = Join-Path $webDir 'node_modules\better-sqlite3\build'
+  if (Test-Path $buildDir) {
+    try {
+      Remove-Item $buildDir -Recurse -Force -ErrorAction Stop
+    } catch {
+      Write-Warning "Cannot remove $buildDir (stop tsx/npm processes using web dir first)"
+    }
   }
+
+  $maxAttempts = 3
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    & $npmCmd rebuild better-sqlite3
+    if ($LASTEXITCODE -eq 0) { return }
+
+    if ($attempt -lt $maxAttempts) {
+      Write-Warning "better-sqlite3 rebuild failed (attempt $attempt/$maxAttempts), retrying in 2s..."
+      Stop-WebDevProcesses $webDir
+      Start-Sleep -Seconds 2
+    }
+  }
+
+  throw "better-sqlite3 rebuild failed with exit code $LASTEXITCODE. Stop node/tsx processes and retry."
 }
 
 function Build-Client {
@@ -97,6 +136,9 @@ if (-not (Test-Path (Join-Path $webDir 'node_modules'))) {
 
 Write-Host "[2/5] Stopping existing server on port $Port..."
 Stop-PortProcess $Port
+Stop-PortProcess 3001
+Stop-PortProcess 5173
+Stop-WebDevProcesses $webDir
 
 Write-Host '[3/5] Ensuring native modules match Node version...'
 Ensure-BetterSqlite3
@@ -152,6 +194,6 @@ if ($Prod) {
 } else {
   Write-Host "[5/5] Starting dev server (tsx, no watch): http://localhost:$Port/cpu/"
   Write-Host "Opened: $url"
-  Write-Host 'Press Ctrl+C to stop. (长任务 ingest 不要用 tsx watch，避免文件变更重启打断 job)'
+  Write-Host 'Press Ctrl+C to stop. (Do not use tsx watch for long ingest jobs.)'
   & $npxCmd tsx server/index.ts
 }

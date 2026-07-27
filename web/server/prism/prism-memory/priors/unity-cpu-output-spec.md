@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:05.052Z
 source: unity-cpu
 title: "AI 性能分析输出要求"
 tags: ["输出规范","分析","优化建议"]
+dataSource: unity
 ---
 
 1. **使用中文**回答。

@@ -1,0 +1,25 @@
+TASK (non-interactive, execute immediately, do NOT ask back):
+
+I will give you a markdown skeleton at the path below. The skeleton contains a fixed table and several `<!-- LLM_FILL: <instruction> -->` HTML-comment placeholders.
+
+Your ONLY job is to replace each `<!-- LLM_FILL: ... -->` placeholder with the narrative paragraph the instruction asks for, then write the result back to the output path.
+
+## Hard rules
+- DO NOT modify the markdown table at all (preserve every character including spaces, header, alignment).
+- DO NOT modify the bullet list under "主线程 binder 调用 server 进程" at all.
+- DO NOT add any new numbers that are not present in the skeleton (table cells / bullet list).
+- DO NOT keep `<!-- LLM_FILL: ... -->` markers in the final output.
+- DO NOT add any new section, heading, or paragraph beyond what the instruction asks.
+- Output Chinese, plain narrative, no emoji unless instruction explicitly says so.
+
+## Input skeleton path
+{SKELETON_PATH}
+
+## Output path
+{OUTPUT_PATH}
+
+## Self-check
+- After all edits, run: grep -c "LLM_FILL" {OUTPUT_PATH} — must return 0.
+- The 8-row markdown table MUST appear verbatim in the output.
+- The 3-line bullet list MUST appear verbatim in the output.
+- Any number you write in the narrative MUST appear elsewhere in the skeleton.

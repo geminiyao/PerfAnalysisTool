@@ -5,6 +5,7 @@ createdAt: 2026-07-11T06:26:04.217Z
 source: unity-cpu
 title: "性能问题模式：Physics Heavy"
 tags: ["unity","physics","性能模式"]
+dataSource: unity
 ---
 
 **关键指标**：`FixedUpdate` > 8ms 或 `Physics.Simulate` > 5ms。

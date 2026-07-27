@@ -1,0 +1,90 @@
+# collect-camera-ab.yaml — 相机 A→B 网格坐标移动采集用例
+#
+# 只采集 Unity Profiler（不启用 simpleperf/perfetto）
+# 相机从大地图 A(gridX, gridY) 平滑移动到 B(gridX, gridY)
+# 调用游戏内 MapCameraCtrl:MoveToGrid 接口
+#
+# 前置条件：游戏侧 ProfileTestMgr.lua 需扩展支持 move_camera_from_to 命令
+#
+# 用法：
+#   python scripts/auto_collector/collect.py --config projects/aoeyz/collect-camera-ab.yaml
+
+# === 项目标识 ===
+project:
+  name: aoeyz
+  package: com.tencent.aoeyz
+  activity: com.tencent.aoeyz.MainActivity
+  intentAction: com.aoe.EXTERNAL_PROFILE
+
+# === 设备路径 ===
+device:
+  simpleperfPath: /data/local/tmp/simpleperf
+  pdataDir: /storage/emulated/0/Android/data/com.tencent.aoeyz/files/doc/log/profile_data/
+
+# === 采集工具 ===
+# simpleperf/perfetto 关闭，只保留 unity-profiler（隐含启用）
+tools:
+  simpleperf:
+    enabled: false
+    ndkDir: D:/Android/android-ndk-r21e-windows-x86_64/simpleperf
+    recordOpts: "-e cpu-clock --call-graph fp --clockid boottime -f 4000"
+    durationPadding: 15
+  perfetto:
+    enabled: false
+    script: g:/AOEYZ_Trunk/Tools/AndroidPerfettoScripts/record_android_trace.py
+    bufferSize: 64mb
+    durationPadding: 15
+    events:
+      - sched
+      - freq
+      - idle
+      - am
+      - wm
+      - gfx
+      - view
+      - binder_driver
+      - hal
+      - dalvik
+      - camera
+      - input
+      - res
+      - memory
+
+# === 场景定义 ===
+scenes:
+  default:
+    label: camera_ab
+    scene: StressTestBattleSimpleMode
+
+# === 动作：C2 Primitive 组合 ===
+# 1. enter_scene: 进入场景
+# 2. camera_sweep: 相机从 A 网格坐标平滑移动到 B 网格坐标
+#    通过 Intent cmd=move_camera_from_to，name 编码 "fromX,fromY,toX,toY"
+#    游戏侧调用 MapCameraCtrl:MoveToGrid 实现平滑移动
+action:
+  defaultDuration: 10            # 小于 camera_sweep.duration，触发自动扩展到 20s（15s 移动 + 5s 余量）
+  steps:
+    - primitive: enter_scene
+      params:
+        scene: StressTestBattleSimpleMode
+        coord: [540, 1200]
+    - primitive: camera_sweep
+      params:
+        duration: 15
+        pattern: move_to_grid
+        from_grid: [1176, 249]    # A 点网格坐标
+        to_grid: [1087, 253]      # B 点网格坐标
+        rounds: 4                 # A→B→A→B→A 来回 2 轮（4 段），每段 15/4=3.75s
+
+# === 输出配置 ===
+output:
+  baseDir: output/collect
+  webApiBase: http://localhost:3000/api
+
+# === 符号配置 ===
+symbols:
+  libDir: output/maple/symbols
+
+# === Meta 默认值 ===
+meta:
+  project: aoeyz
