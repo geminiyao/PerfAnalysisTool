@@ -1,0 +1,263 @@
+[
+  {
+    "bloom_stage": 0,
+    "empire1_encoder": 2,
+    "empire1_target": {
+      "handle": "0x174060f00",
+      "label": "Game_RT_4",
+      "width": 486,
+      "height": 225,
+      "pixel_format": 115,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "87892EA381D07BFD",
+    "empire1_fragment": "A1A7F78082E9C6A7",
+    "empire2_encoder": 2,
+    "empire2_target": {
+      "handle": "0x16ee4af80",
+      "label": "Game_RT_4",
+      "width": 486,
+      "height": 225,
+      "pixel_format": 115,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "E2D1B6F77DE47514",
+    "empire2_fragment": "A9FC0B13C9C056C3",
+    "vertex_identical_bytes": false,
+    "fragment_identical_bytes": false
+  },
+  {
+    "bloom_stage": 1,
+    "empire1_encoder": 3,
+    "empire1_target": {
+      "handle": "0x174060780",
+      "label": "Game_TMP_RT_8",
+      "width": 243,
+      "height": 112,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "B0DCE88977007BE3",
+    "empire1_fragment": "EC1CD231E73733A3",
+    "empire2_encoder": 3,
+    "empire2_target": {
+      "handle": "0x16ee4a800",
+      "label": "Game_TMP_RT_8",
+      "width": 243,
+      "height": 112,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "B0DCE88977007BE3",
+    "empire2_fragment": "EC1CD231E73733A3",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 2,
+    "empire1_encoder": 4,
+    "empire1_target": {
+      "handle": "0x174060a00",
+      "label": "Game_TMP_RT_16",
+      "width": 121,
+      "height": 56,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "B0DCE88977007BE3",
+    "empire1_fragment": "EC1CD231E73733A3",
+    "empire2_encoder": 4,
+    "empire2_target": {
+      "handle": "0x16ee4aa80",
+      "label": "Game_TMP_RT_16",
+      "width": 121,
+      "height": 56,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "B0DCE88977007BE3",
+    "empire2_fragment": "EC1CD231E73733A3",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 3,
+    "empire1_encoder": 5,
+    "empire1_target": {
+      "handle": "0x174060c80",
+      "label": "Game_TMP_RT_32",
+      "width": 60,
+      "height": 28,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "B0DCE88977007BE3",
+    "empire1_fragment": "EC1CD231E73733A3",
+    "empire2_encoder": 5,
+    "empire2_target": {
+      "handle": "0x16ee4ad00",
+      "label": "Game_TMP_RT_32",
+      "width": 60,
+      "height": 28,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "B0DCE88977007BE3",
+    "empire2_fragment": "EC1CD231E73733A3",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 4,
+    "empire1_encoder": 6,
+    "empire1_target": {
+      "handle": "0x174061900",
+      "label": "Game_RT_64",
+      "width": 30,
+      "height": 14,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "B0DCE88977007BE3",
+    "empire1_fragment": "EC1CD231E73733A3",
+    "empire2_encoder": 6,
+    "empire2_target": {
+      "handle": "0x16ee4b980",
+      "label": "Game_RT_64",
+      "width": 30,
+      "height": 14,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "B0DCE88977007BE3",
+    "empire2_fragment": "EC1CD231E73733A3",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 5,
+    "empire1_encoder": 7,
+    "empire1_target": {
+      "handle": "0x174061680",
+      "label": "Game_RT_32",
+      "width": 60,
+      "height": 28,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "A3B4DDAA3ED2AE38",
+    "empire1_fragment": "70C4E390B5467EB4",
+    "empire2_encoder": 7,
+    "empire2_target": {
+      "handle": "0x16ee4b700",
+      "label": "Game_RT_32",
+      "width": 60,
+      "height": 28,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "A3B4DDAA3ED2AE38",
+    "empire2_fragment": "70C4E390B5467EB4",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 6,
+    "empire1_encoder": 8,
+    "empire1_target": {
+      "handle": "0x174061400",
+      "label": "Game_RT_16",
+      "width": 121,
+      "height": 56,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "A3B4DDAA3ED2AE38",
+    "empire1_fragment": "70C4E390B5467EB4",
+    "empire2_encoder": 8,
+    "empire2_target": {
+      "handle": "0x16ee4b480",
+      "label": "Game_RT_16",
+      "width": 121,
+      "height": 56,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "A3B4DDAA3ED2AE38",
+    "empire2_fragment": "70C4E390B5467EB4",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 7,
+    "empire1_encoder": 9,
+    "empire1_target": {
+      "handle": "0x174061180",
+      "label": "Game_RT_8",
+      "width": 243,
+      "height": 112,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "A3B4DDAA3ED2AE38",
+    "empire1_fragment": "70C4E390B5467EB4",
+    "empire2_encoder": 9,
+    "empire2_target": {
+      "handle": "0x16ee4b200",
+      "label": "Game_RT_8",
+      "width": 243,
+      "height": 112,
+      "pixel_format": 92,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "A3B4DDAA3ED2AE38",
+    "empire2_fragment": "70C4E390B5467EB4",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  },
+  {
+    "bloom_stage": 8,
+    "empire1_encoder": 10,
+    "empire1_target": {
+      "handle": "0x174061b80",
+      "label": "Game_RT_SUM_MERGE",
+      "width": 486,
+      "height": 225,
+      "pixel_format": 115,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire1_vertex": "BD70604646654C22",
+    "empire1_fragment": "EDEB96566F435129",
+    "empire2_encoder": 10,
+    "empire2_target": {
+      "handle": "0x16ee4bc00",
+      "label": "Game_RT_SUM_MERGE",
+      "width": 486,
+      "height": 225,
+      "pixel_format": 115,
+      "storage_mode": "Shared",
+      "sample_count": 1
+    },
+    "empire2_vertex": "BD70604646654C22",
+    "empire2_fragment": "EDEB96566F435129",
+    "vertex_identical_bytes": true,
+    "fragment_identical_bytes": true
+  }
+]

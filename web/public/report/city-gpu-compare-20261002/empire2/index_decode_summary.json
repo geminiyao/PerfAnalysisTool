@@ -1,0 +1,12 @@
+{
+  "record_count": 8491,
+  "formats": {
+    "bplist": 148,
+    "other": 8078,
+    "unresolved_placeholder": 265
+  },
+  "plist_failures": [],
+  "available_record_lengths_verified": true,
+  "verified_records": 8226,
+  "unresolved_records": 265
+}

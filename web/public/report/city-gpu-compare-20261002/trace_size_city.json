@@ -1,0 +1,170 @@
+{
+  "empire1": {
+    "sample": "new_empire1",
+    "archive_name": "帝国1内城_全盛_精致10021837.gputrace.zip",
+    "archive_bytes": 100120016,
+    "archive_sha256": "adeb495296f64f9c604f47918cb2f0e0d8a386ffd15480ac18ca34580b5b184c",
+    "store0_bytes": 93235491,
+    "record_compressed_bytes": 93235491,
+    "store0_unaccounted_bytes": 0,
+    "record_raw_bytes": 310187847,
+    "unresolved_placeholders": 92,
+    "groups": {
+      "序列化对象/编译统计": {
+        "records": 195,
+        "raw_bytes": 2061799,
+        "compressed_bytes": 458035,
+        "unique_extents": 195
+      },
+      "描述符/其他": {
+        "records": 943,
+        "raw_bytes": 927039,
+        "compressed_bytes": 76192,
+        "unique_extents": 943
+      },
+      "Metal源码": {
+        "records": 192,
+        "raw_bytes": 1533717,
+        "compressed_bytes": 347818,
+        "unique_extents": 192
+      },
+      "Buffer内容快照": {
+        "records": 1228,
+        "raw_bytes": 62980096,
+        "compressed_bytes": 9275781,
+        "unique_extents": 884
+      },
+      "纹理内容快照": {
+        "records": 2944,
+        "raw_bytes": 235552768,
+        "compressed_bytes": 82723682,
+        "unique_extents": 2901
+      },
+      "API/资源命令流": {
+        "records": 7,
+        "raw_bytes": 7132428,
+        "compressed_bytes": 353983,
+        "unique_extents": 7
+      }
+    },
+    "zip_members": [
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/store0",
+        "raw_bytes": 93235491,
+        "zip_compressed_bytes": 92680985
+      },
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/(gpu.expert-case-config-data)",
+        "raw_bytes": 2218,
+        "zip_compressed_bytes": 2223
+      },
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/(gpu.quicklook-preview)",
+        "raw_bytes": 7333078,
+        "zip_compressed_bytes": 7335318
+      },
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/index",
+        "raw_bytes": 423760,
+        "zip_compressed_bytes": 97812
+      },
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/metadata",
+        "raw_bytes": 3320,
+        "zip_compressed_bytes": 1974
+      },
+      {
+        "name": "帝国1内城_全盛_精致10021837.gputrace/(gpu.shared-tab-ui-state)",
+        "raw_bytes": 227,
+        "zip_compressed_bytes": 232
+      }
+    ],
+    "texture_snapshot_fraction": 0.8872552835057199,
+    "draw_count": 432,
+    "main_elements": 1005885
+  },
+  "empire2": {
+    "sample": "new_empire2",
+    "archive_name": "帝国2内城_全盛_精致_10021831.gputrace.zip",
+    "archive_bytes": 142106676,
+    "archive_sha256": "8005d6bd1bc9b63bb93f8c7fc975187bee803139f405e5de3c8480333e367fa8",
+    "store0_bytes": 134938105,
+    "record_compressed_bytes": 134938105,
+    "store0_unaccounted_bytes": 0,
+    "record_raw_bytes": 374098553,
+    "unresolved_placeholders": 265,
+    "groups": {
+      "序列化对象/编译统计": {
+        "records": 148,
+        "raw_bytes": 1803641,
+        "compressed_bytes": 360507,
+        "unique_extents": 148
+      },
+      "描述符/其他": {
+        "records": 951,
+        "raw_bytes": 709503,
+        "compressed_bytes": 70817,
+        "unique_extents": 951
+      },
+      "Metal源码": {
+        "records": 150,
+        "raw_bytes": 1815065,
+        "compressed_bytes": 374248,
+        "unique_extents": 150
+      },
+      "Buffer内容快照": {
+        "records": 1387,
+        "raw_bytes": 74612736,
+        "compressed_bytes": 14000281,
+        "unique_extents": 911
+      },
+      "纹理内容快照": {
+        "records": 5583,
+        "raw_bytes": 286687232,
+        "compressed_bytes": 119737494,
+        "unique_extents": 4232
+      },
+      "API/资源命令流": {
+        "records": 7,
+        "raw_bytes": 8470376,
+        "compressed_bytes": 394758,
+        "unique_extents": 7
+      }
+    },
+    "zip_members": [
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/store0",
+        "raw_bytes": 134938105,
+        "zip_compressed_bytes": 134243989
+      },
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.expert-case-config-data)",
+        "raw_bytes": 2219,
+        "zip_compressed_bytes": 2224
+      },
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.quicklook-preview)",
+        "raw_bytes": 7721746,
+        "zip_compressed_bytes": 7724101
+      },
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/index",
+        "raw_bytes": 673895,
+        "zip_compressed_bytes": 132675
+      },
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/metadata",
+        "raw_bytes": 3306,
+        "zip_compressed_bytes": 1969
+      },
+      {
+        "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.shared-tab-ui-state)",
+        "raw_bytes": 227,
+        "zip_compressed_bytes": 232
+      }
+    ],
+    "texture_snapshot_fraction": 0.8873512341084084,
+    "draw_count": 456,
+    "main_elements": 1834461
+  }
+}

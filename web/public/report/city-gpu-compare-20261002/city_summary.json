@@ -1,0 +1,147 @@
+{
+  "empire1": {
+    "draws": 432,
+    "triangles": 388740,
+    "main_draws": 301,
+    "main_triangles": 335481,
+    "main_groups": {
+      "山石/矿石": {
+        "draws": 8,
+        "triangles": 42484,
+        "instances": 81
+      },
+      "水面相关": {
+        "draws": 12,
+        "triangles": 11667,
+        "instances": 27
+      },
+      "植被": {
+        "draws": 18,
+        "triangles": 88976,
+        "instances": 1223
+      },
+      "资源点": {
+        "draws": 5,
+        "triangles": 5268,
+        "instances": 17
+      },
+      "其他/未归类": {
+        "draws": 135,
+        "triangles": 21348,
+        "instances": 204
+      },
+      "建筑/道具": {
+        "draws": 101,
+        "triangles": 108755,
+        "instances": 1112
+      },
+      "角色/单位": {
+        "draws": 21,
+        "triangles": 31046,
+        "instances": 87
+      },
+      "主地表/道路": {
+        "draws": 1,
+        "triangles": 25937,
+        "instances": 1
+      }
+    },
+    "encoders": 12,
+    "drawn_PSO": 82,
+    "main_PSO": 59,
+    "texture_preserved_bytes": 214464384,
+    "texture_used_bytes": 143293440,
+    "texture_unused_bytes": 71170944,
+    "buffer_length_bytes": 55893250,
+    "buffer_used_length_bytes": 24295198,
+    "buffer_scratch_count": 8,
+    "buffer_scratch_bytes": 33554432,
+    "buffer_scratch_used_bytes": 16777216,
+    "resource_counts": {
+      "Texture": 558,
+      "Buffer": 920,
+      "RenderPipeline": 199,
+      "ComputePipeline": 9
+    },
+    "primitive_types": {
+      "3": 431,
+      "4": 1
+    },
+    "main_encoder": 1
+  },
+  "empire2": {
+    "draws": 456,
+    "triangles": 633603,
+    "main_draws": 401,
+    "main_triangles": 611625,
+    "main_groups": {
+      "主地表/道路": {
+        "draws": 1,
+        "triangles": 39339,
+        "instances": 1
+      },
+      "其他/未归类": {
+        "draws": 153,
+        "triangles": 54770,
+        "instances": 901
+      },
+      "建筑/道具": {
+        "draws": 148,
+        "triangles": 241711,
+        "instances": 1944
+      },
+      "角色/单位": {
+        "draws": 6,
+        "triangles": 6534,
+        "instances": 18
+      },
+      "植被": {
+        "draws": 45,
+        "triangles": 134501,
+        "instances": 3401
+      },
+      "资源点": {
+        "draws": 9,
+        "triangles": 21791,
+        "instances": 22
+      },
+      "山石/矿石": {
+        "draws": 12,
+        "triangles": 86672,
+        "instances": 132
+      },
+      "水面相关": {
+        "draws": 26,
+        "triangles": 26299,
+        "instances": 63
+      },
+      "云雾/边界透明物": {
+        "draws": 1,
+        "triangles": 8,
+        "instances": 1
+      }
+    },
+    "encoders": 12,
+    "drawn_PSO": 97,
+    "main_PSO": 80,
+    "texture_preserved_bytes": 292823552,
+    "texture_used_bytes": 209055232,
+    "texture_unused_bytes": 83768320,
+    "buffer_length_bytes": 67441236,
+    "buffer_used_length_bytes": 35654508,
+    "buffer_scratch_count": 11,
+    "buffer_scratch_bytes": 46137344,
+    "buffer_scratch_used_bytes": 25165824,
+    "resource_counts": {
+      "Texture": 626,
+      "Buffer": 1023,
+      "RenderPipeline": 123,
+      "ComputePipeline": 21
+    },
+    "primitive_types": {
+      "3": 455,
+      "4": 1
+    },
+    "main_encoder": 1
+  }
+}

@@ -1,0 +1,335 @@
+﻿mesh_label,empire1_draws,empire1_triangles,empire1_instances,empire1_input_counts,empire2_draws,empire2_triangles,empire2_instances,empire2_input_counts,triangle_delta
+SM_MountHuangA_01_City_LOD3,0,0,0,,1,48944,56,2622 indices/list,48944
+TRN_CN_YZ,0,0,0,,1,39339,1,118017 indices/list,39339
+SM_CN_WALL06_A4_LOD03,0,0,0,,2,28014,161,522 indices/list,28014
+SM_GrasslandCircular_B_LOD0,1,4896,136,108 indices/list,6,27468,763,108 indices/list,22572
+SM_MOUNTAINTREE_02,0,0,0,,1,17019,31,1647 indices/list,17019
+SM_Flowers02,2,3818,23,498 indices/list,1,17248,112,462 indices/list,13430
+SM_MountHuangB_02_City_LOD3,1,2348,4,1761 indices/list,1,13501,23,1761 indices/list,11153
+LOD0SG11,1,1225,25,147 indices/list,2,12054,246,147 indices/list,10829
+SM_WRE_NC_GOLDA_L04_LOD01,0,0,0,,1,9508,4,7131 indices/list,9508
+SM_CN_HEROSHRINE08_A4_LOD03,0,0,0,,1,9114,93,294 indices/list,9114
+SM_CN_WALL09_A4_LOD03,0,0,0,,1,8556,3,8556 indices/list,8556
+SM_Water_Plane_LOD2,2,9216,8,3456 indices/list,3,17280,15,3456 indices/list,8064
+SM_CN_WALL01_A4_LOD03,0,0,0,,1,7898,11,2154 indices/list,7898
+SM_Grass16,2,3348,558,18 indices/list,14,10320,1720,18 indices/list,6972
+SM_CN_CENTER_A4_LOD03,0,0,0,,1,5984,1,17952 indices/list,5984
+SM_WRE_BG_GOLD_L04_LOD02,0,0,0,,1,5759,1,17277 indices/list,5759
+SM_NC_PROPS07_A3_LOD02,0,0,0,,1,5600,50,336 indices/list,5600
+SM_CN_CASTLE_A4_LOD03,0,0,0,,1,4953,1,14859 indices/list,4953
+SM_Grass10,1,7446,51,438 indices/list,1,12264,84,438 indices/list,4818
+SM_XIAOHUA06,0,0,0,,1,4536,81,168 indices/list,4536
+SM_Grass17_B_02,1,11264,128,264 indices/list,2,15752,179,264 indices/list,4488
+SM_CN_HEROSHRINE01_A4_LOD03,0,0,0,,1,4450,1,13350 indices/list,4450
+SM_pebbles_group_01,1,2730,7,1170 indices/list,1,7020,18,1170 indices/list,4290
+SM_CN_WALL03_A4_LOD03,0,0,0,,1,4224,6,2112 indices/list,4224
+M_BChnC_01_LOD2_A,0,0,0,,1,4207,7,1803 indices/list,4207
+SM_CN_CASTLE06_A4_LOD03,0,0,0,,1,4046,7,1734 indices/list,4046
+SM_CN_QIJI02_A3_LOD03,0,0,0,,1,3859,1,11577 indices/list,3859
+SM_CN_HALLOFWAR_A4_LOD03,0,0,0,,1,3855,1,11565 indices/list,3855
+SM_CN_WALL06_A3_LOD03,0,0,0,,1,3840,24,480 indices/list,3840
+Plane003,0,0,0,,4,3840,12,960 indices/list,3840
+SM_XIAOHUA07,0,0,0,,1,3472,62,168 indices/list,3472
+SM_CN_HEROSHRINE07_A4_LOD03,0,0,0,,1,3382,19,534 indices/list,3382
+SM_FR_ROADF06_A4_LOD00,0,0,0,,1,3360,35,288 indices/list,3360
+SM_XIAOHUA05,0,0,0,,1,3360,60,168 indices/list,3360
+SM_CN_HOUSE01_A4_LOD03,0,0,0,,1,3340,1,10020 indices/list,3340
+SM_GUANMU_04,0,0,0,,1,3200,80,120 indices/list,3200
+SM_CN_WALL02_A4_LOD03,0,0,0,,1,3150,9,1050 indices/list,3150
+SM_CN_IRONMINE_A4_LOD03,0,0,0,,1,2976,3,2976 indices/list,2976
+SM_CN_SCHOOL_A4_LOD03,0,0,0,,1,2974,1,8922 indices/list,2974
+SM_CN_STABLE_A4_LOD03,0,0,0,,1,2947,1,8841 indices/list,2947
+SM_WRE_BG_GOLD_L02_LOD02,0,0,0,,1,2868,1,8604 indices/list,2868
+SM_CN_PROPS10_A3_LOD03,0,0,0,,1,2802,6,1401 indices/list,2802
+SM_Flowers01,1,340,2,510 indices/list,1,3082,23,402 indices/list,2742
+SM_CN_WALL10_A4_LOD03,0,0,0,,1,2694,3,2694 indices/list,2694
+SM_CN_SCHPROPS_A4_LOD03,0,0,0,,1,2669,1,8007 indices/list,2669
+SM_FlagChinaFeudal_016_MorphUV2_MorphExport,0,0,0,,2,2656,16,384 indices/list; 612 indices/list,2656
+SM_CN_MILL_A4_LOD03,0,0,0,,1,2630,2,3945 indices/list,2630
+SM_CN_MARKET_A4_LOD03,0,0,0,,1,2524,1,7572 indices/list,2524
+SM_CityDeadTree_06,0,0,0,,1,2444,26,282 indices/list,2444
+SM_CN_MTPROPS_A4_LOD03,0,0,0,,1,2436,1,7308 indices/list,2436
+SM_CN_DOCK_A4_LOD03,0,0,0,,1,2429,1,7287 indices/list,2429
+SM_CN_WALL03_A3_LOD03,0,0,0,,1,2418,3,2418 indices/list,2418
+SM_CN_GARDEN_A4_LOD03,0,0,0,,1,2306,1,6918 indices/list,2306
+SM_CN_BLACKSMITH01_A4_LOD03,0,0,0,,1,2257,1,6771 indices/list,2257
+SM_GrassReed_01,1,7744,176,132 indices/list,2,9988,227,132 indices/list,2244
+SM_WORLDLEAFTREE_03_LOD01,0,0,0,,2,2232,72,93 indices/list,2232
+SM_WORLDBUSH_01,0,0,0,,1,2160,54,120 indices/list,2160
+SM_PVEO_DEADTREE07_L0_LOD01,0,0,0,,1,2080,13,480 indices/list,2080
+ScratchBuffer0_3,0,0,0,,105,2066,105,1080 indices/list; 12 indices/list; 1272 indices/list; 18 indices/list; 216 indices/list; 24 indices/list; 240 indices/list; 30 indices/list; 36 indices/list; 42 indices/list; 48 indices/list; 54 indices/list; 576 indices/list; 6 indices/list; 60 indices/list; 66 indices/list; 72 indices/list; 84 indices/list; 90 indices/list,2066
+SM_CN_WALL01_A3_LOD03,0,0,0,,1,2055,3,2055 indices/list,2055
+SM_CN_GOLDMINE_A4_LOD03,0,0,0,,1,1984,2,2976 indices/list,1984
+M_CN_VIPSHIP_A4_LD03_A,0,0,0,,1,1977,1,5931 indices/list,1977
+SM_CN_WALL04_A4_LOD03,0,0,0,,1,1968,24,246 indices/list,1968
+SM_CN_PROPS12_A3_LOD03,0,0,0,,1,1952,2,2928 indices/list,1952
+M_CN_MILL_A4_O1_LD02_A,0,0,0,,1,1938,2,2907 indices/list,1938
+SM_FX_City_CN_WaterFall_Combine01,0,0,0,,1,1920,1,5760 indices/list,1920
+SM_FX_City_CN_WaterFall_Combine02,0,0,0,,1,1920,1,5760 indices/list,1920
+SM_CN_PROPS13_A3_LOD03,0,0,0,,1,1884,3,1884 indices/list,1884
+SM_CN_WALL10_A2_LOD03,0,0,0,,1,1879,1,5637 indices/list,1879
+SM_WORLDLEAFTREE_02_LOD01,0,0,0,,2,1872,36,156 indices/list,1872
+SM_NC_PROPSGROUP03A_A0_LOD02,1,1113,3,1113 indices/list,1,2968,8,1113 indices/list,1855
+SM_CN_PROPS15_A3_LOD03,0,0,0,,1,1844,2,2766 indices/list,1844
+SM_CN_MTPROPS01_A3_LOD03,0,0,0,,1,1785,1,5355 indices/list,1785
+SM_NC_CITYROAD01_A0_LOD01,1,1050,105,30 indices/list,3,2820,282,30 indices/list,1770
+SM_FlagFranceFeudal_01,1,432,2,648 indices/list,1,2160,10,648 indices/list,1728
+SM_CN_WALL05_A4_LOD02,0,0,0,,1,1702,23,222 indices/list,1702
+SM_CN_STABLE01_A4_LOD03,0,0,0,,1,1659,1,4977 indices/list,1659
+SM_FlagChinaFeudal_018_MorphUV2_MorphExport,0,0,0,,1,1652,7,708 indices/list,1652
+SM_NC_PROPS01_A3_LOD02,1,4320,48,270 indices/list,1,5940,66,270 indices/list,1620
+SM_Grass_01,1,2329,17,411 indices/list,1,3836,28,411 indices/list,1507
+SM_CN_TENT02_A4_LOD03,0,0,0,,1,1490,10,447 indices/list,1490
+M_CN_VIPSHIP_A2_LD03_A,0,0,0,,1,1462,1,4386 indices/list,1462
+SM_WRE_BG_ROCK01_L04_LOD03,0,0,0,,1,1412,1,4236 indices/list,1412
+SM_CN_DRILLG_A4_LOD03,0,0,0,,1,1404,1,4212 indices/list,1404
+SM_CN_WALL08_A4_LOD03,0,0,0,,1,1284,4,963 indices/list,1284
+Plane002,0,0,0,,1,1280,4,960 indices/list,1280
+SM_GUANMU_01,0,0,0,,2,1240,155,24 indices/list,1240
+SM_CityLotus_CN_01_LOD01,1,1215,9,405 indices/list,1,2430,18,405 indices/list,1215
+SM_CN_PROPS03_A3_LOD03,1,888,3,888 indices/list,1,2072,7,888 indices/list,1184
+SM_CN_HEROSHRINE05_A4_LOD03,0,0,0,,1,1160,10,348 indices/list,1160
+M_BA_HORSE1_LD02_A,0,0,0,,2,1145,5,687 indices/list,1145
+SM_CN_HEROSHRINE15_A4_LOD03,0,0,0,,1,1064,38,84 indices/list,1064
+SM_CN_PROPS08_A3_LOD03,0,0,0,,1,1056,6,528 indices/list,1056
+SM_CityDeadTree_05,0,0,0,,1,1020,5,612 indices/list,1020
+SM_CN_HEROSHRINE01BASE_A4_LOD03,0,0,0,,1,1004,2,1506 indices/list,1004
+SM_CN_QIJI01_A3_LOD03,0,0,0,,1,984,1,2952 indices/list,984
+SM_CN_HEROSHRINE09_A4_LOD03,0,0,0,,1,960,12,240 indices/list,960
+SM_MountHuangA_02_City_LOD3,1,1892,2,2838 indices/list,1,2838,3,2838 indices/list,946
+SM_CN_PROPS09_A3_LOD03,0,0,0,,1,912,4,684 indices/list,912
+M_FR_WHARF_A4_LD02_A,0,0,0,,1,893,1,2679 indices/list,893
+SM_CN_TENT01_A4_LOD03,0,0,0,,1,864,4,648 indices/list,864
+SM_CN_PROPS06_A3_LOD03,1,852,12,213 indices/list,1,1704,24,213 indices/list,852
+SM_NC_WHARF01_A2_LOD03,0,0,0,,1,848,2,1272 indices/list,848
+SM_FR_MTPROPS11_A3_LOD02,0,0,0,,1,810,81,30 indices/list,810
+M_BS_CN_PKEMN_L3_LD02_A,0,0,0,,1,800,4,600 indices/list,800
+SM_CN_HEROSHRINE02_A4_LOD03,0,0,0,,1,792,4,594 indices/list,792
+SM_WRE_BG_ROCK02_L04_LOD03,0,0,0,,1,770,1,2310 indices/list,770
+SM_CN_PROPS16_A3_LOD03,0,0,0,,1,764,1,2292 indices/list,764
+SM_WRE_NC_GOLDA_L05_LOD02,0,0,0,,1,735,1,2205 indices/list,735
+SM_NC_PROPS10B_A0_LOD02,0,0,0,,1,733,1,2199 indices/list,733
+Pubu02,5,400,5,240 indices/list,8,1120,14,240 indices/list,720
+SM_CN_HEROSHRINE04_A4_LOD03,0,0,0,,1,718,1,2154 indices/list,718
+SM_FlagChinaFeudal_017_MorphUV2_MorphExport,1,1416,6,708 indices/list,1,2124,9,708 indices/list,708
+SM_WRE_NC_FRAMLAND_B_V2_L01_LOD03,0,0,0,,1,672,6,336 indices/list,672
+SM_NC_CITYROAD02_A0_LOD01,1,1020,102,30 indices/list,2,1680,168,30 indices/list,660
+SM_Zhenye03_LOD1,0,0,0,,1,658,2,987 indices/list,658
+SM_NC_PROPSGROUP03B_A0_LOD02,1,390,3,390 indices/list,1,1040,8,390 indices/list,650
+SM_CN_LUMBER_A4_LOD03,0,0,0,,1,644,2,966 indices/list,644
+SM_FlagChinaFeudal_006_MorphUV2_MorphExport,1,128,2,192 indices/list,1,768,12,192 indices/list,640
+SM_ByzantineCityTree03_LOD1,0,0,0,,1,624,4,468 indices/list,624
+SM_CN_BRIDGE01_A4_LOD03,0,0,0,,1,616,2,924 indices/list,616
+SM_WRE_NC_ROCKA_L01_LOD03,0,0,0,,1,609,7,261 indices/list,609
+SM_WRE_NC_ROCKA_L05_LOD02,0,0,0,,1,606,1,1818 indices/list,606
+SM_WRE_NC_FRAMLAND_A_V2_GROUND_LOD03,0,0,0,,1,588,6,294 indices/list,588
+SM_CN_GARDEN_A2_LOD03,0,0,0,,1,581,1,1743 indices/list,581
+SM_FX_City_CN_WaterFall_Combine03,0,0,0,,1,560,1,1680 indices/list,560
+SM_NC_WHARF02_A2_LOD03,0,0,0,,1,538,2,807 indices/list,538
+SM_CN_HEROSHRINE02_A3_LOD03,0,0,0,,1,524,1,1572 indices/list,524
+M_CN_CENTER_A3_O_LD00_A,1,3647,7,1563 indices/list,1,4168,8,1563 indices/list,521
+SM_CN_WEAPONRACK_A3_LOD01,0,0,0,,1,512,2,768 indices/list,512
+SM_FlagChinaFeudal_003_MorphUV2_MorphExport,1,168,1,504 indices/list,1,672,4,504 indices/list,504
+SM_CN_HEROSHRINE19_A4_LOD03,0,0,0,,1,504,14,108 indices/list,504
+SM_MountHuangB_03_LOD3,0,0,0,,2,500,4,114 indices/list; 636 indices/list,500
+SM_CN_BRIDGE02_A4_LOD03,0,0,0,,1,492,2,738 indices/list,492
+SM_CN_PROPS17_A3_LOD03,0,0,0,,1,488,2,732 indices/list,488
+SM_CN_CASTLE02_A4_LOD03,0,0,0,,1,486,1,1458 indices/list,486
+SM_CN_HEROSHRINE17_A4_LOD03,0,0,0,,1,458,2,687 indices/list,458
+SM_CN_HEROSHRINE03_A4_LOD03,0,0,0,,1,428,4,321 indices/list,428
+SM_CN_HEROSHRINE06_A4_LOD03,0,0,0,,1,416,4,312 indices/list,416
+SM_Props10_b001_MorphUV2_MorphExport,0,0,0,,1,400,1,1200 indices/list,400
+SM_CN_HEROSHRINE11_A4_LOD03,0,0,0,,1,392,2,588 indices/list,392
+T2_EditableRoad_meshes,0,0,0,,4,383,4,117 indices/list; 195 indices/list; 285 indices/list; 552 indices/list,383
+SM_CN_PROPS14_A3_LOD03,0,0,0,,1,372,1,1116 indices/list,372
+SM_FR_WHARF05_A4_LOD03,0,0,0,,1,360,5,216 indices/list,360
+SM_FR_MTPROPS12_A3_LOD02,0,0,0,,1,360,36,30 indices/list,360
+SM_CN_WEAPONRACK02_A3_LOD01,0,0,0,,1,356,1,1068 indices/list,356
+SM_FR_BARRACKTARGET_A3_LOD01,1,50,1,150 indices/list,1,400,8,150 indices/list,350
+SM_CN_WALL11_A4_LOD03,0,0,0,,1,350,1,1050 indices/list,350
+M_CN_MILL_A4_O2_LD02_A,0,0,0,,1,344,2,516 indices/list,344
+SM_CN_HEROSHRINE01BASE_A2_LOD03,0,0,0,,1,344,1,1032 indices/list,344
+SM_CityWater_China_YZ_02,0,0,0,,1,344,1,1032 indices/list,344
+M_CN_LUMBERLOG_A4_LD03_A,0,0,0,,1,326,2,489 indices/list,326
+SM_CN_PROPS11_A3_LOD03,0,0,0,,1,308,1,924 indices/list,308
+SM_FlagChinaFeudal_014_MorphUV2_MorphExport,1,510,5,306 indices/list,1,816,8,306 indices/list,306
+SM_CN_BRIDGE04_A4_LOD03,0,0,0,,1,292,2,438 indices/list,292
+SM_CN_PROPS02_A3_LOD03,1,568,4,426 indices/list,1,852,6,426 indices/list,284
+SM_CN_HEROSHRINE10_A4_LOD03,0,0,0,,1,280,4,210 indices/list,280
+SM_CN_CASTLE03_A4_LOD03,0,0,0,,1,272,4,204 indices/list,272
+SM_FlagChinaEmpires_004_MorphUV2_MorphExport,1,134,1,402 indices/list,1,402,3,402 indices/list,268
+SM_CN_BRIDGE03_A4_LOD03,0,0,0,,1,264,2,396 indices/list,264
+SM_WORLDLEAFTREE_01_LOD01,0,0,0,,1,260,5,156 indices/list,260
+SM_NC_PROPS03_A3_LOD02,1,792,22,108 indices/list,1,1044,29,108 indices/list,252
+SM_WRE_NC_WOOD_L01_LOD03,0,0,0,,1,252,6,126 indices/list,252
+SM_CN_HEROSHRINE14_A3_LOD03,0,0,0,,2,248,124,6 indices/list,248
+SM_CN_HOUSE02_A4_LOD03,0,0,0,,1,240,1,720 indices/list,240
+SM_CityWater_China_YZ_03,0,0,0,,1,215,1,645 indices/list,215
+SM_CN_BRIDGE01_A2_LOD03,0,0,0,,1,214,1,642 indices/list,214
+SM_MOUNTAINTREE_01,0,0,0,,1,210,5,126 indices/list,210
+SM_LavaDecal_03,0,0,0,,1,200,1,600 indices/list,200
+M_BS_CN_PALDN_L3_LD02_A,0,0,0,,1,200,1,600 indices/list,200
+SM_CN_BRIDGE03_A2_LOD03,0,0,0,,1,200,5,120 indices/list,200
+Plane,0,0,0,,1,200,1,600 indices/list,200
+SM_CN_CENTERPORPS01_A3_LOD00,1,2646,27,294 indices/list,1,2842,29,294 indices/list,196
+M_BS_CN_PALDN_L3_H_LD02_A,0,0,0,,1,182,1,546 indices/list,182
+SM_CityWater_China_YZ_05,0,0,0,,1,169,1,507 indices/list,169
+SM_TALLTREE_01_LOD01,0,0,0,,1,162,3,162 indices/list,162
+SM_CN_CASTLE12_A3_LOD03,0,0,0,,1,152,4,114 indices/list,152
+SM_NC_PROPS02A_A0_LOD02,1,54,3,54 indices/list,1,198,11,54 indices/list,144
+SM_WRE_NC_GOLDA_L01_LOD03,0,0,0,,1,129,3,129 indices/list,129
+SM_CN_CASTLE05_A4_LOD03,0,0,0,,1,128,4,96 indices/list,128
+SM_CN_HEROSHRINE12_A4_LOD03,0,0,0,,1,120,2,180 indices/list,120
+SM_FR_MTPROPS06_A0_LOD02,0,0,0,,1,110,11,30 indices/list,110
+SM_TALLTREE_02_LOD01,0,0,0,,1,108,2,162 indices/list,108
+SM_CN_MILLWater02_A4,0,0,0,,1,100,2,150 indices/list,100
+SM_NC_PROPS05_A3_LOD02,1,90,1,270 indices/list,1,180,2,270 indices/list,90
+SM_CityWater_China_YZ_04,0,0,0,,1,79,1,237 indices/list,79
+SM_CN_HEROSHRINE16_A4_LOD03,0,0,0,,1,60,2,90 indices/list,60
+SM_COCWater_03,0,0,0,,1,60,1,180 indices/list,60
+SM_FR_MTPROPS07_A0_LOD02,0,0,0,,1,50,5,30 indices/list,50
+SM_LENGSHAN_01,0,0,0,,1,49,1,147 indices/list,49
+SM_NC_PROPS05B_A0_LOD02,1,1288,28,138 indices/list,1,1334,29,138 indices/list,46
+SM_LavaDecal_01_LOD0,0,0,0,,12,42,21,6 indices/list,42
+SM_NC_PROPS04_A0_LOD02,1,37,1,111 indices/list,1,74,2,111 indices/list,37
+SM_CityWater_08,0,0,0,,1,34,1,102 indices/list,34
+SM_CN_MTPROPS02_A4_LOD03,0,0,0,,1,32,1,96 indices/list,32
+SM_StonemineA_G,0,0,0,,1,26,13,6 indices/list,26
+SM_CN_MILLWater01_A4,0,0,0,,1,26,2,39 indices/list,26
+SM_CN_GARDEN_WATER_A2_LOD00,0,0,0,,1,23,1,69 indices/list,23
+SM_CN_GARDEN_WATER_A4_LOD00,0,0,0,,1,15,1,45 indices/list,15
+SM_AdventureVillageG_LOD1,0,0,0,,1,12,6,6 indices/list,12
+SM_CN_SCHOOL_WATER_A4_LOD00,0,0,0,,1,4,1,12 indices/list,4
+SM_CN_HEROSHRINE14_A4_LOD03,0,0,0,,1,2,1,6 indices/list,2
+SM_FlagChinaEmpires_003_MorphUV2_MorphExport,1,154,1,462 indices/list,1,154,1,462 indices/list,0
+SM_FlagChinaFeudal_012_MorphUV2_MorphExport,1,568,4,426 indices/list,1,568,4,426 indices/list,0
+SM_HallOfWarChinaCastle_Flag001_MorphUV2_MorphExport,1,488,1,1464 indices/list,1,488,1,1464 indices/list,0
+SM_StableChinaCastle_Flag001_MorphUV2_MorphExport,1,488,1,1464 indices/list,1,488,1,1464 indices/list,0
+SM_NC_PROPSGROUP05A_A0_LOD02,1,706,2,1059 indices/list,1,706,2,1059 indices/list,0
+SM_NC_PROPSGROUP05B_A0_LOD02,1,160,2,240 indices/list,1,160,2,240 indices/list,0
+SM_FR_WHARF08_A4_LOD02,1,1535,1,4605 indices/list,1,1535,1,4605 indices/list,0
+M_CN_PROPS04_A4_LD02_A,1,816,8,306 indices/list,1,816,8,306 indices/list,0
+SM_CN_PROPS05_A3_LOD03,1,428,2,642 indices/list,1,428,2,642 indices/list,0
+SM_NC_PROPSGROUP01_A0_LOD02,1,679,1,2037 indices/list,1,679,1,2037 indices/list,0
+SM_FR_WHARF02B_A4_LOD00,1,40,20,6 indices/list,1,32,16,6 indices/list,-8
+SM_FlagChinaFeudal_005_MorphUV2_MorphExport,1,288,9,96 indices/list,1,256,8,96 indices/list,-32
+SM_CN_CASTLE04_A4_LOD04,1,47,1,141 indices/list,0,0,0,,-47
+SM_CN_CASTLE09_A4_LOD04,1,48,3,48 indices/list,0,0,0,,-48
+SM_FR_WHARF02_A4_LOD03,1,84,6,42 indices/list,1,28,2,42 indices/list,-56
+SM_FR_WHARF03_A4_LOD03,1,336,12,84 indices/list,1,280,10,84 indices/list,-56
+SM_FR_WEAPONRACK_A3_LOD02,1,58,1,174 indices/list,0,0,0,,-58
+SM_CN_PROPS04_A3_LOD03,1,320,5,192 indices/list,1,256,4,192 indices/list,-64
+SM_FR_WEAPONRACK02_A3_LOD02,1,72,2,108 indices/list,0,0,0,,-72
+SM_CN_CASTLE11_A4_LOD04,1,92,4,69 indices/list,0,0,0,,-92
+SM_CN_CASTLE10_A4_LOD04,1,94,1,282 indices/list,0,0,0,,-94
+SM_FlagChinaFeudal_015_MorphUV2_MorphExport,1,288,3,288 indices/list,1,192,2,288 indices/list,-96
+SM_NC_PROPS11D_A0_LOD02,1,1584,44,108 indices/list,1,1476,41,108 indices/list,-108
+M_BN_CN_THIN1_LD03_A,1,113,1,339 indices/list,0,0,0,,-113
+SM_CN_CASTLE09_A3_LOD04,1,114,1,342 indices/list,0,0,0,,-114
+M_BN_CN_MFARMER1_LD03_A,1,127,1,381 indices/list,0,0,0,,-127
+SM_FR_WHARF06_A4_LOD03,1,256,2,384 indices/list,1,128,1,384 indices/list,-128
+(未命名),3,1142,3,174 indices/list; 2412 indices/list; 282 vertices/strip,2,1012,2,210 vertices/strip; 2412 indices/list,-130
+SM_FR_WHARF04_A4_LOD03,1,405,3,405 indices/list,1,270,2,405 indices/list,-135
+SM_CN_ARCHERYTARGET_A3_LOD01,1,552,4,414 indices/list,1,414,3,414 indices/list,-138
+SM_FlagChinaCastle_01,1,144,1,432 indices/list,0,0,0,,-144
+SM_CN_PROPS03_A4_LOD02,1,760,5,456 indices/list,1,608,4,456 indices/list,-152
+SM_FlagChinaEmpires_002_MorphUV2_MorphExport,1,154,1,462 indices/list,0,0,0,,-154
+M_BH_JOA_LD03_A,1,155,1,465 indices/list,0,0,0,,-155
+st_pubukou01,3,160,4,120 indices/list,0,0,0,,-160
+M_BN_FR_HAWKER1_LD03_A,1,162,1,486 indices/list,0,0,0,,-162
+M_BH_GAIUS_LD03_A,1,162,1,486 indices/list,0,0,0,,-162
+M_BH_ODA_LD03_A,1,168,1,504 indices/list,0,0,0,,-168
+SM_CN_CASTLE08_A4_LOD04,1,182,1,546 indices/list,0,0,0,,-182
+SM_NC_PROPS02_A3_LOD02,1,1830,10,549 indices/list,1,1647,9,549 indices/list,-183
+M_BS_CN_PALDN_L2_H_LD03_A,1,196,2,294 indices/list,0,0,0,,-196
+M_BN_CN_FAT1_LD03_A,1,224,2,336 indices/list,0,0,0,,-224
+M_BS_CN_PALDN_L3_LD03_A,1,238,2,357 indices/list,0,0,0,,-238
+SM_CN_HEROSHRINE02_A3_LOD04,1,250,1,750 indices/list,0,0,0,,-250
+SM_FlagChinaFeudal_007_MorphUV2_MorphExport,1,268,2,402 indices/list,0,0,0,,-268
+M_BS_CN_ARCHR_L2_LD03_A,1,270,2,405 indices/list,0,0,0,,-270
+SM_NC_CITYROAD06_A0_LOD01,2,280,28,30 indices/list,0,0,0,,-280
+SM_CN_CASTLE02_A4_LOD04,1,294,1,882 indices/list,0,0,0,,-294
+SM_Rock_10_LOD2,1,330,2,495 indices/list,0,0,0,,-330
+SM_CN_CASTLE07_A4_LOD04,1,358,1,1074 indices/list,0,0,0,,-358
+M_BA_BIRD1_LD03_A,1,366,3,366 indices/list,0,0,0,,-366
+SM_CN_CASTLE03_A4_LOD04,1,380,10,114 indices/list,0,0,0,,-380
+Plane001,4,384,4,288 indices/list,0,0,0,,-384
+SM_CN_CASTLE05_A4_LOD04,1,390,15,78 indices/list,0,0,0,,-390
+SM_CN_MTPROPS02_A3_LOD04,1,402,3,402 indices/list,0,0,0,,-402
+SM_FR_WHARF07_A4_LOD03,1,1512,7,648 indices/list,1,1080,5,648 indices/list,-432
+SM_NC_WHARF02_A2_LOD04,1,434,2,651 indices/list,0,0,0,,-434
+SM_NC_PROPS11A_A0_LOD02,1,1216,64,57 indices/list,1,779,41,57 indices/list,-437
+M_BM_H_BODY_L1_LD03_A,1,447,3,447 indices/list,0,0,0,,-447
+SM_BarChiC_Flag001_MEx,1,488,1,1464 indices/list,0,0,0,,-488
+SM_ArcChiC_Flag001_MEx,1,488,1,1464 indices/list,0,0,0,,-488
+SM_SpearBarrackChinaCastle_Flag001_MorphUV2_MorphExport,1,488,1,1464 indices/list,0,0,0,,-488
+SM_CN_MTPROPS01_A3_LOD04,1,504,6,252 indices/list,0,0,0,,-504
+M_BS_CN_PKEMN_L2_LD03_A,1,508,4,381 indices/list,0,0,0,,-508
+M_FR_WHARF_A4_LD03_A,1,534,1,1602 indices/list,0,0,0,,-534
+SM_NC_WHARF01_A2_LOD04,1,562,2,843 indices/list,0,0,0,,-562
+SM_NC_PROPS04_A3_LOD02,1,1184,8,444 indices/list,1,592,4,444 indices/list,-592
+M_BN_CN_MFARMER1_O_LD03_A,1,602,1,1806 indices/list,0,0,0,,-602
+SM_CityTree_04_LOD1,1,608,4,456 indices/list,0,0,0,,-608
+SM_CN_WALL05_A4_LOD04,1,609,7,261 indices/list,0,0,0,,-609
+SM_FlagChinaFeudal_004_MorphUV2_MorphExport,2,612,3,612 indices/list,0,0,0,,-612
+SM_CN_BRIDGE04_A2_LOD04,1,660,2,990 indices/list,0,0,0,,-660
+SM_CityWater_07,1,676,1,2028 indices/list,0,0,0,,-676
+M_BS_CN_PALDN_L2_LD03_A,1,684,6,342 indices/list,0,0,0,,-684
+M_BA_HORSE1_LD03_A,1,714,6,357 indices/list,0,0,0,,-714
+SM_CN_BRIDGE_A3_LOD04,1,740,1,2220 indices/list,0,0,0,,-740
+SM_CN_TENT02_A4_LOD04,1,770,10,231 indices/list,0,0,0,,-770
+SM_CN_CASTLE06_A4_LOD04,1,780,2,1170 indices/list,0,0,0,,-780
+SM_CN_DRILLG_A4_LOD04,1,790,1,2370 indices/list,0,0,0,,-790
+SM_CN_TOWER_A4_LOD04,1,806,1,2418 indices/list,0,0,0,,-806
+SM_CN_WALL02_A4_LOD04,1,812,7,348 indices/list,0,0,0,,-812
+SM_CN_SPEARB_A4_LOD04,1,891,1,2673 indices/list,0,0,0,,-891
+M_BS_CN_CHANG_L2_LD03_A,1,912,8,342 indices/list,0,0,0,,-912
+SM_CN_TAVERN_A4_LOD04,1,915,1,2745 indices/list,0,0,0,,-915
+SM_CN_MARKET_A4_LOD04,1,922,1,2766 indices/list,0,0,0,,-922
+SM_CN_STABLE_A4_LOD04,1,925,1,2775 indices/list,0,0,0,,-925
+SM_CN_HOSPITAL_A4_LOD04,1,966,1,2898 indices/list,0,0,0,,-966
+SM_CN_RIVERBANK_A4_LOD01,1,1004,1,3012 indices/list,0,0,0,,-1004
+SM_PropsScaffold_LOD2,1,1584,6,792 indices/list,1,528,2,792 indices/list,-1056
+SM_CN_PROPS01_A4_LOD03,1,2164,4,1623 indices/list,1,1082,2,1623 indices/list,-1082
+SM_CN_GOLDMINE_A4_LOD04,1,1106,2,1659 indices/list,0,0,0,,-1106
+SM_CN_IRONMINE_A4_LOD04,1,1106,2,1659 indices/list,0,0,0,,-1106
+SM_CN_HOUSE01_A4_LOD04,1,1152,4,864 indices/list,0,0,0,,-1152
+SM_CN_ARCHERY_A4_LOD04,1,1176,1,3528 indices/list,0,0,0,,-1176
+SM_ChinaCityTree_04_LOD1,1,1192,4,894 indices/list,0,0,0,,-1192
+SM_ChinaCityTree_03_LOD1,1,2460,6,1230 indices/list,1,1230,3,1230 indices/list,-1230
+M_CN_VIPSHIP_A4_LD04_A,1,1301,1,3903 indices/list,0,0,0,,-1301
+SM_CN_DOCK_A4_LOD04,1,1327,1,3981 indices/list,0,0,0,,-1327
+SM_CN_SCHOOL_A4_LOD04,1,1342,1,4026 indices/list,0,0,0,,-1342
+SM_CN_HEROSHRINE01_A3_LOD04,1,1416,1,4248 indices/list,0,0,0,,-1416
+SM_CN_MTPROPS_A4_LOD04,1,1421,1,4263 indices/list,0,0,0,,-1421
+SM_CN_BARRACK_A4_LOD04,1,1472,1,4416 indices/list,0,0,0,,-1472
+SM_CN_EMBASSY_A4_LOD04,1,1490,1,4470 indices/list,0,0,0,,-1490
+SM_CN_WALL04_A4_LOD04,1,1615,19,255 indices/list,0,0,0,,-1615
+M_BA_FISHG1_LD03_A,2,1650,5,990 indices/list,0,0,0,,-1650
+SM_ChinaCityTree_01_LOD1,1,1683,9,561 indices/list,0,0,0,,-1683
+SM_NC_PROPS11B_A0_LOD02,1,2784,96,87 indices/list,1,1044,36,87 indices/list,-1740
+SM_StonemineB_Lv2_LOD2,1,5746,26,663 indices/list,1,3978,18,663 indices/list,-1768
+SM_CN_MTPROPS03_A3_LOD04,1,1800,6,900 indices/list,0,0,0,,-1800
+SM_CN_WALL01_A4_LOD04,1,1914,11,522 indices/list,0,0,0,,-1914
+SM_CN_WALL09_A4_LOD04,1,1926,2,2889 indices/list,0,0,0,,-1926
+SM_CN_HALLOFWAR_A4_LOD04,1,2009,1,6027 indices/list,0,0,0,,-2009
+SM_BerryCluster,1,2178,9,726 indices/list,0,0,0,,-2178
+SM_NC_PROPS11C_A0_LOD02,1,3240,90,108 indices/list,1,936,26,108 indices/list,-2304
+SM_CN_WALL03_A4_LOD04,1,2352,14,504 indices/list,0,0,0,,-2352
+ScratchBuffer0_1,116,2570,116,1080 indices/list; 12 indices/list; 1272 indices/list; 138 indices/list; 18 indices/list; 192 indices/list; 216 indices/list; 24 indices/list; 240 indices/list; 30 indices/list; 36 indices/list; 42 indices/list; 48 indices/list; 54 indices/list; 576 indices/list; 6 indices/list; 60 indices/list; 72 indices/list; 78 indices/list; 84 indices/list; 90 indices/list; 96 indices/list,0,0,0,,-2570
+SM_CN_CENTER_A4_LOD04,1,2702,1,8106 indices/list,0,0,0,,-2702
+M_BChnC_01_LOD3_A,1,2725,5,1635 indices/list,0,0,0,,-2725
+SM_CN_CASTLE_A4_LOD04,1,2877,1,8631 indices/list,0,0,0,,-2877
+SM_Grass17,1,3024,27,336 indices/list,0,0,0,,-3024
+SM_CityTree_01_LOD1,1,3382,19,534 indices/list,0,0,0,,-3382
+SM_WRE_NC_GOLDB_L05_LOD03,1,3720,12,930 indices/list,0,0,0,,-3720
+SM_Rock_13,1,13478,23,1758 indices/list,1,9376,16,1758 indices/list,-4102
+SM_NC_PROPS06_A3_LOD01,1,5928,26,684 indices/list,1,1824,8,684 indices/list,-4104
+SM_Rock_07,1,4354,7,1866 indices/list,0,0,0,,-4354
+SM_Rock_16,1,7488,18,1248 indices/list,0,0,0,,-7488
+SM_Rock_15,1,9864,18,1644 indices/list,1,1096,2,1644 indices/list,-8768
+M_BN_CN_FFARMER1_O_LD03_A,1,10234,17,1806 indices/list,0,0,0,,-10234
+M_BN_CN_FAT1_O_LD03_A,1,10836,18,1806 indices/list,0,0,0,,-10836
+SM_CN_WALL06_A4_LOD04,1,15336,108,426 indices/list,0,0,0,,-15336
+SM_Terrain_Dark_China,1,25937,1,77811 indices/list,0,0,0,,-25937
+SM_ChinaCityTree_02,1,33264,54,1848 indices/list,1,2464,4,1848 indices/list,-30800

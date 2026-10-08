@@ -1,0 +1,55 @@
+{
+  "captures": [
+    {
+      "case": "empire1",
+      "draws": 432,
+      "triangles": 388740,
+      "main_triangles": 335481,
+      "encoder_draw_triangle_conservation": true,
+      "preserved_texture_equals_used_plus_unused": true,
+      "uniform_reflection_verified": true
+    },
+    {
+      "case": "empire2",
+      "draws": 456,
+      "triangles": 633603,
+      "main_triangles": 611625,
+      "encoder_draw_triangle_conservation": true,
+      "preserved_texture_equals_used_plus_unused": true,
+      "uniform_reflection_verified": true
+    }
+  ],
+  "runtime_replay_timing_recovered": false,
+  "triangle_definition": "triangle-list floor(count/3)*instances; triangle-strip max(count-2,0)*instances; includes potentially degenerate and subsequently culled primitives",
+  "triangle_count_audit": "triangle_count_audit.json",
+  "worldY_branch_audit": "worldY_consumers.json",
+  "worldY_vertex_sampling_draws": 14,
+  "worldY_fragment_disabled_height_draws": 276,
+  "worldY_fragment_variants_verified": 32,
+  "current_city_only": true,
+  "game_sources_modified": false,
+  "summary_values_source": "xcode_summary_measurements.json",
+  "summary_cross_checks": [
+    {
+      "case": "empire1",
+      "draw_calls_match": true,
+      "render_encoders_match": true,
+      "xcode_vertices_equals_submitted_input_count_times_instances": true,
+      "texture_size_matches_within_UI_rounding": true,
+      "summary_memory_equals_displayed_textures_plus_buffers": true,
+      "logical_buffer_minus_summary_buffer_mib": 0.17395698547363025
+    },
+    {
+      "case": "empire2",
+      "draw_calls_match": true,
+      "render_encoders_match": true,
+      "xcode_vertices_equals_submitted_input_count_times_instances": true,
+      "texture_size_matches_within_UI_rounding": true,
+      "summary_memory_equals_displayed_textures_plus_buffers": true,
+      "logical_buffer_minus_summary_buffer_mib": 0.19697463989257358
+    }
+  ],
+  "summary_gpu_time_available": true,
+  "per_encoder_timing_available": false,
+  "runtime_replay_timing_note": "Total GPU Time transcribed from Xcode screenshots; private trace replay timing not decoded."
+}

@@ -1,0 +1,22 @@
+{
+  "empire1": {
+    "render_target": "Game_SCENE_COLOR_MAP_NAME",
+    "indexed_indices_times_instances": 1005603,
+    "indexed_triangles": 335201,
+    "strip_draw_number": 263,
+    "strip_vertices": 282,
+    "strip_instances": 1,
+    "strip_triangles": 280,
+    "total_submitted_triangles": 335481
+  },
+  "empire2": {
+    "render_target": "Game_SCENE_COLOR_MAP_NAME",
+    "indexed_indices_times_instances": 1834251,
+    "indexed_triangles": 611417,
+    "strip_draw_number": 364,
+    "strip_vertices": 210,
+    "strip_instances": 1,
+    "strip_triangles": 208,
+    "total_submitted_triangles": 611625
+  }
+}

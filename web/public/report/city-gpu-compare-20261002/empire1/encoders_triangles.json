@@ -1,0 +1,392 @@
+[
+  {
+    "encoder_index": 0,
+    "handle": "0x305c4eca0",
+    "label": "[R] RenderLoop.Draw",
+    "descriptor_key": "67E6CE4B89B560B",
+    "texture_refs": [
+      "0x17b329b80"
+    ],
+    "targets": [
+      {
+        "handle": "0x17b329b80",
+        "label": "Game_SHARED_GAME_SHADOW_MAP_NAME_2",
+        "width": 2048,
+        "height": 2048,
+        "pixel_format": 250,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 24,
+    "indexed_draws": 24,
+    "submitted_elements": 131778,
+    "distinct_pipelines": 4,
+    "draw_first": 1,
+    "draw_last": 24,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 43926,
+    "role": "阴影"
+  },
+  {
+    "encoder_index": 1,
+    "handle": "0x305c4e5a0",
+    "label": "",
+    "descriptor_key": "D07B86B85A5EF1D4",
+    "texture_refs": [
+      "0x174645680",
+      "0x174060500",
+      "0x1722cfc00"
+    ],
+    "targets": [
+      {
+        "handle": "0x174645680",
+        "label": "Game_SCENE_COLOR_MAP_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      },
+      {
+        "handle": "0x174060500",
+        "label": "Game_SCENE_IMAGEBLOCK_DEPTH_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 55,
+        "storage_mode": "Memoryless",
+        "sample_count": 1
+      },
+      {
+        "handle": "0x1722cfc00",
+        "label": "Game_SCENE_DEPTH_STENCIL_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 250,
+        "storage_mode": "Memoryless",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 301,
+    "indexed_draws": 300,
+    "submitted_elements": 1005885,
+    "distinct_pipelines": 59,
+    "draw_first": 25,
+    "draw_last": 325,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 335481,
+    "role": "Game_SCENE_COLOR_MAP_NAME"
+  },
+  {
+    "encoder_index": 2,
+    "handle": "0x305c4c380",
+    "label": "",
+    "descriptor_key": "14BD4E568DBB194D",
+    "texture_refs": [
+      "0x174060f00"
+    ],
+    "targets": [
+      {
+        "handle": "0x174060f00",
+        "label": "Game_RT_4",
+        "width": 486,
+        "height": 225,
+        "pixel_format": 115,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 326,
+    "draw_last": 326,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 3,
+    "handle": "0x305c4f950",
+    "label": "",
+    "descriptor_key": "DCAD6EC7BFC19734",
+    "texture_refs": [
+      "0x174060780"
+    ],
+    "targets": [
+      {
+        "handle": "0x174060780",
+        "label": "Game_TMP_RT_8",
+        "width": 243,
+        "height": 112,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 327,
+    "draw_last": 327,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 4,
+    "handle": "0x305c4ff70",
+    "label": "",
+    "descriptor_key": "93578F5A100E9EB6",
+    "texture_refs": [
+      "0x174060a00"
+    ],
+    "targets": [
+      {
+        "handle": "0x174060a00",
+        "label": "Game_TMP_RT_16",
+        "width": 121,
+        "height": 56,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 328,
+    "draw_last": 328,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 5,
+    "handle": "0x305c4dc00",
+    "label": "",
+    "descriptor_key": "51A6F9123476E37B",
+    "texture_refs": [
+      "0x174060c80"
+    ],
+    "targets": [
+      {
+        "handle": "0x174060c80",
+        "label": "Game_TMP_RT_32",
+        "width": 60,
+        "height": 28,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 329,
+    "draw_last": 329,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 6,
+    "handle": "0x305c4e1b0",
+    "label": "",
+    "descriptor_key": "5BBBC03157F75551",
+    "texture_refs": [
+      "0x174061900"
+    ],
+    "targets": [
+      {
+        "handle": "0x174061900",
+        "label": "Game_RT_64",
+        "width": 30,
+        "height": 14,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 330,
+    "draw_last": 330,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 7,
+    "handle": "0x305c4e7d0",
+    "label": "",
+    "descriptor_key": "22D3213D0ED23168",
+    "texture_refs": [
+      "0x174061680"
+    ],
+    "targets": [
+      {
+        "handle": "0x174061680",
+        "label": "Game_RT_32",
+        "width": 60,
+        "height": 28,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 331,
+    "draw_last": 331,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 8,
+    "handle": "0x305c4da40",
+    "label": "",
+    "descriptor_key": "1EE8171BACA3909C",
+    "texture_refs": [
+      "0x174061400"
+    ],
+    "targets": [
+      {
+        "handle": "0x174061400",
+        "label": "Game_RT_16",
+        "width": 121,
+        "height": 56,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 332,
+    "draw_last": 332,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 9,
+    "handle": "0x305c4e060",
+    "label": "",
+    "descriptor_key": "8D09BE5706158C44",
+    "texture_refs": [
+      "0x174061180"
+    ],
+    "targets": [
+      {
+        "handle": "0x174061180",
+        "label": "Game_RT_8",
+        "width": 243,
+        "height": 112,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 333,
+    "draw_last": 333,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 10,
+    "handle": "0x305c4fb10",
+    "label": "",
+    "descriptor_key": "EFF358573A42E110",
+    "texture_refs": [
+      "0x174061b80"
+    ],
+    "targets": [
+      {
+        "handle": "0x174061b80",
+        "label": "Game_RT_SUM_MERGE",
+        "width": 486,
+        "height": 225,
+        "pixel_format": 115,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 334,
+    "draw_last": 334,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 2,
+    "role": "Bloom"
+  },
+  {
+    "encoder_index": 11,
+    "handle": "0x305c4df10",
+    "label": "",
+    "descriptor_key": "49BFBE4C917B64F2",
+    "texture_refs": [
+      "0x13b004780",
+      "0x1178d0a00"
+    ],
+    "targets": [
+      {
+        "handle": "0x13b004780",
+        "label": "CAMetalLayer Display Drawable",
+        "width": null,
+        "height": null,
+        "pixel_format": null,
+        "storage_mode": null,
+        "sample_count": null
+      },
+      {
+        "handle": "0x1178d0a00",
+        "label": "",
+        "width": 2778,
+        "height": 1284,
+        "pixel_format": 260,
+        "storage_mode": "Memoryless",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 98,
+    "indexed_draws": 98,
+    "submitted_elements": 27945,
+    "distinct_pipelines": 15,
+    "draw_first": 335,
+    "draw_last": 432,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0,
+    "submitted_triangles": 9315,
+    "role": "最终输出/UI"
+  }
+]

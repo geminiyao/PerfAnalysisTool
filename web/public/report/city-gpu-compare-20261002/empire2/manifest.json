@@ -1,0 +1,81 @@
+{
+  "source": "H:\\AOE专区\\远征2.0\\性能优化\\GPU\\GPU trace分析\\帝国2内城_全盛_精致_10021831.gputrace.zip",
+  "archive_size": 142106676,
+  "archive_sha256": "8005d6bd1bc9b63bb93f8c7fc975187bee803139f405e5de3c8480333e367fa8",
+  "zip_crc": "all extracted members verified by zipfile.read",
+  "members": [
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/store0",
+      "size": 134938105,
+      "sha256": "8b03603706620df6f6e396bcda65efe2ddc276d40a6e6aa935c6830089b6fe0f"
+    },
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.expert-case-config-data)",
+      "size": 2219,
+      "sha256": "f4c73ca01ee35a86762223d1d48583a0c12e0beb5d05bfb1011e2ef6daebe8ff",
+      "decoded_size": 3026,
+      "plist_keys": [
+        "$version",
+        "$archiver",
+        "$top",
+        "$objects"
+      ]
+    },
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.quicklook-preview)",
+      "size": 7721746,
+      "sha256": "3447131953741dffbc05fd2cd1b1295e3c27545d34ce69293ffd042aeb8f49fa",
+      "decoded_size": 7719385,
+      "preview_dimensions": [
+        2778,
+        1284
+      ]
+    },
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/index",
+      "size": 673895,
+      "sha256": "da48251b67a09c098ba974a47a190bd0c6db9cebd549ef3b3399dbd7a9164e63"
+    },
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/metadata",
+      "size": 3306,
+      "sha256": "24e6f4e7be8bc08a46eaeb128c1578dd94370e8e148a356cdd72008db1132b0e",
+      "plist_keys": [
+        "DYCaptureSession.unusedFunctionCount",
+        "DYCaptureSession.graphics_api",
+        "DYCaptureSession.unusedCommandQueueCount",
+        "(uuid)",
+        "DYCaptureSession.boundaryLess",
+        "DYCaptureSession.configuration_dictionary",
+        "DYCaptureSession.capture_version",
+        "DYCaptureSession.unusedRenderPipelineStateCount",
+        "DYCaptureSession.deviceId",
+        "DYCaptureEngine.launch_dictionary",
+        "DYCaptureSession.nativePointerSize",
+        "DYCaptureSession.unusedBufferCount",
+        "DYCaptureSession.unusedTextureCount",
+        "DYCaptureEngine.linked_on_apex_or_later",
+        "DYCaptureSession.unusedSamplerStateCount",
+        "DYCaptureSession.library_link_time_versions",
+        "DYCaptureSession.unusedLibraryCount",
+        "DYCaptureSession.unusedComputePipelineStateCount",
+        "DYCaptureEngine.captured_frames_count",
+        "DYCaptureSession.unusedDepthStencilStateCount",
+        "DYCaptureSession.interpose_feature_version",
+        "DYCaptureSession.interpose_patch_version"
+      ]
+    },
+    {
+      "name": "帝国2内城_全盛_精致_10021831.gputrace/(gpu.shared-tab-ui-state)",
+      "size": 227,
+      "sha256": "ffe298b0f48e40f866e198950d1c60eefa203253dfc27b1ac5735f6726712f8d",
+      "decoded_size": 265,
+      "plist_keys": [
+        "$version",
+        "$archiver",
+        "$top",
+        "$objects"
+      ]
+    }
+  ]
+}

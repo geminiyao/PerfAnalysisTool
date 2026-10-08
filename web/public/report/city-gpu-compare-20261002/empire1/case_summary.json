@@ -1,0 +1,50 @@
+{
+  "case": "empire1",
+  "draw_count": 432,
+  "indexed_draws": 431,
+  "nonindexed_draws": 1,
+  "submitted_elements": 1165662,
+  "render_encoders": 12,
+  "pipelines_drawn": 82,
+  "metal_sources_total": 192,
+  "metal_sources_active": 94,
+  "fragment_height_draws": 0,
+  "vertex_height_draws": 0,
+  "texture_bytes_bound_by_shaders": 110696576,
+  "attachment_bytes": 33212672,
+  "resource_totals": {
+    "Buffer": {
+      "count": 920,
+      "recorded_bytes": 55893250,
+      "used_stream_bytes": 24295198,
+      "last_bound_now_bytes": 41072414
+    },
+    "Texture": {
+      "count": 558,
+      "recorded_bytes": 245266304,
+      "used_stream_bytes": 143293440,
+      "last_bound_now_bytes": 143293440
+    },
+    "RenderPipeline": {
+      "count": 199,
+      "recorded_bytes": 579110,
+      "used_stream_bytes": 268122,
+      "last_bound_now_bytes": 0
+    },
+    "ComputePipeline": {
+      "count": 9,
+      "recorded_bytes": 7442,
+      "used_stream_bytes": 0,
+      "last_bound_now_bytes": 0
+    }
+  },
+  "overviewSamplesAreReady": false,
+  "overview_samples_count": 0,
+  "limitations": [
+    "Private MTSP semantics inferred and coherently linked, without Xcode replay verification",
+    "Submitted elements are not actual vertex invocations or shaded fragment counts",
+    "Compile instructions are not runtime duration; no per-pass or per-pipeline replay timings recovered",
+    "Texture allocation and buffer length use different accounting; not whole-process resident memory",
+    "Used resource stream, last bound Now, and actually bound shader arguments are separate classifications"
+  ]
+}

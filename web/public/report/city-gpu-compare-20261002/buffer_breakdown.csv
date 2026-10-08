@@ -1,0 +1,5 @@
+﻿case,group,count,logical_bytes,used_logical_bytes
+empire1,Scratch通用缓冲,8,33554432,16777216
+empire1,其他Buffer,912,22338818,7517982
+empire2,Scratch通用缓冲,11,46137344,25165824
+empire2,其他Buffer,1012,21303892,10488684

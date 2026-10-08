@@ -1,0 +1,262 @@
+[
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 1,
+    "end_line": 28,
+    "sha256": "390b76b4fe219bfe881ada70a899a5ef5584c74c8d5caa08a9bd5959f760ce37",
+    "source_mtime": 1790933429.4523382,
+    "excerpt": "1: #ifndef BNS_FOG_COMMON_CGINC_\n2: #define BNS_FOG_COMMON_CGINC_\n3: //#include \"UnityLightingCommon.cginc\"\n4: #include \"../Base/Lighting.cginc\"\n5: #include \"GlobalParameters.cginc\"\n6: \n7: #ifndef BNS_FULL_PIXEL_FOG\n8: #define BNS_FULL_PIXEL_FOG 0\n9: #endif\n10: \n11: //#define BNS_PIXEL_MIE\n12: \n13: #if BNS_FULL_PIXEL_FOG\t// 全部在Pixel Shader中计算\n14: \t#define BNS_FOG_COORDS(idx) \n15: \t#define BNS_TRANSFER_FOG(o, worldPos) \n16: \t#define BNS_APPLY_FOG(i, col, worldPos) half4 bnsPixelFog = CalcBnSFogColor(worldPos); col.rgb = col.rgb * bnsPixelFog.a + bnsPixelFog.rgb;\n17: #else\n18: \t#ifdef BNS_PIXEL_MIE\t// 米氏散射在Pixel Shader中计算\n19: \t\t#define BNS_FOG_COORDS(idx) half4 bnsFogCoe : TEXCOORD##idx;\n20: \t\t#define BNS_TRANSFER_FOG(o, worldPos) o.bnsFogCoe = CalcBnSFogCoe(worldPos);\n21: \t\t#define BNS_APPLY_FOG(i, col, worldPos) half4 bnsPixelFog = ApplyBnsFogCoe(worldPos, i.bnsFogCoe); col.rgb = col.rgb * bnsPixelFog.a + bnsPixelFog.rgb;\n22: \t#else\t\t\t\t\t// 全部在Vertex Shader中计算\n23: \t\t#define BNS_FOG_COORDS(idx) half4 bnsFogColor : TEXCOORD##idx;\n24: \t\t#define BNS_TRANSFER_FOG(o, worldPos) o.bnsFogColor = CalcBnSFogColor(worldPos);\n25: \t\t#define BNS_APPLY_FOG(i, col, worldPos) col.rgb = col.rgb * i.bnsFogColor.a + i.bnsFogColor.rgb;\n26: \t#endif\n27: #endif\n28: "
+  },
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 90,
+    "end_line": 105,
+    "sha256": "390b76b4fe219bfe881ada70a899a5ef5584c74c8d5caa08a9bd5959f760ce37",
+    "source_mtime": 1790933429.4523382,
+    "excerpt": "90: \n91: \treturn LineIntegralFinal;\n92: }\n93: \n94: half4 CalcBnSFogColor(half3 WorldPos)\n95: {\n96: \tif (gFogFuncEnabled < 0.5h)\n97: \t\treturn half4(0.0h, 0.0h, 0.0h, 1.0h);\n98: \n99: \tfloat3 EyePos = _WorldSpaceCameraPos;\n100: \tfloat3 EyeToWorld = WorldPos - EyePos;\n101:     half3 V = SafeNormalize(EyeToWorld);\n102:     half D = length(EyeToWorld);\n103: \n104: \thalf D_Atmospheric = max(0, D - BnSFog_AtmosStartDist);\n105: \thalf D_HeightFog = max(0, D - BnSFog_HeightFogStartDist);"
+  },
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 212,
+    "end_line": 229,
+    "sha256": "390b76b4fe219bfe881ada70a899a5ef5584c74c8d5caa08a9bd5959f760ce37",
+    "source_mtime": 1790933429.4523382,
+    "excerpt": "212: \tif (gFogFuncEnabled < 0.5h)\n213: \t\treturn half4(0.0h, 0.0h, 0.0h, 1.0h);\n214: \n215: \thalf3 EyePos = _WorldSpaceCameraPos;\n216: \thalf3 EyeToWorld = WorldPos - EyePos;\n217:     half3 V = SafeNormalize(EyeToWorld);\n218: \thalf3 sunDirection = DirectionalLightDir.xyz;\n219:     half Nu = dot(sunDirection, V);\n220: \n221: \thalf4 OutColor;\n222: \tOutColor.rgb = BnSFog_HeightFogColor * (1 - coe.r);\n223: \tOutColor.rgb += BnSFog_AlbedoR * coe.g;\n224: \tOutColor.rgb += BnSFog_AlbedoM * Mie(Nu, BnSFog_MieG) * coe.b;\n225: \tOutColor.a = coe.a;\n226: \n227: \treturn OutColor;\n228: }\n229: #endif"
+  },
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Runtime\\Fog\\BnSFog.cs",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs",
+    "start_line": 178,
+    "end_line": 200,
+    "sha256": "f1e5bb6f1ec952e7bfca5a519f3fb593c56fe78627a73867b2fb36a86cca569e",
+    "source_mtime": 1732502846.0261176,
+    "excerpt": "178: \n179:         if(s_gFogParams[5].y != HeightFogStartDistance)\n180:         {\n181:             s_gFogParams[5].y = HeightFogStartDistance;\n182:             isFogDirty = true;\n183:         }\n184: \n185:         if(s_gFogParams[5].z != HeightFogFalloff)\n186:         {\n187:             s_gFogParams[5].z = HeightFogFalloff;\n188:             isFogDirty = true;\n189:         }\n190: \n191:         // s_gFogParams[6] is for lobby Fog\n192:         if (!paramsTmp2[0].Equals(s_gFogParams[7]))\n193:         {\n194:             s_gFogParams[7] = paramsTmp2[0];\n195:             isFogDirty = true;\n196:         }\n197:         if (!paramsTmp2[1].Equals(s_gFogParams[8]))\n198:         {\n199:             s_gFogParams[8] = paramsTmp2[1];\n200:             isFogDirty = true;"
+  },
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Runtime\\RenderGraph\\TBURenderGraph.cs",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs",
+    "start_line": 259,
+    "end_line": 287,
+    "sha256": "112bdc3735b44925dc44e3366472306e6bd338daecc658c9e021c6eff2b84e7a",
+    "source_mtime": 1733994020.3213823,
+    "excerpt": "259:             color = m_CameraTargetColor.renderTargetIdentifier;\n260:         }\n261: \n262:         if(m_CameraTargetDepth.IsValid())\n263:         {\n264:             var memoryless = RenderTextureMemoryless.None;\n265:             //如果不需要读Depth，并且支持DepthFetch的话，可以设置成memoryless\n266:             var desc = m_Resources.GetTextureResourceDesc(m_CameraTargetDepth.handle);\n267:             if(!m_CameraTargetDepth.HasRead() && RenderingUtils.IsSupportDepthFetch())\n268:             {\n269:                 if(desc.desc.msaaSamples > 1)\n270:                     memoryless = RenderTextureMemoryless.MSAA;\n271:                 else\n272:                     memoryless = RenderTextureMemoryless.Depth;\n273:             }\n274:             else\n275:             {\n276:                 if(desc.desc.msaaSamples > 1 && RenderingUtils.IsSupportDepthAutoResolve())\n277:                     memoryless = RenderTextureMemoryless.MSAA;\n278:                 else\n279:                     memoryless = RenderTextureMemoryless.None;\n280:             }\n281:             m_Resources.CreateAndClearTexture(m_CameraTargetDepth.handle,true, memoryless);\n282:             depth = m_CameraTargetDepth.renderTargetIdentifier;\n283:         }\n284: \n285:         m_Renderer.ConfigureCameraTarget(color,depth);\n286:         m_IsInExecute = false;\n287:     }"
+  },
+  {
+    "case": "empire1",
+    "file": "G:\\AOE3D_proj\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\MobileBasePass.cginc",
+    "portable": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc",
+    "start_line": 481,
+    "end_line": 502,
+    "sha256": "bdabb45fdbe11b6399ca1b7c20b75e3d42679acb056fd9994517e407f0a258dd",
+    "source_mtime": 1790933429.489173,
+    "excerpt": "481:     diffuseColor += reflectivity * 0.45;\n482:     half3 specularColor = 0;\n483: #elif USE_TANGENT_SPACE_LIGHTING\n484:     //  [2021/03/04]eranzhao: Support tangent space lighting.\n485:     half3 specularColor = 0.08 * parameter.Specular;\n486: #else\n487:     NoV = dot(worldNormal, cameraVector);\n488: \n489:     #ifdef NON_METAL\n490:         half3 specularColor = EnvBRDFApproxNonmetal(parameter.Roughness, NoV);\n491:     #elif LIGHTING_HQ\n492:         half3 specularColor = (0.04 - 0.04 * parameter.Metallic) + parameter.BaseColor * parameter.Metallic;\n493:         half3 Preintegrated_DGF = EnvBRDFApprox(specularColor, parameter.Roughness, NoV);\n494:     #else\n495:         half3 specularColor = EnvBRDFApprox(reflectivity, parameter.Roughness, NoV);\n496:     #endif\n497: #endif  //!FULLY_ROUGH\n498:     \n499:     half3 color = 0;\n500:     \n501:     //--------------------------------------------------------------------------\n502:     // Lightmap, for indirect diffuse only."
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 1,
+    "end_line": 28,
+    "sha256": "39d647978ac8c941bf0bf8e96e0013b1aae901c3e2d90e57a6f5525729f6b1ea",
+    "source_mtime": 1790155301.057307,
+    "excerpt": "1: #ifndef BNS_FOG_COMMON_CGINC_\n2: #define BNS_FOG_COMMON_CGINC_\n3: //#include \"UnityLightingCommon.cginc\"\n4: #include \"../Base/Lighting.cginc\"\n5: #include \"GlobalParameters.cginc\"\n6: \n7: #ifndef BNS_FULL_PIXEL_FOG\n8: #define BNS_FULL_PIXEL_FOG 1\n9: #endif\n10: \n11: //#define BNS_PIXEL_MIE\n12: \n13: #if BNS_FULL_PIXEL_FOG\t// 全部在Pixel Shader中计算\n14: \t#define BNS_FOG_COORDS(idx) \n15: \t#define BNS_TRANSFER_FOG(o, worldPos) \n16: \t\t#define BNS_APPLY_FOG(i, col, worldPos) half4 bnsPixelFog = CalcBnSFogColor(worldPos); col.rgb = col.rgb * bnsPixelFog.a + bnsPixelFog.rgb;\n17: #else\n18: \t#ifdef BNS_PIXEL_MIE\t// 米氏散射在Pixel Shader中计算\n19: \t\t#define BNS_FOG_COORDS(idx) half4 bnsFogCoe : TEXCOORD##idx;\n20: \t\t#define BNS_TRANSFER_FOG(o, worldPos) o.bnsFogCoe = CalcBnSFogCoe(worldPos);\n21: \t\t#define BNS_APPLY_FOG(i, col, worldPos) half4 bnsPixelFog = ApplyBnsFogCoe(worldPos, i.bnsFogCoe); col.rgb = col.rgb * bnsPixelFog.a + bnsPixelFog.rgb;\n22: \t#else\t\t\t\t\t// 全部在Vertex Shader中计算\n23: \t\t#define BNS_FOG_COORDS(idx) half4 bnsFogColor : TEXCOORD##idx;\n24: \t\t#define BNS_TRANSFER_FOG(o, worldPos) o.bnsFogColor = CalcBnSFogColor(worldPos);\n25: \t\t#define BNS_APPLY_FOG(i, col, worldPos) col.rgb = col.rgb * i.bnsFogColor.a + i.bnsFogColor.rgb;\n26: \t#endif\n27: #endif\n28: "
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 90,
+    "end_line": 105,
+    "sha256": "39d647978ac8c941bf0bf8e96e0013b1aae901c3e2d90e57a6f5525729f6b1ea",
+    "source_mtime": 1790155301.057307,
+    "excerpt": "90:     //if (_UseWeatherColorTex >= 0.5)\n91:     {\n92:         // 颜色纹理路径：三张纹理共享 BnsFog_LinearClampSampler，三次双线性采样\n93:         // 区域边界因 Bilinear + 高斯模糊而自然过渡；使用 SampleLevel(mip=0) 保证在 vertex/pixel 通用\n94:         result.rayleighTintColor = _WeatherRayleighColorTex.SampleLevel(BnsFog_LinearClampSampler, worldUV, 0.0);\n95:         result.mieTintColor      = _WeatherMieColorTex.SampleLevel(BnsFog_LinearClampSampler,      worldUV, 0.0);\n96:         result.heightFogColor    = _WeatherHeightFogColorTex.SampleLevel(BnsFog_LinearClampSampler, worldUV, 0.0);\n97:     }\n98:     //else\n99:     //{\n100:     //    // 索引贴图路径（原有行为，保持向后兼容）\n101:     //    // 采样 R8 索引贴图，linear空间，值范围 [0, 1]\n102:     //    float rawIndex = tex2D(_WeatherIndexTex, worldUV).r;\n103:     //    // R8 贴图存储的是 byte 值 / 255.0，还原为整数索引\n104:     //    int index = (int)(rawIndex * 255.0 + 0.5);\n105:     //    index = clamp(index, 0, _WeatherFogColorCount - 1);"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\BnSFogCommon.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+    "start_line": 212,
+    "end_line": 255,
+    "sha256": "39d647978ac8c941bf0bf8e96e0013b1aae901c3e2d90e57a6f5525729f6b1ea",
+    "source_mtime": 1790155301.057307,
+    "excerpt": "212: \treturn LineIntegralFinal;\n213: }\n214: \n215: half4 CalcBnSFogColor(half3 WorldPos)\n216: {\n217:     float3 EyePos = _WorldSpaceCameraPos;\n218:     \n219: \tfloat3 EyeToWorld = WorldPos - EyePos;\n220:     half3 V = SafeNormalize(EyeToWorld);\n221:     half D = length(EyeToWorld);\n222: \n223: \thalf D_Atmospheric = max(0, D - BnSFog_AtmosStartDist);\n224: \n225: \t//-----------------------------------------\n226: \t// 地形高度适配：统一执行一次 VT 采样，供大气雾和高度雾共享\n227: \tfloat terrainY = 0;\n228: #ifdef FOG_TERRAIN_ADAPT_ON\n229: \tif (BnSFog_TerrainAdaptAtmosFog > 0.5 || BnSFog_TerrainAdaptHeightFog > 0.5)\n230: \t{\n231: \t\tterrainY = GetTerrainHeightFromVT(WorldPos);\n232: \t}\n233: #endif\n234: \n235: #if (SHADER_LOD > 200)\n236: \t//-----------------------------------------\n237:     // Atmospheric Fog\n238:     const half BetaT = BnSFog_BetaRs + BnSFog_BetaMs;\n239: \n240: \t// 大气雾地形适配：使用相对地形高度参与衰减计算\n241: \tfloat atmosEyeToWorldY = EyeToWorld.y;\n242: \thalf atmosD = D_Atmospheric;\n243: #ifdef FOG_TERRAIN_ADAPT_ON\n244: \tif (BnSFog_TerrainAdaptAtmosFog > 0.5)\n245: \t{\n246: \t\tfloat adjustedAtmosWorldY = WorldPos.y - terrainY;\n247: \t\tatmosEyeToWorldY = adjustedAtmosWorldY - EyePos.y;\n248: \t\tfloat atmosAdjustedD = length(float3(EyeToWorld.x, atmosEyeToWorldY, EyeToWorld.z));\n249: \t\tatmosD = max(0, atmosAdjustedD - BnSFog_AtmosStartDist);\n250: \t}\n251: #endif\n252: \n253: \thalf AtmosFalloff = CalcFogFalloff(BnSFog_AtmosBaseZ, EyePos.y, atmosEyeToWorldY, BnSFog_AtmosFalloff,\n254: \t\tsaturate(BnSFog_AtmosStartDist / D));\n255:     half T_Atmos = max(exp2(-atmosD * AtmosFalloff * BetaT * BnSFog_AtmosFogDensity), BnSFog_AtmosMinOpacity);"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Runtime\\Fog\\BnSFog.cs",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs",
+    "start_line": 178,
+    "end_line": 200,
+    "sha256": "0d01304181d66c4010fa8276caeee1c4e5d5657e4a6ff12c351579cbdea25541",
+    "source_mtime": 1787217497.474565,
+    "excerpt": "178: \n179:         bool isFogDirty = false;\n180: \n181: \n182:         // Use parameters array to save the performance of draw call.\n183:         var atDensity = (EnableAtmosphericFog && enabled && gameObject.activeInHierarchy) ? AtmosphericDensity : 0;\n184:         paramsTmp[0] = new Vector4(AtmosphericBaseZ, atDensity, AtmosphericMinOpacity, BetaRayleighScatter);\n185:         paramsTmp[1] = new Vector4(BetaMieScatter, MieAsymmetry, AtmosphericStartDistance, AtmosphericFalloff);\n186:         var tmpRayleighTintColor = RenderingUtils.GammaToLinear(RayleighTintColor);\n187:         paramsTmp[2] = new Vector4(tmpRayleighTintColor.r, tmpRayleighTintColor.g, tmpRayleighTintColor.b, SunInscatterIntensity);\n188:         var tmpMieTintColor = RenderingUtils.GammaToLinear(MieTintColor);\n189:         paramsTmp[3] = new Vector4(tmpMieTintColor.r, tmpMieTintColor.g, tmpMieTintColor.b, HeightFogBaseZ);\n190:         var tmpHeightFogColor = RenderingUtils.GammaToLinear(HeightFogColor);\n191:         var hDensity = (EnableHeightFog && enabled && gameObject.activeInHierarchy) ? HeightFogDensity / 1000f : 0;\n192:         paramsTmp[4] = new Vector4(tmpHeightFogColor.r, tmpHeightFogColor.g, tmpHeightFogColor.b, hDensity);\n193:         float enableFogMask = (EnableFogMask && enabled && gameObject.activeInHierarchy) ? 1.0f : 0.0f;\n194:         float fogMaskStrength = (EnableFogMask && enabled && gameObject.activeInHierarchy)\n195:             ? Mathf.Max(0.1f, FogMaskStrength)\n196:             : 0.0f;\n197:         float terrainAdapt = (EnableHeightFog && EnableTerrainAdaptiveHeightFog && enabled && gameObject.activeInHierarchy) ? 1.0f : 0.0f;\n198:         float terrainAdaptAtmos = (EnableAtmosphericFog && EnableTerrainAdaptiveAtmosFog && enabled && gameObject.activeInHierarchy) ? 1.0f : 0.0f;\n199:         paramsTmp2[0] = new Vector4(enableFogMask, fogMaskStrength, terrainAdapt, terrainAdaptAtmos);\n200:         paramsTmp2[1] = FogMaskUVScaleOffset;"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Runtime\\Fog\\BnSFog.cs",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs",
+    "start_line": 318,
+    "end_line": 373,
+    "sha256": "0d01304181d66c4010fa8276caeee1c4e5d5657e4a6ff12c351579cbdea25541",
+    "source_mtime": 1787217497.474565,
+    "excerpt": "318:     public static bool ApplyDefault(Vector4[] s_gFogParams)\n319:     {\n320:         bool isDirty = false;\n321:         for(int i=0;i<paramsTmp.Length;++i)\n322:         {   \n323:             if(!s_gFogParams[i].Equals(Vector4.one))\n324:             {\n325:                 s_gFogParams[i] = Vector4.one;\n326:                 isDirty = true;\n327:             }\n328:         }\n329: \n330:         // 这个因为w给另一个fog用了，没法比较整个vector\n331:         if(s_gFogParams[5].x != 1)\n332:         {\n333:             s_gFogParams[5].x = 1;\n334:             isDirty = true;\n335:         }\n336: \n337:         if(s_gFogParams[5].y != 1)\n338:         {\n339:             s_gFogParams[5].y = 1;\n340:             isDirty = true;\n341:         }\n342: \n343:         if(s_gFogParams[5].z != 1)\n344:         {\n345:             s_gFogParams[5].z = 1;\n346:             isDirty = true;\n347:         }\n348:         \n349:         if (s_gFogParams[7] != Vector4.zero)\n350:         {\n351:             s_gFogParams[7] = Vector4.zero;\n352:             isDirty = true;\n353:         }\n354:         if (s_gFogParams[8] != new Vector4(1, 1, 0, 0))\n355:         {\n356:             s_gFogParams[8] = new Vector4(1, 1, 0, 0);\n357:             isDirty = true;\n358:         }\n359: \n360:         // gFogParams[9]: FadeInRange 重置为 0（无渐隐效果）\n361:         if (s_gFogParams[9] != Vector4.zero)\n362:         {\n363:             s_gFogParams[9] = Vector4.zero;\n364:             isDirty = true;\n365:         }\n366: \n367:         // ScreenCenterFog 重置为零向量（MaxDensity=0，不产生任何雾效）\n368:         Shader.SetGlobalVector(ID_ScreenCenterFogParams0, Vector4.zero);\n369:         Shader.SetGlobalVector(ID_ScreenCenterFogParams1, Vector4.zero);\n370:         Shader.SetGlobalVector(ID_ScreenCenterFogParams2, Vector4.zero);\n371: \n372:         return isDirty;\n373:     }"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT_Helper.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+    "start_line": 15,
+    "end_line": 65,
+    "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494",
+    "source_mtime": 1790155311.7736883,
+    "excerpt": "15: \n16:     public static bool IsMaterialCompatible(Material material) =>\n17:         material != null && material.FindPass(PassName_RenderToVT) >= 0;\n18: \n19:     public static bool VTArrayCreatedReadable = false;\n20:     \n21:     public class VTRenderer\n22:     {\n23:         public Mesh FullScreenMesh;\n24: \n25:         public const int DefaultVTMipCount = 2;\n26:         // MipShift 关闭：page 重绘走 QuadNode.RedrawCurrentMip，只重画当前被采样的那一级 mip，\n27:         // 粗 mip 允许留旧内容。MipShift 会把粗 mip 拷成另一个结点的 mip0，与此前提冲突。\n28:         public const bool DefaultUseMipShift = false;\n29:         public const bool DefaultUseASTCCompress = true;\n30: #if ENABLE_PROFILER\n31:         public const string ProfilerSampleAstc = \"[VT] ASTC\";\n32:         public const string ProfilerSampleAstcCopyToArray = \"[VT] ASTC.CopyToArray\";\n33: #endif\n34: \n35:         public static int VTMipCount = DefaultVTMipCount; // Mip为1时，VT系统不处理MipShift、Mip0限帧等操作\n36:         public static int MaxVTMip = VTMipCount - 1; // [0, MaxVTMip]\n37:         public static float fVTMipCountRcp = 1.0f / VTMipCount;\n38:         public static bool UseMipShift = DefaultUseMipShift;\n39: \n40:         public static bool UseASTCCompress = DefaultUseASTCCompress;\n41:         public static bool RenderToClipFirst = false; // 非ASTC的情况下：是否直接绘制到RT上（而不是先到中间商 clipRTAlbedo 上）\n42:         public static bool ForceLimitedMemoryMode = false; // 内存受限\n43:         public static bool IsEmulatorDevice => TssHelper.IsEmulatorDevice();\n44: \n45:         public static ASTC_BLOCKSIZE DefaultAstcBlockSize = ASTC_BLOCKSIZE.ASTC_4x4;\n46:         public static ASTC_BLOCKSIZE AstcBlockSize = (ASTC_BLOCKSIZE)(-1);\n47: \n48:         public static Dictionary<ASTC_BLOCKSIZE, TextureFormat> AstcFormatMapping =\n49:             new Dictionary<ASTC_BLOCKSIZE, TextureFormat>\n50:         {\n51:             { ASTC_BLOCKSIZE.ASTC_4x4, TextureFormat.ASTC_4x4},\n52:             { ASTC_BLOCKSIZE.ASTC_5x5, TextureFormat.ASTC_5x5},\n53:             { ASTC_BLOCKSIZE.ASTC_6x6, TextureFormat.ASTC_6x6},\n54:         };\n55: \n56:         public static int GetAstcBlockSize(ASTC_BLOCKSIZE blockSize)\n57:         {\n58:             switch (blockSize)\n59:             {\n60:                 case ASTC_BLOCKSIZE.ASTC_5x5: return 5;\n61:                 case ASTC_BLOCKSIZE.ASTC_6x6: return 6;\n62:                 default: return 4;\n63:             }\n64:         }\n65: "
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT_Helper.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+    "start_line": 230,
+    "end_line": 267,
+    "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494",
+    "source_mtime": 1790155311.7736883,
+    "excerpt": "230:         public static int PageCapacity_UpperBound = 128;\n231:         public static int PageCapacity_High = 64;\n232:         public static int PageCapacity_Low = 48;\n233:         public int PageCapacity = PageCapacity_High;\n234: \n235:         private void InitPageCapacity()\n236:         {\n237:             // var recommendLevel = DeviceLevel.DeviceLevelSuperHigh;\n238:             // if (AOE.GameCore.Performance != null)\n239:             // {\n240:             //     recommendLevel = AOE.GameCore.Performance.RecommendLevel;\n241:             // }\n242: \n243:             var memorySize = SystemInfo.systemMemorySize;\n244:             bool isLowMemoryHardware = memorySize > 0 && memorySize < 4000; //RAM小于4G时\n245:             bool LowMemoryMode = ForceLimitedMemoryMode || isLowMemoryHardware;\n246:             if (LowMemoryMode)\n247:             {\n248:                 MaxTreeDepth = MaxTreeDepth_Low;\n249:                 PageCapacity = PageCapacity_Low;\n250:             }\n251:             else\n252:             {\n253:                 MaxTreeDepth = MaxTreeDepth_High;\n254:                 PageCapacity = PageCapacity_High;\n255:             }\n256: \n257: #if UNITY_EDITOR && AOE_ART\n258:             PageCapacity = PageCapacity_UpperBound; // Art工程提升预览品质\n259: #endif\n260: \n261:             if (PageCapacity > PageCapacity_UpperBound)\n262:             {\n263:                 PageCapacity = PageCapacity_UpperBound;\n264:                 Debug.LogError($\"VT.InitPageCapacity: {PageCapacity} 超出最大上限({PageCapacity_UpperBound}\");\n265:             }\n266: \n267:             Debug.Log($\"VT.InitPageCapacity: {ForceLimitedMemoryMode} {SystemInfo.systemMemorySize}MB #{PageCapacity} #{MaxTreeDepth}\");"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT_Helper.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+    "start_line": 348,
+    "end_line": 394,
+    "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494",
+    "source_mtime": 1790155311.7736883,
+    "excerpt": "348:             // 释放旧的 Texture2DArray\n349:             RenderPipelineUtil.DestroyTexture(ref clipAlbedoTexArray2D);\n350:             RenderPipelineUtil.DestroyTexture(ref clipNormalTexArray2D);\n351:             RenderPipelineUtil.DestroyTexture(ref clipWorldYTexArray2D);\n352: \n353:             // 按新块大小计算对齐后的尺寸\n354:             if (!AstcFormatMapping.TryGetValue(AstcBlockSize, out var textureFormat))\n355:             {\n356:                 textureFormat = TextureFormat.ASTC_4x4;\n357:             }\n358: \n359:             bool isLinear = true;\n360:             bool vtUseMipMap = VTMipCount > 1;\n361:             int astcBlock = GetAstcBlockSize(AstcBlockSize);\n362:             int alignedPageSize = (PageSize + astcBlock - 1) / astcBlock * astcBlock;\n363: \n364:             if (VTArrayCreatedReadable)\n365:                 clipAlbedoTexArray2D = new Texture2DArray(alignedPageSize, alignedPageSize, PageCapacity, textureFormat, vtUseMipMap, isLinear);\n366:             else\n367:                 clipAlbedoTexArray2D = new Texture2DArray(alignedPageSize, alignedPageSize, PageCapacity, textureFormat, vtUseMipMap, isLinear, false);\n368:             clipAlbedoTexArray2D.wrapMode = TextureWrapMode.Clamp;\n369:             clipAlbedoTexArray2D.name = \"clipAlbedoTexArray\";\n370:             if (VTArrayCreatedReadable)\n371:                 clipAlbedoTexArray2D.Apply(false, true);\n372: \n373:             if (VTArrayCreatedReadable)\n374:                 clipNormalTexArray2D = new Texture2DArray(alignedPageSize, alignedPageSize, PageCapacity, textureFormat, vtUseMipMap, isLinear);\n375:             else\n376:                 clipNormalTexArray2D = new Texture2DArray(alignedPageSize, alignedPageSize, PageCapacity, textureFormat, vtUseMipMap, isLinear, false);\n377:             clipNormalTexArray2D.wrapMode = TextureWrapMode.Clamp;\n378:             clipNormalTexArray2D.name = \"clipNormalTexArray\";\n379:             if (VTArrayCreatedReadable)\n380:                 clipNormalTexArray2D.Apply(false, true);\n381: \n382:             // WorldY 不做ASTC压缩，格式为 R16（不支持时回退 R8），尺寸不按块对齐，\n383:             // 采样时也不需要 _VT_PageUVScale 校正\n384:             if (VTArrayCreatedReadable)\n385:                 clipWorldYTexArray2D = new Texture2DArray(PageSize, PageSize, PageCapacity, WorldYTexFormat, vtUseMipMap, isLinear);\n386:             else\n387:                 clipWorldYTexArray2D = new Texture2DArray(PageSize, PageSize, PageCapacity, WorldYTexFormat, vtUseMipMap, isLinear, false);\n388:             clipWorldYTexArray2D.wrapMode = TextureWrapMode.Clamp;\n389:             clipWorldYTexArray2D.name = \"clipWorldYTexArray\";\n390:             if (VTArrayCreatedReadable)\n391:                 clipWorldYTexArray2D.Apply(false, true);\n392:         }\n393: \n394:         public void Dispose()"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Runtime\\RenderGraph\\TBURenderGraph.cs",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs",
+    "start_line": 294,
+    "end_line": 318,
+    "sha256": "19d4ed5b1b3e00923f88f7cd20989f29533cd93455df712c56a771904c4dc005",
+    "source_mtime": 1789366316.0483048,
+    "excerpt": "294:             color = m_CameraTargetColor.renderTargetIdentifier;\n295:         }\n296: \n297:         if(m_CameraTargetDepth.IsValid())\n298:         {\n299:             var memoryless = RenderTextureMemoryless.None;\n300:             //如果不需要读Depth，并且支持DepthFetch的话，可以设置成memoryless\n301:             var desc = m_Resources.GetTextureResourceDesc(m_CameraTargetDepth.handle);\n302:             if(!m_CameraTargetDepth.HasRead() && RenderingUtils.IsSupportDepthFetch())\n303:             {\n304:                 if(desc.desc.msaaSamples > 1)\n305:                     memoryless = RenderTextureMemoryless.MSAA;\n306:                 else\n307:                     memoryless = RenderTextureMemoryless.Depth;\n308:             }\n309:             else\n310:             {\n311:                 if(desc.desc.msaaSamples > 1 && RenderingUtils.IsSupportDepthAutoResolve())\n312:                     memoryless = RenderTextureMemoryless.MSAA;\n313:                 else\n314:                     memoryless = RenderTextureMemoryless.None;\n315:             }\n316:             m_Resources.CreateAndClearTexture(m_CameraTargetDepth.handle,true, memoryless);\n317:             depth = m_CameraTargetDepth.renderTargetIdentifier;\n318:         }"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\MobileBasePass.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc",
+    "start_line": 481,
+    "end_line": 502,
+    "sha256": "74bbf3f1f10ef1b6dfa6fbc78ef017a36d6ce2da36f5e58b77d541dd811a08f7",
+    "source_mtime": 1790155301.2255404,
+    "excerpt": "481:     // Get the custom material parameter.\n482:     FSMaterialInputParameter parameter = GET_FS_MATERIAL_INPUT_PARAMETER(i);\n483: #endif\n484:     // Fix the parameters.\n485:     CalcFSMaterialInput(parameter);\n486: \n487:     \n488: #ifdef FAKE_IMPOSTER_ROLE_ON\n489:     #ifdef ALPHA_TEST_ON\n490:         clip(parameter.OpacityMask - parameter.OpacityMaskClipValue);\n491:     #endif\n492: \n493:     #if defined(FOG_FUNC_ON) && FOG_ON\n494:     {\n495:         BNS_APPLY_FOG(input, parameter.BaseColor, i.AbsoluteWorldPosition.xyz);\n496:     }\n497:     #endif\n498:     #if defined(LOBBY_FOG_FUNC_ON)\n499:         LOBBY_APPLY_FOG(input, parameter.BaseColor, i.AbsoluteWorldPosition.xyz);\n500:     #endif\n501: \n502:     #ifndef OIT_ON"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Base\\MobileBasePass.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc",
+    "start_line": 1009,
+    "end_line": 1028,
+    "sha256": "74bbf3f1f10ef1b6dfa6fbc78ef017a36d6ce2da36f5e58b77d541dd811a08f7",
+    "source_mtime": 1790155301.2255404,
+    "excerpt": "1009:     //--------------------------------------------------------------------------\n1010:     // Emissive.\n1011:     color += parameter.EmissiveColor;\n1012:     \n1013:     // War fog.\n1014: // #if defined(WAR_FOG_ON)\n1015: // \n1016: //     //color *= GetWarFog(i.AbsoluteWorldPosition.xyz);\n1017: //     color.rgb = ApplyWarFog(i.AbsoluteWorldPosition.xyz, color.rgb);\n1018: // #endif\n1019:     \n1020:     //--------------------------------------------------------------------------\n1021:     // Fog.\n1022: #if defined(FOG_FUNC_ON) && FOG_ON\n1023:     BNS_APPLY_FOG(input, color, i.AbsoluteWorldPosition.xyz);\n1024: #endif\n1025: #if defined(LOBBY_FOG_FUNC_ON)\n1026: \tLOBBY_APPLY_FOG(input, color, i.AbsoluteWorldPosition.xyz);\n1027: #endif\n1028:     //--------------------------------------------------------------------------"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT_Helper.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+    "start_line": 269,
+    "end_line": 278,
+    "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494",
+    "source_mtime": 1790155311.7736883,
+    "excerpt": "269: \n270:         public void SetShaderParam()\n271:         {\n272:             Shader.SetGlobalTexture(ID_VT_AlbedoTex, UseASTCCompress ? (Texture)clipAlbedoTexArray2D : clipAlbedoTexArrayRT);\n273:             Shader.SetGlobalTexture(ID_VT_NormalTex, UseASTCCompress ? (Texture)clipNormalTexArray2D : clipNormalTexArrayRT);\n274:             Shader.SetGlobalTexture(ID_VT_WorldYTex, UseASTCCompress ? (Texture)clipWorldYTexArray2D : clipWorldYTexArrayRT);\n275: \n276:             // cbForRenderSlice.SetGlobalTexture(\"_VTAlbedoForBlend\", clipRTAlbedoForBlend); // [ToDo:link] Cliff_RenderToVT\n277:             // cbForRenderSlice.SetGlobalTexture(\"_VTNormalForBlend\", clipRTNormalForBlend); // [ToDo:link] Cliff_RenderToVT\n278: "
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT_Helper.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+    "start_line": 782,
+    "end_line": 797,
+    "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494",
+    "source_mtime": 1790155311.7736883,
+    "excerpt": "782:                 cbForRenderSlice.BeginSample(ProfilerSampleAstcCopyToArray);\n783: #endif\n784:                 cbForRenderSlice.CopyTexture(clipRTCompressedAlbedo, 0, iMipLv,\n785:                     clipAlbedoTexArray2D, physicTexIndex, iMipLv);\n786:                 cbForRenderSlice.CopyTexture(clipRTCompressedNormal, 0, iMipLv,\n787:                     clipNormalTexArray2D, physicTexIndex, iMipLv);\n788: #if ENABLE_PROFILER\n789:                 cbForRenderSlice.EndSample(ProfilerSampleAstcCopyToArray);\n790: #endif\n791: \n792:                 // WorldY 跳过压缩直接整块拷贝（源与目标同格式且尺寸相同）\n793:                 cbForRenderSlice.CopyTexture(clipRTWorldY, 0, iMipLv,\n794:                     clipWorldYTexArray2D, physicTexIndex, iMipLv);\n795: #if ENABLE_PROFILER\n796:                 cbForRenderSlice.EndSample(ProfilerSampleAstc);\n797: #endif"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Scripts\\CS\\Outside\\Terrain\\TerrainVT.cs",
+    "portable": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT.cs",
+    "start_line": 632,
+    "end_line": 642,
+    "sha256": "a0bf410d6eec260ff1ecb9ab66cc0851a8c4ec834c9fffb1bf1afe02bc3060a8",
+    "source_mtime": 1790232348.2402222,
+    "excerpt": "632:         PublishSharedPoolWarmupAfterFlush();\n633: #if ENABLE_PROFILER\n634:         }\n635: #endif\n636: \n637: #if UNITY_EDITOR\n638:         int usingPageCount = vtRenderer.PageCapacity - physicIndexManager.FreeCount;\n639:         MaxUsedPageCount = usingPageCount > MaxUsedPageCount ? usingPageCount : MaxUsedPageCount;\n640:         PageUsageInfo = $\"【{CurrentTreeDepth}】【{MaxUsedPageCount}】 【{usingPageCount} / {vtRenderer.PageCapacity}:{camPosInTerrainSpace.y:N2}】\";\n641: \n642:         if (RealtimeUpdateInEditor)"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\Terrain\\VTCommon.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Terrain/VTCommon.cginc",
+    "start_line": 139,
+    "end_line": 184,
+    "sha256": "2524a9b9204886c2a53ec35747cbb381d538218e739faa115a9d4464639930c2",
+    "source_mtime": 1789366326.8855238,
+    "excerpt": "139:     localUV = saturate((wpos - nodeXZ) / nodeSize);\n140: }\n141: \n142: TerrainVTResult SampleFromVT(float2 inputUV, float mipBias = 0)\n143: {\n144:     float physicIndex, availableMipmap;\n145:     float2 localUV;\n146:     DecodeVTIndexAndLocalUV(inputUV, physicIndex, availableMipmap, localUV);\n147: \n148:     float mipmap = min(availableMipmap, _VT_MaxVTMip);\n149:     float2 vtSampleUV = localUV * (_VT_PageUVScale > 0.0 ? _VT_PageUVScale : 1.0);\n150:     float4 albedoAO = _VT_AlbedoTex.SampleLevel(vt_linear_clamp_sampler, float3(vtSampleUV, physicIndex), mipmap);\n151:     float4 worldNormalRoughness = _VT_NormalTex.SampleLevel(vt_linear_clamp_sampler, float3(vtSampleUV, physicIndex), mipmap);\n152:     // WorldY 数组不做ASTC块对齐，尺寸恒等于 PageSize，所以用 localUV 而非 vtSampleUV\n153:     float worldYRatio01 = _VT_WorldYTex.SampleLevel(vt_linear_clamp_sampler, float3(localUV, physicIndex), mipmap).r;\n154:     // [VT:WorldNormal]\n155:     // float4 worldNormalWorldY = UNITY_SAMPLE_TEX2DARRAY_LOD(_VT_WorldNormalTex, float3(localUV, physicIndex), mipmap);\n156: \n157:     TerrainVTResult result;\n158:     result.albedo = albedoAO.xyz;\n159:     result.ao = albedoAO.w;\n160:     result.worldY = Ratio01ToWorldY(worldYRatio01);\n161: \n162:     DecodeWorldNormalRoughness(worldNormalRoughness, result.normal, result.roughness, result.metallic);\n163: \n164:     return result;\n165: }\n166: \n167: TerrainVTResult SampleFromVTByTerrainLocalPos(float3 terrainLocalPos, float mipBias = 0)\n168: {\n169:     float2 terrainLocalUV = float2(\n170:         saturate(terrainLocalPos.x * _VT_TerrainInfo.g), saturate(terrainLocalPos.z * _VT_TerrainInfo.g));\n171:     return SampleFromVT(terrainLocalUV, mipBias);\n172: }\n173: \n174: TerrainVTResult SampleFromVTByWorldPos(float3 worldPos, float mipBias = 0)\n175: {\n176:     float2 worldUV = WorldPosToUV(worldPos);\n177:     return SampleFromVT(worldUV, mipBias);\n178: }\n179: \n180: TerrainVTRaw SampleVTRawByWorldPos(float3 worldPos, float mipBias = 0)\n181: {\n182:     float2 inputUV = WorldPosToUV(worldPos);\n183: \n184:     float physicIndex, availableMipmap;"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\World\\Opacity.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Opacity.cginc",
+    "start_line": 145,
+    "end_line": 215,
+    "sha256": "a8454b39200cd7d8a80487104a39ac2a0ae95c831cde6a1ef14cbc6f9b8ec40b",
+    "source_mtime": 1790155302.2149,
+    "excerpt": "145: }\n146: #endif\n147: \n148: VSMaterialInputParameter GetVSMaterialInputParameter(VertexShaderInput input, VertexShaderMaterialParameter parameter)\n149: {\n150:     VSMaterialInputParameter o = DefaultVSMaterialInputParameterFunc(input, parameter);\n151: \n152:     float2 uv = float2(input.UV1.x, 0);\n153: \n154: #ifdef DECAL_PROJECT\n155:     // 使用 per-instance LocalToWorld（由调用方填入 matParam.InstanceLocalToWorld；\n156:     // 传统路径 = unity_ObjectToWorld，VG DirectDraw 路径 = instanceData.LocalToWorld）。\n157:     // 不要直接用 unity_ObjectToWorld，否则在 VG DrawMeshInstancedIndirect 下拿到的不是 per-instance 矩阵。\n158:     float4x4 _decalProjectL2W = parameter.InstanceLocalToWorld;\n159:     #ifdef UNIFIED_VT_OFFSET_ON\n160:         // 整 mesh 共用一个采样点：以 GameObject 世界原点采样一次 VT 高度，\n161:         // 所有顶点共享同一 Y 偏移，避免逐顶点贴地造成的 mesh 形变。\n162:         // 注意：后续会再叠加 mul(_decalProjectL2W, input.Vertex).y 作为\"体积补偿\"项，\n163:         // 在原 per-vertex 公式中，该补偿恰好与逐顶点的 (vtResult.worldY - parameter.WorldPosition.y)\n164:         // 内部抵消一份顶点局部 Y；而本分支的 worldOffsetY 已经是\"GO原点贴地差值\"，不再需要额外的\n165:         // 体积补偿。这里预先扣掉一份 mul(worldRS, localPos).y，使最终 ΔY = vtResult.worldY -\n166:         // sampleWorldPos.y + _DECAL_PROJECT_OFFSET，整 mesh 作为刚体平移到 GO 原点对应的地面。\n167:         // _VTFollowOffset.xyz 作为本地空间偏移，经 RS 矩阵转换到世界空间，自动跟随 GO 的旋转缩放。\n168:         float3 sampleWorldPos = float3(_decalProjectL2W._m03, _decalProjectL2W._m13, _decalProjectL2W._m23) + mul((float3x3)_decalProjectL2W, _VTFollowOffset.xyz);\n169:         TerrainVTResult vtResult = SampleFromVTByWorldPos(sampleWorldPos);\n170:         float3x3 _unifiedVTOffset_RS = (float3x3)_decalProjectL2W;\n171:         float worldOffsetY = vtResult.worldY - sampleWorldPos.y - mul(_unifiedVTOffset_RS, input.Vertex.xyz).y;\n172:     #else\n173:         // 原行为：逐顶点采样 VT 高度\n174:         TerrainVTResult vtResult = SampleFromVTByWorldPos(parameter.WorldPosition);\n175:         float worldOffsetY = vtResult.worldY - parameter.WorldPosition.y;\n176:     #endif\n177: \n178:     // DepthTexture方案，临时，后续替换为VT方案\n179:     // float groundY = getGroundPositionAdaptive(parameter.WorldPosition, UNITY_MATRIX_VP, _InvVP).y;\n180:     // float worldOffsetY = groundY - parameter.WorldPosition.y;\n181: #endif\n182: \n183: #ifdef VERTEX_ANIM_ON    \n184:     \n185:     #ifdef WAVE_ANIM_ON\n186:         o.WorldPositionOffset = VertexWaveNoise(parameter.TimeInput.xy, input.Vertex.xyz,input.UV1.xy);\n187:     #else\n188:         #ifdef VERTEX_ANIMATION_MANUAL_MODE\n189:         float time = _FrameTime;\n190:         #else\n191:         float time = parameter.TimeInput.y * _FrameRate;\n192:         float variationAmount = frac(unity_ObjectToWorld[0].w + unity_ObjectToWorld[1].w + unity_ObjectToWorld[2].w);\n193:         float variation = variationAmount * _FrameNum;\n194:         time += variation;\n195:         #endif\n196:         half3 worldPosOffset = VertexAnimationTexture(_FrameNum, time, uv);\n197:         o.WorldPositionOffset = worldPosOffset;\n198:     #endif\n199: \n200: #endif\n201:     \n202: #ifdef DECAL_PROJECT\n203:     // 先贴地\n204:     o.WorldPositionOffset.y += (worldOffsetY + _DECAL_PROJECT_OFFSET) * _TERRAIN_VT_HEIGHT_SCALE;\n205: \n206:     // 再补偿体积，原地旋转缩放后的y值：localPos * worldRS，不考虑worldT\n207:     // 这里继续用 per-instance LocalToWorld（_decalProjectL2W 在前面已经赋值），\n208:     // 与 UNIFIED_VT_OFFSET_ON 分支预扣的 mul(_unifiedVTOffset_RS, input.Vertex).y 形成抵消，\n209:     // 使整 mesh 实现刚体平移；非 UNIFIED 分支下则是逐顶点贴地后的体积补偿。\n210:     float3x3 tmpM = (float3x3)_decalProjectL2W;\n211:     o.WorldPositionOffset.y += mul(tmpM, input.Vertex.xyz).y * _TERRAIN_VT_HEIGHT_SCALE;\n212: #endif\n213:     \n214:     return o;\n215: }"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\World\\Foliage.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Foliage.cginc",
+    "start_line": 114,
+    "end_line": 170,
+    "sha256": "b52efdc21c87f759308aab9db6a9102b0837e08645d24697d5208d8aeb3232ab",
+    "source_mtime": 1789615686.0965378,
+    "excerpt": "114:     VSMaterialInputParameter o = (VSMaterialInputParameter)0;\n115: \n116:     half3 worldNormal = parameter.TangentToWorld[2];\n117: \n118: #if defined(FOLIAGE_ANIMATION_ON) || defined(AOE_HUE_VARIATION) || defined(SNOW_VARIATION)\n119:     float variationAmount = frac(unity_ObjectToWorld[0].w + unity_ObjectToWorld[1].w + unity_ObjectToWorld[2].w);\n120:     float variation = variationAmount * _WaveVariation;\n121: #endif\n122: \n123: #ifdef DECAL_PROJECT\n124:     TerrainVTResult vtResult = SampleFromVTByWorldPos(parameter.WorldPosition);\n125:     float worldOffsetY = vtResult.worldY - parameter.WorldPosition.y;\n126: #endif\n127:     \n128: #if SHADER_LOD > 200\n129: #ifndef ANIM_INST_ON\n130:     #ifdef FOLIAGE_ANIMATION_ON\n131:     #   ifdef FOLIAGE_ANIMATION_SIMPLE\n132:         o.WorldPositionOffset.xyz = ApplyBlendingSimple(parameter.TimeInput,parameter.WorldPosition, input.VertexColor, _BendScale, variation);\n133:     #   else\n134:         o.WorldPositionOffset.xyz = ApplyBlendingNew(parameter.TimeInput,parameter.WorldPosition, worldNormal, input.VertexColor, _BendScale, _BranchAmp, _DetailFreq, _DetailAmp, variation);\n135:     #   endif\n136:     #endif\n137: \n138:     #ifdef NEW_FOLIAGE_ANIMATION\n139:         // VG-compatible: derive the per-instance object world position from\n140:         // InstanceLocalToWorld (== unity_ObjectToWorld on the normal path,\n141:         // == per-instance LocalToWorld on the VG DirectDraw path). This keeps\n142:         // the per-plant phase variation (_Variation) correct under\n143:         // DrawMeshInstancedIndirect where unity_ObjectToWorld is NOT per-instance.\n144:         float3 objWS = float3(parameter.InstanceLocalToWorld[0][3], parameter.InstanceLocalToWorld[1][3], parameter.InstanceLocalToWorld[2][3]);\n145:         o.WorldPositionOffset.xyz = FoliageAnim(parameter.TimeInput, input.VertexColor.xyz, parameter.WorldPosition, objWS);\n146:     #endif\n147: #endif\n148: #endif\n149: \n150: #ifdef SNOW_VARIATION\n151: \thalf factor = frac(variationAmount + _SnowVariation) - 0.5;\n152: \to.SnowVariation = half3(_SnowLevel + factor * 0.05, _SnowNoise + factor, _SnowIntensity - _SnowIntensity * factor);\n153: #endif \n154: \n155: #ifdef AOE_HUE_VARIATION\n156:     variationAmount += frac(input.Vertex.x + input.Normal.y + input.Normal.x) * 0.5 - 0.3;\n157:     o.HueVariationAmount = saturate(variationAmount * _HueVariation.a);\n158: #endif\n159: \n160: #ifdef DECAL_PROJECT\n161:     // 先贴地\n162:     o.WorldPositionOffset.y += worldOffsetY * _TERRAIN_VT_HEIGHT_SCALE;\n163: \n164:     // 再补偿体积，原地旋转缩放后的y值：localPos * worldRS，不考虑worldT\n165:     float3x3 tmpM = unity_ObjectToWorld;\n166:     o.WorldPositionOffset.y += mul(tmpM, input.Vertex).y * _TERRAIN_VT_HEIGHT_SCALE;\n167: #endif\n168:     \n169:     return o;\n170: }"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\World\\Water3c_small.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_small.cginc",
+    "start_line": 248,
+    "end_line": 315,
+    "sha256": "f15bf9af52bea895fb41a8ea85d6f301c6dee4ce2f5f1b0bbcc5ad932ebadaab",
+    "source_mtime": 1764661813.6159725,
+    "excerpt": "248:     //float waterRange = depthDiff / _ColorRange;\n249:     #ifndef EDGE_OPACITY_VERT_COLOR_MODE\n250:         float waterRange = UE_DepthFade(sceneDepth, pixelDepth, _ColorRange);\n251:     #else\n252:         float vertColA = i.PackedData0.x;\n253:         float waterRange = saturate(vertColA * _ColorRange);// + _ColorRange * 0.5); \n254:     #endif\n255: #endif\n256: \n257:     //====== Shore Map =============================================\n258:     //float2 shoreMaskUV = (worldPos.xz - _ShoreMask_UV.xy) / _ShoreMask_UV.z;\n259:     //fixed4 shoreMask = Tex2D(_ShoreMask, shoreMaskUV.xy);\n260: \n261:     //shoreMask.xy = shoreMask.xy * 2.0 - 1.0;\n262: \n263:     //fixed shoreRange = 0.0;//shoreMask.z;\n264:     //fixed waterRange = saturate(1.0-_ColorRange);// 1.0;//1.0 - shoreMask.z;\n265:     //fixed waterRange = UE_DepthFade(sceneDepth, pixelDepth, _ColorRange);\n266: \n267:     //====== Normal Map =============================================\n268:     float bump_time1 = _Time.y;\n269:     float bump_time2 = 0;//WaveNormal.w;\n270:     // float bump_time2 = 0;\n271:     float2 bump_uv = float2(-worldPos.z, -worldPos.x);\n272:     float2 bump_uv1 = bump_uv / t5_uv1.z + t5_uv1.xy * float2(bump_time1, bump_time2);\n273:     float2 bump_uv2 = bump_uv / t5_uv2.z + t5_uv2.xy * float2(bump_time1, bump_time2);\n274: \n275:     float3 bump1 = UnpackNormal(Tex2D(t5, bump_uv1));\n276:     float3 bump2 = UnpackNormal(Tex2D(t5, bump_uv2));\n277:     float3 bump12 = bump1 + bump2;\n278:     float3 bump = lerp(float3(0, 0, 1), bump12, t5_intensity);\n279: \n280: #if (SHADER_LOD > 200)\n281:     //bump += WaveNormal.xyz * waterRange;\n282: #endif\n283: \n284: #ifdef FOAM_MODE\n285: #if (SHADER_LOD > 200)\n286:     //====== Edge Foam =============================================\n287:     #ifndef EDGE_OPACITY_VERT_COLOR_MODE\n288:         float shoreDepthRange = UE_DepthFade(sceneDepth, pixelDepth, _EdgeFoamRange);\n289:         shoreDepthRange *= _EdgeFoamPower;\n290: \n291:         float waveFoamRange = 1.0 - UE_DepthFade(sceneDepth, pixelDepth, _WaveFoamRange);//for wave foam\n292:     #else\n293:         float shoreDepthRange = saturate(vertColA * _EdgeFoamRange);\n294: \n295:         float waveFoamRange = saturate(vertColA * _WaveFoamRange);//for wave foam\n296:     #endif\n297: \n298:     float2 edgeFoam_uv = -worldPos.xz * _EdgeFoamTiling;\n299:     float4 edgeFoamMap = Tex2D(_FoamTex, edgeFoam_uv + bump.xy * _EdgeFoamDistortion);\n300: \n301:     float4 waveRamp = Tex2D(_ShoreWaveRamp, float2(shoreDepthRange, 0.5));\n302:     float edgeFoam = waveRamp.x * edgeFoamMap.y + waveRamp.y * edgeFoamMap.z;\n303: \n304:     edgeFoam *= _EdgeFoamOpacity;\n305: \n306:     //====== Wave Foam =============================================\n307:     float4 waveFoam_uv =  i.UV0.xyxy * _WaveFoamTiling + _Time.y * _WaveFoamOffset + bump.xyxy * _WaveFoamDistortion;\n308:     float4 waveFoamMap = Tex2D(_FoamTex, waveFoam_uv.xy);\n309:     float4 waveFoamMap_2 = Tex2D(_FoamTex, waveFoam_uv.zw);\n310:     // float waveFoam = waveFoamMap.y * waveFoamMap_2.x * max(waveFoamMap.w, waveFoamMap_2.w) * waveFoamRange;\n311:     float waveFoam = dot(waveFoamMap.xyz, waveFoamMap_2.xyz) * waveFoamRange;\n312: \n313:     waveFoam = waveFoam * _WaveFoamOpacity;// waveFoam * waveFoam * _WaveFoamOpacity;\n314: #else\n315:     // float2 waveFoam_uv =  i.UV0.xy * _WaveFoamTiling + _Time.y * _WaveFoamOffset + bump.xy * _WaveFoamDistortion;"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\World\\Water3c_small.cginc",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_small.cginc",
+    "start_line": 355,
+    "end_line": 383,
+    "sha256": "f15bf9af52bea895fb41a8ea85d6f301c6dee4ce2f5f1b0bbcc5ad932ebadaab",
+    "source_mtime": 1764661813.6159725,
+    "excerpt": "355:     //half opacityMask = shoreMask.w * _OpacityMaskEnabled + (1.0 - _OpacityMaskEnabled);\n356:     //saturate(opacity) * _Opacity ;//* opacityMask;\n357: #else\n358:     o.Opacity =  min(_AlphaIntensity,1);//min(1.0 * _ShoreAlphaIntensity,1);//min(shoreMask.w * _ShoreAlphaIntensity,1);\n359:     o.Opacity = max(o.Opacity - _AlphaClip,0) / (1- _AlphaClip);//max(o.Opacity - _ShoreAlphaClip,0) / (1- _ShoreAlphaClip);\n360: #endif\n361: \n362: #if (SHADER_LOD > 200)\n363:     //====== Specular =============================================\n364:     float4 SpecularUV = i.PackedData2.xyzw;\n365:     float3 viewDir = SafeNormalize(UnityWorldSpaceViewDir(worldPos));\n366: \n367:     // #ifndef NEW_FAKE_SPECULAR_MODE\n368:     #ifdef SPECULAR_MODE\n369:         float3 worldN;\n370:         worldN = float3(0, 1, 0);\n371: \n372:         float specular = MF_FakeSpecular(SpecularUV, _SpecTex, SafeNormalize(_SpecularDir.xyz), viewDir, worldN);\n373:     #else\n374:         float specular = 0;\n375:     #endif\n376:     //     float3 specBump = lerp(float3(0, 0, 1), bump12, _FakeSpecNormalIntensity);//lerp(float3(0, 0, 1), bump12, _FakeSpecNormalIntensity) + waveBump * _FakeSpecWaveIntensity;\n377: \n378:     //     float3 worldN;\n379:     //     // worldN.x = dot(i.TangentToWorld[0].xyz, specBump);\n380:     //     // worldN.y = dot(i.TangentToWorld[1].xyz, specBump);\n381:     //     // worldN.z = dot(i.TangentToWorld[2].xyz, specBump);\n382:     //     // worldN = SafeNormalize(worldN);\n383:     //     float3 tangent = i.TangentToWorld[0].xyz;"
+  },
+  {
+    "case": "empire2",
+    "file": "K:\\AOEYZ_trunk\\AOE3D\\Assets\\Framework\\Rendering\\Shaders\\World\\Water3c_World_inCity.shader",
+    "portable": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_World_inCity.shader",
+    "start_line": 105,
+    "end_line": 128,
+    "sha256": "74a5f64f38ff6b3cf8bd82ca9f86ccce10d433c2ff37a6ffad4339d5afc3119c",
+    "source_mtime": 1789366330.6225488,
+    "excerpt": "105:             #define AOE_WATER               1\n106:             #define DIFFUSE_SH_ON           1\n107:             #define SPECULAR_REFLECTION_ON  1\n108: \n109:             #define SHADOW_MAP_ON           1          \n110:             #define DYNAMIC_SHADOW_MAP_ON 1\n111:             #define SOFT_SHADOW_PCF_4X4     1\n112: \n113:             #define ALPHA_BLEND_ON          1\n114:             #define PROJECTED_POS_ON        1\n115:             #define CLOUD_SHADOW_ON         1\n116:             #define SHADER_LOD              400\n117:             #define FOG_FUNC_ON\n118:             #define FOG_ON                  1\n119:             #define FOG_TERRAIN_ADAPT_ON\n120:             #define IMAGEBLOCK_DEPTH_READ   1\n121: \n122:             #include \"Water3c_small_Input.cginc\"\n123:             #include \"Water3c_small.cginc\"\n124: \n125: \t\t\t\n126: \t\t\tENDCG\n127:         }\n128:     }"
+  }
+]

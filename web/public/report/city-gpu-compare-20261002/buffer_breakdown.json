@@ -1,0 +1,30 @@
+[
+  {
+    "case": "empire1",
+    "group": "Scratch通用缓冲",
+    "count": 8,
+    "logical_bytes": 33554432,
+    "used_logical_bytes": 16777216
+  },
+  {
+    "case": "empire1",
+    "group": "其他Buffer",
+    "count": 912,
+    "logical_bytes": 22338818,
+    "used_logical_bytes": 7517982
+  },
+  {
+    "case": "empire2",
+    "group": "Scratch通用缓冲",
+    "count": 11,
+    "logical_bytes": 46137344,
+    "used_logical_bytes": 25165824
+  },
+  {
+    "case": "empire2",
+    "group": "其他Buffer",
+    "count": 1012,
+    "logical_bytes": 21303892,
+    "used_logical_bytes": 10488684
+  }
+]

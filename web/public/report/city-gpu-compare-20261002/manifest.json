@@ -1,0 +1,3892 @@
+{
+  "id": "city-gpu-compare-20261002",
+  "entry": "report.html",
+  "basePath": "/cpu/report/city-gpu-compare-20261002/",
+  "preparedAt": "2026-10-08",
+  "sourceReportSha256": "ec2d4ebbb9e48d43a02f1dd7b08c3a0dc442b293bd12172fb67398849155d06d",
+  "sourcePackageSha256": "8e663171ffcbf3333d5abd2b7ec40e9bdd26513e562af6c2594fad9a50faeed5",
+  "fileCount": 776,
+  "totalBytes": 51289983,
+  "files": [
+    {
+      "file": "report.html",
+      "bytes": 1863314,
+      "sha256": "ec2d4ebbb9e48d43a02f1dd7b08c3a0dc442b293bd12172fb67398849155d06d"
+    },
+    {
+      "file": "report_data.json",
+      "bytes": 2427173,
+      "sha256": "f271a941871b9ef8ecae3928015a4e973b533ed4825215df6c6bba73d9ce5c97"
+    },
+    {
+      "file": "city_summary.json",
+      "bytes": 3421,
+      "sha256": "e0e64269ea4ae2c9269c358236961f93ce42e86f9b0f3e1fc177ab4d509e575b"
+    },
+    {
+      "file": "draws_triangles.json",
+      "bytes": 482111,
+      "sha256": "a3b85998584ce7ef20c775f08c08d5ba68dcecd78fa73fc2ad2ef7a2e8bf4a29"
+    },
+    {
+      "file": "mesh_triangles.json",
+      "bytes": 114303,
+      "sha256": "aec26deee142010a002f1c0e0f5520d409bd1394a420d9132eafa8301bf31681"
+    },
+    {
+      "file": "mesh_triangles.csv",
+      "bytes": 23290,
+      "sha256": "dd9b5a7383e854a21ff55389e9aa30ad44e4cd779b40f1a0fa79d0f99f3d9e09"
+    },
+    {
+      "file": "buffer_breakdown.json",
+      "bytes": 622,
+      "sha256": "20e14996fb6b07abaca1eefea729b634c1d6676896c97d86b55e51a31effebfd"
+    },
+    {
+      "file": "buffer_breakdown.csv",
+      "bytes": 241,
+      "sha256": "586b657c34d2915189a39020275959fa299f4e668813f5e79aac41835640e4f0"
+    },
+    {
+      "file": "active_pipeline_statistics.json",
+      "bytes": 137959,
+      "sha256": "2c449596423276a4e86a181a898d0017d9ce5fa0013230487210489814d650b3"
+    },
+    {
+      "file": "active_pipeline_statistics.csv",
+      "bytes": 37117,
+      "sha256": "fae833c72fff0bdde6180d7ff999fa88cbff3438cbb841dfeec0c6dec7901fb6"
+    },
+    {
+      "file": "compiler_basic_blocks.json",
+      "bytes": 627658,
+      "sha256": "546ed9987e24ec72086873a7e23eefdf88f424ac0c08a8ca3487ac89f3b6051a"
+    },
+    {
+      "file": "compiler_basic_blocks.csv",
+      "bytes": 165982,
+      "sha256": "854604e73b265cbdc7e98f5cd6e39bcde058e30004735162383d7da47d2765af"
+    },
+    {
+      "file": "matched_mesh_shader_statistics.json",
+      "bytes": 73426,
+      "sha256": "6cf1ea8633986d53ec5fc2713d61ce10994b4e3f10b83559c696b162a705cdc4"
+    },
+    {
+      "file": "matched_mesh_shader_statistics.csv",
+      "bytes": 13134,
+      "sha256": "166ddbbfcd99ab2cd2c362431e37b6c0cd2e2d7b27b4a39d197b803e5a9f4437"
+    },
+    {
+      "file": "postprocess_comparison.json",
+      "bytes": 7092,
+      "sha256": "676815221fe83551804a8fcaecfac6d0c07079a8651385c05da34cf747c897a4"
+    },
+    {
+      "file": "source_evidence.json",
+      "bytes": 52590,
+      "sha256": "b22f9d22e62223fb155f982df9bd54adb27257ae8c5f4b25c53d509873afeaa7"
+    },
+    {
+      "file": "validation.json",
+      "bytes": 2175,
+      "sha256": "91a969a7374f4b9fe7ec8f6bde4be3b9f32d9e330191a3c4fa5a994416f9b722"
+    },
+    {
+      "file": "browser_validation.json",
+      "bytes": 1580,
+      "sha256": "dca73ce12f378b9d41fdd5b6732f2b36d6f0d435edf96cb483877dcc2d7c46ba"
+    },
+    {
+      "file": "trace_size_city.json",
+      "bytes": 5224,
+      "sha256": "3c1bc108d3e5234a0fe68150e89cea341507380873a0cf33fd34555d5f1d4e93"
+    },
+    {
+      "file": "阅读说明.txt",
+      "bytes": 927,
+      "sha256": "fb34b69c6cffb636875d9767edfaa913b57abd2d8c1d0a214fe89713b775c9d2"
+    },
+    {
+      "file": "xcode_summary_measurements.json",
+      "bytes": 2318,
+      "sha256": "5635d6bf86ab619783cd074cf53c81c088737b023124ba9a0bfd77d5d468f98c"
+    },
+    {
+      "file": "triangle_count_audit.json",
+      "bytes": 627,
+      "sha256": "477e87357170d43b8ec24d2fb21f0a18100afc123f6ee63f579dc3a22b1b5560"
+    },
+    {
+      "file": "worldY_consumers.json",
+      "bytes": 177412,
+      "sha256": "bb540f42956d9fe2ec6c30ed785f23d44ed420a1d5c22480e1090f443c336fb4"
+    },
+    {
+      "file": "worldY_consumers.csv",
+      "bytes": 36809,
+      "sha256": "5d263624f8e230a0f970b5b8c831156e7cb32a6e79db976ce3182b1029167d0e"
+    },
+    {
+      "file": "shader_representatives.json",
+      "bytes": 5089,
+      "sha256": "351c1a6fb0ebf1f4c3bd4e74213d1059bf5b2ad60c971e12e32f80e0fd366ccd"
+    },
+    {
+      "file": "shader_representatives.csv",
+      "bytes": 1412,
+      "sha256": "b4460851968f4dcade731f3042c15d5eb54743c56bf9422cd1f824e6b1025ad1"
+    },
+    {
+      "file": "xcode_summary_comparison.csv",
+      "bytes": 553,
+      "sha256": "23aa16c4c1fd43c946192ef37f60b85f234fc5191c655e20d5ed983e999272de"
+    },
+    {
+      "file": "fog_stage_audit.json",
+      "bytes": 13191,
+      "sha256": "f0ae44baff22536d3a4e02e1e1bba11610d89b2c5776314c65fa015a4d742348"
+    },
+    {
+      "file": "empire1/frame_preview.png",
+      "bytes": 7330837,
+      "sha256": "5aef7df82b574652ae30874472f2c0db732f084e8093c8eeb33fe90f7e623e19"
+    },
+    {
+      "file": "empire1/frame_links.json",
+      "bytes": 4073184,
+      "sha256": "7341e2188cd0cd10f6a3007ec48e588036a74ba7187ebff2d1129ed202b6f674"
+    },
+    {
+      "file": "empire1/case_summary.json",
+      "bytes": 1644,
+      "sha256": "b56fe7e2d77a61b64272235635437a882d7efee9bd79c084fbeb51523211aeef"
+    },
+    {
+      "file": "empire1/render_encoders.json",
+      "bytes": 8631,
+      "sha256": "66fdb06bb5801a6d30f0668c743268399113751d51107b6b0ae867ba6f44f98e"
+    },
+    {
+      "file": "empire1/render_encoders.csv",
+      "bytes": 3779,
+      "sha256": "f180a22aba0ea24b1248ef23d7fa0c8743a074c91ac10a72f5dd520fa9d96512"
+    },
+    {
+      "file": "empire1/encoders_triangles.json",
+      "bytes": 9310,
+      "sha256": "8d01c3974d72d139da3afb2fbca08d89c7355ae85d041f267a446631e460c80b"
+    },
+    {
+      "file": "empire1/encoders_triangles.csv",
+      "bytes": 3421,
+      "sha256": "9a997debe9ab03909e8a609bd568e50d81cd0cd5c195cdba38f7f6544c690c64"
+    },
+    {
+      "file": "empire1/draws_triangles.csv",
+      "bytes": 78819,
+      "sha256": "e0382b91f0d23540d273b708de92175462c6582c07ce5b4c5467d3adb56d097b"
+    },
+    {
+      "file": "empire1/memory_resources.json",
+      "bytes": 1120707,
+      "sha256": "5c482e148a8b3f42f10e8901d5b24053fa3949025e6a6080f10e85b93dc0fccc"
+    },
+    {
+      "file": "empire1/memory_resources.csv",
+      "bytes": 311431,
+      "sha256": "98132658cc802e1adb796a459aaf454ba7a3fa36739e6494d199e8727e6fae06"
+    },
+    {
+      "file": "empire1/pipeline_compile_statistics.csv",
+      "bytes": 27576,
+      "sha256": "8456c59b91baebf6baeeb90c7e31ec47e113f2721863fce39c9dfbfc59c63559"
+    },
+    {
+      "file": "empire1/shader_inventory.csv",
+      "bytes": 17363,
+      "sha256": "e6799b91ef3a3056b6657189527ae015d95114d1f532ab545fbebc49af69b203"
+    },
+    {
+      "file": "empire1/api_calls.csv",
+      "bytes": 1696,
+      "sha256": "14a51a815237058bcad0d4809db150086e0a833df177d2cb993685b2a1be4829"
+    },
+    {
+      "file": "empire1/uniform_evidence.json",
+      "bytes": 331087,
+      "sha256": "2f82546b3a5d15da3025f82d603e8cfe79515b17ec214163385fb957cbe63eda"
+    },
+    {
+      "file": "empire1/index_decode_summary.json",
+      "bytes": 253,
+      "sha256": "1dd414f672ba21dbe5b0859be3d410fcc6126ad7f835701dc142724a3fb6073d"
+    },
+    {
+      "file": "empire1/manifest.json",
+      "bytes": 3035,
+      "sha256": "3f2ad94cb089c98bc9c8425c2fee978ba57fa0c4a3f51db430e8815acd5e8fec"
+    },
+    {
+      "file": "empire1/shaders/14788CCAB56E96D8.metal",
+      "bytes": 14569,
+      "sha256": "0ac522526a720222f1cb93013ef2153984f53da12cf54e34e72ea6b84d6194b3"
+    },
+    {
+      "file": "empire1/shaders/151B9A990A48BBC2.metal",
+      "bytes": 14565,
+      "sha256": "ae195a66d865f920bb964f381e5534337b2f10916981894bd73f8b751905498b"
+    },
+    {
+      "file": "empire1/shaders/1612188E7337B96D.metal",
+      "bytes": 8273,
+      "sha256": "75fbb5d84153feacf7e871df13b21e603de2abcb201d7c9b03afc9aaae969ab9"
+    },
+    {
+      "file": "empire1/shaders/1691458634011AB8.metal",
+      "bytes": 19567,
+      "sha256": "4a3c935fcddfbe9a95351b90582051e24fd7ef7bfc5a7f0ae496d86f4cf2a4fd"
+    },
+    {
+      "file": "empire1/shaders/16AC49AC28C42243.metal",
+      "bytes": 7622,
+      "sha256": "26ed0bced82fd2678a1315220fa9e11035bcb9c05d020084748ac1e7e650e222"
+    },
+    {
+      "file": "empire1/shaders/174D35A856499CD8.metal",
+      "bytes": 13524,
+      "sha256": "d94b5209234c034acb4ed61a0c7921cb4c2d26b05d68aeca3c8aaac066bb2e48"
+    },
+    {
+      "file": "empire1/shaders/188D50A799517AAF.metal",
+      "bytes": 15912,
+      "sha256": "16324b9cf9ece7bfe9423ac804cf1fd644f674b4b47de7a7c8039e5b6a106662"
+    },
+    {
+      "file": "empire1/shaders/196EF8DF13C7788F.metal",
+      "bytes": 7487,
+      "sha256": "5711c055e893d41b9fb720176927001f975b8332238e353e970d706b1d9595a1"
+    },
+    {
+      "file": "empire1/shaders/1B40A8F37A170B65.metal",
+      "bytes": 10029,
+      "sha256": "31fbe912ee5070fad69f794df3e09fa1e8edefdf48820e2ac2aad88fda9ca197"
+    },
+    {
+      "file": "empire1/shaders/1E26FC8BD57E9F13.metal",
+      "bytes": 17333,
+      "sha256": "80dcab50cec39efe71a30314be8488e97e9676bf9ba2bf7978ec5d1d65bcdfbb"
+    },
+    {
+      "file": "empire1/shaders/20E26A637FF18F8B.metal",
+      "bytes": 1461,
+      "sha256": "1b9ae378d2599a678c18b9c9c91acb67bb9144e558f70eaec34bb915dc10f955"
+    },
+    {
+      "file": "empire1/shaders/22055D42DDAA566A.metal",
+      "bytes": 2223,
+      "sha256": "fe4229d80601faae3ca8bfa47eaab60bfc3268084545b235eae3c59d76411b1b"
+    },
+    {
+      "file": "empire1/shaders/227CD4FB0731032F.metal",
+      "bytes": 8321,
+      "sha256": "3b3ad1f00d0b4cbc20df1e73ceeafdf4a15e6e845fde652e7cb5e8a58fbe5081"
+    },
+    {
+      "file": "empire1/shaders/22D87860333938AC.metal",
+      "bytes": 4198,
+      "sha256": "423e4f584d09a2937a371e8decb5d3b0ff4044755b0446998b01530b54ecd818"
+    },
+    {
+      "file": "empire1/shaders/23F6FB5BD501C54B.metal",
+      "bytes": 5940,
+      "sha256": "2cf08c258edf95c701011354e3af6449eaf7b9e75b829f57f06c0332e9ae7e1e"
+    },
+    {
+      "file": "empire1/shaders/2465498F1DE737E1.metal",
+      "bytes": 6366,
+      "sha256": "49e05aada8bdde36bc5c1251e914a002c88ac9e4ce523193fc51f3bc38957db8"
+    },
+    {
+      "file": "empire1/shaders/2613B19CE486FF0B.metal",
+      "bytes": 1005,
+      "sha256": "144c52379089b9da7bf44ae491a9d52b9d7c5f08b07a12635a166dfb83ebbe89"
+    },
+    {
+      "file": "empire1/shaders/2707632F1253D56F.metal",
+      "bytes": 12134,
+      "sha256": "c24d641a79425272f5aaa99bce82c6ed849534593ea3743ab599e41fc17ae064"
+    },
+    {
+      "file": "empire1/shaders/28EEA23597BD580D.metal",
+      "bytes": 6025,
+      "sha256": "4d5dfc68a8f58e83fc050a5f2845fb8cd93472eac18226073e5b5efdd2212b1a"
+    },
+    {
+      "file": "empire1/shaders/2984D55E52C1E153.metal",
+      "bytes": 17622,
+      "sha256": "e8135ed985f66ddbc25dfa20d48cfbb40b4b96fad8c81d3e2830d3bdc298e031"
+    },
+    {
+      "file": "empire1/shaders/2D0003307A2DDCE2.metal",
+      "bytes": 18088,
+      "sha256": "5302b4a47613d14ba14dde32599a7f9cd89aae8511fc9622692239f60f540e92"
+    },
+    {
+      "file": "empire1/shaders/2DEBF7C98BFF98A2.metal",
+      "bytes": 9099,
+      "sha256": "9e646f0b408d21475d46eea7348a9b4aa84793a7961a5b5b2a0f4663038ec7dd"
+    },
+    {
+      "file": "empire1/shaders/2EB35058C7F2CB6C.metal",
+      "bytes": 2770,
+      "sha256": "fa91e996ed70939846e267364cd8f7dd4be38bb70626426645a70a69262cd115"
+    },
+    {
+      "file": "empire1/shaders/2F3A91608005BFBA.metal",
+      "bytes": 8768,
+      "sha256": "d1c9694ea9186948f8a4a63c4ca26752f37af6d5781afc74311aa35b06a8c9fc"
+    },
+    {
+      "file": "empire1/shaders/30AB13A42E07ADCC.metal",
+      "bytes": 1125,
+      "sha256": "1e9b84a3e2806420c6ea55d2ba5185dce552d408b3fe80ec697a9ceb978633d9"
+    },
+    {
+      "file": "empire1/shaders/31D235AF91C9B9A5.metal",
+      "bytes": 5390,
+      "sha256": "ab57d5396bd8d17355d1152ec8280393fea307f191416a8ac4ce620d8626fa74"
+    },
+    {
+      "file": "empire1/shaders/33D3CA7D5A654A74.metal",
+      "bytes": 3431,
+      "sha256": "efee6edfdd6e33a931bfb54ff5677e0594d001068fc2270a01a147d069ff0f69"
+    },
+    {
+      "file": "empire1/shaders/33EDB6F482810399.metal",
+      "bytes": 2125,
+      "sha256": "0d165f2cac03dfda25ee1c5aa796625b6156a58d0d8091a37185b9544859d0d1"
+    },
+    {
+      "file": "empire1/shaders/346FC28515F59739.metal",
+      "bytes": 3569,
+      "sha256": "b2cc10beec01085c8d931cd617ff7050abd88d426ce9c56e10fc0194f5f608d3"
+    },
+    {
+      "file": "empire1/shaders/34FC370E33FDB53E.metal",
+      "bytes": 1408,
+      "sha256": "a5c78cd3b48f31b3a4d74cdfbd48da971a343e1aa37f32c64ce39105fd946cd2"
+    },
+    {
+      "file": "empire1/shaders/35E744FC2162B835.metal",
+      "bytes": 2013,
+      "sha256": "4ea4381cb752b18e46545520400b0cfe10cf4e53703478453930342fa555c6f7"
+    },
+    {
+      "file": "empire1/shaders/36230B57011F2EC6.metal",
+      "bytes": 1618,
+      "sha256": "d6e3e7e7cd44943064028ca3445d46d92397261791ef81732c62e5adb5e20dc5"
+    },
+    {
+      "file": "empire1/shaders/37D7280164AA460A.metal",
+      "bytes": 4014,
+      "sha256": "2ca00849dec066f1e69e139f3826cc731b01b278b66215bdda835a36d451c231"
+    },
+    {
+      "file": "empire1/shaders/3AA60A6A70C58EA8.metal",
+      "bytes": 6656,
+      "sha256": "41875c34dd26ab7949a889fd9b65d8b06902ba2d71926641caaf9866b65a5f4d"
+    },
+    {
+      "file": "empire1/shaders/3C0B4F15F668CCDA.metal",
+      "bytes": 11504,
+      "sha256": "567f50604d0436fb20aaf50c2e36bd748579dba46825ecc3fe38c6ea425822d9"
+    },
+    {
+      "file": "empire1/shaders/3C0FAD1E4F352F8A.metal",
+      "bytes": 2703,
+      "sha256": "8de7d701a5d6948e2193c403f3a3d92fbbc0c38db2b7f5e258267998dbbaa1de"
+    },
+    {
+      "file": "empire1/shaders/3D5927F6BF1FEA06.metal",
+      "bytes": 9311,
+      "sha256": "4ab497d99890249ec45efc0567bef9aedcfe083246ce521d776c1815b93c5eed"
+    },
+    {
+      "file": "empire1/shaders/3E5377095A1A291E.metal",
+      "bytes": 4978,
+      "sha256": "8af957ea92e0039fa7f124b2537a472490065e17f90ec97a7c780d6bb714589c"
+    },
+    {
+      "file": "empire1/shaders/408ADCBC4DA4210D.metal",
+      "bytes": 4307,
+      "sha256": "3c7cb3183624d42b57d86ca7d8ae2ed2590c5f4fd08c57086dfb75cbee06a909"
+    },
+    {
+      "file": "empire1/shaders/41D9BA21D7508E63.metal",
+      "bytes": 1729,
+      "sha256": "1af245f52a108c087323fec8973f409878cd3d3c0fded98cd8b9748f92f2d1a1"
+    },
+    {
+      "file": "empire1/shaders/43912D3816DEDB30.metal",
+      "bytes": 4975,
+      "sha256": "88def4a4dd9b4549cc6d141826a64eb633c6e5c72e9d53eda9d6ddd54b645a8c"
+    },
+    {
+      "file": "empire1/shaders/4552894A96D16654.metal",
+      "bytes": 21120,
+      "sha256": "b23091cfed66d265760419f90c1c77c92965017f9e421ee971e697558cf806e8"
+    },
+    {
+      "file": "empire1/shaders/46D23D7FFA994B60.metal",
+      "bytes": 3727,
+      "sha256": "3b59583a5bb78c7ecf0df0161e6728b0b21e9ae8244aee5cd777966b023afc7b"
+    },
+    {
+      "file": "empire1/shaders/46DC5A6F854C8B99.metal",
+      "bytes": 3547,
+      "sha256": "dfbd44e18089c2fb84a01bdc60bb4770889e48fbe03667107e289542686db757"
+    },
+    {
+      "file": "empire1/shaders/48AF95639F3762C4.metal",
+      "bytes": 2621,
+      "sha256": "fa71ca98b366c84bb21fa2c9a605d2e8a3d61d77872eb5f9f33ab71302fb4b4a"
+    },
+    {
+      "file": "empire1/shaders/4A0D8380ECEC865B.metal",
+      "bytes": 19661,
+      "sha256": "6f3a18f27dd662bb92da4c218d4f5e2f1424f83b34ba7d1165394e33ce52ecad"
+    },
+    {
+      "file": "empire1/shaders/4DED8AD7E1660F39.metal",
+      "bytes": 16763,
+      "sha256": "980b8c5f1935eb51735f234db34cc43a3b743352074ea92da558dfabf5a1160b"
+    },
+    {
+      "file": "empire1/shaders/518EE59035279A02.metal",
+      "bytes": 14771,
+      "sha256": "e172cac4c337e695004bd81c129db320748e82f5b55e207e3039f81e5af3a507"
+    },
+    {
+      "file": "empire1/shaders/536E997566D7B672.metal",
+      "bytes": 18536,
+      "sha256": "24f577c567a2e11ae457490897d299543ceac772e03adce146a80ca9382bf273"
+    },
+    {
+      "file": "empire1/shaders/53E1EC6302A10572.metal",
+      "bytes": 13488,
+      "sha256": "ea50a5190082dd8e88a7e8a67625ca7fe05c079dd6f50651ae3c85e20a91a0b1"
+    },
+    {
+      "file": "empire1/shaders/578E9F4D01282EEB.metal",
+      "bytes": 1489,
+      "sha256": "04634ccc420847ee1c0eae97da84a3cb88f04684d2a5fda68eab204bac28986a"
+    },
+    {
+      "file": "empire1/shaders/57FA8E9FAA6F7438.metal",
+      "bytes": 5994,
+      "sha256": "6e40412672e04c6f990c7981692a43584718f18afdfe28baa7a8618ca373ca3b"
+    },
+    {
+      "file": "empire1/shaders/5AFBECBEE4FB17D.metal",
+      "bytes": 2619,
+      "sha256": "5f3b2f5612ad088a1b10340de9b8a491df7c886b386c900ff8c573f34ddde18c"
+    },
+    {
+      "file": "empire1/shaders/5C7B364CA13D6F7.metal",
+      "bytes": 4738,
+      "sha256": "2bdf4551f0da3b7179e25125031ac0706f6a4d8872783999ae7045e0c50d1a63"
+    },
+    {
+      "file": "empire1/shaders/5D6CDC97007F6042.metal",
+      "bytes": 2793,
+      "sha256": "802186212735b93e48892c5b1906e7e7af9289a37dee14222f92f4be9165f04a"
+    },
+    {
+      "file": "empire1/shaders/5F656BBB84FAD980.metal",
+      "bytes": 14083,
+      "sha256": "bce3e5377e3ca2b2dd9b717c78ad2ac60249ef3447cf13596714ad2202422531"
+    },
+    {
+      "file": "empire1/shaders/5FBC198DE5480DE5.metal",
+      "bytes": 1463,
+      "sha256": "c75b4ad70d655aecd35da47c0ab6a72b262ee91a80ccbee795ab8752d36b1c95"
+    },
+    {
+      "file": "empire1/shaders/60CCAA8FBE45D9EE.metal",
+      "bytes": 5306,
+      "sha256": "eeffa027d96e2132abcbcfd69cd5e9d67f5a9fdc51a5770df94e4f2e3958edc8"
+    },
+    {
+      "file": "empire1/shaders/62E3049CB2FAFD0F.metal",
+      "bytes": 7976,
+      "sha256": "acff7ad332ad529b45875d2a29a09461e207768f3a4f39b0bd9af10df5ac5afa"
+    },
+    {
+      "file": "empire1/shaders/636B5ED715A13F15.metal",
+      "bytes": 10371,
+      "sha256": "5cbc5af93f1abad7f60ca7b75802c4ba669a5a98951d763bffa0ed2ab51e2a31"
+    },
+    {
+      "file": "empire1/shaders/638728690530CC14.metal",
+      "bytes": 19164,
+      "sha256": "b9134fee1746343be88d68301c5296a9947a48dde44490f2df6d7e19e67c8a5f"
+    },
+    {
+      "file": "empire1/shaders/64C2E4E483C4CE99.metal",
+      "bytes": 13589,
+      "sha256": "da61d1af6d4b7848fae88ba63b305ecce978bd22e275dcfef282c7d7cd8cd486"
+    },
+    {
+      "file": "empire1/shaders/64FFE712E711D3D5.metal",
+      "bytes": 17318,
+      "sha256": "989e59873aa598b9f64a5825215b91d446670de676f44df607745eda56b2c29a"
+    },
+    {
+      "file": "empire1/shaders/6602DE0A5FDA4B00.metal",
+      "bytes": 5663,
+      "sha256": "f7134fa7cce2771052968b6ec6951b4b901cec2e0605a39c1a75efc841583d6e"
+    },
+    {
+      "file": "empire1/shaders/6698D44D00A79B98.metal",
+      "bytes": 17464,
+      "sha256": "9e24a0854e330b9cb35f09fcf1fac389095a905d0dd70e12e9f904a4aaf23fa1"
+    },
+    {
+      "file": "empire1/shaders/686822A56FBD4695.metal",
+      "bytes": 2156,
+      "sha256": "b7d98195ed3e636324e91382ab40b340d989ef5cfc3be91bcc6871d6298d5843"
+    },
+    {
+      "file": "empire1/shaders/6889EB0DFEE058CA.metal",
+      "bytes": 19776,
+      "sha256": "24b965ba616eef248f4cd3a7d51bfc5df14927fc0984509a92b643a800a75761"
+    },
+    {
+      "file": "empire1/shaders/69B88B548D033785.metal",
+      "bytes": 13922,
+      "sha256": "63cbcc019abcbf4d49d6364304638ca9a10783815d90f779850c2bc5645a0f3e"
+    },
+    {
+      "file": "empire1/shaders/6B0680F5DAFD522F.metal",
+      "bytes": 9469,
+      "sha256": "70fe5da042a0b73d48cbe6d6918c97dd9e856da0ae9a8a391587ffe1f946042a"
+    },
+    {
+      "file": "empire1/shaders/6C029C85E694EBF9.metal",
+      "bytes": 5896,
+      "sha256": "583c9eb72bc6e40002e831702b3db8c29627f014fe466f0694eddd5c798cf5d9"
+    },
+    {
+      "file": "empire1/shaders/6CCDA53F60836463.metal",
+      "bytes": 7477,
+      "sha256": "e412fe5e005eeb856c10eb7f3655ef7d3a985cbccd3edfad9b779a3cdc94ecdf"
+    },
+    {
+      "file": "empire1/shaders/70C4E390B5467EB4.metal",
+      "bytes": 3814,
+      "sha256": "a9e41824a90ecee831a6ce1076f631a60fbb2578c3c20b559cc2caefb4f78e8e"
+    },
+    {
+      "file": "empire1/shaders/71980F19B900799D.metal",
+      "bytes": 5205,
+      "sha256": "c05909b7a05645aad1268c279b1309001318ef9a8139506419b6275378aba94e"
+    },
+    {
+      "file": "empire1/shaders/72909EDA43C96810.metal",
+      "bytes": 6877,
+      "sha256": "7ccd352d45ed3e34542432df22757b677f2da93b9aec568b5f6ab3e7262ace16"
+    },
+    {
+      "file": "empire1/shaders/733A19A0DCE8699.metal",
+      "bytes": 14036,
+      "sha256": "5b5724f55a135c7f4e2e9d812bd7b3c6a9e1072e5cc1127a66a1022672195f7a"
+    },
+    {
+      "file": "empire1/shaders/74B67F909E32C446.metal",
+      "bytes": 13843,
+      "sha256": "f87206e575175cb6677c78cbb01aabb02a89b90ea0db2d3275ca8c1a33e4354d"
+    },
+    {
+      "file": "empire1/shaders/753C73EDAD594149.metal",
+      "bytes": 2329,
+      "sha256": "98a0ed077c14bbadcc76d611d9b7f2eae12efa01f043c0cfbf8cf84d21c064a2"
+    },
+    {
+      "file": "empire1/shaders/769FC20FEB1EFA.metal",
+      "bytes": 3788,
+      "sha256": "28d294f9cb0d0b2226442a19f984ef571643b0e2d13aa830fe9f122cae044a1e"
+    },
+    {
+      "file": "empire1/shaders/7AFEBB89254F0758.metal",
+      "bytes": 3455,
+      "sha256": "b8fd2ae4b6755b1b73044734cde667a2395bc0a5a108c3306287cbfd69bfb4f7"
+    },
+    {
+      "file": "empire1/shaders/7B16A553394FCE7B.metal",
+      "bytes": 1542,
+      "sha256": "b67c18ded7ef513f69c408d4540136b27af656cdca572efb3a946c3b4ee6ce6b"
+    },
+    {
+      "file": "empire1/shaders/7DB79330DBD11955.metal",
+      "bytes": 5323,
+      "sha256": "4a1d763d06faf06239a4a1fef97e5c832227166c7ebbfa9f70321002514eeceb"
+    },
+    {
+      "file": "empire1/shaders/80DF5FBA03B5F00C.metal",
+      "bytes": 15623,
+      "sha256": "72e6b0dfdbe14ab2f02d1b01f6a293bd78a84e9b9d2774035dfe872949978bd0"
+    },
+    {
+      "file": "empire1/shaders/821C556184BC5089.metal",
+      "bytes": 6631,
+      "sha256": "512a8e979ead7f960d43ae11aeb6f6a89c48e6d8a8bb97d5f4a6ccb77b07a9e0"
+    },
+    {
+      "file": "empire1/shaders/82BE10A0550B0FDB.metal",
+      "bytes": 7095,
+      "sha256": "ec4a436e05cac83c27f86dbee69c5477143a8e1f6fdbec34f5a7b1f3a8d51ccb"
+    },
+    {
+      "file": "empire1/shaders/84DC1364D846CE97.metal",
+      "bytes": 14937,
+      "sha256": "2ad0bc308d7070d0f5aa2fbe69b2ede7fa81aab7aa24ef980f49215be0f79778"
+    },
+    {
+      "file": "empire1/shaders/85FDEF5B00BDFF60.metal",
+      "bytes": 8735,
+      "sha256": "f00102184c92e2bdb8b9b569e673f579da5f620dc33b5b8b7962d5321330b5ab"
+    },
+    {
+      "file": "empire1/shaders/875610C72915D770.metal",
+      "bytes": 511,
+      "sha256": "d84151f39e153a2d284ec104cc7ac99024e65a8d0bcc78c94c0fb12cdea88baa"
+    },
+    {
+      "file": "empire1/shaders/87892EA381D07BFD.metal",
+      "bytes": 1953,
+      "sha256": "b08ca584cfcc1ed8d33b78d56cf9e7769317a464c8b33d43604e57b8330abb6d"
+    },
+    {
+      "file": "empire1/shaders/8A5B8921A26C4885.metal",
+      "bytes": 2205,
+      "sha256": "ebf4d89bbc3e02a59d372661e74f578e634c15eb84802c15a85f8b79f9ebbbe0"
+    },
+    {
+      "file": "empire1/shaders/8D93CB5787D86000.metal",
+      "bytes": 5859,
+      "sha256": "0cb7bc52dd626787e1981a9a16b2d2343f86e01747a8b3f8e7ec0cde24a0c29e"
+    },
+    {
+      "file": "empire1/shaders/8DD8400F218EC011.metal",
+      "bytes": 17144,
+      "sha256": "df088c42f44bea22890c2b630b5691497760ffc44197cd61477cbc7ba11cba15"
+    },
+    {
+      "file": "empire1/shaders/8F37E6C07FE50ECB.metal",
+      "bytes": 572,
+      "sha256": "ed59913e65f371a53f2c568f4ac961d9bce7e1965a2d88c9edf7720baa767ae9"
+    },
+    {
+      "file": "empire1/shaders/923CBC7F3247AAF9.metal",
+      "bytes": 18394,
+      "sha256": "641d861a8470e22ed824c9085b6be246117051048d6610a5ade32fa0327af30b"
+    },
+    {
+      "file": "empire1/shaders/929EF07019286C21.metal",
+      "bytes": 4918,
+      "sha256": "29e7946be7c34ffeb54ada83d56538b9966ee5dd9b43b2c029a232c576c220af"
+    },
+    {
+      "file": "empire1/shaders/94F9E06D2B8EB3AE.metal",
+      "bytes": 6179,
+      "sha256": "d5f82f9272b3591cb2b1318a40a2e0c2c62f4a4b769b146462edd298aeb5b540"
+    },
+    {
+      "file": "empire1/shaders/951F6B4398C15DB0.metal",
+      "bytes": 8604,
+      "sha256": "2a101d25a13349b3e11f543347f9c0ca275950b1245433648180c4fe6aeaaa8f"
+    },
+    {
+      "file": "empire1/shaders/9774F775C75AFF58.metal",
+      "bytes": 2650,
+      "sha256": "3f3f63e3357f0a123a4376156e6da3f53162226099a6cec5626dadab59cb7e20"
+    },
+    {
+      "file": "empire1/shaders/984C06405061B9BF.metal",
+      "bytes": 20154,
+      "sha256": "7ad5a93fcf51154812ac97bf2b923c63811e182ada7d1a3a26a9fd190b376b87"
+    },
+    {
+      "file": "empire1/shaders/9860E55E92BF8AC1.metal",
+      "bytes": 6452,
+      "sha256": "e7215a83e97007321c51082c6b29db42ae0df4f25cae22ea1f4ce9310bd15ddd"
+    },
+    {
+      "file": "empire1/shaders/999337456265EEDC.metal",
+      "bytes": 1614,
+      "sha256": "20cbdc838892c7d7a68d3449f78cb02a2862eaa50eb735111a6013ffbc20fe34"
+    },
+    {
+      "file": "empire1/shaders/9A1405DF7F1F6D0A.metal",
+      "bytes": 14471,
+      "sha256": "70c71615008850962cb9e39ae3fcb3011420bdb3feff51669a383b520f0ea223"
+    },
+    {
+      "file": "empire1/shaders/9C4F5F26F60487BC.metal",
+      "bytes": 18517,
+      "sha256": "5c2f036c53670407b38719235d74f71d932b3659ed837521376fb06c6f4fabf6"
+    },
+    {
+      "file": "empire1/shaders/9C9349FD038E4AD0.metal",
+      "bytes": 12865,
+      "sha256": "05e74858d38061c52b6a8d76fafb07ed2bf24a2d25ad4bfe6a5fdcc3374aa4fc"
+    },
+    {
+      "file": "empire1/shaders/9DB33C0FAC2F7214.metal",
+      "bytes": 4705,
+      "sha256": "93bb96448768d18791fd0b7dab66b8ed9ec471e6478367afed20d4f881202a5b"
+    },
+    {
+      "file": "empire1/shaders/9DBB7524CB526D97.metal",
+      "bytes": 5838,
+      "sha256": "6435d9661ad66f9d1c5312b842e20131f14e51ba822b3b0622cecdf0ca3efe65"
+    },
+    {
+      "file": "empire1/shaders/9E71E80A088FB9A3.metal",
+      "bytes": 15322,
+      "sha256": "56663c6b35ddb1a04ee5a2f37957206636c1e3d994b200e3e21cff3c811fd08f"
+    },
+    {
+      "file": "empire1/shaders/9F92DC298725FA72.metal",
+      "bytes": 4879,
+      "sha256": "12951017b668dc39337e421a589a7810ba345d5ac05a34941bc124a97fe43f16"
+    },
+    {
+      "file": "empire1/shaders/A1A7F78082E9C6A7.metal",
+      "bytes": 1777,
+      "sha256": "7ee8e3d146a39e455f723090e4c6ac0c01482b5820ae6cda5730142b7f52f3af"
+    },
+    {
+      "file": "empire1/shaders/A1C3CF9403EB8AB2.metal",
+      "bytes": 19032,
+      "sha256": "f7727669133ad6beeffc81f22bc551ba00c0a23a9e11103df2e5c9190a7de8e2"
+    },
+    {
+      "file": "empire1/shaders/A3B4DDAA3ED2AE38.metal",
+      "bytes": 2991,
+      "sha256": "8b5ff5e385e1e3fc59478e1d987cafbb6d38b409740b0277cdd18883b35439c3"
+    },
+    {
+      "file": "empire1/shaders/A488685C8F1BA0B8.metal",
+      "bytes": 8970,
+      "sha256": "b4b8f54f11a3a422de6b9a2e3e1f9419f57bee7c73e6ff23bdd0de8fa9db7073"
+    },
+    {
+      "file": "empire1/shaders/A6CC9973B6F2EF4D.metal",
+      "bytes": 4710,
+      "sha256": "dcbf74990fe9c365b05debf9fd95c1a1d6c9e4e781bc4a663baaeac7e49d6a80"
+    },
+    {
+      "file": "empire1/shaders/A6EC8DD3FDAD4C6E.metal",
+      "bytes": 7575,
+      "sha256": "44a3f19f45ebb91e117b5fb6e89a6b996f184f846bb9b0a610b2c6a53ba7ca45"
+    },
+    {
+      "file": "empire1/shaders/A79416C2A8490414.metal",
+      "bytes": 2953,
+      "sha256": "e9d4ff45a7d33450aaf65660572fb28e239a2ed3140bc2237e02f22647611e9a"
+    },
+    {
+      "file": "empire1/shaders/AAA1087E6BA9B10B.metal",
+      "bytes": 5862,
+      "sha256": "6280c9c037dd18fff3922d48430c0f4ab932945d6a952502ca87d2cabf5cd244"
+    },
+    {
+      "file": "empire1/shaders/AB6F92097EE2EAD6.metal",
+      "bytes": 1535,
+      "sha256": "4a685153c9d5b7b4eb8624d243b8f075f2a6484cfb075a14472cad889a26fa59"
+    },
+    {
+      "file": "empire1/shaders/AC6404B2073E8BAF.metal",
+      "bytes": 1202,
+      "sha256": "595b1ca6cfc0caf218be41cb0a40924685b433751a9ddd98808490ac0a04a92c"
+    },
+    {
+      "file": "empire1/shaders/AD0CA4181D52BC8D.metal",
+      "bytes": 13158,
+      "sha256": "a01981dabe256d96e4404b73c5557fd62a21f0adf25f587f18584c4e0690ef8c"
+    },
+    {
+      "file": "empire1/shaders/AE7E8102E2F2CBEB.metal",
+      "bytes": 15214,
+      "sha256": "5c84ff650882671a5519a66ec5690c531bde9b96aeeeab6ab126ad7a9296216b"
+    },
+    {
+      "file": "empire1/shaders/B083094AEB2654C5.metal",
+      "bytes": 4300,
+      "sha256": "d534eedeead2d2f5f201d8335a494d091f0638013f27c570585e1e9b0ad0d33c"
+    },
+    {
+      "file": "empire1/shaders/B0DCE88977007BE3.metal",
+      "bytes": 3496,
+      "sha256": "1de3a49710f07c3472b0ab5dc94450e36ef4b868d048c0cb13cc0ccbcd27e249"
+    },
+    {
+      "file": "empire1/shaders/B188F609D61C2EF3.metal",
+      "bytes": 13383,
+      "sha256": "b2d70ab47fbdc160fc4077d25e7a620e6fb353103fbdab7c3bb4bd1c50159ec7"
+    },
+    {
+      "file": "empire1/shaders/B194C9FD14F7FACE.metal",
+      "bytes": 6483,
+      "sha256": "66d9d72533a059b9ffaf5e5038aca436353c06a0867669a2578c271fb21f47d6"
+    },
+    {
+      "file": "empire1/shaders/B2E74B64FC0C1CFA.metal",
+      "bytes": 5569,
+      "sha256": "8dab85e2fe06c162e4451628713fd16e3ef0f4e523b85ef17608716bd9a3addf"
+    },
+    {
+      "file": "empire1/shaders/B5B6D85014F58E9A.metal",
+      "bytes": 7090,
+      "sha256": "be7264f3132b67a551d36060100d0947b0e84c77a1078861d7cfadba482cbf42"
+    },
+    {
+      "file": "empire1/shaders/B751EED52466438D.metal",
+      "bytes": 2877,
+      "sha256": "cb371547c54b3b8e7dcbafbcfdd429342f477bb0843e07d95001faed6f13ed25"
+    },
+    {
+      "file": "empire1/shaders/B911A3DF0C1990FB.metal",
+      "bytes": 973,
+      "sha256": "36f2607282d7c1ca7ce02b4d49fcd795dba9a476d1de3a1476cfa95b57547413"
+    },
+    {
+      "file": "empire1/shaders/B9D813E5FFC9F6A8.metal",
+      "bytes": 14154,
+      "sha256": "62b24d3a93c7ac35ffaff56da395cdb607f607eb20d3a3615ba2711c8c258e8a"
+    },
+    {
+      "file": "empire1/shaders/B9F1F4EEE0AA6AED.metal",
+      "bytes": 19074,
+      "sha256": "78621a7aa30eecedfcecd74ae42988f91fbea99126efcb31b1300a08fdf3ad2a"
+    },
+    {
+      "file": "empire1/shaders/BA139042AA7CEE38.metal",
+      "bytes": 18993,
+      "sha256": "5cc1877dc7e176d037f4cfba7c72bebb6d2f47666587f7d13062863f22710832"
+    },
+    {
+      "file": "empire1/shaders/BA217AB43B6E08D.metal",
+      "bytes": 7035,
+      "sha256": "2b64b32dcd69f1bd43435301b6468f6eba5efaa8d7eddb40662030b2e60d1503"
+    },
+    {
+      "file": "empire1/shaders/BD70604646654C22.metal",
+      "bytes": 2692,
+      "sha256": "54c343ff198a43f81787f8021023324c54062aeca874aa09e9944a049a10788e"
+    },
+    {
+      "file": "empire1/shaders/BE9835242F6F26A.metal",
+      "bytes": 8218,
+      "sha256": "d90ed63b287ced36ad9ba3789d7c35cfb3a4fe29f734b4e0cc8407080bd12d30"
+    },
+    {
+      "file": "empire1/shaders/BF8E952ACC8411F5.metal",
+      "bytes": 4738,
+      "sha256": "7fabf2651807ef646c529ae42040d25a56bbce9ab05da245beffd6e7e68eb089"
+    },
+    {
+      "file": "empire1/shaders/C193988139C3BC84.metal",
+      "bytes": 5741,
+      "sha256": "e384ffc6866e8e388be7bb50b1dae1774fc17d705b709f9a3d43dbe48274d0e1"
+    },
+    {
+      "file": "empire1/shaders/C5D1BDD1122385F8.metal",
+      "bytes": 3527,
+      "sha256": "e35933fb20ff10c13a888aaeb494f3a06c3c568e2f5c16e72318326a289353d6"
+    },
+    {
+      "file": "empire1/shaders/C61761D692A8436B.metal",
+      "bytes": 13920,
+      "sha256": "31067162beb45a8522de52703be9a470d6a244ba943f04b6b1dc378603549819"
+    },
+    {
+      "file": "empire1/shaders/C7CC29362A584C67.metal",
+      "bytes": 2981,
+      "sha256": "d2619baa599a3736cde1122ab34335ee44325ed9dc57e61084c6f17bfb1d3820"
+    },
+    {
+      "file": "empire1/shaders/C86DAFF697CC7867.metal",
+      "bytes": 2719,
+      "sha256": "6213816c1ddf77113a7584b9f86630610bc3e3a42a172e938bcd8c2055145c14"
+    },
+    {
+      "file": "empire1/shaders/C8F43083A752A09F.metal",
+      "bytes": 1583,
+      "sha256": "1f6bbbec040332b270a6e1f32581498621b5fd964cd1bdef7dc67984204de3c1"
+    },
+    {
+      "file": "empire1/shaders/CAFA94E3ADCCFC4A.metal",
+      "bytes": 3565,
+      "sha256": "b1547f3f5095f425e978d756fd2e0f0682750c623e8a3d4a3891d3b1b2ab9b4f"
+    },
+    {
+      "file": "empire1/shaders/CB4C4F16944253C7.metal",
+      "bytes": 2412,
+      "sha256": "93a8c36eee3173beab1dce144c547400ed95de337c0885411948ee48e51f001a"
+    },
+    {
+      "file": "empire1/shaders/CC7620EBED6C48DE.metal",
+      "bytes": 15721,
+      "sha256": "f45a22195f7df26fbab2947d2d24b8817050b9d696c29c06174a98ecee8cc0d9"
+    },
+    {
+      "file": "empire1/shaders/CD68E5030B8C188A.metal",
+      "bytes": 1886,
+      "sha256": "38868a9c26f25a3e976e8242cb5f273dafcd61b892d305038b927d018577db6c"
+    },
+    {
+      "file": "empire1/shaders/CE394E061D0C5956.metal",
+      "bytes": 1555,
+      "sha256": "ce96a3dbbfe9353d8f123c3d4d1a285f85807d555376dcd43f35f8e141fb2eaa"
+    },
+    {
+      "file": "empire1/shaders/CEEF5DBBEE7731DB.metal",
+      "bytes": 15752,
+      "sha256": "8ba200d41fee8c28395ee9bf3bb17cf7ef33a77ca655ea065155a1519b79f4b1"
+    },
+    {
+      "file": "empire1/shaders/D0854CE3F6003FFD.metal",
+      "bytes": 4912,
+      "sha256": "00cb16440ac090a8e2e2bc71b10b5ba71dbbae9c2e6a4d8b61a3c53eb80e562c"
+    },
+    {
+      "file": "empire1/shaders/D116D9D1700F8575.metal",
+      "bytes": 12987,
+      "sha256": "16fbe778856012f9e904593b842ae01417a6a53bf645c513ff588ead1ce96971"
+    },
+    {
+      "file": "empire1/shaders/D184AC1F266B710B.metal",
+      "bytes": 11522,
+      "sha256": "e0ce3bf238f9332c67a0f65eec93890beb52dd53ab347463c7a47e3a235ef619"
+    },
+    {
+      "file": "empire1/shaders/D1B904E519407191.metal",
+      "bytes": 511,
+      "sha256": "e9a06f2adb7c92f220d12b180cafd047e6a702ecc3b6c740cdd7d76dbca83d3d"
+    },
+    {
+      "file": "empire1/shaders/D1EF4F88A533C806.metal",
+      "bytes": 19528,
+      "sha256": "e82f17fbff1af3c913f6d9e55f8a3744852c7f1644323de804efc153e1e6f8c8"
+    },
+    {
+      "file": "empire1/shaders/D2C560C2AD694FD5.metal",
+      "bytes": 13153,
+      "sha256": "6670cd0e8c20a8971653e9db0cd483f2a8bc8cc1ba77ddcf4efeef628218d175"
+    },
+    {
+      "file": "empire1/shaders/D309BA442F33E25F.metal",
+      "bytes": 1582,
+      "sha256": "0e7649124b1cd3ecceb581b0bd59bcd68b1d4f705d6f11f4bce4ca29858120bc"
+    },
+    {
+      "file": "empire1/shaders/D37DAE5812AF2F9.metal",
+      "bytes": 5638,
+      "sha256": "ada990964d788378e57b5993fe92a0e237f18e30b41ddabd063016dedb7e64fb"
+    },
+    {
+      "file": "empire1/shaders/D398500030572B2.metal",
+      "bytes": 11759,
+      "sha256": "51944727f66f6bbed9cb012c85c08279c9d147d1d67ee9ebf68943edd4592074"
+    },
+    {
+      "file": "empire1/shaders/D592BEC78CA5E7C9.metal",
+      "bytes": 12813,
+      "sha256": "7dc01084cd606ed1ddcb03f36d4b743e9dfa55f88ebf7e1d4a53889db28cdbcf"
+    },
+    {
+      "file": "empire1/shaders/D5ABDC78338227A0.metal",
+      "bytes": 15460,
+      "sha256": "cd02bfecc6cae66834d7a2c658e69185089d116bf04050686318ff640a74359b"
+    },
+    {
+      "file": "empire1/shaders/D9A15AD76CE69253.metal",
+      "bytes": 16264,
+      "sha256": "a41676e170bb63c346eda110af2c19af6209b474a6b0a534a9c95073cffe522d"
+    },
+    {
+      "file": "empire1/shaders/DA9306BA28ED88E0.metal",
+      "bytes": 3390,
+      "sha256": "82f3b14cc1ff08fbdc980a5d260ccc00513d5632a4b4244414b10311fa1f02c7"
+    },
+    {
+      "file": "empire1/shaders/DB879FA045206D5C.metal",
+      "bytes": 16871,
+      "sha256": "c12c06e7a45d544cd335cb53fe2dda8e086d1c00019ced7b883b7c454974ae78"
+    },
+    {
+      "file": "empire1/shaders/DC527BA668D83F94.metal",
+      "bytes": 14716,
+      "sha256": "1eb57abf100d8afd2302997fe68ca2c3374a2cdcc4155f69d14b746048d35def"
+    },
+    {
+      "file": "empire1/shaders/DC747AEE59D2844D.metal",
+      "bytes": 8901,
+      "sha256": "e7036aecabe4b937c1722794c4ce934f0912061cfa4e9333fa495ef8613c0e45"
+    },
+    {
+      "file": "empire1/shaders/DD1E94D2F6D34CBC.metal",
+      "bytes": 2502,
+      "sha256": "c027ebba9a38ff93619b607abd84c15722b9b19e2c878e37e4a668907001da42"
+    },
+    {
+      "file": "empire1/shaders/DE39B994EC96EDE9.metal",
+      "bytes": 1661,
+      "sha256": "4efd8eb1190b9929698dc3f927239c21c009c633a70486a36bff964f7c3d9d49"
+    },
+    {
+      "file": "empire1/shaders/DEF330D4312C1E7.metal",
+      "bytes": 2679,
+      "sha256": "8346a13d3c91d4cdb9ba8943c8ddfbd38cf35c46534d16121923e259c0de123f"
+    },
+    {
+      "file": "empire1/shaders/DF235B16BA3BF7D1.metal",
+      "bytes": 12023,
+      "sha256": "0187992f0aa396ad970d4e9bf7dbf2e2c9c04a881fdd1a9ddfbe360c8a132d65"
+    },
+    {
+      "file": "empire1/shaders/DF376854D1774666.metal",
+      "bytes": 15622,
+      "sha256": "670e8e72233f50673cffd87eee8adf70e8f57f573a21452abf67708d29c9f0b7"
+    },
+    {
+      "file": "empire1/shaders/DF9230398DF35216.metal",
+      "bytes": 8089,
+      "sha256": "09cf4c9205de8693b2fb6c8b565a552eac655f8de7d7133e82f126587c4dc13d"
+    },
+    {
+      "file": "empire1/shaders/E1BE6757B3050D69.metal",
+      "bytes": 6275,
+      "sha256": "7c52f7c6b40c7496e22ed3200d274881d5063fff23efadfe511c0efe8a9d5b19"
+    },
+    {
+      "file": "empire1/shaders/E2D1B6F77DE47514.metal",
+      "bytes": 1461,
+      "sha256": "f17faa5e62e2c129c5ebaaa999e9a959429cd8f491acfa86815fa642dc25fa07"
+    },
+    {
+      "file": "empire1/shaders/E4355BC9D42165B2.metal",
+      "bytes": 4053,
+      "sha256": "6ac22cddc5e763e9da0d03dd7322b954989b48fbb7fc08008c2623c8b29256a4"
+    },
+    {
+      "file": "empire1/shaders/E641A1A7FB56D02B.metal",
+      "bytes": 948,
+      "sha256": "2161e487790098b38d71da5064d0c030584ec6d279f3fb6e22d654afd457a6fa"
+    },
+    {
+      "file": "empire1/shaders/E7F8ACA2F1E897AB.metal",
+      "bytes": 3139,
+      "sha256": "fef05dd4578c5cf34aabd3bb1420d5dcd8800af54a0544101f0374dfc60b0852"
+    },
+    {
+      "file": "empire1/shaders/E8383A36BFC8A08F.metal",
+      "bytes": 15949,
+      "sha256": "4c2e7daa5efee5bddc11821c8e544d46e578c9f44c38666c7e79c7d49e6e62d2"
+    },
+    {
+      "file": "empire1/shaders/EC1CD231E73733A3.metal",
+      "bytes": 3901,
+      "sha256": "4e520db93f1c14d83af942714bb04b59a62a1cf9696864a83021285d4f1b157c"
+    },
+    {
+      "file": "empire1/shaders/ED4A9DD355F1BD66.metal",
+      "bytes": 13872,
+      "sha256": "81a38e660988b3ec11d067d28b3c22fb9759043a54d93a786c234f1e14329185"
+    },
+    {
+      "file": "empire1/shaders/EDEB96566F435129.metal",
+      "bytes": 2853,
+      "sha256": "0724ebc5010dd1b54dabf853b801327538ca1c444b8c047c2bacc7ba05685151"
+    },
+    {
+      "file": "empire1/shaders/EF77047B1C43EFB4.metal",
+      "bytes": 5342,
+      "sha256": "ca8de591ce34401f5b5ef5a775c8c0da9106a098f5c5248b39a6bb3ece1249c8"
+    },
+    {
+      "file": "empire1/shaders/EFD5D488A058F874.metal",
+      "bytes": 4885,
+      "sha256": "2ac66b627048196582be7c06395214421fbf664905051eacbbba6291a19321c7"
+    },
+    {
+      "file": "empire1/shaders/F04FDE7221F086E4.metal",
+      "bytes": 2534,
+      "sha256": "f51ec07c55e3d422fe90ddd35ff5da4019eeb703b33c0941bc7c34856e4ea5ea"
+    },
+    {
+      "file": "empire1/shaders/F076A7D2DB37D02.metal",
+      "bytes": 9130,
+      "sha256": "700bc320a9a22fca1cc4906c4b7b6b23c92fa6610da5cb22ff50e054bd6ba602"
+    },
+    {
+      "file": "empire1/shaders/F12D5AEB0DEDD6F0.metal",
+      "bytes": 14991,
+      "sha256": "f31773ce051f14358d7d9261ee3bf7b90716a5b6577bf31da36e9a93ae7e0b13"
+    },
+    {
+      "file": "empire1/shaders/F2806ABBA36C2A28.metal",
+      "bytes": 15919,
+      "sha256": "f5ccda21ac8ba938eb4a06b3e52520b4496230d8303d3c7272ed040892241e2e"
+    },
+    {
+      "file": "empire1/shaders/F4BD9D1377B8ECE6.metal",
+      "bytes": 509,
+      "sha256": "6ae67db5e11909118ef986cf7bfcb1fd0958bcffa1edbf301c174fd52336af4c"
+    },
+    {
+      "file": "empire1/shaders/F4BE18C4370788AD.metal",
+      "bytes": 14637,
+      "sha256": "f1174f9ef046c99658121c0fc3831de8daf9b1ccc6c9f67c6afe3d4c73972877"
+    },
+    {
+      "file": "empire1/shaders/F6677F470185FB3A.metal",
+      "bytes": 874,
+      "sha256": "372928195c2597b454fd5fbf7d5dc717c4369c6b737619d387b9497bb98e85db"
+    },
+    {
+      "file": "empire1/shaders/F7591146499B4E70.metal",
+      "bytes": 3579,
+      "sha256": "fe6cc282330e1cce186a09fb1ceab5982d7e18f7e0de4bc0f477cbff7c27ae42"
+    },
+    {
+      "file": "empire1/shaders/F94E3E0F0CC6B460.metal",
+      "bytes": 509,
+      "sha256": "cf651a8a9d8dadc25b7c6d22d76bbe2c4a2dd91f41b4e6046ebe9257390dbf43"
+    },
+    {
+      "file": "empire1/shaders/FAD1A80942B4E95E.metal",
+      "bytes": 14234,
+      "sha256": "86bc037d3a144272fabbe947bdfcccdf847c76fd1ecaede6659cb4a4eda94675"
+    },
+    {
+      "file": "empire1/shaders/FC73153FD62F03C.metal",
+      "bytes": 11058,
+      "sha256": "b28dac4f06c3d51f0cc340bfdc4ada32a01eaac6741d7793af0f89e955e1a0a0"
+    },
+    {
+      "file": "empire1/shaders/FCB2ED5E9EFB5181.metal",
+      "bytes": 16691,
+      "sha256": "dada68ab8657c4479fe3ea5a799d5599b8153a8bd2fd7379ee0f5f5d2ca58e50"
+    },
+    {
+      "file": "empire1/shaders/FF8503E22E795756.metal",
+      "bytes": 19663,
+      "sha256": "cc489a8d6f48e4a2628a1e8dba2ec0e5c19ae9cf30f3d45ff9d9cba22d950b6b"
+    },
+    {
+      "file": "empire1/shaders/14788CCAB56E96D8.metal.html",
+      "bytes": 33557,
+      "sha256": "23305cbe8f18f1f21cb15015bad2ecad164300cb5ed9a8632e629ed41e03ef68"
+    },
+    {
+      "file": "empire1/shaders/151B9A990A48BBC2.metal.html",
+      "bytes": 33451,
+      "sha256": "61b2f12973ebf4fcd7d0628b42ad7677b4799fedfe0fd3153a04c6666b6bc7f2"
+    },
+    {
+      "file": "empire1/shaders/1612188E7337B96D.metal.html",
+      "bytes": 20756,
+      "sha256": "14f600ae283c2c2a14e702fb6bd0dc55bce81ff48af9dff875883c190270f47c"
+    },
+    {
+      "file": "empire1/shaders/1691458634011AB8.metal.html",
+      "bytes": 44399,
+      "sha256": "bbb979ecda2db6bb24c3efe5efc69b5ab8b165c73f60ed3b53b49a7ea10533a0"
+    },
+    {
+      "file": "empire1/shaders/16AC49AC28C42243.metal.html",
+      "bytes": 19511,
+      "sha256": "8e0c6aa7bb211eee28870957d93b1ee3e17ecedf22d7812757fb71eb63524cb5"
+    },
+    {
+      "file": "empire1/shaders/174D35A856499CD8.metal.html",
+      "bytes": 30882,
+      "sha256": "e2c946fb43290e37c234ce2ac1450f8e21f299c72353b619c83ba6d8e30d3731"
+    },
+    {
+      "file": "empire1/shaders/188D50A799517AAF.metal.html",
+      "bytes": 36070,
+      "sha256": "965c457f00ad96c08fba553389e12b7b28f817f3ed8368f6052842fc104854ee"
+    },
+    {
+      "file": "empire1/shaders/196EF8DF13C7788F.metal.html",
+      "bytes": 18827,
+      "sha256": "0fcbf2c843af64f03f05d888708307ec7dc3d36432392e99165fff4406230ef1"
+    },
+    {
+      "file": "empire1/shaders/1B40A8F37A170B65.metal.html",
+      "bytes": 23739,
+      "sha256": "fb0aecb539642f2ab028a75071bffa179abb9321149ea3d08a9bf63c34ae9368"
+    },
+    {
+      "file": "empire1/shaders/1E26FC8BD57E9F13.metal.html",
+      "bytes": 39750,
+      "sha256": "6aa6095f5a08937006288961f7c4d0aa89c90e0d5b8dfa072583d9a5a91b31b1"
+    },
+    {
+      "file": "empire1/shaders/20E26A637FF18F8B.metal.html",
+      "bytes": 4613,
+      "sha256": "04feb27242d5aee5cd2a2c9000e0363d6d4b897e2c8535f8b51ef1d54c46182c"
+    },
+    {
+      "file": "empire1/shaders/22055D42DDAA566A.metal.html",
+      "bytes": 6481,
+      "sha256": "fe1a7469677fb4dbc4a7c2bb0ddff8c811181797d1d50032d1ce0b46370c5339"
+    },
+    {
+      "file": "empire1/shaders/227CD4FB0731032F.metal.html",
+      "bytes": 20693,
+      "sha256": "e711fa750f6c7faf8aab4927575f46e14c0cf48fcfa12db9e4fc9ca1ded344a6"
+    },
+    {
+      "file": "empire1/shaders/22D87860333938AC.metal.html",
+      "bytes": 10544,
+      "sha256": "290db51c0c8ff01cb9d7a0bbbce6b8824d124d3f4d855da72d740fbb64223072"
+    },
+    {
+      "file": "empire1/shaders/23F6FB5BD501C54B.metal.html",
+      "bytes": 15207,
+      "sha256": "5ca2ac52a7e5365a697f11430c97290b80e1201b38293cacd3ea19a8bb6d5393"
+    },
+    {
+      "file": "empire1/shaders/2465498F1DE737E1.metal.html",
+      "bytes": 16260,
+      "sha256": "e347a1c5f783c3f4044a0bc7a0120a533953d6b235f51721c0ade902d488dddb"
+    },
+    {
+      "file": "empire1/shaders/2613B19CE486FF0B.metal.html",
+      "bytes": 3989,
+      "sha256": "b57b99ee1a1568788497dae049f691b07539cb7bef2c952080a84d9ddd4d7f40"
+    },
+    {
+      "file": "empire1/shaders/2707632F1253D56F.metal.html",
+      "bytes": 28203,
+      "sha256": "23bf9f38a1336b6c7139586d4e0822e98e56f29944764fb3ce0c021f41284b2b"
+    },
+    {
+      "file": "empire1/shaders/28EEA23597BD580D.metal.html",
+      "bytes": 15319,
+      "sha256": "fa7cbf00621a6c404a5cf27b1c1c622838da1d1db9b03b7ea568bc8daca0a847"
+    },
+    {
+      "file": "empire1/shaders/2984D55E52C1E153.metal.html",
+      "bytes": 40551,
+      "sha256": "638926d6898e65272f8e4ba8aa8c31adc2bc9f5cc68b00b52878ff7c9e7e6a6f"
+    },
+    {
+      "file": "empire1/shaders/2D0003307A2DDCE2.metal.html",
+      "bytes": 41465,
+      "sha256": "8507f46367416e4e5f7b498537111b2efe9b63aa679f7b6db4abc7e55b4f0c63"
+    },
+    {
+      "file": "empire1/shaders/2DEBF7C98BFF98A2.metal.html",
+      "bytes": 22248,
+      "sha256": "1f6127e38b345d45383bb98dd214932db3ba8701b63702135dafcb8ff177050d"
+    },
+    {
+      "file": "empire1/shaders/2EB35058C7F2CB6C.metal.html",
+      "bytes": 7140,
+      "sha256": "3d8ac483377cd9b4e1a7c6759ea0a2cc2824843e04c8f52097817c702b5b7950"
+    },
+    {
+      "file": "empire1/shaders/2F3A91608005BFBA.metal.html",
+      "bytes": 21088,
+      "sha256": "fb2da2f2e5c60b558fd933a89073f9d70c042b7143deeed18ff0cb46c38edc44"
+    },
+    {
+      "file": "empire1/shaders/30AB13A42E07ADCC.metal.html",
+      "bytes": 3873,
+      "sha256": "495394c7eb27b92b55976781eb8d7153be9923b1e66cc8458ba1d0b3a359da1e"
+    },
+    {
+      "file": "empire1/shaders/31D235AF91C9B9A5.metal.html",
+      "bytes": 11858,
+      "sha256": "e66a34414b1e0bd3b3410b0952370e94ea33a07ff77629a39e82edc7c73237d5"
+    },
+    {
+      "file": "empire1/shaders/33D3CA7D5A654A74.metal.html",
+      "bytes": 8555,
+      "sha256": "86966af23b8dd1df6dc8becb23dad4eebff9d2a5894eab15227d7ef3c328e3a3"
+    },
+    {
+      "file": "empire1/shaders/33EDB6F482810399.metal.html",
+      "bytes": 6278,
+      "sha256": "acc524380fdea6e6dcd93bd91004520bfb5e4a67cb8b38929201ee7f8fdd9e03"
+    },
+    {
+      "file": "empire1/shaders/346FC28515F59739.metal.html",
+      "bytes": 9410,
+      "sha256": "f22b84c9d1603cae332b18b451ae2396ced2d4a7f8042e8cc88b2793fb24c46b"
+    },
+    {
+      "file": "empire1/shaders/34FC370E33FDB53E.metal.html",
+      "bytes": 4859,
+      "sha256": "19e9bf4c284303f0c3c23399c6ead8eaf196ebd71686d94e2d5ad8fce63e001e"
+    },
+    {
+      "file": "empire1/shaders/35E744FC2162B835.metal.html",
+      "bytes": 5919,
+      "sha256": "ba9329fa56c02dc1297457ef1869a7862f00cc9275ac513303e8c91f26955c18"
+    },
+    {
+      "file": "empire1/shaders/36230B57011F2EC6.metal.html",
+      "bytes": 5124,
+      "sha256": "0ac8df80ee923b062fc0847a0cd80794d4d5226be459a2edd5f88b67bc937906"
+    },
+    {
+      "file": "empire1/shaders/37D7280164AA460A.metal.html",
+      "bytes": 9834,
+      "sha256": "b5f60793ab7da057946224cc6197451513c2cd27dfaab38a79a478670810f284"
+    },
+    {
+      "file": "empire1/shaders/3AA60A6A70C58EA8.metal.html",
+      "bytes": 17225,
+      "sha256": "55249a8aebe28157f02b350db5a8a9680b1c3456cdfa55cf8a999e379e27f0c5"
+    },
+    {
+      "file": "empire1/shaders/3C0B4F15F668CCDA.metal.html",
+      "bytes": 27938,
+      "sha256": "c66297b2f5eb1399c07a67787a040a58bc573ef8a87c03682d54e3447d9ed7a2"
+    },
+    {
+      "file": "empire1/shaders/3C0FAD1E4F352F8A.metal.html",
+      "bytes": 7572,
+      "sha256": "299c9f1f0bb5a1f83ea409e908c72797d9ead21ac1bf6fe986b3772d0fe38134"
+    },
+    {
+      "file": "empire1/shaders/3D5927F6BF1FEA06.metal.html",
+      "bytes": 22792,
+      "sha256": "d072ba1b776aa5d745158c6382767831ceeba1b1338cdc8ebf2ab8c02a501915"
+    },
+    {
+      "file": "empire1/shaders/3E5377095A1A291E.metal.html",
+      "bytes": 11767,
+      "sha256": "4e41429b0bdae81eeb2429b2ce067c7bbe527beb7501e0014423d27b45c795ba"
+    },
+    {
+      "file": "empire1/shaders/408ADCBC4DA4210D.metal.html",
+      "bytes": 11009,
+      "sha256": "d7110c9ceb14385a72815a8e0909ab25a6b7c3366c8e3343572b58f6bb32063b"
+    },
+    {
+      "file": "empire1/shaders/41D9BA21D7508E63.metal.html",
+      "bytes": 5525,
+      "sha256": "92163669b4862befc5ad77a8b90e0f8f08d007cccfbd04244aac3c9ea77dc152"
+    },
+    {
+      "file": "empire1/shaders/43912D3816DEDB30.metal.html",
+      "bytes": 13315,
+      "sha256": "a1a1e1a958996707902d8fa2112b9b8a2a5c9f2126e760831c2d2abcfc6f5d63"
+    },
+    {
+      "file": "empire1/shaders/4552894A96D16654.metal.html",
+      "bytes": 47739,
+      "sha256": "f125303986b832df32a70eb8fe079e094085e9dc13d32ddf94b8f8d03f261d33"
+    },
+    {
+      "file": "empire1/shaders/46D23D7FFA994B60.metal.html",
+      "bytes": 10441,
+      "sha256": "05785e14efa913a3390f56bc4f121f80d17a64778749f170eeab50a799c186b8"
+    },
+    {
+      "file": "empire1/shaders/46DC5A6F854C8B99.metal.html",
+      "bytes": 9616,
+      "sha256": "e0842404c2fea552903e0ed538eca4221612dd1415ebb058c9c983a57c30c5f5"
+    },
+    {
+      "file": "empire1/shaders/48AF95639F3762C4.metal.html",
+      "bytes": 7009,
+      "sha256": "9d441cc142c2b0ee16eeca24dc9aed5a7c705c032befca3d04e920d565aaf592"
+    },
+    {
+      "file": "empire1/shaders/4A0D8380ECEC865B.metal.html",
+      "bytes": 44772,
+      "sha256": "52dc71729814c0a1704f60d48e36b6a565adc31438f5d7dab4833cd3d16ed66c"
+    },
+    {
+      "file": "empire1/shaders/4DED8AD7E1660F39.metal.html",
+      "bytes": 38732,
+      "sha256": "440fe36acdfba52a49c6b3abe75fc07faa2d3221f0bc4f36d1f49c83fd64593a"
+    },
+    {
+      "file": "empire1/shaders/518EE59035279A02.metal.html",
+      "bytes": 33873,
+      "sha256": "3b50712a2e3401a04404432d7c39991bbc06ccd043ce485ffb35d1bcd3a89db8"
+    },
+    {
+      "file": "empire1/shaders/536E997566D7B672.metal.html",
+      "bytes": 41917,
+      "sha256": "440fc68d621ac65b4ebe27d6e32d56cdf22a16ff8a54ac39de77e529e82f1d3e"
+    },
+    {
+      "file": "empire1/shaders/53E1EC6302A10572.metal.html",
+      "bytes": 31288,
+      "sha256": "0b00d0af3ab00ce9dc3dd88b2cd355e322875f980c87a21cdfa72e4a642db38d"
+    },
+    {
+      "file": "empire1/shaders/578E9F4D01282EEB.metal.html",
+      "bytes": 5059,
+      "sha256": "86a2fcb051dd1c7865e6bdd447f747eab735dae46c2f23915edabec0e24f0909"
+    },
+    {
+      "file": "empire1/shaders/57FA8E9FAA6F7438.metal.html",
+      "bytes": 14326,
+      "sha256": "d6dec1cf2b4224ff22d89bfdf6dd8d82fdb7abe44c40436d304017b55c2d65c6"
+    },
+    {
+      "file": "empire1/shaders/5AFBECBEE4FB17D.metal.html",
+      "bytes": 7054,
+      "sha256": "a8250758a11b9778e07fc267f1626a30b579ff4015b4ec7fa8500a966db6c1c2"
+    },
+    {
+      "file": "empire1/shaders/5C7B364CA13D6F7.metal.html",
+      "bytes": 12530,
+      "sha256": "b79be4dc703af65f1e792e2a1723c64ce290680b22023242be116e8a02b071ba"
+    },
+    {
+      "file": "empire1/shaders/5D6CDC97007F6042.metal.html",
+      "bytes": 7869,
+      "sha256": "f34e996afe480066d5f9ab99f3e1cc30fc599de136f25f045bafc91581550041"
+    },
+    {
+      "file": "empire1/shaders/5F656BBB84FAD980.metal.html",
+      "bytes": 32492,
+      "sha256": "71dd42e9c8598d920daa06f9f49c92eca75afc7cd4b850eb3b3ed66178344409"
+    },
+    {
+      "file": "empire1/shaders/5FBC198DE5480DE5.metal.html",
+      "bytes": 3155,
+      "sha256": "ea2a2384011b7f0d7b49f8480fc7de0cf4f24d4f63006c2505a7942a6ca3f91b"
+    },
+    {
+      "file": "empire1/shaders/60CCAA8FBE45D9EE.metal.html",
+      "bytes": 13790,
+      "sha256": "3a834c61d4eee3fd29c3f5fe4dc1967190c25b297e9a76f932e68e4260aa0b40"
+    },
+    {
+      "file": "empire1/shaders/62E3049CB2FAFD0F.metal.html",
+      "bytes": 19739,
+      "sha256": "b346eda1f4225c1c843c8b1610e13aa3b0484c91e4caa9cbf77bf7fdfa8358c9"
+    },
+    {
+      "file": "empire1/shaders/636B5ED715A13F15.metal.html",
+      "bytes": 26239,
+      "sha256": "f890f08e0be98aa19528734350fb1681e73adf370ea44176111fae9e95c5b00e"
+    },
+    {
+      "file": "empire1/shaders/638728690530CC14.metal.html",
+      "bytes": 43615,
+      "sha256": "21c2d7243f96740d95dd7f3e48e27da0bd148de50584c0c0cbf99db57a6dfd48"
+    },
+    {
+      "file": "empire1/shaders/64C2E4E483C4CE99.metal.html",
+      "bytes": 32095,
+      "sha256": "6aa8908747bb2658212f2ea570adfeeafedc651ebb1a2f5252b667249099f0fa"
+    },
+    {
+      "file": "empire1/shaders/64FFE712E711D3D5.metal.html",
+      "bytes": 40064,
+      "sha256": "7ca7b3a525d6a6c3b64f6cd43757ad5ec2d41d37082a393235ede70accb28a44"
+    },
+    {
+      "file": "empire1/shaders/6602DE0A5FDA4B00.metal.html",
+      "bytes": 14723,
+      "sha256": "c682c6e6d1f96d7d591ce1b1fb476deb4856f57b86ad71f8ae655e76761934f0"
+    },
+    {
+      "file": "empire1/shaders/6698D44D00A79B98.metal.html",
+      "bytes": 40176,
+      "sha256": "e844f2be3acbd44bceb844844b8b48931c425cf978b72f7b5f79c5bb808bd7a0"
+    },
+    {
+      "file": "empire1/shaders/686822A56FBD4695.metal.html",
+      "bytes": 6474,
+      "sha256": "5b3773322bee80e5cc01ee285be3d92fb96447a6b6b2592333ec96c143a4d3de"
+    },
+    {
+      "file": "empire1/shaders/6889EB0DFEE058CA.metal.html",
+      "bytes": 44927,
+      "sha256": "ae44eab74f81313b9ac96e2a3d3d9a319986f87801ffe2beb6d61763aad4a5a6"
+    },
+    {
+      "file": "empire1/shaders/69B88B548D033785.metal.html",
+      "bytes": 31272,
+      "sha256": "51b9fdf0a0d8923d0ba38448eef8eace3329d0ef1b8604d135f3e8b90f449793"
+    },
+    {
+      "file": "empire1/shaders/6B0680F5DAFD522F.metal.html",
+      "bytes": 23043,
+      "sha256": "66745cb08763a21f2a215cca6e8a0a134ef40cb1a69ec3316bebb1e0f4c1b4ae"
+    },
+    {
+      "file": "empire1/shaders/6C029C85E694EBF9.metal.html",
+      "bytes": 15499,
+      "sha256": "16d0078369d8ed05fd5c2fb55a5dc1961bb22bd1b6f3e363e0a574459ce9cec0"
+    },
+    {
+      "file": "empire1/shaders/6CCDA53F60836463.metal.html",
+      "bytes": 18047,
+      "sha256": "b330f38313bc169410bf691df78f6da2b7784e0c5d49ba61249e2f1879847832"
+    },
+    {
+      "file": "empire1/shaders/70C4E390B5467EB4.metal.html",
+      "bytes": 9182,
+      "sha256": "d38aeb77b047c8e04f22b7b58529686587d843cc4289268989f81671faa8d429"
+    },
+    {
+      "file": "empire1/shaders/71980F19B900799D.metal.html",
+      "bytes": 13363,
+      "sha256": "363613a9aea09f0697576ab2271d89a40baf0305d74397b09d6776ac80cb251b"
+    },
+    {
+      "file": "empire1/shaders/72909EDA43C96810.metal.html",
+      "bytes": 16289,
+      "sha256": "36522a9c35afaf766330142da54ef859d280d4d8eb738a8070dffd8bbf83d69d"
+    },
+    {
+      "file": "empire1/shaders/733A19A0DCE8699.metal.html",
+      "bytes": 32389,
+      "sha256": "1e4af0aaf5d00b0ad75e31dc5795fe56c7f979bc6835f8e498abf7916eb1e8a5"
+    },
+    {
+      "file": "empire1/shaders/74B67F909E32C446.metal.html",
+      "bytes": 32743,
+      "sha256": "502436c84967395fb3a91d19ff6cf756c1353e8535a3274adb739c592e4da233"
+    },
+    {
+      "file": "empire1/shaders/753C73EDAD594149.metal.html",
+      "bytes": 6601,
+      "sha256": "5e8468d9b5ca7967a5cf2bef62c06851504339561b26fd402986b98ca93244d0"
+    },
+    {
+      "file": "empire1/shaders/769FC20FEB1EFA.metal.html",
+      "bytes": 10558,
+      "sha256": "4d8b5e00fa81c17fbfb0f96635b0b21a7ecb5ebad925fa967c5081fe31230ee0"
+    },
+    {
+      "file": "empire1/shaders/7AFEBB89254F0758.metal.html",
+      "bytes": 9339,
+      "sha256": "2d3a2dc3487c64e34d6861210231f5a6c8b58e719740fe8f8af31358c46c6d9d"
+    },
+    {
+      "file": "empire1/shaders/7B16A553394FCE7B.metal.html",
+      "bytes": 4752,
+      "sha256": "8cb3a4117f2d430fd29b1b85ab3bdaea27b90cc0918b94fc075aff9e36161ec8"
+    },
+    {
+      "file": "empire1/shaders/7DB79330DBD11955.metal.html",
+      "bytes": 13239,
+      "sha256": "c6d388795db5a805735ddbcd7be46ea26204e8ae61f9aced1011706ab3457630"
+    },
+    {
+      "file": "empire1/shaders/80DF5FBA03B5F00C.metal.html",
+      "bytes": 35931,
+      "sha256": "205c362bf2de1fdd93fe72b8584ee61c0ade2bc304a5327e63db305ad63111fe"
+    },
+    {
+      "file": "empire1/shaders/821C556184BC5089.metal.html",
+      "bytes": 16465,
+      "sha256": "6f2b5405f66efe089ce5079434dd080c5d96151549b3dd3c4dd45686cff506cb"
+    },
+    {
+      "file": "empire1/shaders/82BE10A0550B0FDB.metal.html",
+      "bytes": 18262,
+      "sha256": "6620b372fcf38b05dca99bda3c47bece7a20363ce10229c29f1a318b12cd5664"
+    },
+    {
+      "file": "empire1/shaders/84DC1364D846CE97.metal.html",
+      "bytes": 34286,
+      "sha256": "e95cf766d2f112352618ebaa16c9af00e626f1a6c462b1bf16ced21d33236811"
+    },
+    {
+      "file": "empire1/shaders/85FDEF5B00BDFF60.metal.html",
+      "bytes": 20252,
+      "sha256": "341b2819176319cdab9a270fe7f0364279b6e216edf5d2a7318381511d1ab054"
+    },
+    {
+      "file": "empire1/shaders/875610C72915D770.metal.html",
+      "bytes": 2499,
+      "sha256": "a481af70d743a9356df8eecd7c6f248247402693147ba5cc74102751c05574bd"
+    },
+    {
+      "file": "empire1/shaders/87892EA381D07BFD.metal.html",
+      "bytes": 5511,
+      "sha256": "371f004724da76664b323e6c9a4bdf5afa78b4d274ac18fce6155a45141b7281"
+    },
+    {
+      "file": "empire1/shaders/8A5B8921A26C4885.metal.html",
+      "bytes": 6361,
+      "sha256": "bad39759bce73b99f0def5f85ed9c37def7d0b1b1f29167695c39d4f73521e53"
+    },
+    {
+      "file": "empire1/shaders/8D93CB5787D86000.metal.html",
+      "bytes": 15099,
+      "sha256": "030f52b2820aee8296b04fcb42f12747f398c1ad6944f503cb8c719a5a08efba"
+    },
+    {
+      "file": "empire1/shaders/8DD8400F218EC011.metal.html",
+      "bytes": 39336,
+      "sha256": "d369ab38521cab1c4e4eac93a7c3d46c3ac246819ccfc98d1f17302cdecf9c0b"
+    },
+    {
+      "file": "empire1/shaders/8F37E6C07FE50ECB.metal.html",
+      "bytes": 2166,
+      "sha256": "b6f317fee18d2d6e21f34cdf717a57a98c55325ca799674acf7c575ccfb412b7"
+    },
+    {
+      "file": "empire1/shaders/923CBC7F3247AAF9.metal.html",
+      "bytes": 41786,
+      "sha256": "fc1bc1c464a730d118b67a190b06ea74afd06f42b3358b446e3a25d52fa5c930"
+    },
+    {
+      "file": "empire1/shaders/929EF07019286C21.metal.html",
+      "bytes": 13433,
+      "sha256": "53ac81228832b89123505ab867b5497aa5e37fdedb234883e5b9ecdd8bdbe9ff"
+    },
+    {
+      "file": "empire1/shaders/94F9E06D2B8EB3AE.metal.html",
+      "bytes": 15729,
+      "sha256": "c575f64db4cf02cefcdd22350d645f302de397d909aed0bcf6323e1dc0023735"
+    },
+    {
+      "file": "empire1/shaders/951F6B4398C15DB0.metal.html",
+      "bytes": 19986,
+      "sha256": "6e9e038cdc70f73ae9fa0002265e7a0a56b8fc32485a23dba356a8c00d99b167"
+    },
+    {
+      "file": "empire1/shaders/9774F775C75AFF58.metal.html",
+      "bytes": 7956,
+      "sha256": "0d8ee9d179b1e54b11b07a0076971b4241b41f2ebbf39004816572038eb7c788"
+    },
+    {
+      "file": "empire1/shaders/984C06405061B9BF.metal.html",
+      "bytes": 45849,
+      "sha256": "6c084039962dea8b20382f76cf7f68bb078c823d646ef0de3bfd8f3eecca6dc3"
+    },
+    {
+      "file": "empire1/shaders/9860E55E92BF8AC1.metal.html",
+      "bytes": 16235,
+      "sha256": "e18c252fb97c8eb2e615a00e9cf13506726b1e5da96e87b9000d122aaafbe339"
+    },
+    {
+      "file": "empire1/shaders/999337456265EEDC.metal.html",
+      "bytes": 4882,
+      "sha256": "11c6dfb2632a8d4a9002eec2c9e876cf11f199e7161e194364db7f52c9c62eb0"
+    },
+    {
+      "file": "empire1/shaders/9A1405DF7F1F6D0A.metal.html",
+      "bytes": 33339,
+      "sha256": "4409c42d4852ca0e9a84a610aec13e1e43d3ce9ffbce1ba494347faa9ae244fa"
+    },
+    {
+      "file": "empire1/shaders/9C4F5F26F60487BC.metal.html",
+      "bytes": 41039,
+      "sha256": "b9a713f1a794dc29a732b0c4179f780f2c213d91648245b06b676be3306b2422"
+    },
+    {
+      "file": "empire1/shaders/9C9349FD038E4AD0.metal.html",
+      "bytes": 30255,
+      "sha256": "8619333d1ff10517ff5c263a715a4f8d55d3f6321b23057dec2f02e66ef96969"
+    },
+    {
+      "file": "empire1/shaders/9DB33C0FAC2F7214.metal.html",
+      "bytes": 12499,
+      "sha256": "84e6cbf883b932300c489e2eacb16ba46b6b3132ff355c50d5d4a915ed324a63"
+    },
+    {
+      "file": "empire1/shaders/9DBB7524CB526D97.metal.html",
+      "bytes": 13800,
+      "sha256": "d2f42950838e8c98628944c7768c6fd0d2d17a770cd9b64cbb30dfb82986340a"
+    },
+    {
+      "file": "empire1/shaders/9E71E80A088FB9A3.metal.html",
+      "bytes": 35654,
+      "sha256": "03ae9ecbad33fd95c75783adce13ae57bf9e5744366de16f012933656a63d480"
+    },
+    {
+      "file": "empire1/shaders/9F92DC298725FA72.metal.html",
+      "bytes": 11701,
+      "sha256": "ab7bb161bf39780b1663d3e4b22f481aec9ed8eb52fe47dab0d82b665d3cc684"
+    },
+    {
+      "file": "empire1/shaders/A1A7F78082E9C6A7.metal.html",
+      "bytes": 5573,
+      "sha256": "caefee5edae3db35b0bfea08c45d5771fe2af613d09a607688df9f612e4cdb9b"
+    },
+    {
+      "file": "empire1/shaders/A1C3CF9403EB8AB2.metal.html",
+      "bytes": 42833,
+      "sha256": "ffd70d32f9136517d901b61e35da850ecb2807b8e990c243d47f6b88b2e0a33d"
+    },
+    {
+      "file": "empire1/shaders/A3B4DDAA3ED2AE38.metal.html",
+      "bytes": 7187,
+      "sha256": "605882209275cd6f93b89bbb66861d9ae9cfb7a9dc51b5e1d53f4d7134b43294"
+    },
+    {
+      "file": "empire1/shaders/A488685C8F1BA0B8.metal.html",
+      "bytes": 21579,
+      "sha256": "55218d3ebf1392224c0c73773253b11771d28e27c17287359c4dd31afa1759bc"
+    },
+    {
+      "file": "empire1/shaders/A6CC9973B6F2EF4D.metal.html",
+      "bytes": 12807,
+      "sha256": "0dcc8bd50cbd88a34f77be93daad112370aba64cd4c4c5152d5f13d4db3fb761"
+    },
+    {
+      "file": "empire1/shaders/A6EC8DD3FDAD4C6E.metal.html",
+      "bytes": 18744,
+      "sha256": "07ea0830053e19a8c9c0e8db7570e47b00bf6665facba969b75d05bf81278ac3"
+    },
+    {
+      "file": "empire1/shaders/A79416C2A8490414.metal.html",
+      "bytes": 8605,
+      "sha256": "801bb4603e23dbc9195c1dbe7ab75d374cd98e7806fc88c585fa2b641bff3641"
+    },
+    {
+      "file": "empire1/shaders/AAA1087E6BA9B10B.metal.html",
+      "bytes": 14925,
+      "sha256": "0199d00e38e7466cff0f42e73f5716c0151c60337d6b085420896e63f5b4c412"
+    },
+    {
+      "file": "empire1/shaders/AB6F92097EE2EAD6.metal.html",
+      "bytes": 4745,
+      "sha256": "d02a70fdbb0328b175d393e6c4b4afb6e9f9fc96f17511a29ec6f4dcadb985c8"
+    },
+    {
+      "file": "empire1/shaders/AC6404B2073E8BAF.metal.html",
+      "bytes": 4363,
+      "sha256": "b190bb7ea1a0cdec5eea87e75ea902ed764164249fb1d621f6074339fcf6759b"
+    },
+    {
+      "file": "empire1/shaders/AD0CA4181D52BC8D.metal.html",
+      "bytes": 30734,
+      "sha256": "2340a01366fd5292e5e3eca57519bc81b6e3f4556f25423e2e4ad664a9c0ee61"
+    },
+    {
+      "file": "empire1/shaders/AE7E8102E2F2CBEB.metal.html",
+      "bytes": 35313,
+      "sha256": "d4123b023c513235b0c747c579b1ea71c7352ef8259bcf426ad89460852ffbfa"
+    },
+    {
+      "file": "empire1/shaders/B083094AEB2654C5.metal.html",
+      "bytes": 11711,
+      "sha256": "321c6602877a9564cf93b547a70b275966df0bba5b1a2d225709d3e8f11f2849"
+    },
+    {
+      "file": "empire1/shaders/B0DCE88977007BE3.metal.html",
+      "bytes": 7982,
+      "sha256": "03c22c7644c0e5589d41faa19ba8ee895783a293d7beb85816a8488efeedf54e"
+    },
+    {
+      "file": "empire1/shaders/B188F609D61C2EF3.metal.html",
+      "bytes": 31072,
+      "sha256": "fa1004a3133351d98c71c63cc624d125ba4ab5281f489547e2bbae8becab7cde"
+    },
+    {
+      "file": "empire1/shaders/B194C9FD14F7FACE.metal.html",
+      "bytes": 17047,
+      "sha256": "869de67af3ff7a9f1c3d26c75d6ee52d9431487d24e070bca014031bd012b244"
+    },
+    {
+      "file": "empire1/shaders/B2E74B64FC0C1CFA.metal.html",
+      "bytes": 14053,
+      "sha256": "7fcb3491f2705d369bd79e8953382cfeaf1ff77a8a6f10218913795ed7e7cf52"
+    },
+    {
+      "file": "empire1/shaders/B5B6D85014F58E9A.metal.html",
+      "bytes": 17536,
+      "sha256": "2df5c105a57fe104b518c5d18c4cbbb41f5a89a847fe5c0c1df3519dd3aec072"
+    },
+    {
+      "file": "empire1/shaders/B751EED52466438D.metal.html",
+      "bytes": 8305,
+      "sha256": "3ef90f1a2b17b6cf9134ba052575a350b5790ec83b5eff3a00608607ec592c5a"
+    },
+    {
+      "file": "empire1/shaders/B911A3DF0C1990FB.metal.html",
+      "bytes": 3666,
+      "sha256": "c105197cf3093e8340929f543e2dac575e8cf36c4d301a000156614b9f30aaf6"
+    },
+    {
+      "file": "empire1/shaders/B9D813E5FFC9F6A8.metal.html",
+      "bytes": 32740,
+      "sha256": "77af8c2dbb4990ed8f6418e8b821313c2c5e1e20edbe9e897dd4dcab57ad1a57"
+    },
+    {
+      "file": "empire1/shaders/B9F1F4EEE0AA6AED.metal.html",
+      "bytes": 44608,
+      "sha256": "d46e0b9ff81e85e8ae4c13e0ccbe07906576a2053accfd76c92927ea59e6ef67"
+    },
+    {
+      "file": "empire1/shaders/BA139042AA7CEE38.metal.html",
+      "bytes": 43471,
+      "sha256": "dad50df455cdab433a1174dc3362f5805c33ca2c139422a2ae42ca08ca2659c9"
+    },
+    {
+      "file": "empire1/shaders/BA217AB43B6E08D.metal.html",
+      "bytes": 17347,
+      "sha256": "c559585e1ecadaa98db935d44740c94cbc80809a89594853a29b65b342d5dfdb"
+    },
+    {
+      "file": "empire1/shaders/BD70604646654C22.metal.html",
+      "bytes": 7120,
+      "sha256": "c5e2c8beffd555c8e9871895d8151a0c71ad23a1a232269c25c76409376f7b5e"
+    },
+    {
+      "file": "empire1/shaders/BE9835242F6F26A.metal.html",
+      "bytes": 20769,
+      "sha256": "494d88ebf03abfd5dfa0460bd8c39a301d3e666e855dde438557d47c96304ad1"
+    },
+    {
+      "file": "empire1/shaders/BF8E952ACC8411F5.metal.html",
+      "bytes": 11620,
+      "sha256": "e293432ae37fccbb0a1b7f9bd90c06349fdce233d0589d0f385d98815abce608"
+    },
+    {
+      "file": "empire1/shaders/C193988139C3BC84.metal.html",
+      "bytes": 13583,
+      "sha256": "52e96bbed66e8492a8335e47b99af7e74ba982ddfab733ffa5de005da10e5bf7"
+    },
+    {
+      "file": "empire1/shaders/C5D1BDD1122385F8.metal.html",
+      "bytes": 9415,
+      "sha256": "c3dbee6e3e0aeebed513aac87f64e69a162c9566675dbb7c1e4d7db5e39ef636"
+    },
+    {
+      "file": "empire1/shaders/C61761D692A8436B.metal.html",
+      "bytes": 31992,
+      "sha256": "404481c70bfb6bb4c4dc093ea5fded9756fd96219745f67e95be4ab7b6ace8d4"
+    },
+    {
+      "file": "empire1/shaders/C7CC29362A584C67.metal.html",
+      "bytes": 7763,
+      "sha256": "e8754aa2c17be60243ad0a5882f34c295384101c6fbdb9a4c07b939071a26b89"
+    },
+    {
+      "file": "empire1/shaders/C86DAFF697CC7867.metal.html",
+      "bytes": 7675,
+      "sha256": "9557ec12babcf59dfef58457ea81e04dbb6af2a1c2fff497719961c0b8cbabb7"
+    },
+    {
+      "file": "empire1/shaders/C8F43083A752A09F.metal.html",
+      "bytes": 4851,
+      "sha256": "fe92fcee6ff73d78c6f84579e972878cde2556af2252e6d4c56a6c9b3fc90335"
+    },
+    {
+      "file": "empire1/shaders/CAFA94E3ADCCFC4A.metal.html",
+      "bytes": 9406,
+      "sha256": "fef34a988280c82317806894e65eb336ed21a65c3ee07acc1130c5277209a032"
+    },
+    {
+      "file": "empire1/shaders/CB4C4F16944253C7.metal.html",
+      "bytes": 6965,
+      "sha256": "d65c4291c1c9ec1d18dc41ffb7c40618904e3cd1ef981d509df72a18f4f8a44f"
+    },
+    {
+      "file": "empire1/shaders/CC7620EBED6C48DE.metal.html",
+      "bytes": 36149,
+      "sha256": "4539461683bc90c5a900c3bfb16c90a966f566d1efcdcfd738f73c2b192f4427"
+    },
+    {
+      "file": "empire1/shaders/CD68E5030B8C188A.metal.html",
+      "bytes": 5688,
+      "sha256": "36344c16e209b05d1755ff265a6797a253091c19b890cffb0b78890587dd2521"
+    },
+    {
+      "file": "empire1/shaders/CE394E061D0C5956.metal.html",
+      "bytes": 5119,
+      "sha256": "fdc7c1a70e2bbf6e6c1b472d2d7bcfad21072430d06dcee066b9d753c6ffdb11"
+    },
+    {
+      "file": "empire1/shaders/CEEF5DBBEE7731DB.metal.html",
+      "bytes": 37055,
+      "sha256": "8b6021529f398149c0645902a930064f426d0f3a3d41960354d014c2128b9b2e"
+    },
+    {
+      "file": "empire1/shaders/D0854CE3F6003FFD.metal.html",
+      "bytes": 13192,
+      "sha256": "01f64d16f16809f1e13d8180c06cefe96dd04ff44d2a08217b3ac51204710147"
+    },
+    {
+      "file": "empire1/shaders/D116D9D1700F8575.metal.html",
+      "bytes": 30987,
+      "sha256": "fdd91bcf662bea556891b879d70d471c893ab247c75369e0d3a974f5ed0cc8b8"
+    },
+    {
+      "file": "empire1/shaders/D184AC1F266B710B.metal.html",
+      "bytes": 27836,
+      "sha256": "c23c78899b04415e83c7e648796c6ffb9907da65ac508212b79c28d7043bd14a"
+    },
+    {
+      "file": "empire1/shaders/D1B904E519407191.metal.html",
+      "bytes": 2499,
+      "sha256": "cd0eb56b1dd1ec2109d76c41aafd77d28b5acc0a7dba1b3bf4cd58082700ab4d"
+    },
+    {
+      "file": "empire1/shaders/D1EF4F88A533C806.metal.html",
+      "bytes": 44162,
+      "sha256": "c0c313b98b60b393d9f391a3002125b54d5d8acb7843b78b6e992d7630ab00b7"
+    },
+    {
+      "file": "empire1/shaders/D2C560C2AD694FD5.metal.html",
+      "bytes": 31330,
+      "sha256": "356bb51da3d66fd0c6fd0791459f27bb8381b3943b6e7fbad33ec3c8fb59bcd3"
+    },
+    {
+      "file": "empire1/shaders/D309BA442F33E25F.metal.html",
+      "bytes": 5088,
+      "sha256": "203694111a3e56830a2fb66368c77c44acb0a850bb88f75f69826116b5b6e8f7"
+    },
+    {
+      "file": "empire1/shaders/D37DAE5812AF2F9.metal.html",
+      "bytes": 14336,
+      "sha256": "4537a7697ece5038b0bd371abb3196725dd37b249b50efeed12d8828ef29a862"
+    },
+    {
+      "file": "empire1/shaders/D398500030572B2.metal.html",
+      "bytes": 27153,
+      "sha256": "ab757bce0cd75ca28087477b722c234da776d11b270f7ccde9dcbad2714f058f"
+    },
+    {
+      "file": "empire1/shaders/D592BEC78CA5E7C9.metal.html",
+      "bytes": 29668,
+      "sha256": "2c79d66787bfb5899e77a7992a724d69fe8b976865f26203f1f83609cbf94a0a"
+    },
+    {
+      "file": "empire1/shaders/D5ABDC78338227A0.metal.html",
+      "bytes": 34974,
+      "sha256": "5f06313a46f92c6416b65bbbd6c4475522e2f211025916a926576134b6a42599"
+    },
+    {
+      "file": "empire1/shaders/D9A15AD76CE69253.metal.html",
+      "bytes": 37476,
+      "sha256": "4f88b9e664c8e2028f06b272533474b9d052ae307175ffb2416b2b600c778b5c"
+    },
+    {
+      "file": "empire1/shaders/DA9306BA28ED88E0.metal.html",
+      "bytes": 9683,
+      "sha256": "df55f8b3b1d64709426bbec190cfaf38cd98a7be02f656e6ef591a413443b85d"
+    },
+    {
+      "file": "empire1/shaders/DB879FA045206D5C.metal.html",
+      "bytes": 38748,
+      "sha256": "54a20597d5cff1d81e8bb61c6b07308866ed27f385a2cc0f517048f9ce4469b4"
+    },
+    {
+      "file": "empire1/shaders/DC527BA668D83F94.metal.html",
+      "bytes": 33851,
+      "sha256": "c54dec3b04a0bf599b8be2df08aaa35b5b6da9de9cd58217fcc651c011f0c425"
+    },
+    {
+      "file": "empire1/shaders/DC747AEE59D2844D.metal.html",
+      "bytes": 21333,
+      "sha256": "5aee4428785afc1ca375274f9215be60f1705d929d84272a5414d5799e6d1981"
+    },
+    {
+      "file": "empire1/shaders/DD1E94D2F6D34CBC.metal.html",
+      "bytes": 6640,
+      "sha256": "579013ce7689dd2c6f68ab45867844a4d4fff092a36c82abd38e3f6a4347ce78"
+    },
+    {
+      "file": "empire1/shaders/DE39B994EC96EDE9.metal.html",
+      "bytes": 5283,
+      "sha256": "e120d522538f4ad4943382c746035d60e3874229042358d2a455d89964695ff1"
+    },
+    {
+      "file": "empire1/shaders/DEF330D4312C1E7.metal.html",
+      "bytes": 7929,
+      "sha256": "04371951c9791da8d743010c2dc4622506d5023e55af7eb43318c7a25f68c9bd"
+    },
+    {
+      "file": "empire1/shaders/DF235B16BA3BF7D1.metal.html",
+      "bytes": 28633,
+      "sha256": "c829009c87cf518c218b8a82dd7584032ae0f650a6aa291bbb068a67689cf2bf"
+    },
+    {
+      "file": "empire1/shaders/DF376854D1774666.metal.html",
+      "bytes": 36006,
+      "sha256": "0aea31a47714add8783c9667e61d0f3faf33214b36cc622d732732885f384c97"
+    },
+    {
+      "file": "empire1/shaders/DF9230398DF35216.metal.html",
+      "bytes": 19921,
+      "sha256": "7685eb01615a9e2f26d99ab3eab287fb3235a6e06f757f797e7f5c659af4789b"
+    },
+    {
+      "file": "empire1/shaders/E1BE6757B3050D69.metal.html",
+      "bytes": 15542,
+      "sha256": "77e7f290079371f870335b41eb9fbae637536d1cd124d294906e81c9882d87ce"
+    },
+    {
+      "file": "empire1/shaders/E2D1B6F77DE47514.metal.html",
+      "bytes": 4613,
+      "sha256": "39fae8e6ec5c3b21b847d405585df00e40502893183a153b5b17099a61a202e9"
+    },
+    {
+      "file": "empire1/shaders/E4355BC9D42165B2.metal.html",
+      "bytes": 11067,
+      "sha256": "0b897e8dbc4a4d30c362e549aa7a9fc4b1eb1cfb692da68e1385321adf396e3c"
+    },
+    {
+      "file": "empire1/shaders/E641A1A7FB56D02B.metal.html",
+      "bytes": 3871,
+      "sha256": "322723b84a224821e11a2a01fdfe9018feb40fe8c8c80f7520e58252baa54fa5"
+    },
+    {
+      "file": "empire1/shaders/E7F8ACA2F1E897AB.metal.html",
+      "bytes": 8151,
+      "sha256": "41e25bcd145bfc3a4c614564002c2744952b703788966f95457f631f653fa552"
+    },
+    {
+      "file": "empire1/shaders/E8383A36BFC8A08F.metal.html",
+      "bytes": 36491,
+      "sha256": "9dfb69518f74c77c9ae23ee3354ae653ba737a553e524a03266388563d76d349"
+    },
+    {
+      "file": "empire1/shaders/EC1CD231E73733A3.metal.html",
+      "bytes": 8737,
+      "sha256": "3e63c908a7bd61938e4ae13d04cc6c5919fa0ba16c1b83e241b9697e184ab7a5"
+    },
+    {
+      "file": "empire1/shaders/ED4A9DD355F1BD66.metal.html",
+      "bytes": 32014,
+      "sha256": "0d1b7d245306f3f0b5521cda8867dadb3139e88598b94d0cbb969a8879a32eac"
+    },
+    {
+      "file": "empire1/shaders/EDEB96566F435129.metal.html",
+      "bytes": 7583,
+      "sha256": "469273d8b17ce59367998839164c2507779f52cff976f3e992f053e66087d7cd"
+    },
+    {
+      "file": "empire1/shaders/EF77047B1C43EFB4.metal.html",
+      "bytes": 12497,
+      "sha256": "2cf8690be494fb402efae57a244872b12ea6a8e71292532b8e956d5e8ac18290"
+    },
+    {
+      "file": "empire1/shaders/EFD5D488A058F874.metal.html",
+      "bytes": 12197,
+      "sha256": "92bbc2f1b4db7e5ebfe946744c17d7c48daf0466cf0203e1af18dc0cd5b53f02"
+    },
+    {
+      "file": "empire1/shaders/F04FDE7221F086E4.metal.html",
+      "bytes": 7318,
+      "sha256": "53e77e58c1107a321184041d065cc7a5fcebfb779d0829b9b456d7c809da9625"
+    },
+    {
+      "file": "empire1/shaders/F076A7D2DB37D02.metal.html",
+      "bytes": 22482,
+      "sha256": "447966c704f10dc94b04424451fb5d3faee7018ccbafe1c14b6e32e48a93c6b0"
+    },
+    {
+      "file": "empire1/shaders/F12D5AEB0DEDD6F0.metal.html",
+      "bytes": 34460,
+      "sha256": "fcee83c7b59a9b6da2c7b49405cd0575facaf093715b408fefa135699f32cd4e"
+    },
+    {
+      "file": "empire1/shaders/F2806ABBA36C2A28.metal.html",
+      "bytes": 37365,
+      "sha256": "d2155a355984c08207ece586895554889de66064a9608b9ca9ccb64c7c14f1b4"
+    },
+    {
+      "file": "empire1/shaders/F4BD9D1377B8ECE6.metal.html",
+      "bytes": 2497,
+      "sha256": "2791baa11fc40b5fd4b87ea46e441d88594e60fd65a5238938b9452b67752cf8"
+    },
+    {
+      "file": "empire1/shaders/F4BE18C4370788AD.metal.html",
+      "bytes": 34129,
+      "sha256": "74491e33b1d5328ac6394cc4f2398d6f0faca4c342eed8e270cdff93bd33af53"
+    },
+    {
+      "file": "empire1/shaders/F6677F470185FB3A.metal.html",
+      "bytes": 3448,
+      "sha256": "58b19591bc2edf54ea17ad51854981273d37d9934d0d014495185031a2735151"
+    },
+    {
+      "file": "empire1/shaders/F7591146499B4E70.metal.html",
+      "bytes": 9927,
+      "sha256": "7d7a48aa4cda318a1513f58c3483937be313e197da0a1a93026c4d577754f1b2"
+    },
+    {
+      "file": "empire1/shaders/F94E3E0F0CC6B460.metal.html",
+      "bytes": 2497,
+      "sha256": "65830dd48cc612bd5949e5e6723ece09ce8a538e30814d609cecf02892f0e3a9"
+    },
+    {
+      "file": "empire1/shaders/FAD1A80942B4E95E.metal.html",
+      "bytes": 32386,
+      "sha256": "375cf836f68a007901fdab76e910295402a51a1da295ff8f02b5181ab79ee0d4"
+    },
+    {
+      "file": "empire1/shaders/FC73153FD62F03C.metal.html",
+      "bytes": 26914,
+      "sha256": "6dd5860c3e79569e6fde802bcbc6532ef020eb6b735c74e18d36938260459eb8"
+    },
+    {
+      "file": "empire1/shaders/FCB2ED5E9EFB5181.metal.html",
+      "bytes": 38407,
+      "sha256": "aaf3c189a6e4ae506e736aeac446c7f985c0dba4fe4e23e1977ee7525e1deddb"
+    },
+    {
+      "file": "empire1/shaders/FF8503E22E795756.metal.html",
+      "bytes": 43625,
+      "sha256": "23009fbc6f02250057585942fa61cf2f8da951cc6e3c3b25839e0f87df3abf7e"
+    },
+    {
+      "file": "empire2/frame_preview.png",
+      "bytes": 7719385,
+      "sha256": "b25dc6e5eb640f5652a5542bfca828847dd001d6c97256f5cb258a31118f397f"
+    },
+    {
+      "file": "empire2/frame_links.json",
+      "bytes": 3897700,
+      "sha256": "baa11da8add386e5189b4b67900652285494c01ed8b2441b927e8e702cbdcfe1"
+    },
+    {
+      "file": "empire2/case_summary.json",
+      "bytes": 1651,
+      "sha256": "a5d53463cab06f1c99c32c852f89d6f75a49364ec1aace808c1994c69144f056"
+    },
+    {
+      "file": "empire2/render_encoders.json",
+      "bytes": 8627,
+      "sha256": "cc178407c9e25be5e9b5dbf388d1da9a5a0b70d6c970bf5fc92b38f225425115"
+    },
+    {
+      "file": "empire2/render_encoders.csv",
+      "bytes": 3775,
+      "sha256": "24f486c91ba9589076e8d49947dd030701ad2b5ffc2015311f5782ce2df213cd"
+    },
+    {
+      "file": "empire2/encoders_triangles.json",
+      "bytes": 9306,
+      "sha256": "d9538c641991352aeed25cabc9cf9e78c59ec8bcdc63eab856d20fee2efe1789"
+    },
+    {
+      "file": "empire2/encoders_triangles.csv",
+      "bytes": 3417,
+      "sha256": "6debe6a3f7f605d8e24be0d4f8e6b1aced929554165e9f159e1144651e0e623d"
+    },
+    {
+      "file": "empire2/draws_triangles.csv",
+      "bytes": 100851,
+      "sha256": "3afc839bf089668b3d27f8c7056fff58f2228897408a206f2fcf302542bdb78b"
+    },
+    {
+      "file": "empire2/memory_resources.json",
+      "bytes": 1214827,
+      "sha256": "632965495bad4789f34349723b2726e61ae3f4c16f2844879765d0a561c2f4ab"
+    },
+    {
+      "file": "empire2/memory_resources.csv",
+      "bytes": 336041,
+      "sha256": "d6f08ec8002327694f52de4402fa0609af879a7e24a1615f4df5c9ae4d3ed7a3"
+    },
+    {
+      "file": "empire2/pipeline_compile_statistics.csv",
+      "bytes": 36369,
+      "sha256": "e32224808e75bb22183765d82dd45fd99e3d14f6d33b56ac388df2fe0b5f6875"
+    },
+    {
+      "file": "empire2/shader_inventory.csv",
+      "bytes": 13670,
+      "sha256": "5803390cda27503304755c0e93a2a8e1af3a32d51452c82de4229ed0e93df070"
+    },
+    {
+      "file": "empire2/api_calls.csv",
+      "bytes": 1754,
+      "sha256": "ed505c3151f6d5ed33a1eae717231702cdbf21c2d80669ae0e982e8d210e1a97"
+    },
+    {
+      "file": "empire2/uniform_evidence.json",
+      "bytes": 828925,
+      "sha256": "03b69e4d65d035cc10110ee2724bb69826f5d3226eab6a238c8924db623c36b1"
+    },
+    {
+      "file": "empire2/index_decode_summary.json",
+      "bytes": 255,
+      "sha256": "1b36c615543b9a7de4c6f7d9597609e1225afa6acaac53c92dfeb5adfd2bf480"
+    },
+    {
+      "file": "empire2/manifest.json",
+      "bytes": 3043,
+      "sha256": "bf15e01d52d8a8b0f2bef097b6edf5f73d57c81ed0b86cc9cf8b34f632c7e6dc"
+    },
+    {
+      "file": "empire2/shaders/112FEB9B48CDF289.metal",
+      "bytes": 11276,
+      "sha256": "edf7b58ec7146baf9e9441dbbbac951d1602bd58f6bbd6d69b5789324a040301"
+    },
+    {
+      "file": "empire2/shaders/11385535CDA8BFA3.metal",
+      "bytes": 33689,
+      "sha256": "576e92dd2e8b8138f2570481eccb329aa63d6336a842d399e771e36d19db5f04"
+    },
+    {
+      "file": "empire2/shaders/11B7E8526834AE51.metal",
+      "bytes": 29582,
+      "sha256": "e69f8bf889b43cd620d255ff26e09916e1583feb67ae21b9486575f64983539d"
+    },
+    {
+      "file": "empire2/shaders/12E0E4D166FFC495.metal",
+      "bytes": 5760,
+      "sha256": "0741248b86a86f9a668605dcacdcaf5d721e96c484b542a3470fe5bae67ecd1d"
+    },
+    {
+      "file": "empire2/shaders/13EBDB9A014E1EC2.metal",
+      "bytes": 29232,
+      "sha256": "e0bde797581530eb89e71091d85255b54280a3e16551b2f30a49eeb26e7949ad"
+    },
+    {
+      "file": "empire2/shaders/1413EF1EEFFFD4F8.metal",
+      "bytes": 11127,
+      "sha256": "4ab8f811db893d896bd8034cc72bdd2140b27b58ef78274b5972c504748c7250"
+    },
+    {
+      "file": "empire2/shaders/16AA5853F5F3E209.metal",
+      "bytes": 7087,
+      "sha256": "15764b7c79ac1059aa77130e27680d6d03e7ae5b2bf32cd0f56ba366b26d59bc"
+    },
+    {
+      "file": "empire2/shaders/18F7E91CD7D8DE7C.metal",
+      "bytes": 505,
+      "sha256": "694bd3c9bf027546e19a2df235f603e6429ae877de31e8b13bcc6c0a76d9ee95"
+    },
+    {
+      "file": "empire2/shaders/1AB9B61B5463E48C.metal",
+      "bytes": 2553,
+      "sha256": "f4b7c31a0c8a79b55f519aa6737d45abad99e2512887e198543e8bebe1d20da8"
+    },
+    {
+      "file": "empire2/shaders/1E7EF532F18FDDAF.metal",
+      "bytes": 8218,
+      "sha256": "66170d857bebeb61ccd90638fe81bf4a7d5a262a5dad63ea28d2da800faa7de5"
+    },
+    {
+      "file": "empire2/shaders/1F05412574446FA1.metal",
+      "bytes": 9393,
+      "sha256": "15979964a46578c0af198a5479ff9cc8ecfb0a29f4ae0a4f586b1aed5dc48404"
+    },
+    {
+      "file": "empire2/shaders/204082A3AA1BC90A.metal",
+      "bytes": 4280,
+      "sha256": "3d2e9e8e4b9364e0cb401378334ccc3cdb92949eacec0355ef8196389bf4a192"
+    },
+    {
+      "file": "empire2/shaders/21820F54954DE970.metal",
+      "bytes": 24922,
+      "sha256": "3f42c06d128fc32c5dbf012287317de5689859b4ab10160c35223c09e39cbe31"
+    },
+    {
+      "file": "empire2/shaders/24B4211C998DA423.metal",
+      "bytes": 11763,
+      "sha256": "3d2e597cda756547767d1a09ad9ab58949d24003dcc23a034a24303fdc4fd9c4"
+    },
+    {
+      "file": "empire2/shaders/278FCB7A4626D051.metal",
+      "bytes": 12984,
+      "sha256": "61dac622b8af379dee5d78fb695a1070b16e9bf3757bf976a019bc37293c6b16"
+    },
+    {
+      "file": "empire2/shaders/28AB1DF27C3B3F8C.metal",
+      "bytes": 7975,
+      "sha256": "a892bb95b177687de139b2e862d8e7f9368085295c633cb9ff1530b2a45cf448"
+    },
+    {
+      "file": "empire2/shaders/28CB504009E19C42.metal",
+      "bytes": 2162,
+      "sha256": "0c14ab15e7bdf7a258442a98aa620e05a5d705495a271cf74007413de8955f4e"
+    },
+    {
+      "file": "empire2/shaders/29ECCBB5F84ABC85.metal",
+      "bytes": 25732,
+      "sha256": "d9494926dae2bd273f68f7e3b8bcceb453be6d84d98adf27b2f0fe8bac6e5b29"
+    },
+    {
+      "file": "empire2/shaders/2D062C2736F37ED8.metal",
+      "bytes": 1654,
+      "sha256": "09ce46f3f8338e90ff396d9727544fb9697cf5b627781cce6b3715036895fdbd"
+    },
+    {
+      "file": "empire2/shaders/2EB35058C7F2CB6C.metal",
+      "bytes": 2770,
+      "sha256": "fa91e996ed70939846e267364cd8f7dd4be38bb70626426645a70a69262cd115"
+    },
+    {
+      "file": "empire2/shaders/306A279F91BE2169.metal",
+      "bytes": 617,
+      "sha256": "98d4f2996103de0f4707593fbc981dccf66120f15aa50104bbd92d6d9ffa4066"
+    },
+    {
+      "file": "empire2/shaders/30AB13A42E07ADCC.metal",
+      "bytes": 1125,
+      "sha256": "1e9b84a3e2806420c6ea55d2ba5185dce552d408b3fe80ec697a9ceb978633d9"
+    },
+    {
+      "file": "empire2/shaders/30DC02723A6AFF2F.metal",
+      "bytes": 13762,
+      "sha256": "4f6cf4c1791e4e5fef0d5ed4760c6eef10e86d4d15aa566cd70cdb479b9304e6"
+    },
+    {
+      "file": "empire2/shaders/313951F9DAEAB9DE.metal",
+      "bytes": 6292,
+      "sha256": "a86e272ffe1535998e6f155d2f0b7ed3f9577c43b86b107689562995d80d058a"
+    },
+    {
+      "file": "empire2/shaders/35E744FC2162B835.metal",
+      "bytes": 2013,
+      "sha256": "4ea4381cb752b18e46545520400b0cfe10cf4e53703478453930342fa555c6f7"
+    },
+    {
+      "file": "empire2/shaders/36230B57011F2EC6.metal",
+      "bytes": 1618,
+      "sha256": "d6e3e7e7cd44943064028ca3445d46d92397261791ef81732c62e5adb5e20dc5"
+    },
+    {
+      "file": "empire2/shaders/37291EC15CECC475.metal",
+      "bytes": 15104,
+      "sha256": "f5002c4f6853da3526af0810831e1a3db7c9ff64179f6cb0f4ea35109e2d437c"
+    },
+    {
+      "file": "empire2/shaders/3763AC95B0BD53FA.metal",
+      "bytes": 33276,
+      "sha256": "8bdc8377c7e994a92ec5992c2da857144f02ffa74c5ce631897ca447f677974d"
+    },
+    {
+      "file": "empire2/shaders/3B4BA408BF949A09.metal",
+      "bytes": 27785,
+      "sha256": "b0e458df490c037134881d26d28f91b066f58884b5414a5cbe90d146fe5b1eef"
+    },
+    {
+      "file": "empire2/shaders/3C0FAD1E4F352F8A.metal",
+      "bytes": 2703,
+      "sha256": "8de7d701a5d6948e2193c403f3a3d92fbbc0c38db2b7f5e258267998dbbaa1de"
+    },
+    {
+      "file": "empire2/shaders/3CAB235BF378FDC9.metal",
+      "bytes": 30708,
+      "sha256": "b8cb64d821c5bf4caf462271db2da5036b8e36e5872db4a24dcb30de747f77cd"
+    },
+    {
+      "file": "empire2/shaders/3CEB06A14A77D67F.metal",
+      "bytes": 11372,
+      "sha256": "929f373f45515e5c9f973e1db8c711034abd705898bc1f40a52f97fc66e8ff81"
+    },
+    {
+      "file": "empire2/shaders/3E7759CA7E3AA058.metal",
+      "bytes": 26659,
+      "sha256": "221d571e6bcc79910e926886ebd8f5260927351df5fa9d95825ca9024c0d79d2"
+    },
+    {
+      "file": "empire2/shaders/3EA5D56C463C3D2A.metal",
+      "bytes": 5261,
+      "sha256": "8c7b4cc20990e3573643b5c8cb5f6198a8ccc01a6cedf2829def82628f14d1c2"
+    },
+    {
+      "file": "empire2/shaders/3EFBC51F256CC4C6.metal",
+      "bytes": 29620,
+      "sha256": "b253666894bf2b73b2c920e38c7d0f65fc26e9bc61d8b1add3ae527e5691eba7"
+    },
+    {
+      "file": "empire2/shaders/41D9BA21D7508E63.metal",
+      "bytes": 1729,
+      "sha256": "1af245f52a108c087323fec8973f409878cd3d3c0fded98cd8b9748f92f2d1a1"
+    },
+    {
+      "file": "empire2/shaders/42ABA1E35DC6D1EA.metal",
+      "bytes": 2912,
+      "sha256": "45aa2da78d807dea99ccb24ed8696815bf5eeb5cb23734ad64ad6c7ea2b55d50"
+    },
+    {
+      "file": "empire2/shaders/4419AD67EC5DFFAF.metal",
+      "bytes": 14132,
+      "sha256": "c505a6b7fe3211d6d00666ada4002f1507236e70b9ef89279cb7a67b23111d70"
+    },
+    {
+      "file": "empire2/shaders/459C768EA74745AF.metal",
+      "bytes": 7675,
+      "sha256": "f2e767347a62ecad9190b59998d8209b0868092a14d0b29c0e49e64c89e181c6"
+    },
+    {
+      "file": "empire2/shaders/46D23D7FFA994B60.metal",
+      "bytes": 3727,
+      "sha256": "3b59583a5bb78c7ecf0df0161e6728b0b21e9ae8244aee5cd777966b023afc7b"
+    },
+    {
+      "file": "empire2/shaders/4A50C017BC1680B1.metal",
+      "bytes": 4357,
+      "sha256": "71a4efa0be307226ab88387c1f7ab9f01a2a1bc1423730ba837386aa6dc71c4d"
+    },
+    {
+      "file": "empire2/shaders/4C1D15EA3966A13.metal",
+      "bytes": 8336,
+      "sha256": "78f5b87526d053fd92d8a6c9e44db523d80903ca5c6c607061e1bc21e722e716"
+    },
+    {
+      "file": "empire2/shaders/50983F649F0906B0.metal",
+      "bytes": 11014,
+      "sha256": "20bdb305c79fe810287a7d5873d183611442265b1a06f12edf0de9d0c6784a26"
+    },
+    {
+      "file": "empire2/shaders/534E3B771762AC50.metal",
+      "bytes": 10464,
+      "sha256": "90f72ccdf64afd4141e7b23b00d75183cdc52e8673c24aadf653cbc2c2107baf"
+    },
+    {
+      "file": "empire2/shaders/537455CC7BB49C49.metal",
+      "bytes": 30364,
+      "sha256": "bd015da13e17359ba346832ec8ea5a59337825ffba50da26c01ba84938e6b3a0"
+    },
+    {
+      "file": "empire2/shaders/559B5AD3FC2AA6C3.metal",
+      "bytes": 8645,
+      "sha256": "868a6711267823e2e1361164a50e9783d451818df944b5096396486a3b9fdd50"
+    },
+    {
+      "file": "empire2/shaders/55D6E02D88377CC7.metal",
+      "bytes": 4198,
+      "sha256": "91e97728c1561ed15a7140d0beed03263590df68937557a4a5eb4bdabc5a5aef"
+    },
+    {
+      "file": "empire2/shaders/5B7AC09463BD2AEA.metal",
+      "bytes": 3037,
+      "sha256": "216f906eadc7cd156e56c7cd1e7be79166ecbf1488e04c94c8ff74137a462ee0"
+    },
+    {
+      "file": "empire2/shaders/5BD7ADC28BED71D0.metal",
+      "bytes": 25260,
+      "sha256": "b75ffb8150891d79cdf0e8ad8830ee0bd149a82b1c1972ee459df6dd532c0914"
+    },
+    {
+      "file": "empire2/shaders/5C5173AA64E28744.metal",
+      "bytes": 5327,
+      "sha256": "70b5532248d29e9657713839eeb76e405d027edb161288f85a0a2e9dfecf37ec"
+    },
+    {
+      "file": "empire2/shaders/5FBC198DE5480DE5.metal",
+      "bytes": 1463,
+      "sha256": "c75b4ad70d655aecd35da47c0ab6a72b262ee91a80ccbee795ab8752d36b1c95"
+    },
+    {
+      "file": "empire2/shaders/5FEB678AF446310D.metal",
+      "bytes": 8736,
+      "sha256": "15ebb84e45273cd27bbb163a2f3e05224459d6dc72bd1e9a72c4b787e57d80ab"
+    },
+    {
+      "file": "empire2/shaders/600AB73F661FDE98.metal",
+      "bytes": 11975,
+      "sha256": "17987ccec3401e5740f899a43355325b473b8748f6a47855f3bc81738c5a20cf"
+    },
+    {
+      "file": "empire2/shaders/60E5C20A1B3B7947.metal",
+      "bytes": 22674,
+      "sha256": "db20714efb6270a768a5e69ca69891c94538030c49e616c326b3c81f8cb81823"
+    },
+    {
+      "file": "empire2/shaders/61348F89D3309B2A.metal",
+      "bytes": 12518,
+      "sha256": "810f337a1305c65b5ec109f438913151980955647de4bc4fce9ea1607e98767c"
+    },
+    {
+      "file": "empire2/shaders/61B6956E2898C227.metal",
+      "bytes": 14125,
+      "sha256": "257876523347edd977be8a1546dce6269bc0e9610c6fa7e079d8c9222594edf2"
+    },
+    {
+      "file": "empire2/shaders/626E39771A726EF5.metal",
+      "bytes": 4321,
+      "sha256": "7516ecef6d15a3a10394fced7e4fcee3e9cccd52d225846f31b49b7e7d1b9545"
+    },
+    {
+      "file": "empire2/shaders/6540E2867800AF53.metal",
+      "bytes": 25525,
+      "sha256": "183828c42caa6399c27820c34751b9186e3679b6ef0d4f3cc3ddadcb2c0d964c"
+    },
+    {
+      "file": "empire2/shaders/665FA03EBF2921A1.metal",
+      "bytes": 40550,
+      "sha256": "26f5f934a259e606a4cee5c0a536e19fd43c885d6ed0b6f1ac7d6bb7549cfe8b"
+    },
+    {
+      "file": "empire2/shaders/66FA624068854DAC.metal",
+      "bytes": 17050,
+      "sha256": "c73b4a7059c25672e772da8e95fb8e4f6bb76fb9d1f42acbcd8ec5d1f5b8866b"
+    },
+    {
+      "file": "empire2/shaders/6712C3416DD25C4D.metal",
+      "bytes": 690,
+      "sha256": "1dcee795d37b5d7a81f52b6a6641e809fe128405e2925637a54ec2757e6a5c5e"
+    },
+    {
+      "file": "empire2/shaders/69A910513AF15D.metal",
+      "bytes": 15593,
+      "sha256": "604aa8e4d56c721bcc19604c9b7f7e468684f9db0c00540d66d1a34845facc1e"
+    },
+    {
+      "file": "empire2/shaders/6E0BCB1AF394F1D8.metal",
+      "bytes": 37547,
+      "sha256": "546235eb33c97eb89e63081d2737db446480675a31d20d50fc5d3700b391868b"
+    },
+    {
+      "file": "empire2/shaders/6F0AFD997C95808.metal",
+      "bytes": 4093,
+      "sha256": "53c5acc75e1b7e9f11f57ece7e3e05fb13ded8a025a5719fc8683021cf5d532b"
+    },
+    {
+      "file": "empire2/shaders/7039C9670E864F63.metal",
+      "bytes": 32875,
+      "sha256": "78261ad2086b6200c170274c37c18fb93288c46af7fa6acc64f1f6cf0f5ef6b3"
+    },
+    {
+      "file": "empire2/shaders/70C4E390B5467EB4.metal",
+      "bytes": 3814,
+      "sha256": "a9e41824a90ecee831a6ce1076f631a60fbb2578c3c20b559cc2caefb4f78e8e"
+    },
+    {
+      "file": "empire2/shaders/7165489D9CC05C9D.metal",
+      "bytes": 5838,
+      "sha256": "7c6abaa7ec38da674ed9e404cd646943f5e04d3654970eeeb4c13ac2835e92a2"
+    },
+    {
+      "file": "empire2/shaders/735A994C4DBEB7A0.metal",
+      "bytes": 24954,
+      "sha256": "04af8a3d73231daf87e7406b17ca3ea5bcc7bef71822d380df8108b399433eb2"
+    },
+    {
+      "file": "empire2/shaders/75B0E8BB7D998BB6.metal",
+      "bytes": 29637,
+      "sha256": "3088a6e9d7c4d168f5255cf84c63883ee5681f961c1d5a4238dd9951f34252b8"
+    },
+    {
+      "file": "empire2/shaders/7899A635D90D2E9.metal",
+      "bytes": 14613,
+      "sha256": "6db9b5843c779220d27542a991b8d1acabc7aeb15c7055b2c11b5960f252ce53"
+    },
+    {
+      "file": "empire2/shaders/791277F879E1FBC9.metal",
+      "bytes": 1309,
+      "sha256": "a6045c6a0b019bdd3ff9ba1ce1aca5b9471c809e76fc5e8575a187d29a3eb68b"
+    },
+    {
+      "file": "empire2/shaders/797332E8F0D8DD4E.metal",
+      "bytes": 25715,
+      "sha256": "8aeb9c43e9a8d1943a9fd9d6314ade7d538e7fe6f6744464d7c59d48736b3e9f"
+    },
+    {
+      "file": "empire2/shaders/7E39655F4436F864.metal",
+      "bytes": 41921,
+      "sha256": "46dca9700060793df64f36250e825f99035d6474da220f816f63f5ecd325995b"
+    },
+    {
+      "file": "empire2/shaders/7E860C3A1A3D9A55.metal",
+      "bytes": 194,
+      "sha256": "43e596bebbcc2200495199e6e5430a2fa6a7280fc08d2d98c8e8e5a732b9f9df"
+    },
+    {
+      "file": "empire2/shaders/81CAFF7A2CFB6A7C.metal",
+      "bytes": 9197,
+      "sha256": "19cac3f6d531f0bf5b1a4210249bf97ef7e47912d0381e788b081c359f13f708"
+    },
+    {
+      "file": "empire2/shaders/8380A6200BDBEED0.metal",
+      "bytes": 3461,
+      "sha256": "3c333c9337eda8d378748e7ef3ea6c1d99982ec9e1b53a6f688b5f875ff83ea0"
+    },
+    {
+      "file": "empire2/shaders/8893AC0A7EA413D8.metal",
+      "bytes": 29376,
+      "sha256": "e2ae3c31b5c3a19a1dd162edbffad85eb4fdd1f2eee83eff9ec9367e06e54e28"
+    },
+    {
+      "file": "empire2/shaders/89C52512CBAD6D.metal",
+      "bytes": 32687,
+      "sha256": "3d3e8367b183228d3d80e2fe95556776711d76d34101c38b69c89dc0834a648a"
+    },
+    {
+      "file": "empire2/shaders/8A841B7474DF6D4E.metal",
+      "bytes": 27633,
+      "sha256": "bee197e4be65835fc56c1adaf3e19ff53422d664b410ba9de5ea2cc5c6c412e8"
+    },
+    {
+      "file": "empire2/shaders/8F37E6C07FE50ECB.metal",
+      "bytes": 572,
+      "sha256": "ed59913e65f371a53f2c568f4ac961d9bce7e1965a2d88c9edf7720baa767ae9"
+    },
+    {
+      "file": "empire2/shaders/9023C3FAB0141D27.metal",
+      "bytes": 23590,
+      "sha256": "2c721c2fdecb8d082a2631167da6ebc51028074c520fb380345f942dc6edd95a"
+    },
+    {
+      "file": "empire2/shaders/90DD8BBE11E20C25.metal",
+      "bytes": 27016,
+      "sha256": "826441a8a687b438fb1650cef02161bae9da8ffd1e18b5a34f8bab6f4a8b1897"
+    },
+    {
+      "file": "empire2/shaders/9774F775C75AFF58.metal",
+      "bytes": 2650,
+      "sha256": "3f3f63e3357f0a123a4376156e6da3f53162226099a6cec5626dadab59cb7e20"
+    },
+    {
+      "file": "empire2/shaders/97C2DE9615BCB3FD.metal",
+      "bytes": 15593,
+      "sha256": "f49ca2286f69b8426eaa66c838b8e44f1d281c3e41cd5c11db7aecda1d7ba93d"
+    },
+    {
+      "file": "empire2/shaders/980E7674030BD3E2.metal",
+      "bytes": 5766,
+      "sha256": "40f6a17f0f6acc3b990a7de8bdb7dd994ef920ae0fb685f71efd4ae62781d3ec"
+    },
+    {
+      "file": "empire2/shaders/98BC6F212AB2AB07.metal",
+      "bytes": 26307,
+      "sha256": "35674001f147a2e35dc0fc44976c27a14b8be25e7dc7b268f2f3e920e5ba402e"
+    },
+    {
+      "file": "empire2/shaders/999337456265EEDC.metal",
+      "bytes": 1614,
+      "sha256": "20cbdc838892c7d7a68d3449f78cb02a2862eaa50eb735111a6013ffbc20fe34"
+    },
+    {
+      "file": "empire2/shaders/99EF5128A8DD78BE.metal",
+      "bytes": 13923,
+      "sha256": "5af1646dff34e9e5816b1576af3a0e2f616a6f07fafcad85632dfd5d10e0a03b"
+    },
+    {
+      "file": "empire2/shaders/9C1452166BD01029.metal",
+      "bytes": 9318,
+      "sha256": "f629c0a1e1980e290ed215de99db963fe77464f947cd1a1135b8b586f61a0d48"
+    },
+    {
+      "file": "empire2/shaders/9D724AFF578D9744.metal",
+      "bytes": 7205,
+      "sha256": "0bfc6ebbd31426c2465c64f40d645dd4f0cff8a25b0ca4d3ff607b123b94d89f"
+    },
+    {
+      "file": "empire2/shaders/9FB7777740666F62.metal",
+      "bytes": 2224,
+      "sha256": "bf22cde4f03803efed0d27c7a3336ffe9ca77a4c281fba8c5b74181a43925d16"
+    },
+    {
+      "file": "empire2/shaders/A09DA05CAF6C73D.metal",
+      "bytes": 625,
+      "sha256": "7cf60145b5ef114ed7a8f13566f708bc61ffcb1e1f980ed099f6ae2dc33869b1"
+    },
+    {
+      "file": "empire2/shaders/A3B4DDAA3ED2AE38.metal",
+      "bytes": 2991,
+      "sha256": "8b5ff5e385e1e3fc59478e1d987cafbb6d38b409740b0277cdd18883b35439c3"
+    },
+    {
+      "file": "empire2/shaders/A5471301C9A914FE.metal",
+      "bytes": 11352,
+      "sha256": "9b1a13574bd2e600f4930fb24d8bebf48957cbe0136b488bf2a8b095f0ff1fd8"
+    },
+    {
+      "file": "empire2/shaders/A5D4DC50B960B1E4.metal",
+      "bytes": 6464,
+      "sha256": "064ecde525c335bcc9af93ef8ae50d0b1fd89e5ef28b1914571b57f4786ac8e2"
+    },
+    {
+      "file": "empire2/shaders/A823E8B0C4DC2A2E.metal",
+      "bytes": 6542,
+      "sha256": "43f309d0bc950821645ab81695f2b8b9198e7bced713633ee6950db86de5427f"
+    },
+    {
+      "file": "empire2/shaders/A9FC0B13C9C056C3.metal",
+      "bytes": 12153,
+      "sha256": "e7e362384d107eaf49f33ad891bef5d6bfc96a73eed4f62d265eb141db5c66b1"
+    },
+    {
+      "file": "empire2/shaders/AA9222CBB4AAF010.metal",
+      "bytes": 3269,
+      "sha256": "813666869c7e600a0f5a99a2a06bad585735a5033947d41407c9bf414d3ec7d4"
+    },
+    {
+      "file": "empire2/shaders/AB6A7887745B5B4.metal",
+      "bytes": 18339,
+      "sha256": "628bfa6d918378338752436e4bd977805593488bffc2498a8368c6f573ed974f"
+    },
+    {
+      "file": "empire2/shaders/ACFE2168C54BAD9C.metal",
+      "bytes": 30855,
+      "sha256": "ef3bff4f34d145f3ec999d549cafdfa2a08fa798cfdd5dadf8fd0f5818865ab5"
+    },
+    {
+      "file": "empire2/shaders/B0DCE88977007BE3.metal",
+      "bytes": 3496,
+      "sha256": "1de3a49710f07c3472b0ab5dc94450e36ef4b868d048c0cb13cc0ccbcd27e249"
+    },
+    {
+      "file": "empire2/shaders/B4028DD3369CC08F.metal",
+      "bytes": 6255,
+      "sha256": "499f3411d916f60071ae64d55689fc0267303354e62d33265c63ad4ea312edec"
+    },
+    {
+      "file": "empire2/shaders/B4335829656F078C.metal",
+      "bytes": 2810,
+      "sha256": "40fec80243b8fdc8451f37b9d90fba65a1bea44eae1cd3fe664cec5ca2ec2cd7"
+    },
+    {
+      "file": "empire2/shaders/B56E04AD50E89A8.metal",
+      "bytes": 3488,
+      "sha256": "b8909bede2c79f0d2c53cc495c934bfe2156da73b7ad5a8c791c54853769a06a"
+    },
+    {
+      "file": "empire2/shaders/B5938A74A6D4BC6.metal",
+      "bytes": 27110,
+      "sha256": "0ec0fdfc919a7030e5aa187fff74fcdac847bc6034acd2a75afaa88ed134003c"
+    },
+    {
+      "file": "empire2/shaders/B5C0778AABCA22B2.metal",
+      "bytes": 5524,
+      "sha256": "59d63e65ee508ba367fa498019f0e027f753d903cbcc70740cfd666998d85ea6"
+    },
+    {
+      "file": "empire2/shaders/B70C9B8C3CB291A8.metal",
+      "bytes": 5741,
+      "sha256": "2020e33cba32c199e6d31ea34323bc64300e8a9efd7e59fbfd77937a6ba26d95"
+    },
+    {
+      "file": "empire2/shaders/B8D58464E05F5953.metal",
+      "bytes": 512,
+      "sha256": "77561259bf3505f74b7c42fcde338385ab5d89949c7c906890b306551dd69a14"
+    },
+    {
+      "file": "empire2/shaders/B92355BC99986829.metal",
+      "bytes": 29536,
+      "sha256": "3789e0bdaa3a3fc48b12e55c78b7d2fb1218c66453370603e51ed5fe45e4e9a1"
+    },
+    {
+      "file": "empire2/shaders/BBC443789BF62E64.metal",
+      "bytes": 1969,
+      "sha256": "7781fffda0cd4ef1f3f0003930e62b95c8682dcbd96f4c7c0a1fb9a921713e02"
+    },
+    {
+      "file": "empire2/shaders/BD70604646654C22.metal",
+      "bytes": 2692,
+      "sha256": "54c343ff198a43f81787f8021023324c54062aeca874aa09e9944a049a10788e"
+    },
+    {
+      "file": "empire2/shaders/BD977EBF71A68058.metal",
+      "bytes": 5451,
+      "sha256": "7d11af1c0e52cd91089130526d126ed276fb6d47fd0a4f87f981a3ffdddc0db3"
+    },
+    {
+      "file": "empire2/shaders/C5A23A39586A6494.metal",
+      "bytes": 13098,
+      "sha256": "e70c569b567cdbc06c2871462bfccd5d42bac2e8a5691a96618316edf3b0a3f1"
+    },
+    {
+      "file": "empire2/shaders/C7563D42F46C078C.metal",
+      "bytes": 25761,
+      "sha256": "c6b6e0e21aed99e16baf8fbcc6e157af76ebb5fee836405e51e7c850b73f0cfe"
+    },
+    {
+      "file": "empire2/shaders/CAE3F95F0F0257F7.metal",
+      "bytes": 26122,
+      "sha256": "1ca037800d0fff435e90b9cc92a46c43eaac4edbf8d33e6c8717430de7252996"
+    },
+    {
+      "file": "empire2/shaders/CD61BFF2AB5FDFE5.metal",
+      "bytes": 17089,
+      "sha256": "d28cd84fea1b69096b0e996351d8c4a54ca68b1fb3cfb1738e952b9c95e74d89"
+    },
+    {
+      "file": "empire2/shaders/CEFE845EB922EB95.metal",
+      "bytes": 3544,
+      "sha256": "afb1fb9744a4e725fdc1c914e09082f51ec9fcddf3be7f2a4516130c0105cb6d"
+    },
+    {
+      "file": "empire2/shaders/CFCE32AD1A51227.metal",
+      "bytes": 4643,
+      "sha256": "16c5d0ad152f46b3d06229f46349a28fce8ec3783d119dc4ef9819be2de59a01"
+    },
+    {
+      "file": "empire2/shaders/D07E9B24F44D764A.metal",
+      "bytes": 9970,
+      "sha256": "e2924472c11bf5a0a78e9f6b0d773f78d15e7cf69f2d87b6bf7813f6bff12ee1"
+    },
+    {
+      "file": "empire2/shaders/D0854CE3F6003FFD.metal",
+      "bytes": 4912,
+      "sha256": "00cb16440ac090a8e2e2bc71b10b5ba71dbbae9c2e6a4d8b61a3c53eb80e562c"
+    },
+    {
+      "file": "empire2/shaders/D119CCE5CDDA249D.metal",
+      "bytes": 4099,
+      "sha256": "ee86acbd050af68e78d7502d7c6e5757f25460f457d0c83f60d3f7ba1420c3d4"
+    },
+    {
+      "file": "empire2/shaders/D42C9EF079F78D62.metal",
+      "bytes": 25521,
+      "sha256": "c08f9ccc7f59e3abbe101ebcea2f5803e26e337e6d7dd2e084041a00a9a2a8d0"
+    },
+    {
+      "file": "empire2/shaders/D5988DA6CDB91FD3.metal",
+      "bytes": 3206,
+      "sha256": "919da4030e77cfca9be60cf47476583187e407a8d170a6712dc0dfda4ffd87c6"
+    },
+    {
+      "file": "empire2/shaders/D8A2333527888AEA.metal",
+      "bytes": 7673,
+      "sha256": "696e6af53a4e0984e8c1db3dc925416183522cfaac6143c55335e6aec14cdd91"
+    },
+    {
+      "file": "empire2/shaders/DC296B865FA66B4C.metal",
+      "bytes": 28803,
+      "sha256": "0bdad8a3122dfaa0f29489baa18df12b5d3dd8e32a99cc8c889778736b175bc5"
+    },
+    {
+      "file": "empire2/shaders/DC308D1AF7BF025C.metal",
+      "bytes": 10364,
+      "sha256": "1d05cf289b5eebd3e56b0f95123caf9ff2f6ec859543223b28180d359aa622ac"
+    },
+    {
+      "file": "empire2/shaders/DDF102376784B008.metal",
+      "bytes": 4660,
+      "sha256": "1c9e66d3607f9b77f82d1b8c7b57c9d738cb091713aa07730ec9d30bef1490f3"
+    },
+    {
+      "file": "empire2/shaders/DFE0F5CD7D6882E2.metal",
+      "bytes": 7904,
+      "sha256": "ec023869256ab7c1df190db0290c4f9fcb20a53181ce917b328584bd0a63e996"
+    },
+    {
+      "file": "empire2/shaders/DFF11FBE61F4EB76.metal",
+      "bytes": 18818,
+      "sha256": "19607ca1c9afe49798c8769ebdcf126ba2b533f40dd9634b7033f3ecd7eb430e"
+    },
+    {
+      "file": "empire2/shaders/E0A8D0BC44A2BF3B.metal",
+      "bytes": 13072,
+      "sha256": "09a434b36c81a02bfee729089bfd9b7fd941c825042af134d1a5169bfc43d55d"
+    },
+    {
+      "file": "empire2/shaders/E2D1B6F77DE47514.metal",
+      "bytes": 1461,
+      "sha256": "f17faa5e62e2c129c5ebaaa999e9a959429cd8f491acfa86815fa642dc25fa07"
+    },
+    {
+      "file": "empire2/shaders/E31D63387007CEC0.metal",
+      "bytes": 14614,
+      "sha256": "7e780d40b8adf1824a4739caf8f352e08b23b4d3326ce9202a16f2d4f92fc8ac"
+    },
+    {
+      "file": "empire2/shaders/E633F210C5A48E31.metal",
+      "bytes": 12379,
+      "sha256": "3693005f7bf1c72d0252d6994d83ebcc43fb197e3a491abe1b9cdd4db8fbb78b"
+    },
+    {
+      "file": "empire2/shaders/E76E1AAEEE0FE6B3.metal",
+      "bytes": 10219,
+      "sha256": "320caf3cf9ba4044e9a848ec22b7bdf9145769f403f6b6c5647df26d82940162"
+    },
+    {
+      "file": "empire2/shaders/E77DD1A8B2BB40D2.metal",
+      "bytes": 6897,
+      "sha256": "07e09472e3cbc88eff073cd880ae1c289bb7dbb489a3985dde81e9cd307b9c27"
+    },
+    {
+      "file": "empire2/shaders/E8B044C2DC95E0E8.metal",
+      "bytes": 25339,
+      "sha256": "8e63ed1cb82f9f88adfabd4e27295654fab93eecd0741681b204880204bfe21c"
+    },
+    {
+      "file": "empire2/shaders/EC1CD231E73733A3.metal",
+      "bytes": 3901,
+      "sha256": "4e520db93f1c14d83af942714bb04b59a62a1cf9696864a83021285d4f1b157c"
+    },
+    {
+      "file": "empire2/shaders/ECF84F140BD2A332.metal",
+      "bytes": 12972,
+      "sha256": "131769e7d51f97e440d9a6316e3322bb2f651c406d02759e8857e940cf68e4cf"
+    },
+    {
+      "file": "empire2/shaders/EDEB96566F435129.metal",
+      "bytes": 2853,
+      "sha256": "0724ebc5010dd1b54dabf853b801327538ca1c444b8c047c2bacc7ba05685151"
+    },
+    {
+      "file": "empire2/shaders/EE5E09CB72FF7D4A.metal",
+      "bytes": 4095,
+      "sha256": "689985dc63bf4fd873b9bfdc11d5a223c90df3ef2007a945e9fc22b052ab5173"
+    },
+    {
+      "file": "empire2/shaders/EF49B877F4748DC5.metal",
+      "bytes": 8301,
+      "sha256": "9e8f0e1df92c50c35bf1197ca3263ae2896928ab4e4e05fd07c411e44b3390f3"
+    },
+    {
+      "file": "empire2/shaders/F00E73816488008D.metal",
+      "bytes": 26213,
+      "sha256": "cdba988d750245de39bedb26f06b1722ac5cd22d939775b4a76fb3fb484ec612"
+    },
+    {
+      "file": "empire2/shaders/F1A3444EA29C9AE2.metal",
+      "bytes": 5821,
+      "sha256": "a45897e4f0b093ca0e48d4780f41a5fd5e61b6a24f1ae63f83e788e22d661d4f"
+    },
+    {
+      "file": "empire2/shaders/F30D42B7B387D4BE.metal",
+      "bytes": 4049,
+      "sha256": "1440c038230275915ee64a606872e399a4364ff42bd35b4e879658bbd9714993"
+    },
+    {
+      "file": "empire2/shaders/F5D13132E7F44A41.metal",
+      "bytes": 11895,
+      "sha256": "d64714df0cc37f50ea8cbd3c72a620d4de550a74ce702fcaf7707ebd36efd914"
+    },
+    {
+      "file": "empire2/shaders/F6966226A3B5EAC7.metal",
+      "bytes": 947,
+      "sha256": "29edc4680f5950741db5e89132e64f050480f810e0a22e308d7a40492f9b8ca0"
+    },
+    {
+      "file": "empire2/shaders/FC5D17909A869C1A.metal",
+      "bytes": 10464,
+      "sha256": "7ba9bbe88935148b31c615108e1035b9ab460057c5e6383842aed9261269fb8b"
+    },
+    {
+      "file": "empire2/shaders/FDA8C747A5187008.metal",
+      "bytes": 26477,
+      "sha256": "a53e9c91e8fcbf75c33b3527130de908a04b2c15534edf76fc6930e805a9a9eb"
+    },
+    {
+      "file": "empire2/shaders/FF75455F6679637C.metal",
+      "bytes": 5966,
+      "sha256": "dbe9906fa8a53528824c6b10ea06b2520865470b57b02e01a6c8bb7ec5d0fb11"
+    },
+    {
+      "file": "empire2/shaders/FF99FE8D37CC7104.metal",
+      "bytes": 15355,
+      "sha256": "9ac3e692e4dc2fc6624de86bbfcdaad60341643c1c6da2bfaa01f2a993c9df46"
+    },
+    {
+      "file": "empire2/shaders/112FEB9B48CDF289.metal.html",
+      "bytes": 26891,
+      "sha256": "18f60cf21befde79bff8fadea669aeaf4821359088fa179e85c79b5b3b4cb934"
+    },
+    {
+      "file": "empire2/shaders/11385535CDA8BFA3.metal.html",
+      "bytes": 74441,
+      "sha256": "230f1e76b514c8a3ea0e9b3e97db45dc6f2b1ee527b15819f318e87dfd4681a5"
+    },
+    {
+      "file": "empire2/shaders/11B7E8526834AE51.metal.html",
+      "bytes": 65228,
+      "sha256": "25d79e164689b83c282fc23a07a2a59db0e2da5b1670e0b46656506e6aac284a"
+    },
+    {
+      "file": "empire2/shaders/12E0E4D166FFC495.metal.html",
+      "bytes": 14883,
+      "sha256": "a80cc67ec74c1ef7d171d243169e4e1cbad9a74d69f641b59def80a50210cd73"
+    },
+    {
+      "file": "empire2/shaders/13EBDB9A014E1EC2.metal.html",
+      "bytes": 65638,
+      "sha256": "347fb112b95f8545b0ba419b31707aae7bf56e7403975db43166362156f865b4"
+    },
+    {
+      "file": "empire2/shaders/1413EF1EEFFFD4F8.metal.html",
+      "bytes": 27048,
+      "sha256": "5a9b56a76987fc97493a4d5ec42950d5cdd9e3a49c0ebe5f36de3a41565902d0"
+    },
+    {
+      "file": "empire2/shaders/16AA5853F5F3E209.metal.html",
+      "bytes": 16503,
+      "sha256": "12116cd75f554fe73cd60f75e1c470cadd7f5d69dae94c6d588a44b3b6b2688e"
+    },
+    {
+      "file": "empire2/shaders/18F7E91CD7D8DE7C.metal.html",
+      "bytes": 2609,
+      "sha256": "fe9d910df38d87dc22d0beafed30c7dc67f035b3c0e1803a1f5ad1c2b2bc6acf"
+    },
+    {
+      "file": "empire2/shaders/1AB9B61B5463E48C.metal.html",
+      "bytes": 7637,
+      "sha256": "1a6ec5d586df8856e66ff8fb39099de05a06339bad7a2eb8b8b20d6e5c3d3667"
+    },
+    {
+      "file": "empire2/shaders/1E7EF532F18FDDAF.metal.html",
+      "bytes": 18777,
+      "sha256": "ce9f9c6b1a5b94db449d7f9134ed1d0fffa656b10cde780b17ee8e289416e230"
+    },
+    {
+      "file": "empire2/shaders/1F05412574446FA1.metal.html",
+      "bytes": 21452,
+      "sha256": "388a2591f9bdd0b96ecfdf386c4f6c00590926c58ec381ff14fc09695f635b89"
+    },
+    {
+      "file": "empire2/shaders/204082A3AA1BC90A.metal.html",
+      "bytes": 11561,
+      "sha256": "2c21241a78f0de621844a55340c59565e555f8181b8a6bd155b87a4dfb19a529"
+    },
+    {
+      "file": "empire2/shaders/21820F54954DE970.metal.html",
+      "bytes": 55690,
+      "sha256": "c9e73630f14703a2006250290cae27db00fd53ea57db228c6bdf21f236889bce"
+    },
+    {
+      "file": "empire2/shaders/24B4211C998DA423.metal.html",
+      "bytes": 28398,
+      "sha256": "d78f5b06bf86d8ba9aaac5f68e96932fd34c3820c4c9cea24d2861bddade06af"
+    },
+    {
+      "file": "empire2/shaders/278FCB7A4626D051.metal.html",
+      "bytes": 31956,
+      "sha256": "709c8e8eff03cb0dd99f080e96b5513141a3257d21997ba932a54320fe43d245"
+    },
+    {
+      "file": "empire2/shaders/28AB1DF27C3B3F8C.metal.html",
+      "bytes": 19627,
+      "sha256": "d68edf789a2d1d089d646ac22a8ac41fcd6115081c57066d98cdbbb4ab874627"
+    },
+    {
+      "file": "empire2/shaders/28CB504009E19C42.metal.html",
+      "bytes": 6322,
+      "sha256": "75521ccdd55195aa8690c390f0cf7f4f6015f0c146b4bcd7f2be21a93a4254b9"
+    },
+    {
+      "file": "empire2/shaders/29ECCBB5F84ABC85.metal.html",
+      "bytes": 58068,
+      "sha256": "c4d8860c0c0f6aa60a2e4edf6745e125d0031125ad94b00136c9184a92ad389f"
+    },
+    {
+      "file": "empire2/shaders/2D062C2736F37ED8.metal.html",
+      "bytes": 5038,
+      "sha256": "f3c103fe67dc39420fdfe12e38bfa99e25fafef87c55b5d7da85f74f2d796044"
+    },
+    {
+      "file": "empire2/shaders/2EB35058C7F2CB6C.metal.html",
+      "bytes": 7140,
+      "sha256": "3d8ac483377cd9b4e1a7c6759ea0a2cc2824843e04c8f52097817c702b5b7950"
+    },
+    {
+      "file": "empire2/shaders/306A279F91BE2169.metal.html",
+      "bytes": 2895,
+      "sha256": "21a2388f1abca553011be301ab8a0f4bb81123b58353eeaf27beb8f50af80c31"
+    },
+    {
+      "file": "empire2/shaders/30AB13A42E07ADCC.metal.html",
+      "bytes": 3873,
+      "sha256": "495394c7eb27b92b55976781eb8d7153be9923b1e66cc8458ba1d0b3a359da1e"
+    },
+    {
+      "file": "empire2/shaders/30DC02723A6AFF2F.metal.html",
+      "bytes": 31323,
+      "sha256": "341293c71e07e32c8baf9c958737f39873519b9de98b6976cc9a3e033c6042eb"
+    },
+    {
+      "file": "empire2/shaders/313951F9DAEAB9DE.metal.html",
+      "bytes": 16129,
+      "sha256": "5b5cf52767a8a8c7868a973d2ecdd29b491ade9b822eeeae603ff0ab95ca6ce9"
+    },
+    {
+      "file": "empire2/shaders/35E744FC2162B835.metal.html",
+      "bytes": 5919,
+      "sha256": "ba9329fa56c02dc1297457ef1869a7862f00cc9275ac513303e8c91f26955c18"
+    },
+    {
+      "file": "empire2/shaders/36230B57011F2EC6.metal.html",
+      "bytes": 5124,
+      "sha256": "0ac8df80ee923b062fc0847a0cd80794d4d5226be459a2edd5f88b67bc937906"
+    },
+    {
+      "file": "empire2/shaders/37291EC15CECC475.metal.html",
+      "bytes": 33599,
+      "sha256": "7db205a7c2bbc3934368f10b5e67176efa9143a911fdf858ea5960087e5780dc"
+    },
+    {
+      "file": "empire2/shaders/3763AC95B0BD53FA.metal.html",
+      "bytes": 73782,
+      "sha256": "a102444d6dfd1385102417905b307cb55300f85968c21e59c43a417d82378182"
+    },
+    {
+      "file": "empire2/shaders/3B4BA408BF949A09.metal.html",
+      "bytes": 62456,
+      "sha256": "87cd19a751dd0535d1c014d3d2684f9bebfcb82471fbe4a84d0c9c72cd1dfca6"
+    },
+    {
+      "file": "empire2/shaders/3C0FAD1E4F352F8A.metal.html",
+      "bytes": 7572,
+      "sha256": "299c9f1f0bb5a1f83ea409e908c72797d9ead21ac1bf6fe986b3772d0fe38134"
+    },
+    {
+      "file": "empire2/shaders/3CAB235BF378FDC9.metal.html",
+      "bytes": 68940,
+      "sha256": "c8d8e12a46893cf9454ca68435303ca43a709e099d8ee470b1d20b0a6ba777a5"
+    },
+    {
+      "file": "empire2/shaders/3CEB06A14A77D67F.metal.html",
+      "bytes": 26563,
+      "sha256": "d09dfb58c4a38dbda34d0c7faeba474d16e92cc99e3849c6d00f957e90e30ddf"
+    },
+    {
+      "file": "empire2/shaders/3E7759CA7E3AA058.metal.html",
+      "bytes": 60748,
+      "sha256": "043af7d044aca732dd31b8ada5d8658cd61cf09ec6c00c78a52506aa07fb7069"
+    },
+    {
+      "file": "empire2/shaders/3EA5D56C463C3D2A.metal.html",
+      "bytes": 13427,
+      "sha256": "3f8d799fc0dcec38b7393c7401184dd89e29574d080686d7eddb2949a2ab4052"
+    },
+    {
+      "file": "empire2/shaders/3EFBC51F256CC4C6.metal.html",
+      "bytes": 65737,
+      "sha256": "b5988a595dd78e8e794b630b47c300c1fa165f7127e3f3fa0d295f03b6296d37"
+    },
+    {
+      "file": "empire2/shaders/41D9BA21D7508E63.metal.html",
+      "bytes": 5525,
+      "sha256": "92163669b4862befc5ad77a8b90e0f8f08d007cccfbd04244aac3c9ea77dc152"
+    },
+    {
+      "file": "empire2/shaders/42ABA1E35DC6D1EA.metal.html",
+      "bytes": 8429,
+      "sha256": "358189c11b7063cfd767c79ee80f11aba8380a893d22ecadc02f8ea51e0a475a"
+    },
+    {
+      "file": "empire2/shaders/4419AD67EC5DFFAF.metal.html",
+      "bytes": 32506,
+      "sha256": "a5cbcb04437b8abc50713e3f4aab6001d7d7fc6ce4d834fb6f59043ee6780e7a"
+    },
+    {
+      "file": "empire2/shaders/459C768EA74745AF.metal.html",
+      "bytes": 18480,
+      "sha256": "00ce8aa0a05236fb57c1d3df8ba007d8526965236d40943560b15c1c38a7e3ba"
+    },
+    {
+      "file": "empire2/shaders/46D23D7FFA994B60.metal.html",
+      "bytes": 10441,
+      "sha256": "05785e14efa913a3390f56bc4f121f80d17a64778749f170eeab50a799c186b8"
+    },
+    {
+      "file": "empire2/shaders/4A50C017BC1680B1.metal.html",
+      "bytes": 11479,
+      "sha256": "82c173418544960745261e89bd6f89113ba97b28853626813fd985355fb55ee7"
+    },
+    {
+      "file": "empire2/shaders/4C1D15EA3966A13.metal.html",
+      "bytes": 21014,
+      "sha256": "23d0c9192a57ee811c075064804b625c231a3b5eb10a8daf9ae48038f9a530ef"
+    },
+    {
+      "file": "empire2/shaders/50983F649F0906B0.metal.html",
+      "bytes": 24897,
+      "sha256": "d87708f4a99fee1e7f2a81dc67999145579c02af6ebb8c3600c402cb499e604b"
+    },
+    {
+      "file": "empire2/shaders/534E3B771762AC50.metal.html",
+      "bytes": 24695,
+      "sha256": "042b654536f7479a8e1839122f558fdc6458eb82c14b831d0432d62ca8a3fab8"
+    },
+    {
+      "file": "empire2/shaders/537455CC7BB49C49.metal.html",
+      "bytes": 68176,
+      "sha256": "0c36fc6bd1fcc05d847b621ea2f2319642590ba1a55f98cda7c8547d874839b1"
+    },
+    {
+      "file": "empire2/shaders/559B5AD3FC2AA6C3.metal.html",
+      "bytes": 20360,
+      "sha256": "5772250ab372fcc4a750bd424285da0c3f1512741598f827590d6c35dce69c27"
+    },
+    {
+      "file": "empire2/shaders/55D6E02D88377CC7.metal.html",
+      "bytes": 11338,
+      "sha256": "237711eff738c9f67e0073d8e0e53814dbca4a5b78b0f71436b6431aea3c03e0"
+    },
+    {
+      "file": "empire2/shaders/5B7AC09463BD2AEA.metal.html",
+      "bytes": 8634,
+      "sha256": "bdfd091c8fb5e66371a8fafecc9c20ba1c1339ccc8b9fd589818a75cff25efe8"
+    },
+    {
+      "file": "empire2/shaders/5BD7ADC28BED71D0.metal.html",
+      "bytes": 57717,
+      "sha256": "630b0750ddbc8a762b69b1ce424447dd8926648c163b4fcb6ac65900232db7a7"
+    },
+    {
+      "file": "empire2/shaders/5C5173AA64E28744.metal.html",
+      "bytes": 13871,
+      "sha256": "4ad1836b8d806182a8e0075c7af16f3628984615ecce19f19aac0d9fff04831c"
+    },
+    {
+      "file": "empire2/shaders/5FBC198DE5480DE5.metal.html",
+      "bytes": 3155,
+      "sha256": "ea2a2384011b7f0d7b49f8480fc7de0cf4f24d4f63006c2505a7942a6ca3f91b"
+    },
+    {
+      "file": "empire2/shaders/5FEB678AF446310D.metal.html",
+      "bytes": 21010,
+      "sha256": "8ce35fedd73794cf094f07dad09f9f8b7eb5c2f6ed49b1842a7b2273c4e95f8e"
+    },
+    {
+      "file": "empire2/shaders/600AB73F661FDE98.metal.html",
+      "bytes": 28630,
+      "sha256": "06d17bf6cab8a9bc57c9d26e3032a7053cc124bf8c5b015133d8bdc91a940089"
+    },
+    {
+      "file": "empire2/shaders/60E5C20A1B3B7947.metal.html",
+      "bytes": 48978,
+      "sha256": "2d40f06d2eeaeb6edd7ad09292979dcb6f0688a4e78740bfe67c4e2b1df19a09"
+    },
+    {
+      "file": "empire2/shaders/61348F89D3309B2A.metal.html",
+      "bytes": 29117,
+      "sha256": "dc8c2b9a0449243449e17e59cb9a0201320fc06e68627f111b852c28f57e3cb2"
+    },
+    {
+      "file": "empire2/shaders/61B6956E2898C227.metal.html",
+      "bytes": 32713,
+      "sha256": "90e7eb42ce61bccfa1aa7a105905421802d366f19edb723a7a5eaff89428f491"
+    },
+    {
+      "file": "empire2/shaders/626E39771A726EF5.metal.html",
+      "bytes": 11792,
+      "sha256": "1485914a81e0f09aa4bcd92cc05133964d3c9cfc56d466559f459a5f7be0999d"
+    },
+    {
+      "file": "empire2/shaders/6540E2867800AF53.metal.html",
+      "bytes": 56419,
+      "sha256": "e169e64a389c359419b56fd46347e35c574dcc09e474afa90fd6f41a5bb322a0"
+    },
+    {
+      "file": "empire2/shaders/665FA03EBF2921A1.metal.html",
+      "bytes": 90324,
+      "sha256": "3b1d0f4274e2b95ff6734e7ed860d7c0e7bcfaf92ebce2b28a5af245b0e7e214"
+    },
+    {
+      "file": "empire2/shaders/66FA624068854DAC.metal.html",
+      "bytes": 37082,
+      "sha256": "01099f02418885abd7bb12b07d0affa56c5343b97acc6e4fd77672a8856730f8"
+    },
+    {
+      "file": "empire2/shaders/6712C3416DD25C4D.metal.html",
+      "bytes": 3087,
+      "sha256": "14700fdf973a44387cb5349e98f7728b04f68d5663b191683770f1cf44a75581"
+    },
+    {
+      "file": "empire2/shaders/69A910513AF15D.metal.html",
+      "bytes": 36218,
+      "sha256": "fb77eca7b355f3b5d427b780c499bb5696ef46ed7476771f83f126adbfa3d729"
+    },
+    {
+      "file": "empire2/shaders/6E0BCB1AF394F1D8.metal.html",
+      "bytes": 75291,
+      "sha256": "85be2b9391a5b2d7b0f736d2cc7407390bc67772e7fa64f4ebf7641bd1ae482e"
+    },
+    {
+      "file": "empire2/shaders/6F0AFD997C95808.metal.html",
+      "bytes": 10493,
+      "sha256": "7319b1d943bee9fa16f5f335ce0fcc3b3adf40e87bd084c9f2fbbc0fd4a75049"
+    },
+    {
+      "file": "empire2/shaders/7039C9670E864F63.metal.html",
+      "bytes": 73390,
+      "sha256": "6069b894ff37c21bd7aabac73388fb29a274780362fe38175bf5802d05378944"
+    },
+    {
+      "file": "empire2/shaders/70C4E390B5467EB4.metal.html",
+      "bytes": 9182,
+      "sha256": "d38aeb77b047c8e04f22b7b58529686587d843cc4289268989f81671faa8d429"
+    },
+    {
+      "file": "empire2/shaders/7165489D9CC05C9D.metal.html",
+      "bytes": 13800,
+      "sha256": "2e9bf7eba1974e57328169584fdabdf1df2ef452c4358050974c2f3e34690154"
+    },
+    {
+      "file": "empire2/shaders/735A994C4DBEB7A0.metal.html",
+      "bytes": 56247,
+      "sha256": "29649c2d13f03129d95966a33bc3a6ac7e55adc3a141b57c768eebd0456e71c2"
+    },
+    {
+      "file": "empire2/shaders/75B0E8BB7D998BB6.metal.html",
+      "bytes": 66549,
+      "sha256": "0731b712d29f35e6d96298595ea90174c2f9518cdb126b5181a62f2c861676c7"
+    },
+    {
+      "file": "empire2/shaders/7899A635D90D2E9.metal.html",
+      "bytes": 33859,
+      "sha256": "b8cdf7d475aa31b87e808544f39d58ad3beb5b04ab62813dece2b2abc4796deb"
+    },
+    {
+      "file": "empire2/shaders/791277F879E1FBC9.metal.html",
+      "bytes": 4751,
+      "sha256": "78a71f38109ef57860268d0cb1da3c7079b53e6ef187ece11d1adbed36ebe868"
+    },
+    {
+      "file": "empire2/shaders/797332E8F0D8DD4E.metal.html",
+      "bytes": 58655,
+      "sha256": "d0810cc9bf281e2807839771be307e163539f6e7bb42f6092d8ead3aa041f084"
+    },
+    {
+      "file": "empire2/shaders/7E39655F4436F864.metal.html",
+      "bytes": 93207,
+      "sha256": "489d1b7ac65e7e961a30d449983a75ae0eb59a00f5410934c16f1c9d193ebf54"
+    },
+    {
+      "file": "empire2/shaders/7E860C3A1A3D9A55.metal.html",
+      "bytes": 1544,
+      "sha256": "9870c26627b9c768b00fdf48f7145c228e472dce4e4217c54565833c7937fe53"
+    },
+    {
+      "file": "empire2/shaders/81CAFF7A2CFB6A7C.metal.html",
+      "bytes": 22469,
+      "sha256": "fa41b1ecc8e176f03031a44f92cde2d9181acb997da91333c82ac6cf6a59588f"
+    },
+    {
+      "file": "empire2/shaders/8380A6200BDBEED0.metal.html",
+      "bytes": 9695,
+      "sha256": "b71171b4c1cafcb12e64be9bc81c110c7c8dedcf2c4f2b4d6d0287179fa357b2"
+    },
+    {
+      "file": "empire2/shaders/8893AC0A7EA413D8.metal.html",
+      "bytes": 68051,
+      "sha256": "7f93a7aa360808b24db3188d68d6b05d4938f4edfd85227da5f1c5e9eb496fd3"
+    },
+    {
+      "file": "empire2/shaders/89C52512CBAD6D.metal.html",
+      "bytes": 72529,
+      "sha256": "2ceee01660947fc624d8a5ae054dad2bf57d381bdf9508b9dff1be4ddaa8435a"
+    },
+    {
+      "file": "empire2/shaders/8A841B7474DF6D4E.metal.html",
+      "bytes": 62530,
+      "sha256": "c7b10e9ad33f84d6f275176aba67586ed6d13033d1ae095ca8567304ff6e0001"
+    },
+    {
+      "file": "empire2/shaders/8F37E6C07FE50ECB.metal.html",
+      "bytes": 2166,
+      "sha256": "b6f317fee18d2d6e21f34cdf717a57a98c55325ca799674acf7c575ccfb412b7"
+    },
+    {
+      "file": "empire2/shaders/9023C3FAB0141D27.metal.html",
+      "bytes": 53032,
+      "sha256": "fc6dfe810e11d8fe17bd1cc2f83c7e3bc7e7b82411e583acab40e860908316cc"
+    },
+    {
+      "file": "empire2/shaders/90DD8BBE11E20C25.metal.html",
+      "bytes": 60781,
+      "sha256": "0610ec0aa7196089bf93babec07655b5e03b07d5e91a48d05af8748aa4b1f4b9"
+    },
+    {
+      "file": "empire2/shaders/9774F775C75AFF58.metal.html",
+      "bytes": 7956,
+      "sha256": "0d8ee9d179b1e54b11b07a0076971b4241b41f2ebbf39004816572038eb7c788"
+    },
+    {
+      "file": "empire2/shaders/97C2DE9615BCB3FD.metal.html",
+      "bytes": 36222,
+      "sha256": "aa91a68130aff71f6461f1227090c6f1620e512678c7204060282d3d6dce3007"
+    },
+    {
+      "file": "empire2/shaders/980E7674030BD3E2.metal.html",
+      "bytes": 14836,
+      "sha256": "f7696cf54b2fde5da64850def4ba680d3d306cfc79fa84f8be88b1b57e27dd00"
+    },
+    {
+      "file": "empire2/shaders/98BC6F212AB2AB07.metal.html",
+      "bytes": 59172,
+      "sha256": "f7a9a094843dd913b0b67026fe8ad7756c16ed0d2ea839086a76fe4e32543f5b"
+    },
+    {
+      "file": "empire2/shaders/999337456265EEDC.metal.html",
+      "bytes": 4882,
+      "sha256": "11c6dfb2632a8d4a9002eec2c9e876cf11f199e7161e194364db7f52c9c62eb0"
+    },
+    {
+      "file": "empire2/shaders/99EF5128A8DD78BE.metal.html",
+      "bytes": 30918,
+      "sha256": "2f935aff6271a8f19c945f7f3e497654c61cb263796012e1e923c19c594b0b8f"
+    },
+    {
+      "file": "empire2/shaders/9C1452166BD01029.metal.html",
+      "bytes": 22109,
+      "sha256": "9e3473c579b5a1bc443a0a6fa7a27cc8d5205e34d72821d894ac95024093b96b"
+    },
+    {
+      "file": "empire2/shaders/9D724AFF578D9744.metal.html",
+      "bytes": 18499,
+      "sha256": "95e81bccfbe760bb48d3a1d9f6ab979585d380e49d5ac5be1c98f3de7e6b02fe"
+    },
+    {
+      "file": "empire2/shaders/9FB7777740666F62.metal.html",
+      "bytes": 6780,
+      "sha256": "d86dd8da0862b7b68d50592de9a60953dd856ba2e7794bb6ffa77042b53957ba"
+    },
+    {
+      "file": "empire2/shaders/A09DA05CAF6C73D.metal.html",
+      "bytes": 2507,
+      "sha256": "29ffa3105d60930aec1b1c5559a58164b3f9117ca3842817e3e25807ddc90066"
+    },
+    {
+      "file": "empire2/shaders/A3B4DDAA3ED2AE38.metal.html",
+      "bytes": 7187,
+      "sha256": "605882209275cd6f93b89bbb66861d9ae9cfb7a9dc51b5e1d53f4d7134b43294"
+    },
+    {
+      "file": "empire2/shaders/A5471301C9A914FE.metal.html",
+      "bytes": 26483,
+      "sha256": "0874b4a4c1e093ee42addadda942f627f6c786145299ee32d0489fa8335e6200"
+    },
+    {
+      "file": "empire2/shaders/A5D4DC50B960B1E4.metal.html",
+      "bytes": 16697,
+      "sha256": "635d37028003a5e9e1b5ce4553354c6466552f6bd39240276c16fab2c7cd0f64"
+    },
+    {
+      "file": "empire2/shaders/A823E8B0C4DC2A2E.metal.html",
+      "bytes": 16448,
+      "sha256": "b1709019fbf5548e91d6a3fc602da3375ee32ba3152f62dce94c000ec92c141d"
+    },
+    {
+      "file": "empire2/shaders/A9FC0B13C9C056C3.metal.html",
+      "bytes": 27321,
+      "sha256": "d4081b2ce572d6c9f2e43986ae962cd8e2cd45132300863f27c7d7dd76a529c3"
+    },
+    {
+      "file": "empire2/shaders/AA9222CBB4AAF010.metal.html",
+      "bytes": 9159,
+      "sha256": "da84c2f2410f34fdc05e55dc3bc32556b34d2f1b7a7df9309c7d60e72e403d63"
+    },
+    {
+      "file": "empire2/shaders/AB6A7887745B5B4.metal.html",
+      "bytes": 42550,
+      "sha256": "a8837ea82ba3c80c6a8918ca07ddeeb94e2c14dd4d82eb39949201167d1354e9"
+    },
+    {
+      "file": "empire2/shaders/ACFE2168C54BAD9C.metal.html",
+      "bytes": 68544,
+      "sha256": "1aaa6a9d17525b71497db933af928744e81ee894182399f1efa71866fea48e4f"
+    },
+    {
+      "file": "empire2/shaders/B0DCE88977007BE3.metal.html",
+      "bytes": 7982,
+      "sha256": "03c22c7644c0e5589d41faa19ba8ee895783a293d7beb85816a8488efeedf54e"
+    },
+    {
+      "file": "empire2/shaders/B4028DD3369CC08F.metal.html",
+      "bytes": 15445,
+      "sha256": "da0d23e857978e645b0e8d1324a09c808e818913803b83f229a3f82ac078cd6c"
+    },
+    {
+      "file": "empire2/shaders/B4335829656F078C.metal.html",
+      "bytes": 7774,
+      "sha256": "7756ad33878566650c45c041014f704c693517c3e4d07c27fb93e855787bb5ad"
+    },
+    {
+      "file": "empire2/shaders/B56E04AD50E89A8.metal.html",
+      "bytes": 8918,
+      "sha256": "a3c02ea9f6368856e609fd525befa09ebb7a91944790b7502f29278bf79a35cc"
+    },
+    {
+      "file": "empire2/shaders/B5938A74A6D4BC6.metal.html",
+      "bytes": 60999,
+      "sha256": "680812acc09884ef4f0161157650c93a8bb16a7ffd51d28a1946ea484cb2ebd0"
+    },
+    {
+      "file": "empire2/shaders/B5C0778AABCA22B2.metal.html",
+      "bytes": 14044,
+      "sha256": "ce7e0186263e83e00ecf2c8a5f4ec3d9e1a695573318a11a73793d89b92bdded"
+    },
+    {
+      "file": "empire2/shaders/B70C9B8C3CB291A8.metal.html",
+      "bytes": 13583,
+      "sha256": "7afb30bfcb6a85a4aecf7f044d6aa71e19cc60fea64c09174f5524e7224b85a5"
+    },
+    {
+      "file": "empire2/shaders/B8D58464E05F5953.metal.html",
+      "bytes": 2106,
+      "sha256": "7cf2a04d09f20617618d60554c3a5ff04d1258f11f8d24391732f45b57b491fa"
+    },
+    {
+      "file": "empire2/shaders/B92355BC99986829.metal.html",
+      "bytes": 64642,
+      "sha256": "3a28694d56e6f93df10a419faa5572606af8131046b2b453550604ccca14f756"
+    },
+    {
+      "file": "empire2/shaders/BBC443789BF62E64.metal.html",
+      "bytes": 6232,
+      "sha256": "c7a0e541b8a707b76b77eb33b4ff0f3a6314dab011dd5b10e4459ecbf9edef85"
+    },
+    {
+      "file": "empire2/shaders/BD70604646654C22.metal.html",
+      "bytes": 7120,
+      "sha256": "c5e2c8beffd555c8e9871895d8151a0c71ad23a1a232269c25c76409376f7b5e"
+    },
+    {
+      "file": "empire2/shaders/BD977EBF71A68058.metal.html",
+      "bytes": 13875,
+      "sha256": "91d2c0bbf5fbc0788a9b1d22ea6b640b6d254310a8c33c4a14ca5b62f04a71fc"
+    },
+    {
+      "file": "empire2/shaders/C5A23A39586A6494.metal.html",
+      "bytes": 30579,
+      "sha256": "1e36b9e9762a2a54926928d57f9beeb536bacdb81ceb10cf2b8f3da2d6644a55"
+    },
+    {
+      "file": "empire2/shaders/C7563D42F46C078C.metal.html",
+      "bytes": 58701,
+      "sha256": "70ef9c2882c84e00c41d2d92daf2aba2163c9e03898a00fc30f9994e74ce2db5"
+    },
+    {
+      "file": "empire2/shaders/CAE3F95F0F0257F7.metal.html",
+      "bytes": 59122,
+      "sha256": "3e6422f8ff47a47e2ac5a526cd93c37d4d5256a411218cc911db492715d7b2d6"
+    },
+    {
+      "file": "empire2/shaders/CD61BFF2AB5FDFE5.metal.html",
+      "bytes": 39261,
+      "sha256": "0a1ceee3b3060eae008b6416e44b603119edb222ff131429a5c0384b0c8af837"
+    },
+    {
+      "file": "empire2/shaders/CEFE845EB922EB95.metal.html",
+      "bytes": 9494,
+      "sha256": "cd0e41ec3c7f8719416e597454f5bca3282beee687a46d1b3ef54b13ef696c4e"
+    },
+    {
+      "file": "empire2/shaders/CFCE32AD1A51227.metal.html",
+      "bytes": 12682,
+      "sha256": "057f46192c3e86a79126ae89e2a6e6e0dd0317469c3c71d899a43ab69326fb71"
+    },
+    {
+      "file": "empire2/shaders/D07E9B24F44D764A.metal.html",
+      "bytes": 23881,
+      "sha256": "783f33c006b0ee16ec07dfb6032cda0ad2939a4334bd547b9c059854abfb8118"
+    },
+    {
+      "file": "empire2/shaders/D0854CE3F6003FFD.metal.html",
+      "bytes": 13192,
+      "sha256": "01f64d16f16809f1e13d8180c06cefe96dd04ff44d2a08217b3ac51204710147"
+    },
+    {
+      "file": "empire2/shaders/D119CCE5CDDA249D.metal.html",
+      "bytes": 10825,
+      "sha256": "c470a1ee1a7854616f4783861bbcd5fb4d5fb0e0290dc922101f2076b4d4f4b8"
+    },
+    {
+      "file": "empire2/shaders/D42C9EF079F78D62.metal.html",
+      "bytes": 56895,
+      "sha256": "c15935a48333cee441a889d1488db01de81d1a9bb75a95151138a83633c08b0f"
+    },
+    {
+      "file": "empire2/shaders/D5988DA6CDB91FD3.metal.html",
+      "bytes": 8858,
+      "sha256": "8b87914ad1433b6267eb0a7a3dc2b7bd667350f3ad75ea55bfaac2089cb97d86"
+    },
+    {
+      "file": "empire2/shaders/D8A2333527888AEA.metal.html",
+      "bytes": 18965,
+      "sha256": "f008dffceca7efcfb156fd3ebd773b26beff42b6a46ad79f33b32b247201ecad"
+    },
+    {
+      "file": "empire2/shaders/DC296B865FA66B4C.metal.html",
+      "bytes": 63663,
+      "sha256": "9e209e0def3877152b9e3427d93b8b8b02cca608376357f502a86d1b91e4c465"
+    },
+    {
+      "file": "empire2/shaders/DC308D1AF7BF025C.metal.html",
+      "bytes": 24475,
+      "sha256": "bd6c20f27ef4999a69674dc5ab44f5fa35e28af982126c0d21f05b5a8afb1a96"
+    },
+    {
+      "file": "empire2/shaders/DDF102376784B008.metal.html",
+      "bytes": 12397,
+      "sha256": "6b6fbe92c1cfc312855584bee6451c3f43750332094d1318aa569fd46ab11286"
+    },
+    {
+      "file": "empire2/shaders/DFE0F5CD7D6882E2.metal.html",
+      "bytes": 19061,
+      "sha256": "08592e5050baf4b34c2dea7a310a134d63f43e410c15368eb02edbd20f9b05eb"
+    },
+    {
+      "file": "empire2/shaders/DFF11FBE61F4EB76.metal.html",
+      "bytes": 40557,
+      "sha256": "519f27e01538163d9a06e27634881ffb264bced7c30e0e0b8d8bf707846e7452"
+    },
+    {
+      "file": "empire2/shaders/E0A8D0BC44A2BF3B.metal.html",
+      "bytes": 30432,
+      "sha256": "8e7600d9453208c1df33061489ed93c1ac8096744c21c50cd13c2a9251a4b6b1"
+    },
+    {
+      "file": "empire2/shaders/E2D1B6F77DE47514.metal.html",
+      "bytes": 4613,
+      "sha256": "39fae8e6ec5c3b21b847d405585df00e40502893183a153b5b17099a61a202e9"
+    },
+    {
+      "file": "empire2/shaders/E31D63387007CEC0.metal.html",
+      "bytes": 33648,
+      "sha256": "7ff2b1d5da3c8a855f8cb93bdd6ee3d1b8f088df74272692e4f05485eef918cd"
+    },
+    {
+      "file": "empire2/shaders/E633F210C5A48E31.metal.html",
+      "bytes": 28959,
+      "sha256": "32c542a913ef9889664d5e988870754b1a7375918c36ae17f39455e3a3f87fe9"
+    },
+    {
+      "file": "empire2/shaders/E76E1AAEEE0FE6B3.metal.html",
+      "bytes": 23970,
+      "sha256": "14e7136bda980c9f3e2f69b954727e16bd65922df281beb0b69bf601c877a2df"
+    },
+    {
+      "file": "empire2/shaders/E77DD1A8B2BB40D2.metal.html",
+      "bytes": 17130,
+      "sha256": "23b5f34039521f3b18076e88933bd5eae5dbf4c29b718860d75b02568b7b872a"
+    },
+    {
+      "file": "empire2/shaders/E8B044C2DC95E0E8.metal.html",
+      "bytes": 54903,
+      "sha256": "d02850d8c1281c10fe379847ff2838dc12fa4c3fcbd7d721e597750974c05eb8"
+    },
+    {
+      "file": "empire2/shaders/EC1CD231E73733A3.metal.html",
+      "bytes": 8737,
+      "sha256": "3e63c908a7bd61938e4ae13d04cc6c5919fa0ba16c1b83e241b9697e184ab7a5"
+    },
+    {
+      "file": "empire2/shaders/ECF84F140BD2A332.metal.html",
+      "bytes": 30212,
+      "sha256": "6892d50dce2597aa75bd051a381b1f8eb604c3aa8ef5a34ba13310f5bcb9058c"
+    },
+    {
+      "file": "empire2/shaders/EDEB96566F435129.metal.html",
+      "bytes": 7583,
+      "sha256": "469273d8b17ce59367998839164c2507779f52cff976f3e992f053e66087d7cd"
+    },
+    {
+      "file": "empire2/shaders/EE5E09CB72FF7D4A.metal.html",
+      "bytes": 10821,
+      "sha256": "7c1b37d7dff42fca0f0a464390bc8b942ef34de1b8b8a06c7fc5889a005d47fb"
+    },
+    {
+      "file": "empire2/shaders/EF49B877F4748DC5.metal.html",
+      "bytes": 20676,
+      "sha256": "626f96bc98018c4764340bd95316a62d6f290913a36a997322e340e4ee7c8255"
+    },
+    {
+      "file": "empire2/shaders/F00E73816488008D.metal.html",
+      "bytes": 59519,
+      "sha256": "540ae625bd9c5d208de5b305e71aea8b05f7d1e8ee13edc216cdec55d17cb8f5"
+    },
+    {
+      "file": "empire2/shaders/F1A3444EA29C9AE2.metal.html",
+      "bytes": 14665,
+      "sha256": "dea637ef8b37c5a5e7dbd1d7cb514a0add1e5a57134e2efe96dd150886c99abb"
+    },
+    {
+      "file": "empire2/shaders/F30D42B7B387D4BE.metal.html",
+      "bytes": 10889,
+      "sha256": "ad7416d6fd64c7c5bb23a04d25cb209eab203aece01a21b70a0cef9dfd1b75b0"
+    },
+    {
+      "file": "empire2/shaders/F5D13132E7F44A41.metal.html",
+      "bytes": 27815,
+      "sha256": "dda566ee61a2fadd5ee41593f584bfd4a0adbddbd14d292da1cc95746129ade4"
+    },
+    {
+      "file": "empire2/shaders/F6966226A3B5EAC7.metal.html",
+      "bytes": 3637,
+      "sha256": "1805f7a9c3db634e821540dd5ba0a715be882517d804bf232d862850f6b057e7"
+    },
+    {
+      "file": "empire2/shaders/FC5D17909A869C1A.metal.html",
+      "bytes": 24695,
+      "sha256": "623e711c992b56157f91453c497924acb9ba66d89646ab05b698abd06e333921"
+    },
+    {
+      "file": "empire2/shaders/FDA8C747A5187008.metal.html",
+      "bytes": 60197,
+      "sha256": "b62b899f0feb92aa25d1819061214ea8c4da0bc8aa935188fd8ef3949f3e3a84"
+    },
+    {
+      "file": "empire2/shaders/FF75455F6679637C.metal.html",
+      "bytes": 15017,
+      "sha256": "3a3f59b6820b880b21226aa158624930385819b1c369e880fd8f5a389fd04281"
+    },
+    {
+      "file": "empire2/shaders/FF99FE8D37CC7104.metal.html",
+      "bytes": 35087,
+      "sha256": "6fbc93d94b51e854f37430b8b63587b4819288cbf94fffca41f82e3457eacdca"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT.cs",
+      "bytes": 59242,
+      "sha256": "a0bf410d6eec260ff1ecb9ab66cc0851a8c4ec834c9fffb1bf1afe02bc3060a8"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT.cs.html",
+      "bytes": 166987,
+      "sha256": "05dadb33349a5fe6f2580d2f736bba76817705071a43b995a0c1e8e695ead1a9"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs",
+      "bytes": 62056,
+      "sha256": "452485449ec17285c80ecd315d6bbdc34035ec6a4136fdf28be64f71d929e494"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Scripts/CS/Outside/Terrain/TerrainVT_Helper.cs.html",
+      "bytes": 153976,
+      "sha256": "49a1631205c3de94a6240e19a36849243561ea412b37ba3dc2baee94cd77c03f"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+      "bytes": 18759,
+      "sha256": "39d647978ac8c941bf0bf8e96e0013b1aae901c3e2d90e57a6f5525729f6b1ea"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc.html",
+      "bytes": 47919,
+      "sha256": "43d85cf28399a2cc4817d62ad4ce5b1f3b5ce1320bf758f8263d42a54de60ae2"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc",
+      "bytes": 42776,
+      "sha256": "74bbf3f1f10ef1b6dfa6fbc78ef017a36d6ce2da36f5e58b77d541dd811a08f7"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc.html",
+      "bytes": 116446,
+      "sha256": "625eeda630c270f3b2b08c00136d778535a734843369d0f631d7a3d04f7ba047"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Terrain/VTCommon.cginc",
+      "bytes": 10434,
+      "sha256": "2524a9b9204886c2a53ec35747cbb381d538218e739faa115a9d4464639930c2"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/Terrain/VTCommon.cginc.html",
+      "bytes": 27177,
+      "sha256": "736be02204d0bc30b73bb428b31c6ee08986a17af10de2af127925571fc2a254"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Foliage.cginc",
+      "bytes": 12193,
+      "sha256": "b52efdc21c87f759308aab9db6a9102b0837e08645d24697d5208d8aeb3232ab"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Foliage.cginc.html",
+      "bytes": 34845,
+      "sha256": "3670cc96eae78be4bdb22b2d589f42dc55de38ab1ccc4a82cab02dfcf846f5e3"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Opacity.cginc",
+      "bytes": 32500,
+      "sha256": "a8454b39200cd7d8a80487104a39ac2a0ae95c831cde6a1ef14cbc6f9b8ec40b"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Opacity.cginc.html",
+      "bytes": 88125,
+      "sha256": "e7c08f0a6c7f222859f953562eb1f34a333f6c22a8166f5f011c247ab3275fb4"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_small.cginc",
+      "bytes": 16716,
+      "sha256": "f15bf9af52bea895fb41a8ea85d6f301c6dee4ce2f5f1b0bbcc5ad932ebadaab"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_small.cginc.html",
+      "bytes": 45545,
+      "sha256": "aa91019eba8ef45992af76d4836f71654f58b3a40c7d239650c14f04f0a393d0"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_World_inCity.shader",
+      "bytes": 12227,
+      "sha256": "74a5f64f38ff6b3cf8bd82ca9f86ccce10d433c2ff37a6ffad4339d5afc3119c"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Shaders/World/Water3c_World_inCity.shader.html",
+      "bytes": 33586,
+      "sha256": "ebcb21bcca601a6f11608b9b26d946646917e58413af99e01062c11f69396b90"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs",
+      "bytes": 17473,
+      "sha256": "0d01304181d66c4010fa8276caeee1c4e5d5657e4a6ff12c351579cbdea25541"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs.html",
+      "bytes": 41201,
+      "sha256": "ef83585fd73832e7b867b24ce9e2856c025f1ef205052608f3ace108a945dc55"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs",
+      "bytes": 37910,
+      "sha256": "19d4ed5b1b3e00923f88f7cd20989f29533cd93455df712c56a771904c4dc005"
+    },
+    {
+      "file": "source_snapshots/empire2/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs.html",
+      "bytes": 99502,
+      "sha256": "0e7e89f1fef1bfbc3e0b18aa3098bd08ef50aeaa67f2cf659888fd7e4cd9649e"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc",
+      "bytes": 8056,
+      "sha256": "390b76b4fe219bfe881ada70a899a5ef5584c74c8d5caa08a9bd5959f760ce37"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/BnSFogCommon.cginc.html",
+      "bytes": 22234,
+      "sha256": "73e2a4e2d2f0eb3f1bc8a158f68f7206b7bce22b5752c9b184e491378f669885"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc",
+      "bytes": 31425,
+      "sha256": "bdabb45fdbe11b6399ca1b7c20b75e3d42679acb056fd9994517e407f0a258dd"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Shaders/Base/MobileBasePass.cginc.html",
+      "bytes": 88820,
+      "sha256": "34307fe1237efa2271cb21c4c2a89f129c668867c766d8f1c6697a9aa973295e"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs",
+      "bytes": 10640,
+      "sha256": "f1e5bb6f1ec952e7bfca5a519f3fb593c56fe78627a73867b2fb36a86cca569e"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/Fog/BnSFog.cs.html",
+      "bytes": 26626,
+      "sha256": "54f9afa9f18d268825a581ebc87c8ca93b7ff77b55c40da284f460138e2f16be"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs",
+      "bytes": 36320,
+      "sha256": "112bdc3735b44925dc44e3366472306e6bd338daecc658c9e021c6eff2b84e7a"
+    },
+    {
+      "file": "source_snapshots/empire1/Assets/Framework/Rendering/Runtime/RenderGraph/TBURenderGraph.cs.html",
+      "bytes": 93300,
+      "sha256": "6c63013f9f35715a04d1b93b0f794f6d893062221f6e76390d29117edf86974d"
+    },
+    {
+      "file": "summary_screenshots/empire1_xcode_summary.png",
+      "bytes": 2290340,
+      "sha256": "8c1f895c8246d50c1d4a1abbe7dffd997027fbde918a484ff3efc9eb750ae478"
+    },
+    {
+      "file": "summary_screenshots/empire2_xcode_summary.png",
+      "bytes": 2237374,
+      "sha256": "060de944ebd584bbab6f7be2350c90433c17665695310f581ad19ac331b17e2c"
+    }
+  ]
+}

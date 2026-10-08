@@ -8,6 +8,25 @@
     "quality": "精致",
     "href": "/cpu/report/ferry-stress-20261006/report.html",
     "summary": "两岸静止、滑图与无极缩放的性能采集，结合历史采样、iWiki和TAPD问题，展示整帧成本、热点调用树和按优先级实施的优化方案。",
-    "sources": ["Unity Profiler", "Simpleperf", "Perfetto"]
+    "sources": [
+      "Unity Profiler",
+      "Simpleperf",
+      "Perfetto"
+    ]
+  },
+  {
+    "id": "city-gpu-compare-20261002",
+    "title": "帝国1 vs 帝国2：内城全盛·精致 GPU对比",
+    "collectedAt": "2026-10-02（报告更新：2026-10-08）",
+    "model": "iPhone（具体型号未核定）",
+    "version": "未提供构建版本号",
+    "quality": "精致 · 内城全盛",
+    "href": "/cpu/report/city-gpu-compare-20261002/report.html",
+    "summary": "对比两份内城捕获的GPU耗时、纹理与Buffer容量、提交三角形及实际Shader复杂度；重点标注片元计算、几何密度和纹理预算，并提供源码、截图及逐Draw证据。",
+    "sources": [
+      "Xcode GPU Trace",
+      "Xcode Summary",
+      "Metal Shader"
+    ]
   }
 ]

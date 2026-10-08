@@ -1,0 +1,3 @@
+# Published evidence is checked by byte size and SHA256; keep it byte-identical
+# across Windows/Linux checkouts. Captured/source whitespace is intentional.
+* -text -whitespace

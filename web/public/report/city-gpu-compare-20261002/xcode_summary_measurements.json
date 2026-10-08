@@ -1,0 +1,72 @@
+{
+  "empire1": {
+    "gpu_time_ms": 11.94,
+    "summary_memory_mib": 257.66,
+    "textures_mib": 204.53,
+    "buffers_mib": 53.13,
+    "other_bytes": 0,
+    "vertices": 1165662,
+    "command_buffers": 1,
+    "render_encoders": 12,
+    "compute_encoders": 0,
+    "blit_encoders": 0,
+    "acceleration_encoders": 0,
+    "draw_calls": 432,
+    "dispatch_calls": 0,
+    "resolution": [
+      2778,
+      1284
+    ],
+    "pixel_format": "BGRA8Unorm",
+    "insights": {
+      "memory_savings_mib": 14.69,
+      "bandwidth_savings_mib": null,
+      "bandwidth_status": "No Insights",
+      "performance_status": "No Insights",
+      "api_usage_count": 133
+    },
+    "original_screenshot": "codex-clipboard-9fc01a86-1b98-4124-8225-7f062f9542ea.png",
+    "source": {
+      "kind": "Xcode Summary screenshot",
+      "portable": "summary_screenshots/empire1_xcode_summary.png",
+      "sha256": "8c1f895c8246d50c1d4a1abbe7dffd997027fbde918a484ff3efc9eb750ae478",
+      "trace_archive": "帝国1内城_全盛_精致10021837.gputrace.zip",
+      "value_precision": "UI rounded to 0.01 ms / MiB; counts shown as integers"
+    }
+  },
+  "empire2": {
+    "gpu_time_ms": 17.15,
+    "summary_memory_mib": 343.38,
+    "textures_mib": 279.26,
+    "buffers_mib": 64.12,
+    "other_bytes": 0,
+    "vertices": 1900395,
+    "command_buffers": 1,
+    "render_encoders": 12,
+    "compute_encoders": 0,
+    "blit_encoders": 0,
+    "acceleration_encoders": 0,
+    "draw_calls": 456,
+    "dispatch_calls": 0,
+    "resolution": [
+      2778,
+      1284
+    ],
+    "pixel_format": "BGRA8Unorm",
+    "insights": {
+      "memory_savings_mib": 13.39,
+      "bandwidth_savings_mib": 8.35,
+      "bandwidth_status": "Savings estimate shown",
+      "performance_status": "No Insights",
+      "api_usage_count": 59
+    },
+    "original_screenshot": "codex-clipboard-b0bfd6ec-c8ae-4fa2-b835-e3b9800a8a5b.png",
+    "source": {
+      "kind": "Xcode Summary screenshot",
+      "portable": "summary_screenshots/empire2_xcode_summary.png",
+      "sha256": "060de944ebd584bbab6f7be2350c90433c17665695310f581ad19ac331b17e2c",
+      "trace_archive": "帝国2内城_全盛_精致_10021831.gputrace.zip",
+      "value_precision": "UI rounded to 0.01 ms / MiB; counts shown as integers"
+    }
+  }
+}

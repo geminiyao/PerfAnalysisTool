@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "checkedAt": "2026-10-08",
+  "builtAssetsVerifiedByHttpAndSha256": 776,
+  "catalogReports": 2,
+  "catalogContentType": "application/json",
+  "existingReportAccessible": true,
+  "performanceReportsPageListsBothReports": true,
+  "openReportInNewTab": true,
+  "draws": 888,
+  "empire2ColorDraws": 401,
+  "actualPso": 179,
+  "resources": 3479,
+  "emphasizedShaderMetrics": true,
+  "images": [
+    {
+      "src": "summary_screenshots/empire1_xcode_summary.png",
+      "loaded": true
+    },
+    {
+      "src": "summary_screenshots/empire2_xcode_summary.png",
+      "loaded": true
+    },
+    {
+      "src": "empire1/frame_preview.png",
+      "loaded": true
+    },
+    {
+      "src": "empire2/frame_preview.png",
+      "loaded": true
+    }
+  ],
+  "sourceAndCsvLinksPass": true,
+  "narrowLayoutPass": true,
+  "pageErrors": [],
+  "remoteDeploymentPerformed": false
+}

@@ -1,0 +1,7 @@
+完整解压后浏览器打开report.html。只分析帝国1_10021837和帝国2_10021831两份内城捕获。
+Xcode Summary截图：GPU Time 11.94/17.15 ms，总内存257.66/343.38 MiB；原始截图在summary_screenshots目录。
+逐encoder/PSO/shader行计时尚未取得；总耗时不分摊给静态候选。
+三角形按实际图元类型换算并乘实例数，包含退化和后续裁剪。Vertices字段与提交输入count乘实例数的总和一致，不是面数或实测VS调用次数。
+NonVolatile是纹理内容保留状态，不是未用；总量由本帧Used与Unused组成。Buffer容量单位是字节，不是面数；Summary Buffer与解析逻辑长度分别列示。
+Insights容量/带宽建议不等于当前总容量/总带宽或已实现节省。GPU资源容量不等于进程物理内存，未取得功耗测量。
+报告含实际捕获MSL、当前工程源码与CSV；未修改游戏代码。

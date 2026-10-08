@@ -1,0 +1,368 @@
+[
+  {
+    "encoder_index": 0,
+    "handle": "0x3006389a0",
+    "label": "",
+    "descriptor_key": "A73924AC6FE5FBDF",
+    "texture_refs": [
+      "0x16ee4a080"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4a080",
+        "label": "Game_SHARED_GAME_SHADOW_MAP_NAME_2",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 250,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 14,
+    "indexed_draws": 14,
+    "submitted_elements": 55374,
+    "distinct_pipelines": 5,
+    "draw_first": 1,
+    "draw_last": 14,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 1,
+    "handle": "0x300638930",
+    "label": "[R] RenderLoop.Draw",
+    "descriptor_key": "3E431AA8639D2056",
+    "texture_refs": [
+      "0x16ee49900",
+      "0x16ee4a580",
+      "0x16ee49b80"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee49900",
+        "label": "Game_SCENE_COLOR_MAP_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      },
+      {
+        "handle": "0x16ee4a580",
+        "label": "Game_SCENE_IMAGEBLOCK_DEPTH_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 55,
+        "storage_mode": "Memoryless",
+        "sample_count": 1
+      },
+      {
+        "handle": "0x16ee49b80",
+        "label": "Game_SCENE_DEPTH_STENCIL_NAME",
+        "width": 1946,
+        "height": 900,
+        "pixel_format": 260,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 401,
+    "indexed_draws": 400,
+    "submitted_elements": 1834461,
+    "distinct_pipelines": 80,
+    "draw_first": 15,
+    "draw_last": 415,
+    "fragment_height_draws": 276,
+    "vertex_height_draws": 14
+  },
+  {
+    "encoder_index": 2,
+    "handle": "0x3006388c0",
+    "label": "",
+    "descriptor_key": "65FCF1E4F7786BF2",
+    "texture_refs": [
+      "0x16ee4af80"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4af80",
+        "label": "Game_RT_4",
+        "width": 486,
+        "height": 225,
+        "pixel_format": 115,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 416,
+    "draw_last": 416,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 3,
+    "handle": "0x300639ce0",
+    "label": "",
+    "descriptor_key": "64DCA9B3E14F31B2",
+    "texture_refs": [
+      "0x16ee4a800"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4a800",
+        "label": "Game_TMP_RT_8",
+        "width": 243,
+        "height": 112,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 417,
+    "draw_last": 417,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 4,
+    "handle": "0x300638e70",
+    "label": "",
+    "descriptor_key": "76EE7FD460C6EFC2",
+    "texture_refs": [
+      "0x16ee4aa80"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4aa80",
+        "label": "Game_TMP_RT_16",
+        "width": 121,
+        "height": 56,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 418,
+    "draw_last": 418,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 5,
+    "handle": "0x300638770",
+    "label": "",
+    "descriptor_key": "73F39ED2749DF7A",
+    "texture_refs": [
+      "0x16ee4ad00"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4ad00",
+        "label": "Game_TMP_RT_32",
+        "width": 60,
+        "height": 28,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 419,
+    "draw_last": 419,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 6,
+    "handle": "0x300638070",
+    "label": "",
+    "descriptor_key": "304684C0441BDD45",
+    "texture_refs": [
+      "0x16ee4b980"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4b980",
+        "label": "Game_RT_64",
+        "width": 30,
+        "height": 14,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 420,
+    "draw_last": 420,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 7,
+    "handle": "0x300638700",
+    "label": "",
+    "descriptor_key": "B85DCFDF6A015E22",
+    "texture_refs": [
+      "0x16ee4b700"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4b700",
+        "label": "Game_RT_32",
+        "width": 60,
+        "height": 28,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 421,
+    "draw_last": 421,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 8,
+    "handle": "0x300638690",
+    "label": "",
+    "descriptor_key": "5180B71E16C7DFE0",
+    "texture_refs": [
+      "0x16ee4b480"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4b480",
+        "label": "Game_RT_16",
+        "width": 121,
+        "height": 56,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 422,
+    "draw_last": 422,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 9,
+    "handle": "0x300639ab0",
+    "label": "",
+    "descriptor_key": "E2D6B877544659B9",
+    "texture_refs": [
+      "0x16ee4b200"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4b200",
+        "label": "Game_RT_8",
+        "width": 243,
+        "height": 112,
+        "pixel_format": 92,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 423,
+    "draw_last": 423,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 10,
+    "handle": "0x3006385b0",
+    "label": "",
+    "descriptor_key": "C2F41BB827B900B8",
+    "texture_refs": [
+      "0x16ee4bc00"
+    ],
+    "targets": [
+      {
+        "handle": "0x16ee4bc00",
+        "label": "Game_RT_SUM_MERGE",
+        "width": 486,
+        "height": 225,
+        "pixel_format": 115,
+        "storage_mode": "Shared",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 1,
+    "indexed_draws": 1,
+    "submitted_elements": 6,
+    "distinct_pipelines": 1,
+    "draw_first": 424,
+    "draw_last": 424,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  },
+  {
+    "encoder_index": 11,
+    "handle": "0x3007f6300",
+    "label": "",
+    "descriptor_key": "81E80A0118B8AD76",
+    "texture_refs": [
+      "0x13dc1d900",
+      "0x1191acf00"
+    ],
+    "targets": [
+      {
+        "handle": "0x13dc1d900",
+        "label": "CAMetalLayer Display Drawable",
+        "width": null,
+        "height": null,
+        "pixel_format": null,
+        "storage_mode": null,
+        "sample_count": null
+      },
+      {
+        "handle": "0x1191acf00",
+        "label": "",
+        "width": 2778,
+        "height": 1284,
+        "pixel_format": 260,
+        "storage_mode": "Memoryless",
+        "sample_count": 1
+      }
+    ],
+    "draw_count": 32,
+    "indexed_draws": 32,
+    "submitted_elements": 10506,
+    "distinct_pipelines": 8,
+    "draw_first": 425,
+    "draw_last": 456,
+    "fragment_height_draws": 0,
+    "vertex_height_draws": 0
+  }
+]

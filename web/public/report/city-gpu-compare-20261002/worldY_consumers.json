@@ -1,0 +1,7407 @@
+{
+  "bound_unique_draws": 276,
+  "vertex_unconditional_sampling_draws": 14,
+  "fragment_bound_draws": 276,
+  "fragment_height_branch_enabled_draws": 0,
+  "fragment_variants_checked": 32,
+  "branch_audit": {
+    "9023C3FAB0141D27": {
+      "guard_line": 329,
+      "sample_line": 333,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "75B0E8BB7D998BB6": {
+      "guard_line": 433,
+      "sample_line": 458,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "797332E8F0D8DD4E": {
+      "guard_line": 367,
+      "sample_line": 392,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "7039C9670E864F63": {
+      "guard_line": 493,
+      "sample_line": 518,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "C7563D42F46C078C": {
+      "guard_line": 367,
+      "sample_line": 392,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "F00E73816488008D": {
+      "guard_line": 373,
+      "sample_line": 398,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "3EFBC51F256CC4C6": {
+      "guard_line": 417,
+      "sample_line": 442,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "ACFE2168C54BAD9C": {
+      "guard_line": 443,
+      "sample_line": 468,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "98BC6F212AB2AB07": {
+      "guard_line": 364,
+      "sample_line": 389,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "FDA8C747A5187008": {
+      "guard_line": 378,
+      "sample_line": 403,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "11B7E8526834AE51": {
+      "guard_line": 410,
+      "sample_line": 435,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "B5938A74A6D4BC6": {
+      "guard_line": 381,
+      "sample_line": 406,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "537455CC7BB49C49": {
+      "guard_line": 446,
+      "sample_line": 471,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "6540E2867800AF53": {
+      "guard_line": 331,
+      "sample_line": 356,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "D42C9EF079F78D62": {
+      "guard_line": 339,
+      "sample_line": 364,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "89C52512CBAD6D": {
+      "guard_line": 480,
+      "sample_line": 505,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "3763AC95B0BD53FA": {
+      "guard_line": 491,
+      "sample_line": 516,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "90DD8BBE11E20C25": {
+      "guard_line": 379,
+      "sample_line": 404,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "735A994C4DBEB7A0": {
+      "guard_line": 338,
+      "sample_line": 363,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "B92355BC99986829": {
+      "guard_line": 401,
+      "sample_line": 426,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "CAE3F95F0F0257F7": {
+      "guard_line": 366,
+      "sample_line": 391,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "3CAB235BF378FDC9": {
+      "guard_line": 453,
+      "sample_line": 478,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "29ECCBB5F84ABC85": {
+      "guard_line": 355,
+      "sample_line": 380,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "21820F54954DE970": {
+      "guard_line": 329,
+      "sample_line": 354,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "DC296B865FA66B4C": {
+      "guard_line": 397,
+      "sample_line": 422,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "11385535CDA8BFA3": {
+      "guard_line": 495,
+      "sample_line": 520,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "3B4BA408BF949A09": {
+      "guard_line": 394,
+      "sample_line": 419,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "5BD7ADC28BED71D0": {
+      "guard_line": 357,
+      "sample_line": 382,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "3E7759CA7E3AA058": {
+      "guard_line": 385,
+      "sample_line": 410,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "8A841B7474DF6D4E": {
+      "guard_line": 398,
+      "sample_line": 423,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "665FA03EBF2921A1": {
+      "guard_line": 640,
+      "sample_line": 665,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    },
+    "13EBDB9A014E1EC2": {
+      "guard_line": 423,
+      "sample_line": 448,
+      "conditional_scope_verified": true,
+      "captured_flags_all_zero": true
+    }
+  },
+  "draws": [
+    {
+      "draw_number": 15,
+      "encoder_index": 1,
+      "mesh_label": "TRN_CN_YZ",
+      "vertex_source": "DFE0F5CD7D6882E2",
+      "fragment_source": "9023C3FAB0141D27",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        333
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 17,
+      "encoder_index": 1,
+      "mesh_label": "SM_StonemineA_G",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "75B0E8BB7D998BB6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        458
+      ],
+      "fragment_guard_lines": [
+        433,
+        434,
+        435
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 18,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 19,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "61348F89D3309B2A",
+      "fragment_source": "7039C9670E864F63",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        192
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        518
+      ],
+      "fragment_guard_lines": [
+        493,
+        494,
+        495
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 20,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "69A910513AF15D",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 21,
+      "encoder_index": 1,
+      "mesh_label": "SM_AdventureVillageG_LOD1",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "C7563D42F46C078C",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 22,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_FRAMLAND_A_V2_GROUND_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "75B0E8BB7D998BB6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        458
+      ],
+      "fragment_guard_lines": [
+        433,
+        434,
+        435
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 23,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_03",
+      "vertex_source": "534E3B771762AC50",
+      "fragment_source": "F00E73816488008D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        398
+      ],
+      "fragment_guard_lines": [
+        373,
+        374,
+        375
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 24,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 25,
+      "encoder_index": 1,
+      "mesh_label": "T2_EditableRoad_meshes",
+      "vertex_source": "534E3B771762AC50",
+      "fragment_source": "F00E73816488008D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        398
+      ],
+      "fragment_guard_lines": [
+        373,
+        374,
+        375
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 26,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 27,
+      "encoder_index": 1,
+      "mesh_label": "T2_EditableRoad_meshes",
+      "vertex_source": "534E3B771762AC50",
+      "fragment_source": "F00E73816488008D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        398
+      ],
+      "fragment_guard_lines": [
+        373,
+        374,
+        375
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 28,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 29,
+      "encoder_index": 1,
+      "mesh_label": "T2_EditableRoad_meshes",
+      "vertex_source": "534E3B771762AC50",
+      "fragment_source": "F00E73816488008D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        398
+      ],
+      "fragment_guard_lines": [
+        373,
+        374,
+        375
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 30,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 31,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 32,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 33,
+      "encoder_index": 1,
+      "mesh_label": "T2_EditableRoad_meshes",
+      "vertex_source": "534E3B771762AC50",
+      "fragment_source": "F00E73816488008D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        398
+      ],
+      "fragment_guard_lines": [
+        373,
+        374,
+        375
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 34,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 35,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 36,
+      "encoder_index": 1,
+      "mesh_label": "SM_LavaDecal_01_LOD0",
+      "vertex_source": "97C2DE9615BCB3FD",
+      "fragment_source": "797332E8F0D8DD4E",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        230
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        392
+      ],
+      "fragment_guard_lines": [
+        367,
+        368,
+        369
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 37,
+      "encoder_index": 1,
+      "mesh_label": "M_BS_CN_PALDN_L3_H_LD02_A",
+      "vertex_source": "CD61BFF2AB5FDFE5",
+      "fragment_source": "3EFBC51F256CC4C6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        442
+      ],
+      "fragment_guard_lines": [
+        417,
+        418,
+        419
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 38,
+      "encoder_index": 1,
+      "mesh_label": "M_BS_CN_PALDN_L3_LD02_A",
+      "vertex_source": "CD61BFF2AB5FDFE5",
+      "fragment_source": "3EFBC51F256CC4C6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        442
+      ],
+      "fragment_guard_lines": [
+        417,
+        418,
+        419
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 39,
+      "encoder_index": 1,
+      "mesh_label": "M_BS_CN_PKEMN_L3_LD02_A",
+      "vertex_source": "CD61BFF2AB5FDFE5",
+      "fragment_source": "3EFBC51F256CC4C6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        442
+      ],
+      "fragment_guard_lines": [
+        417,
+        418,
+        419
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 40,
+      "encoder_index": 1,
+      "mesh_label": "M_BA_HORSE1_LD02_A",
+      "vertex_source": "30DC02723A6AFF2F",
+      "fragment_source": "ACFE2168C54BAD9C",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        468
+      ],
+      "fragment_guard_lines": [
+        443,
+        444,
+        445
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 41,
+      "encoder_index": 1,
+      "mesh_label": "M_BA_HORSE1_LD02_A",
+      "vertex_source": "30DC02723A6AFF2F",
+      "fragment_source": "ACFE2168C54BAD9C",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        468
+      ],
+      "fragment_guard_lines": [
+        443,
+        444,
+        445
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 42,
+      "encoder_index": 1,
+      "mesh_label": "SM_ByzantineCityTree03_LOD1",
+      "vertex_source": "4419AD67EC5DFFAF",
+      "fragment_source": "98BC6F212AB2AB07",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        389
+      ],
+      "fragment_guard_lines": [
+        364,
+        365,
+        366
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 43,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS11B_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 44,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_GOLDA_L01_LOD03",
+      "vertex_source": "1E7EF532F18FDDAF",
+      "fragment_source": "11B7E8526834AE51",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        435
+      ],
+      "fragment_guard_lines": [
+        410,
+        411,
+        412
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 45,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS11D_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 46,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS11C_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 47,
+      "encoder_index": 1,
+      "mesh_label": "SM_MountHuangA_02_City_LOD3",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 48,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 49,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 50,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 51,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 52,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 53,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrasslandCircular_B_LOD0",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 54,
+      "encoder_index": 1,
+      "mesh_label": "SM_MountHuangB_02_City_LOD3",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 55,
+      "encoder_index": 1,
+      "mesh_label": "SM_MountHuangA_01_City_LOD3",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 56,
+      "encoder_index": 1,
+      "mesh_label": "SM_MountHuangB_03_LOD3",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 57,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_BG_GOLD_L04_LOD02",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 58,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_ROCKA_L01_LOD03",
+      "vertex_source": "1F05412574446FA1",
+      "fragment_source": "6540E2867800AF53",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        356
+      ],
+      "fragment_guard_lines": [
+        331,
+        332,
+        333
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 59,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_BG_GOLD_L02_LOD02",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 60,
+      "encoder_index": 1,
+      "mesh_label": "SM_StonemineB_Lv2_LOD2",
+      "vertex_source": "1F05412574446FA1",
+      "fragment_source": "D42C9EF079F78D62",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        364
+      ],
+      "fragment_guard_lines": [
+        339,
+        340,
+        341
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 61,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_GOLDA_L04_LOD01",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 62,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_GOLDA_L05_LOD02",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 63,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_ROCKA_L05_LOD02",
+      "vertex_source": "1F05412574446FA1",
+      "fragment_source": "D42C9EF079F78D62",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        364
+      ],
+      "fragment_guard_lines": [
+        339,
+        340,
+        341
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 64,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_BG_ROCK01_L04_LOD03",
+      "vertex_source": "1F05412574446FA1",
+      "fragment_source": "D42C9EF079F78D62",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        364
+      ],
+      "fragment_guard_lines": [
+        339,
+        340,
+        341
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 65,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_BG_ROCK02_L04_LOD03",
+      "vertex_source": "1F05412574446FA1",
+      "fragment_source": "D42C9EF079F78D62",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        364
+      ],
+      "fragment_guard_lines": [
+        339,
+        340,
+        341
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 66,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDLEAFTREE_02_LOD01",
+      "vertex_source": "61B6956E2898C227",
+      "fragment_source": "89C52512CBAD6D",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        205
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        505
+      ],
+      "fragment_guard_lines": [
+        480,
+        481,
+        482
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 67,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDLEAFTREE_03_LOD01",
+      "vertex_source": "7899A635D90D2E9",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": true,
+      "fragment_bound": true,
+      "vertex_sample_lines": [
+        211
+      ],
+      "vertex_height_scale": 1.0,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 68,
+      "encoder_index": 1,
+      "mesh_label": "SM_Rock_13",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 69,
+      "encoder_index": 1,
+      "mesh_label": "SM_pebbles_group_01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 70,
+      "encoder_index": 1,
+      "mesh_label": "SM_Rock_15",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 71,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityLotus_CN_01_LOD01",
+      "vertex_source": "E31D63387007CEC0",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 72,
+      "encoder_index": 1,
+      "mesh_label": "SM_PVEO_DEADTREE07_L0_LOD01",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 73,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityDeadTree_06",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 74,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityDeadTree_05",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 75,
+      "encoder_index": 1,
+      "mesh_label": "SM_Flowers02",
+      "vertex_source": "DC308D1AF7BF025C",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 76,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass_01",
+      "vertex_source": "4419AD67EC5DFFAF",
+      "fragment_source": "98BC6F212AB2AB07",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        389
+      ],
+      "fragment_guard_lines": [
+        364,
+        365,
+        366
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 77,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HOUSE01_A4_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 78,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HOUSE02_A4_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 79,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_WOOD_L01_LOD03",
+      "vertex_source": "1E7EF532F18FDDAF",
+      "fragment_source": "B92355BC99986829",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        426
+      ],
+      "fragment_guard_lines": [
+        401,
+        402,
+        403
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 80,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_IRONMINE_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 81,
+      "encoder_index": 1,
+      "mesh_label": "SM_WRE_NC_FRAMLAND_B_V2_L01_LOD03",
+      "vertex_source": "F5D13132E7F44A41",
+      "fragment_source": "89C52512CBAD6D",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        505
+      ],
+      "fragment_guard_lines": [
+        480,
+        481,
+        482
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 82,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_005_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 83,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_012_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 84,
+      "encoder_index": 1,
+      "mesh_label": "SM_HallOfWarChinaCastle_Flag001_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 85,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HALLOFWAR_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 86,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BLACKSMITH01_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 87,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS06_A3_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 88,
+      "encoder_index": 1,
+      "mesh_label": "SM_StableChinaCastle_Flag001_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 89,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_STABLE_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 90,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_STABLE01_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 91,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_MILL_A4_O2_LD02_A",
+      "vertex_source": "AB6A7887745B5B4",
+      "fragment_source": "29ECCBB5F84ABC85",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        380
+      ],
+      "fragment_guard_lines": [
+        355,
+        356,
+        357
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 92,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_MILL_A4_O1_LD02_A",
+      "vertex_source": "37291EC15CECC475",
+      "fragment_source": "21820F54954DE970",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        354
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 93,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_MILL_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 94,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_LUMBERLOG_A4_LD03_A",
+      "vertex_source": "37291EC15CECC475",
+      "fragment_source": "21820F54954DE970",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        354
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 95,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_LUMBER_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 96,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CENTER_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 97,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_QIJI01_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 98,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_QIJI02_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 99,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_GOLDMINE_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 100,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_MARKET_A4_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 101,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaEmpires_003_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 102,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaEmpires_004_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 103,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_MTPROPS02_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 104,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_MTPROPS_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 105,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_DRILLG_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 106,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagFranceFeudal_01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 107,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_006_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 108,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_SCHOOL_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 109,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_SCHPROPS_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 110,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 111,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_014_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 112,
+      "encoder_index": 1,
+      "mesh_label": "M_BChnC_01_LOD2_A",
+      "vertex_source": "AB6A7887745B5B4",
+      "fragment_source": "29ECCBB5F84ABC85",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        380
+      ],
+      "fragment_guard_lines": [
+        355,
+        356,
+        357
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 113,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_PROPS04_A4_LD02_A",
+      "vertex_source": "AB6A7887745B5B4",
+      "fragment_source": "29ECCBB5F84ABC85",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        380
+      ],
+      "fragment_guard_lines": [
+        355,
+        356,
+        357
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 114,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS03_A4_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 115,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF02B_A4_LOD00",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 116,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF02_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 117,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF04_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 118,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF03_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 119,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPSGROUP05A_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 120,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPSGROUP05B_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 121,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_WHARF01_A2_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 122,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_WHARF02_A2_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 123,
+      "encoder_index": 1,
+      "mesh_label": "M_FR_WHARF_A4_LD02_A",
+      "vertex_source": "37291EC15CECC475",
+      "fragment_source": "21820F54954DE970",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        354
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 124,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF07_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 125,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS03_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 126,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS02_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 127,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF08_A4_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 128,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF06_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 129,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_WHARF05_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 130,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS03_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 131,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS02_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 132,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_MTPROPS11_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 133,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_MTPROPS07_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 134,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_MTPROPS12_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 135,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_MTPROPS06_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 136,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS14_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 137,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS07_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 138,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS01_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 139,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE12_A3_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 140,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_BARRACKTARGET_A3_LOD01",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 141,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CENTERPORPS01_A3_LOD00",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 142,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS05B_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 143,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_ARCHERYTARGET_A3_LOD01",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 144,
+      "encoder_index": 1,
+      "mesh_label": "SM_Props10_b001_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 145,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_016_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 146,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_016_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 147,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS10B_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 148,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WEAPONRACK_A3_LOD01",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 149,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WEAPONRACK02_A3_LOD01",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 150,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL02_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 151,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL05_A4_LOD02",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 152,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL06_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 153,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL06_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 154,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL04_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 155,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL08_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 156,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL01_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 157,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL10_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 158,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL11_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 159,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL03_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 160,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_015_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 161,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_017_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 162,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE03_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 163,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL06_A3_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 164,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL01_A3_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 165,
+      "encoder_index": 1,
+      "mesh_label": "SM_PropsScaffold_LOD2",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 166,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_003_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 167,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL09_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 168,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL03_A3_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 169,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE19_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 170,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE05_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 171,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE02_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 172,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE09_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 173,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE04_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 174,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE04_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 175,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE14_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 176,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE06_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 177,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE07_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 178,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE02_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 179,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE17_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 180,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE11_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 181,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE10_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 182,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE15_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 183,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE14_A3_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 184,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE03_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 185,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE08_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 186,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE02_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 187,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE16_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 188,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE01_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 189,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE03_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 190,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE05_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 191,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE12_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 192,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE01_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 193,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE02_A3_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 194,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_VIPSHIP_A2_LD03_A",
+      "vertex_source": "37291EC15CECC475",
+      "fragment_source": "21820F54954DE970",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        354
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 195,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_VIPSHIP_A4_LD03_A",
+      "vertex_source": "37291EC15CECC475",
+      "fragment_source": "21820F54954DE970",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        354
+      ],
+      "fragment_guard_lines": [
+        329,
+        330,
+        331
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 196,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS11A_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 197,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_CITYROAD02_A0_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 198,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_CITYROAD02_A0_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 199,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_CITYROAD01_A0_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 200,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_CITYROAD01_A0_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 201,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_CITYROAD01_A0_LOD01",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 202,
+      "encoder_index": 1,
+      "mesh_label": "SM_FR_ROADF06_A4_LOD00",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 203,
+      "encoder_index": 1,
+      "mesh_label": "SM_FlagChinaFeudal_018_MorphUV2_MorphExport",
+      "vertex_source": "C5A23A39586A6494",
+      "fragment_source": "CAE3F95F0F0257F7",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        391
+      ],
+      "fragment_guard_lines": [
+        366,
+        367,
+        368
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 204,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS10_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 205,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS06_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 206,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS02A_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 207,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS09_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 208,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS08_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 209,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS04_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 210,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS01_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 211,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS17_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 212,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_TENT02_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 213,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_TENT01_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 214,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPSGROUP01_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 215,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS05_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 216,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS04_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 217,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPSGROUP03A_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 218,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPSGROUP03B_A0_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 219,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE01_A2_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 220,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_GARDEN_A4_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 221,
+      "encoder_index": 1,
+      "mesh_label": "M_CN_CENTER_A3_O_LD00_A",
+      "vertex_source": "99EF5128A8DD78BE",
+      "fragment_source": "DC296B865FA66B4C",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        422
+      ],
+      "fragment_guard_lines": [
+        397,
+        398,
+        399
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 222,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_DOCK_A4_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 223,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_MTPROPS01_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 224,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS16_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 225,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS11_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 226,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS12_A3_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 227,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS13_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 228,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_PROPS15_A3_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 229,
+      "encoder_index": 1,
+      "mesh_label": "SM_MOUNTAINTREE_01",
+      "vertex_source": "F5D13132E7F44A41",
+      "fragment_source": "11385535CDA8BFA3",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        520
+      ],
+      "fragment_guard_lines": [
+        495,
+        496,
+        497
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 230,
+      "encoder_index": 1,
+      "mesh_label": "SM_TALLTREE_01_LOD01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 231,
+      "encoder_index": 1,
+      "mesh_label": "SM_TALLTREE_02_LOD01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 232,
+      "encoder_index": 1,
+      "mesh_label": "SM_LENGSHAN_01",
+      "vertex_source": "F5D13132E7F44A41",
+      "fragment_source": "11385535CDA8BFA3",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        520
+      ],
+      "fragment_guard_lines": [
+        495,
+        496,
+        497
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 233,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_BRIDGE03_A2_LOD03",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 234,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDBUSH_01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 235,
+      "encoder_index": 1,
+      "mesh_label": "SM_MOUNTAINTREE_02",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 236,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_GARDEN_A2_LOD03",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "537455CC7BB49C49",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        471
+      ],
+      "fragment_guard_lines": [
+        446,
+        447,
+        448
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 237,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE01BASE_A2_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 238,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE14_A3_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 239,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_WALL10_A2_LOD03",
+      "vertex_source": "3CEB06A14A77D67F",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 240,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_HEROSHRINE01BASE_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 241,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_CASTLE06_A4_LOD03",
+      "vertex_source": "E76E1AAEEE0FE6B3",
+      "fragment_source": "3CAB235BF378FDC9",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        478
+      ],
+      "fragment_guard_lines": [
+        453,
+        454,
+        455
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 242,
+      "encoder_index": 1,
+      "mesh_label": "SM_ChinaCityTree_02",
+      "vertex_source": "E31D63387007CEC0",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 243,
+      "encoder_index": 1,
+      "mesh_label": "SM_Flowers01",
+      "vertex_source": "DC308D1AF7BF025C",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 244,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS04_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 245,
+      "encoder_index": 1,
+      "mesh_label": "SM_NC_PROPS05_A3_LOD02",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "FDA8C747A5187008",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        403
+      ],
+      "fragment_guard_lines": [
+        378,
+        379,
+        380
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 246,
+      "encoder_index": 1,
+      "mesh_label": "SM_XIAOHUA05",
+      "vertex_source": "ECF84F140BD2A332",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 247,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDLEAFTREE_03_LOD01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 248,
+      "encoder_index": 1,
+      "mesh_label": "LOD0SG11",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 249,
+      "encoder_index": 1,
+      "mesh_label": "LOD0SG11",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "B5938A74A6D4BC6",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        406
+      ],
+      "fragment_guard_lines": [
+        381,
+        382,
+        383
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 250,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 251,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 252,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 253,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 254,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 255,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 256,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 257,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 258,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 259,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 260,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 261,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 262,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 263,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass16",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 264,
+      "encoder_index": 1,
+      "mesh_label": "SM_XIAOHUA07",
+      "vertex_source": "ECF84F140BD2A332",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 265,
+      "encoder_index": 1,
+      "mesh_label": "SM_GUANMU_01",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 266,
+      "encoder_index": 1,
+      "mesh_label": "SM_GUANMU_01",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 267,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrassReed_01",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 268,
+      "encoder_index": 1,
+      "mesh_label": "SM_GrassReed_01",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 269,
+      "encoder_index": 1,
+      "mesh_label": "SM_GUANMU_04",
+      "vertex_source": "A5471301C9A914FE",
+      "fragment_source": "90DD8BBE11E20C25",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        404
+      ],
+      "fragment_guard_lines": [
+        379,
+        380,
+        381
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 270,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass10",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 271,
+      "encoder_index": 1,
+      "mesh_label": "SM_Zhenye03_LOD1",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 272,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDLEAFTREE_01_LOD01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 273,
+      "encoder_index": 1,
+      "mesh_label": "SM_WORLDLEAFTREE_02_LOD01",
+      "vertex_source": "E633F210C5A48E31",
+      "fragment_source": "3763AC95B0BD53FA",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        516
+      ],
+      "fragment_guard_lines": [
+        491,
+        492,
+        493
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 274,
+      "encoder_index": 1,
+      "mesh_label": "SM_ChinaCityTree_03_LOD1",
+      "vertex_source": "E0A8D0BC44A2BF3B",
+      "fragment_source": "3B4BA408BF949A09",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        419
+      ],
+      "fragment_guard_lines": [
+        394,
+        395,
+        396
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 275,
+      "encoder_index": 1,
+      "mesh_label": "SM_XIAOHUA06",
+      "vertex_source": "ECF84F140BD2A332",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 276,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass17_B_02",
+      "vertex_source": "ECF84F140BD2A332",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 277,
+      "encoder_index": 1,
+      "mesh_label": "SM_Grass17_B_02",
+      "vertex_source": "ECF84F140BD2A332",
+      "fragment_source": "735A994C4DBEB7A0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        363
+      ],
+      "fragment_guard_lines": [
+        338,
+        339,
+        340
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 278,
+      "encoder_index": 1,
+      "mesh_label": "Plane",
+      "vertex_source": "9C1452166BD01029",
+      "fragment_source": "5BD7ADC28BED71D0",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        382
+      ],
+      "fragment_guard_lines": [
+        357,
+        358,
+        359
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 279,
+      "encoder_index": 1,
+      "mesh_label": "SM_MountHuangB_03_LOD3",
+      "vertex_source": "FC5D17909A869C1A",
+      "fragment_source": "3E7759CA7E3AA058",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        410
+      ],
+      "fragment_guard_lines": [
+        385,
+        386,
+        387
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 282,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_SCHOOL_WATER_A4_LOD00",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "8A841B7474DF6D4E",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        423
+      ],
+      "fragment_guard_lines": [
+        398,
+        399,
+        400
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 283,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_GARDEN_WATER_A4_LOD00",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "8A841B7474DF6D4E",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        423
+      ],
+      "fragment_guard_lines": [
+        398,
+        399,
+        400
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 284,
+      "encoder_index": 1,
+      "mesh_label": "SM_CN_GARDEN_WATER_A2_LOD00",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "8A841B7474DF6D4E",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        423
+      ],
+      "fragment_guard_lines": [
+        398,
+        399,
+        400
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 285,
+      "encoder_index": 1,
+      "mesh_label": "SM_Water_Plane_LOD2",
+      "vertex_source": "278FCB7A4626D051",
+      "fragment_source": "665FA03EBF2921A1",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        665
+      ],
+      "fragment_guard_lines": [
+        640,
+        641,
+        642
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 286,
+      "encoder_index": 1,
+      "mesh_label": "SM_COCWater_03",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 287,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityWater_08",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 288,
+      "encoder_index": 1,
+      "mesh_label": "SM_Water_Plane_LOD2",
+      "vertex_source": "278FCB7A4626D051",
+      "fragment_source": "665FA03EBF2921A1",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        665
+      ],
+      "fragment_guard_lines": [
+        640,
+        641,
+        642
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 289,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityWater_China_YZ_03",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 290,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityWater_China_YZ_05",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 291,
+      "encoder_index": 1,
+      "mesh_label": "SM_Water_Plane_LOD2",
+      "vertex_source": "278FCB7A4626D051",
+      "fragment_source": "665FA03EBF2921A1",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        665
+      ],
+      "fragment_guard_lines": [
+        640,
+        641,
+        642
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 292,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityWater_China_YZ_02",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    },
+    {
+      "draw_number": 293,
+      "encoder_index": 1,
+      "mesh_label": "SM_CityWater_China_YZ_04",
+      "vertex_source": "24B4211C998DA423",
+      "fragment_source": "13EBDB9A014E1EC2",
+      "vertex_bound": false,
+      "fragment_bound": true,
+      "vertex_sample_lines": [],
+      "vertex_height_scale": null,
+      "fragment_sample_lines": [
+        448
+      ],
+      "fragment_guard_lines": [
+        423,
+        424,
+        425
+      ],
+      "fragment_fog_flags": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fragment_height_branch_enabled": false
+    }
+  ]
+}

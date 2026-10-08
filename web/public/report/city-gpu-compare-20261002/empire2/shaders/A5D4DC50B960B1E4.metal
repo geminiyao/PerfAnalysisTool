@@ -1,0 +1,163 @@
+#include <metal_stdlib>
+#include <metal_texture>
+using namespace metal;
+
+#if !(__HAVE_FMA__)
+#define fma(a,b,c) ((a) * (b) + (c))
+#endif
+
+struct Globals_Type
+{
+    half4 _GlossyEnvironmentColor ;
+    half4 _SubtractiveShadowColor ;
+    float4 hlslcc_mtx4x4_InvCameraViewProj [4];
+    float4 _ScaledScreenParams ;
+    float4 _MainLightPosition ;
+    half4 _MainLightColor ;
+    half4 _AdditionalLightsCount ;
+    float4 _AdditionalLightsPosition [32];
+    half4 _AdditionalLightsColor [32];
+    half4 _AdditionalLightsAttenuation [32];
+    half4 _AdditionalLightsSpotDir [32];
+    half4 _AdditionalLightsOcclusionProbes [32];
+    float4 _Time ;
+    float4 _SinTime ;
+    float4 _CosTime ;
+    float4 unity_DeltaTime ;
+    float4 _TimeParameters ;
+    float3 _WorldSpaceCameraPos ;
+    float4 _ProjectionParams ;
+    float4 _ScreenParams ;
+    float4 _ZBufferParams ;
+    float4 unity_OrthoParams ;
+    float4 unity_CameraWorldClipPlanes [6];
+    float4 hlslcc_mtx4x4unity_CameraProjection [4];
+    float4 hlslcc_mtx4x4unity_CameraInvProjection [4];
+    float4 hlslcc_mtx4x4unity_WorldToCamera [4];
+    float4 hlslcc_mtx4x4unity_CameraToWorld [4];
+    float4 hlslcc_mtx4x4glstate_matrix_transpose_modelview0 [4];
+    half4 glstate_lightmodel_ambient ;
+    half4 unity_AmbientSky ;
+    half4 unity_AmbientEquator ;
+    half4 unity_AmbientGround ;
+    half4 unity_IndirectSpecColor ;
+    float4 unity_FogParams ;
+    half4 unity_FogColor ;
+    float4 hlslcc_mtx4x4glstate_matrix_projection [4];
+    float4 hlslcc_mtx4x4unity_MatrixV [4];
+    float4 hlslcc_mtx4x4unity_MatrixInvV [4];
+    float4 hlslcc_mtx4x4unity_MatrixVP [4];
+    float4 unity_StereoScaleOffset ;
+    int unity_StereoEyeIndex ;
+    half4 unity_ShadowColor ;
+    float4 hlslcc_mtx4x4_PrevViewProjMatrix [4];
+    float4 hlslcc_mtx4x4_ViewProjMatrix [4];
+    float4 hlslcc_mtx4x4_NonJitteredViewProjMatrix [4];
+    float4 hlslcc_mtx4x4_ViewMatrix [4];
+    float4 hlslcc_mtx4x4_ProjMatrix [4];
+    float4 hlslcc_mtx4x4_InvViewProjMatrix [4];
+    float4 hlslcc_mtx4x4_InvViewMatrix [4];
+    float4 hlslcc_mtx4x4_InvProjMatrix [4];
+    float4 _InvProjParam ;
+    float4 _ScreenSize ;
+    float4 _FrustumPlanes [6];
+    float _ScreenFade ;
+    int _EdgeMode ;
+    float2 _ReflectionRTSize ;
+    float _WaterPlaneHeight ;
+    float4 hlslcc_mtx4x4_VPMatrix [4];
+    float4 hlslcc_mtx4x4_IVPMatrix [4];
+};
+
+kernel void computeMain(
+    constant Globals_Type& Globals [[ buffer(0) ]],
+    texture2d<half, access::sample > _CameraOpaqueTexture [[ texture(2) ]] ,
+    texture2d<float, access::sample > _CameraDepthTexture [[ texture(3) ]] ,
+    texture2d<half, access::write > Result [[ texture(0) ]] ,
+    texture2d<float, access::read_write > Height [[ texture(1) ]] ,
+    uint3 mtl_ThreadID [[ thread_position_in_grid ]])
+{
+    constexpr sampler PointClampSampler(filter::nearest,address::clamp_to_edge);
+    constexpr sampler LinearClampSampler(filter::linear,mip_filter::nearest,address::clamp_to_edge);
+    float2 u_xlat0;
+    float4 u_xlat1;
+    bool u_xlatb1;
+    float4 u_xlat2;
+    uint4 u_xlatu2;
+    float4 u_xlat3;
+    half u_xlat16_3;
+    half3 u_xlat16_4;
+    half u_xlat16_8;
+    float2 u_xlat10;
+    bool u_xlatb10;
+    bool u_xlatb11;
+    float u_xlat15;
+    u_xlat0.xy = float2(mtl_ThreadID.xy);
+    u_xlat0.xy = u_xlat0.xy + float2(0.5, 0.5);
+    u_xlat0.xy = u_xlat0.xy / Globals._ReflectionRTSize.xxxy.zw;
+    u_xlat10.x = _CameraDepthTexture.sample(PointClampSampler, u_xlat0.xy, level(0.0)).x;
+    u_xlat1.xy = fma(u_xlat0.xy, float2(2.0, 2.0), float2(-1.0, -1.0));
+    u_xlat2 = u_xlat1.yyyy * Globals.hlslcc_mtx4x4_IVPMatrix[1];
+    u_xlat1 = fma(Globals.hlslcc_mtx4x4_IVPMatrix[0], u_xlat1.xxxx, u_xlat2);
+    u_xlat1 = fma(Globals.hlslcc_mtx4x4_IVPMatrix[2], u_xlat10.xxxx, u_xlat1);
+    u_xlat1 = u_xlat1 + Globals.hlslcc_mtx4x4_IVPMatrix[3];
+    u_xlat1.xyz = u_xlat1.xyz / u_xlat1.www;
+    u_xlatb10 = u_xlat1.y<Globals._WaterPlaneHeight;
+    if(u_xlatb10){
+        return;
+    }
+    u_xlat10.x = fma(Globals._WaterPlaneHeight, 2.0, (-u_xlat1.y));
+    u_xlat2.xyz = u_xlat10.xxx * Globals.hlslcc_mtx4x4_VPMatrix[1].xyw;
+    u_xlat2.xyz = fma(Globals.hlslcc_mtx4x4_VPMatrix[0].xyw, u_xlat1.xxx, u_xlat2.xyz);
+    u_xlat1.xzw = fma(Globals.hlslcc_mtx4x4_VPMatrix[2].xyw, u_xlat1.zzz, u_xlat2.xyz);
+    u_xlat1.xzw = u_xlat1.xzw + Globals.hlslcc_mtx4x4_VPMatrix[3].xyw;
+    u_xlat10.xy = u_xlat1.xz / u_xlat1.ww;
+    u_xlat10.xy = fma(u_xlat10.xy, float2(0.5, 0.5), float2(0.5, 0.5));
+    u_xlat10.y = (-u_xlat10.y) + 1.0;
+    u_xlatb1 = Globals._EdgeMode==0x1;
+    if(u_xlatb1){
+        u_xlatb1 = u_xlat10.y<0.0;
+        u_xlatb11 = 1.0<u_xlat10.y;
+        u_xlatb1 = u_xlatb11 || u_xlatb1;
+        if(u_xlatb1){
+            return;
+        }
+        u_xlat1.x = max(u_xlat10.x, 0.00100000005);
+        u_xlat10.x = min(u_xlat1.x, 0.999000013);
+    } else {
+        u_xlatb1 = u_xlat10.x<0.0;
+        u_xlatb11 = 1.0<u_xlat10.x;
+        u_xlatb1 = u_xlatb11 || u_xlatb1;
+        u_xlatb11 = u_xlat10.y<0.0;
+        u_xlatb1 = u_xlatb11 || u_xlatb1;
+        u_xlatb11 = 1.0<u_xlat10.y;
+        u_xlatb1 = u_xlatb11 || u_xlatb1;
+        if(u_xlatb1){
+            return;
+        }
+    }
+    u_xlat2 = fma(u_xlat10.xyyy, Globals._ReflectionRTSize.xxxy.zwww, float4(0.5, 0.5, 0.5, 0.5));
+    u_xlatu2 = uint4(u_xlat2);
+    u_xlat10.x = Height.read(u_xlatu2.xw).x;
+    u_xlatb10 = u_xlat1.y<u_xlat10.x;
+    if(u_xlatb10){
+        if((uint(Globals._EdgeMode))==uint(0)){
+            u_xlat16_3 = half(max(u_xlat0.y, u_xlat0.x));
+            u_xlat16_3 = (-u_xlat16_3) + half(1.0);
+            u_xlat16_8 = half(min(u_xlat0.y, u_xlat0.x));
+            u_xlat16_3 = min(u_xlat16_8, u_xlat16_3);
+            u_xlatb10 = Globals._ScreenFade<float(u_xlat16_3);
+            u_xlat15 = float(u_xlat16_3) / Globals._ScreenFade;
+            u_xlat15 = clamp(u_xlat15, 0.0f, 1.0f);
+            u_xlat16_3 = (u_xlatb10) ? half(1.0) : half(u_xlat15);
+            u_xlat3.w = float(u_xlat16_3) * float(u_xlat16_3);
+        } else {
+            u_xlat3.w = 1.0;
+        }
+        u_xlat16_4.xyz = _CameraOpaqueTexture.sample(LinearClampSampler, u_xlat0.xy, level(0.0)).xyz;
+        u_xlat3.xyz = float3(u_xlat16_4.xyz);
+        Result.write(half4(u_xlat3), u_xlatu2.xw);
+        Height.write(u_xlat1.yyyy, u_xlatu2.xy);
+    }
+    return;
+}

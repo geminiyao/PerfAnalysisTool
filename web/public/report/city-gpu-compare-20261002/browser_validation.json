@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "draws": "匹配 888 条 · 显示 80 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "pso": "匹配 179 条 · 显示 80 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "memory": "匹配 3479 条 · 显示 80 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "main": "匹配 401 条 · 显示 80 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "water": "匹配 3 条 · 显示 3 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "paired": "匹配 72 条 · 显示 72 条。Mesh / shader配对表同时包含两款，样本筛选对配对表不生效。",
+    "summary": {
+      "gpu_ms": [
+        11.94,
+        17.15
+      ],
+      "memory_mib": [
+        257.66,
+        343.38
+      ],
+      "screenshot_values_checked": true
+    },
+    "shader_metric_emphasis": true
+  },
+  "triangles": {
+    "empire1": 388740,
+    "empire2": 633603
+  },
+  "js_errors": [],
+  "links_checked": 399,
+  "missing_links": [],
+  "images": [
+    {
+      "src": "summary_screenshots/empire1_xcode_summary.png",
+      "loaded": true
+    },
+    {
+      "src": "summary_screenshots/empire2_xcode_summary.png",
+      "loaded": true
+    },
+    {
+      "src": "empire1/frame_preview.png",
+      "loaded": true
+    },
+    {
+      "src": "empire2/frame_preview.png",
+      "loaded": true
+    }
+  ],
+  "narrow_overflow": false,
+  "city_only_and_terminology_check": true
+}
