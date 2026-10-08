@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "revision": 10,
+  "cases": 115,
+  "candidates": 42978,
+  "allCaseHtmlLosslessAgainstV9": true,
+  "allFrameAndTelemetryDataUnchanged": true,
+  "budgetHtmlUnchanged": true,
+  "sourceSha256": "0f907cc1c5180d7495f16fc1a099f2a0ee278c0ebec97ee2778d0790504e8796",
+  "deferredBodies": 73698,
+  "compactCaseHtmlBytes": 7695679,
+  "expandedCaseHtmlBytes": 126552513,
+  "totalDeployBytes": 46376070,
+  "initialWithDefaultCaseAndAllItsImagesBytes": 343067,
+  "htmlBytes": 13276,
+  "httpSubpathResourcesPass": true,
+  "nativeAndFallbackGzipDecodingPass": true,
+  "allEvidenceRoutesPass": true,
+  "noRawTracesSymbolsOrOfflineBackups": true,
+  "kind": "Lossless HTML reconstruction, data comparison and static HTTP/client loader checks; not a browser scrolling benchmark or remote deployment"
+}
