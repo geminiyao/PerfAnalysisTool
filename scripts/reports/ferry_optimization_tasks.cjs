@@ -1,0 +1,25 @@
+// Source-reviewed recommendations only; source measurements are never modified.
+const spec=require('./ferry_optimization_tasks.json');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const numbered=xs=>xs.map((x,i)=>`${i+1}. ${x}`).join('\n');
+const filename=id=>'goal-'+id+'.md';
+function review(id){
+ const tasks=id==='shared-budget'?spec.tasks:spec.tasks.filter(t=>t.id===id);
+ if(!tasks.length)return '';
+ if(id==='shared-budget')return `<div class="plan-source-review"><h4>具体涉及哪些模块 · 2026-10-08源码核查</h4><p>${esc(spec.status)}</p><div class="plan-scope-table"><table><thead><tr><th>模块 / 实施入口</th><th>已有控制与具体缺口</th><th>下一步</th></tr></thead><tbody>${tasks.map(t=>`<tr><td><a href="#plan-${t.id}">${esc(t.title.split('：')[0])}</a><br><code>${esc(t.entry)}</code></td><td><p><b>已有：</b>${esc(t.existing)}</p><p><b>缺口：</b>${esc(t.gap)}</p></td><td>${esc(t.integration)}<br><a href="${filename(t.id)}" download>下载该模块优化任务</a></td></tr>`).join('')}</tbody></table></div><div class="plan-coordination"><h5>${esc(spec.coordination.title)}</h5><p>${esc(spec.coordination.problem)}</p><details><summary>什么时候需要统一、怎么计时、哪些模块先不纳入</summary><ol>${spec.coordination.steps.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><p>${esc(spec.coordination.excluded)}</p></details><a href="${filename(id)}" download>下载有前置条件的跨模块验证任务</a></div></div>`;
+ return `<div class="plan-source-review"><h4>${id==='shared-budget'?'具体涉及哪些模块 · 2026-10-08源码核查':'实施入口 · 2026-10-08源码核查'}</h4><p>${esc(spec.status)}</p>${tasks.map(t=>`<div class="plan-module-review"><h5>${esc(t.title)}</h5><code>${esc(t.entry)}</code><p><b>已有控制：</b>${esc(t.existing)}</p><p><b>需要解决：</b>${esc(t.gap)}</p><p><b>是否统一调度：</b>${esc(t.integration)}</p><a href="${filename(t.id)}" download>下载可直接交给其它会话的优化任务</a><details><summary>具体步骤、验收与源码位置</summary><h5>实施步骤</h5><ol>${t.change.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><h5>验收</h5><ol>${t.accept.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol>${t.sources.map(s=>'<p><code>'+esc(spec.sourceRoot+s.path)+'</code><br>'+esc(s.functions)+'</p>').join('')}</details></div>`).join('')}${id==='shared-budget'?`<div class="plan-coordination"><h5>${esc(spec.coordination.title)}</h5><p>${esc(spec.coordination.problem)}</p><details><summary>什么时候需要统一、怎么计时、哪些模块先不纳入</summary><ol>${spec.coordination.steps.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><p>${esc(spec.coordination.excluded)}</p></details><a href="${filename(id)}" download>下载有前置条件的跨模块验证任务</a></div>`:''}</div>`;
+}
+function sourceMarkdown(tasks){return tasks.flatMap(t=>t.sources.map(s=>`- ${spec.sourceRoot+s.path}:${s.line}\n  - 函数：${s.functions}\n  - 本次核查SHA256：${s.sha256}`)).join('\n')}
+function baseline(D,helpers,id){const p=D.businessPlans.find(p=>p.id===id);return helpers.distinctRefs(p).map(r=>{const m=r.metric;return `- 用例：${r.case}；原采样：${spec.captureRoot+r.case}.pdata\n  - marker：${r.marker}\n  - 全程均${m.wholeMeanMs.toFixed(3)}ms/帧；出现帧均${m.appearingMeanMs.toFixed(3)}ms；${m.appearingFrames}/${m.totalFrames}帧；全程${m.calls??'未提供'}次调用\n  - 单次max ${m.singleMaxMs.toFixed(3)}ms/F${m.peakFrame}；最大帧累计${m.frameMaxMs.toFixed(3)}ms（它可能来自另一帧，不能沿用单次峰值帧号）`}).join('\n')}
+function documents(D,helpers){
+ const environment='采样条件：抢渡口，24072PX77C，游戏版本0.0.999.1020，精致画质。报告部署地址：https://aoeyz-perf.devcloud.woa.com/cpu/report/ferry-stress-20261006/report.html 。本地报告目录：K:/AI/PerfAnalysisTool_Codebuddy/web/public/report/ferry-stress-20261006/。';
+ const common=`${environment}\n\n证据状态：${spec.status}\n\n共同要求：\n${numbered(spec.common)}`;
+ const docs={};
+ for(const t of spec.tasks){const prompt=`请完成以下局部优化，并用源码、正确性验证及对照结果验收。\n\n目标：${t.title}\n\n${common}\n\n已有采样基线（定位依据，不是当前代码的保证）：\n${baseline(D,helpers,t.id)}\n\n源码输入：\n${sourceMarkdown([t])}\n\n实际入口：${t.entry}\n\n已有实现：${t.existing}\n\n要核查并解决的步骤：${t.gap}\n\n实施步骤：\n${numbered(t.change)}\n\n验收与完成条件：\n${numbered(t.accept)}\n\n跨模块关系：${t.integration}\n\n范围：只修改该路径已确认的业务步骤和必要计时，保持接口兼容；先保留现有预算与超时机制。报告提供的是方向，读取当前实现后选择具体改法，不能机械照抄过期行号。交付每个方案实际改变的工作量与等待时间，不把尚未实测的改善写成收益。`;
+  docs[filename(t.id)]=`# ${t.title}\n\n在新会话中复制下面的任务正文；如要使用goal功能，可由你在正文前加 /goal。\n\n\`\`\`text\n${prompt}\n\`\`\`\n`;
+ }
+ docs[filename('shared-budget')]=`# ${spec.coordination.title}\n\n这是完成模块内优化后才考虑的验证任务；没有独立收益实测。复制以下正文到新会话，按需要加 /goal。\n\n\`\`\`text\n请先验证是否确有跨模块同帧执行叠加问题，再决定是否实现统一累计计时。\n\n${common}\n\n前置任务：\n${spec.tasks.map(t=>`- 读取并确认 ${filename(t.id)} 的当前实现和验证结果：${t.title}`).join('\n')}\n\n源码输入：\n${sourceMarkdown(spec.tasks)}\n\n实施与验收步骤：\n${numbered(spec.coordination.steps)}\n\n不默认纳入的范围：${spec.coordination.excluded}\n\n完成条件：交付同帧成本证据、是否有必要统一的结论；若有必要，交付局部实现、正确性和同负载对照。若没有额外收益，明确说明保留原模块时间片，不为完成目标强行增加通用调度器。\n\`\`\`\n`;
+ docs['optimization-goals.md']='# 抢渡口压测 · 按源码入口执行的优化任务\n\n'+common+'\n\n## 独立模块任务\n\n'+spec.tasks.map(t=>`- [${t.title}](${filename(t.id)})\n  - 入口：${t.entry}\n  - ${t.integration}`).join('\n\n')+'\n\n## 最后才考虑的跨模块验证\n\n'+`[${spec.coordination.title}](${filename('shared-budget')})\n\n${spec.coordination.problem}\n\n${spec.coordination.excluded}\n\n历史GridPreviewMgr、联盟奇观造例：另见 [followup-cases.md](followup-cases.md)，本次没有执行。\n`;
+ return docs;
+}
+module.exports={review,documents,spec};

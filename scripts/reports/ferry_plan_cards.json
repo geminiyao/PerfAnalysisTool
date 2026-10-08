@@ -2,12 +2,12 @@
   "prepare": {
     "module": "MapSignificanceMgr",
     "group": "significance",
-    "change": ["按entityId和数据版本合并增删改请求，消除重复刷新与查询。", "消费侧按entityType核查重复创建/刷新；确认可拆边界后，再将预处理和消费接入同一额度。"],
-    "accept": ["同路线3轮，核对最终实体/视图集合、删除顺序与每类任务有效完成数。", "分别验收总CPU下降和事件削峰，同时记录队列年龄、view-ready与原子越界；预处理≤2ms只是首轮工程目标。"]
+    "change": ["沿UpdatePrepareTask的CreateMapObject、RefreshMapObject、ProcessDeleteInfo合并有一致性保证的重复请求，再用持有输入的待处理批次保存处理位置。", "ReadyForProcessTask已把预处理计入消费耗时；完善这套计时。消费侧沿ProcessSignificanceTask按entityType减少重复工作，拆实际重步骤。"],
+    "accept": ["同路线3轮，核对最终实体/视图集合、删除后重建顺序、版本变化和每类任务实际完成数。", "分别比较预处理集中帧与实体消费持续CPU；记录等待多久、显示完成多久及超时单项，核对已有超时轮转是否有效。"]
   },
   "layer-scan": {
     "module": "MapCoreMgr · 切层实体扫描",
-    "change": ["先对齐手机包与工作区deferred实现；按层级/空间缩小候选集合。", "扫描携带层版本，切回或删除时使旧任务失效；优先处理近处可见对象。"],
+    "change": ["先核对手机包是否走已有OnUpdate延后扫描；分开量entityIds全表准备与ProcessInfiniteLayerEntity，按层级/空间缩小候选集合。", "保留已有revision、处理位置和rescanRequired；定位单实体的显示判断/切层回调，持续切层时不能清零进度让表尾一直得不到处理。"],
     "accept": ["固定12秒/腿轨迹3轮，比较扫描实体数、总扫描CPU与单帧峰值。", "最终集合一致；检查1.5ms/128项额度是否越界及请求到view-ready的延迟。"]
   },
   "render-cpu": {
@@ -22,12 +22,12 @@
   },
   "frame-end": {
     "module": "LoaderManagerOnFrameEnd",
-    "change": ["先按峰值日志定位并修复触发条件，避免用关闭日志掩盖错误。", "预配置或复用组件，减少AddComponent/Instantiate/SetParent；按可拆初始化阶段分批完成回调。"],
+    "change": ["按loader资源URL、版本与业务完成回调定位F34重操作和日志根因，再评估Prefab预配置、对象复用及分步初始化。", "核对实际OnFrameEndTimeSlice；已有检查在loader与完成回调之后，不能中断一次Instantiate。列表复制、超时处理与卸载分开量。"],
     "accept": ["记录完成数、原子最长耗时、资源就绪P95和总CPU，验证取消与释放后回调。", "帧末均值≤1ms、单原子≤2ms为工程目标；不可拆超限项单列，不能用视图缺失换帧率。"]
   },
   "bigcity": {
     "module": "名城图标刷新",
-    "change": ["相机变化仅标记视口/层级/数据版本dirty，合并同帧刷新。", "先缩小变化集合并复用可见性/配置判定；创建复用与分批单独处理事件长尾。"],
+    "change": ["沿已有ScheduleBigCityIconRefreshTasks与ProcessBigCityIconRefreshTasks减少重复显示判定，按实际视口/层级/数据变化合并刷新。", "持续移动时按实体ID和版本更新未完成请求，避免每次生成队列都将位置重置为1；创建重步骤单独定位后再拆。"],
     "accept": ["固定轨迹3轮A/B/A，核对图标集合、显隐、缩放尺度和脏数据刷新。", "比较总CPU、有效完成、队列年龄及view-ready；现有差分开关尚无稳定正收益。"]
   },
   "network": {
@@ -37,7 +37,7 @@
   },
   "view": {
     "module": "视野差集与下游视图创建",
-    "change": ["按网格变化增量维护候选，合并同帧回调，分开计时DiffAOI、派发与CreateBatch。", "资源田按版本合并创建并复用已有对象；确认一致性后再拆大原子批次。"],
+    "change": ["分开量DiffAOI、派发、EnsureServerEntity、CreateView和CreateLevel；资源田批量创建在OnNewlyVisible内同步执行，不能假定受帧末加载时间片控制。", "按gridIndex/版本合并创建；确需分批时持有独立输入，区分待创建与已可用状态，保护复用buffer和C#静态列表的生命周期。"],
     "accept": ["固定移动轨迹，核对可见集合、差集规模、创建数、总CPU和视图就绪。", "回调出现帧≤1.5ms是工程目标；外层视野与内层创建包含时不重复加预算。"]
   },
   "ecs": {
@@ -71,8 +71,17 @@
     "accept": ["足够长的相同场景捕获至少3次等待，比较锁等待、持锁时长和内存峰值。", "保持回收进度、Lua线程安全及锁顺序；主线程等待与后台GC不重复相加。"]
   },
   "shared-budget": {
-    "module": "共享额度 · 去重和拆分后的配套调度",
-    "change": ["先完成冗余消除和原子拆分，再在父级一次计时统筹可拆工作。", "可见对象与一致性删除优先，老任务提升；记录原子越界、借用和取消原因。"],
-    "accept": ["记录request→start→data-ready→view-ready、最大年龄、有效吞吐及取消原因。", "可见P95≤100ms/后台≤250ms只是待体验确认的讨论值，不能靠无限延期取得帧率。"]
+    "module": "重要度任务 / 切层 / 资源田 / 帧末加载 / 名城图标",
+    "title": "先完善五条路径，再验证是否需要共用每帧剩余时间",
+    "presentation": {
+      "title": "先完善五条路径，再验证是否需要共用每帧剩余时间",
+      "evidence": "2026-10-08工作区源码：MapSignificanceMgr已有预处理与消费合计；MapCoreMgr的延后扫描在OnUpdate；资源田创建在视野回调内同步执行；LoaderManager已有操作完成后的时间片检查；名城差分已有按数量处理队列。是否与采样包一致仍需确认。",
+      "change": "先完成各模块具体优化，按Unity frameCount统计同一帧互斥占用；只有各自时间片叠加确实产生慢帧时才评估共用累计计时。不得跨Update/LateUpdate/帧末使用一个宽泛父节点计时，也不能重复扣父子耗时。",
+      "accept": "同负载验证同帧慢帧下降、必要工作完成量一致、显示完成延迟合格及队列内存不持续增长。延迟标准先经业务确认，不使用未经验证的100/250ms。",
+      "benefit": "本项是条件成立后才考虑的配套改动，没有独立热点或收益实测。一次重操作不能被计时器打断；没有额外收益就保留各模块现有控制。",
+      "source": "2026-10-08源码核查：MapSignificanceMgr.lua:684/1445/1508；MapCoreMgr.lua:199/773；ResLandViewPipeline.lua:173/246；OutsideViewGridLine.cs:369；LoaderManager.cs:844/898；InfiniteZoomMapGoEffectCtrl.lua:1386/1412。具体路径和文件SHA256见下载任务。"
+    },
+    "change": ["先分别处理表中五条路径的整批准备、单实体重操作、同步资源创建和回调；保留已有效的时间片及超时轮转。", "按同一frameCount确认这些模块是否一起造成慢帧；确有必要再让可暂停批次共用剩余时间，沿实际调用范围计时，父子不重复扣除。"],
+    "accept": ["对照独立时间片与统一累计计时：必要完成数一致，慢帧下降，显示完成延迟按业务确认的标准验收。", "持续滑图/缩放时检查每个实体或资源已等多久，旧请求不能一直没有机会处理；无额外收益就不新增通用调度器。"]
   }
 }

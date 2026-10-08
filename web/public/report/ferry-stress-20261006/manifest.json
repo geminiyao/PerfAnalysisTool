@@ -1,5 +1,5 @@
 {
-  "revision": 11,
+  "revision": 12,
   "title": "抢渡口压测性能采集报告",
   "environment": {
     "model": "24072PX77C",
@@ -20,7 +20,8 @@
   "sourceSha256": "0f907cc1c5180d7495f16fc1a099f2a0ee278c0ebec97ee2778d0790504e8796",
   "measurementsUnchanged": true,
   "followupStatus": "planned",
-  "totalBytes": 46397163,
+  "recommendationsReviewedAt": "2026-10-08",
+  "totalBytes": 46447451,
   "files": [
     {
       "file": "evidence/noise_zoom_0_r3.json.gz",
@@ -3606,15 +3607,15 @@
     },
     {
       "file": "evidence/chapter-3.json.gz",
-      "bytes": 11057,
-      "uncompressedBytes": 45145,
-      "sha256": "8b9832c0b93e3449b1590590bc6a4dba77241c7893e7ccc5ab0c23bb7089e800"
+      "bytes": 17910,
+      "uncompressedBytes": 65788,
+      "sha256": "0a54ccc21d6454445a8efbe246ceaaec81f5795d3edba185707f3d9ff01414fa"
     },
     {
       "file": "chapters/3.html.gz",
-      "bytes": 12226,
-      "uncompressedBytes": 50301,
-      "sha256": "1be47c801814065fcdb7f5c51fdfb665fedccf92a60de652e56f67ffad2e0267"
+      "bytes": 14217,
+      "uncompressedBytes": 56574,
+      "sha256": "76adfbddfdb7a92afa5f66e264b496aff72e5733b280d245b04d07507a492321"
     },
     {
       "file": "evidence/chapter-4.json.gz",
@@ -3684,15 +3685,15 @@
     },
     {
       "file": "index.json.gz",
-      "bytes": 8868,
-      "uncompressedBytes": 51163,
-      "sha256": "b600821d8fd3f86ac39952dbd638dca840e7cf9c2b4d8bbd592afbf4a3c8e7ce"
+      "bytes": 8901,
+      "uncompressedBytes": 51204,
+      "sha256": "4b7d7a460a436c5b0f05c41ecea69831a558acbfbb5e6702f25c457e72a376f9"
     },
     {
       "file": "styles.css",
-      "bytes": 10395,
-      "uncompressedBytes": 10395,
-      "sha256": "25f08dfd44d3a0bb409286d979d5ddb3470eb2db8a14141c5a4184fcbe613bef"
+      "bytes": 11401,
+      "uncompressedBytes": 11401,
+      "sha256": "8e586a4f71828df86a3b616964025cf37e647ea449325e580144245844ef2f26"
     },
     {
       "file": "followup-cases.md",
@@ -3701,10 +3702,52 @@
       "sha256": "f05babcc20633181227a8624f144b12d3ebdc9a467b730daa9e96e63d5c6933f"
     },
     {
+      "file": "goal-prepare.md",
+      "bytes": 6150,
+      "uncompressedBytes": 6150,
+      "sha256": "5bed770a828585c862a083eb8beadacabde65ff9af80bb3b34ff6eefc85be209"
+    },
+    {
+      "file": "goal-layer-scan.md",
+      "bytes": 5477,
+      "uncompressedBytes": 5477,
+      "sha256": "3f7866ea5af819874ec46b7bc0e423159180a09f53be1ce46d1574ac842a6fd7"
+    },
+    {
+      "file": "goal-view.md",
+      "bytes": 6121,
+      "uncompressedBytes": 6121,
+      "sha256": "6152c8b1f3f295de8702601ba6014689621c9eae09237cb79eef0df5f9fe1d76"
+    },
+    {
+      "file": "goal-frame-end.md",
+      "bytes": 5706,
+      "uncompressedBytes": 5706,
+      "sha256": "abb1c5aeb4df05c89be1c647dff2f74b42130192e2377a694cda5319f706062d"
+    },
+    {
+      "file": "goal-bigcity.md",
+      "bytes": 5360,
+      "uncompressedBytes": 5360,
+      "sha256": "4b6e360ce3d9667680655332d20b501f61d55a69a4b773c24b94cc8966f3ab2c"
+    },
+    {
+      "file": "goal-shared-budget.md",
+      "bytes": 6883,
+      "uncompressedBytes": 6883,
+      "sha256": "cf81840e27e8bc056956810f54674923941200883acf07972ef2a822e148b4a5"
+    },
+    {
+      "file": "optimization-goals.md",
+      "bytes": 4671,
+      "uncompressedBytes": 4671,
+      "sha256": "d543453c65b25ad120e552ec57d71939b463ad64ef8c07b6762898735661b49f"
+    },
+    {
       "file": "report.html",
-      "bytes": 13276,
-      "uncompressedBytes": 13276,
-      "sha256": "667a23093d037d14a3a84b0232366bc54568131fa1a0ed0469d0efa67a40c8a3"
+      "bytes": 13313,
+      "uncompressedBytes": 13313,
+      "sha256": "1fabb6f38493894a0084593e0f22259867819e12e06d62fa82bbf7ee133b8906"
     },
     {
       "file": "report.js",

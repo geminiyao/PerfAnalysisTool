@@ -10,6 +10,10 @@
 
 方案详情采用默认可见的卡片：成本指标、改法、验收和收益边界分区展示，详细判断与源码折叠保留，调用树返回第2章统一查看。GridPreviewMgr及奇观的历史重负载单列为“待造例复测”，包含4份后续测试设计与覆盖门槛；清单见 [followup-cases.md](followup-cases.md)。这些测试尚未执行，历史峰值不计入本次成本或优化收益。
 
+2026-10-08补充了重要度预处理/消费、切层扫描、资源田创建、帧末资源集成、名城图标五条路径的源码核查。实施任务见 [optimization-goals.md](optimization-goals.md)：五份独立模块任务与一份有前置条件的跨模块验证任务，可以复制到其它会话。每份包含采样基线、完整源码路径、核查时文件SHA256、已有实现、具体步骤和完成条件。这些建议未实施；工作区源码与原采样包的一致性仍须核验。
+
+“共享预算”不再作为已经证实的独立问题：MapSignificanceMgr已经合计预处理和消费时间，MapCore延后扫描在OnUpdate，资源田同步创建不自动受Loader时间片约束，Loader已有执行完成后的检查，名城差分已有队列。先修具体重步骤，再根据同帧证据决定是否统一计时；不采用未经业务确认的100/250ms延迟要求。
+
 ## 发布资源
 
 入口HTML约13KB，默认用例及其全部图片的初始资源合计约343KB。全部用例和证据约46MB，具体大小与哈希见 `manifest.json`。这不是浏览器滚动耗时的实测结果。
@@ -41,5 +45,7 @@ node --max-old-space-size=8192 scripts/reports/verify_ferry_report.cjs
 ```
 
 生成器保留V9用例与测量数据，方案卡片由 `ferry_plan_cards.cjs` 呈现，造例设计来自 `ferry_followup_cases.json`。复建时需已安装pako，或通过 `FERRY_PAKO_ROOT` 指向它的包目录。核验脚本需要Node.js 20及以上。无需连接手机。
+
+模块实施建议来自 `ferry_optimization_tasks.json`，由 `ferry_optimization_tasks.cjs` 同时生成卡片源码核查内容和可下载任务，核验脚本检查任务基线与报告来源一致。服务器阅读这些任务不需要访问源码盘或采样盘。
 
 部署操作提示词见 [DEPLOYMENT_PROMPT.md](DEPLOYMENT_PROMPT.md)。
