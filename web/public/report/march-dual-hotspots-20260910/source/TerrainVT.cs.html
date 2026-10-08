@@ -1,0 +1,1175 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>TerrainVT.cs</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\CS\Outside\Terrain\TerrainVT.cs<br>current local source; phone build commit unverified · SHA256 69f2e730f62e255d5f1219b20dc309e59e59056339221bc6b5b760a88c4c8cb7</p><pre><span id="L1"><a href="#L1">1</a>using System;</span>
+<span id="L2"><a href="#L2">2</a>using UnityEngine;</span>
+<span id="L3"><a href="#L3">3</a>using UnityEngine.Profiling;</span>
+<span id="L4"><a href="#L4">4</a>using UnityEngine.Rendering;</span>
+<span id="L5"><a href="#L5">5</a>using System.Collections.Generic;</span>
+<span id="L6"><a href="#L6">6</a>using UnityEngine.Experimental.Rendering;</span>
+<span id="L7"><a href="#L7">7</a></span>
+<span id="L8"><a href="#L8">8</a>[ExecuteInEditMode]</span>
+<span id="L9"><a href="#L9">9</a>public partial class TerrainVT : MonoBehaviour</span>
+<span id="L10"><a href="#L10">10</a>{</span>
+<span id="L11"><a href="#L11">11</a>    // 全局只有一份Active TerrainVT（处于激活状态的）</span>
+<span id="L12"><a href="#L12">12</a>    public static TerrainVT Instance =&gt; TerrainVT_Manager.ActiveTerrainVT;</span>
+<span id="L13"><a href="#L13">13</a></span>
+<span id="L14"><a href="#L14">14</a>    public bool UseVT = true;</span>
+<span id="L15"><a href="#L15">15</a>    private bool Inited = false;</span>
+<span id="L16"><a href="#L16">16</a>    public bool DrawDecal = true;</span>
+<span id="L17"><a href="#L17">17</a>    public static bool HardwareSupportsDecal =&gt; TBU.Rendering.GraphicsQualitySetting.CurrentLevel &lt;= TBU.Rendering.GraphicsQualityLevel.QualityLow;</span>
+<span id="L18"><a href="#L18">18</a>    [Header(&quot;MeshInfo 四叉树增删每帧上限，0 表示本帧全部冲完&quot;)]</span>
+<span id="L19"><a href="#L19">19</a>    public int MaxMeshInfoOpsPerFrame = 200;</span>
+<span id="L20"><a href="#L20">20</a>    public bool KeepDetail = false; // true：_OutsideTerrainDetailLevel 始终为 0，不合并贴图，不隐藏 Decal</span>
+<span id="L21"><a href="#L21">21</a>    public bool SubEntityDecalToVT = true;</span>
+<span id="L22"><a href="#L22">22</a>    [Header(&quot;使用地形自身的法线 True:使用地形法线 False:地形顶点法线始终向上&quot;)]</span>
+<span id="L23"><a href="#L23">23</a>    public bool UseTerrainNormal = false;</span>
+<span id="L24"><a href="#L24">24</a>    public bool VTDebugView = false;</span>
+<span id="L25"><a href="#L25">25</a>    public bool IndexDebugView = false;</span>
+<span id="L26"><a href="#L26">26</a>    [Header(&quot;Scene 中绘制视野 Gizmos（红框采样点），默认关闭&quot;)]</span>
+<span id="L27"><a href="#L27">27</a>    public bool DrawViewGizmos = false;</span>
+<span id="L28"><a href="#L28">28</a>    [Range(0, 1)] public float DebugViewRatio = 0.25f;</span>
+<span id="L29"><a href="#L29">29</a>    public bool ShowClip = false;</span>
+<span id="L30"><a href="#L30">30</a></span>
+<span id="L31"><a href="#L31">31</a>    [Header(&quot;横纵各有多少个地块&quot;)]</span>
+<span id="L32"><a href="#L32">32</a>    public int TileCount = 1;</span>
+<span id="L33"><a href="#L33">33</a>    [Header(&quot;地形的实际尺寸，数值上需要严格对应&quot;)]//[EditorReadOnly]</span>
+<span id="L34"><a href="#L34">34</a>    public float TerrainSize = 1024;</span>
+<span id="L35"><a href="#L35">35</a>    private float terrainSizeRcp;</span>
+<span id="L36"><a href="#L36">36</a>    private float singleTileTerrainSize;</span>
+<span id="L37"><a href="#L37">37</a></span>
+<span id="L38"><a href="#L38">38</a>    // [EditorReadOnly]</span>
+<span id="L39"><a href="#L39">39</a>    public float TerrainHeightMin = -30;</span>
+<span id="L40"><a href="#L40">40</a>    // [EditorReadOnly]</span>
+<span id="L41"><a href="#L41">41</a>    public float TerrainHeightMax = 30;</span>
+<span id="L42"><a href="#L42">42</a></span>
+<span id="L43"><a href="#L43">43</a>    public const float DefaultMaxViewDistance = 1000.0f;</span>
+<span id="L44"><a href="#L44">44</a>    private float maxViewDistance = DefaultMaxViewDistance;</span>
+<span id="L45"><a href="#L45">45</a>    private bool forceViewCheck = false;</span>
+<span id="L46"><a href="#L46">46</a>    public void SetMaxViewDistance(float _maxViewDistance)</span>
+<span id="L47"><a href="#L47">47</a>    {</span>
+<span id="L48"><a href="#L48">48</a>        maxViewDistance = _maxViewDistance;</span>
+<span id="L49"><a href="#L49">49</a>        forceViewCheck = true;</span>
+<span id="L50"><a href="#L50">50</a>        camGroundFrustum?.SetMaxUpDistance(maxViewDistance);</span>
+<span id="L51"><a href="#L51">51</a>    }</span>
+<span id="L52"><a href="#L52">52</a></span>
+<span id="L53"><a href="#L53">53</a>    public enum PivotType</span>
+<span id="L54"><a href="#L54">54</a>    {</span>
+<span id="L55"><a href="#L55">55</a>        LeftDown,</span>
+<span id="L56"><a href="#L56">56</a>        Center,</span>
+<span id="L57"><a href="#L57">57</a>    }</span>
+<span id="L58"><a href="#L58">58</a></span>
+<span id="L59"><a href="#L59">59</a>    public PivotType Pivot = PivotType.LeftDown;</span>
+<span id="L60"><a href="#L60">60</a>    public bool IsTileOriginLeftUp = true; // true：Tile_00_00在左上角  false：Tile_00_00在左下角 </span>
+<span id="L61"><a href="#L61">61</a></span>
+<span id="L62"><a href="#L62">62</a>    public RenderTexture indexRT;</span>
+<span id="L63"><a href="#L63">63</a>    public VTRenderer vtRenderer;</span>
+<span id="L64"><a href="#L64">64</a></span>
+<span id="L65"><a href="#L65">65</a>#if UNITY_EDITOR</span>
+<span id="L66"><a href="#L66">66</a>    private int MaxUsedPageCount = 0;</span>
+<span id="L67"><a href="#L67">67</a>    public string PageUsageInfo = &quot;&quot;;</span>
+<span id="L68"><a href="#L68">68</a>    public string PixelDensity = &quot;&quot;;</span>
+<span id="L69"><a href="#L69">69</a>#endif</span>
+<span id="L70"><a href="#L70">70</a></span>
+<span id="L71"><a href="#L71">71</a>    private QuadDriver quadDriver;</span>
+<span id="L72"><a href="#L72">72</a></span>
+<span id="L73"><a href="#L73">73</a>    // 实现 IComparer&lt;QuadTree&gt;，避免 Lambda 闭包每帧产生 GC 分配</span>
+<span id="L74"><a href="#L74">74</a>    private class QuadTreeDistanceComparer : IComparer&lt;QuadTree&gt;</span>
+<span id="L75"><a href="#L75">75</a>    {</span>
+<span id="L76"><a href="#L76">76</a>        public Vector2 frustumCenter;</span>
+<span id="L77"><a href="#L77">77</a></span>
+<span id="L78"><a href="#L78">78</a>        public int Compare(QuadTree treeLeft, QuadTree treeRight)</span>
+<span id="L79"><a href="#L79">79</a>        {</span>
+<span id="L80"><a href="#L80">80</a>            var leftDist = (treeLeft.treeAreaCenter - frustumCenter).sqrMagnitude;</span>
+<span id="L81"><a href="#L81">81</a>            var rightDist = (treeRight.treeAreaCenter - frustumCenter).sqrMagnitude;</span>
+<span id="L82"><a href="#L82">82</a>            return leftDist.CompareTo(rightDist);</span>
+<span id="L83"><a href="#L83">83</a>        }</span>
+<span id="L84"><a href="#L84">84</a>    }</span>
+<span id="L85"><a href="#L85">85</a>    private readonly QuadTreeDistanceComparer quadTreeDistanceComparer = new QuadTreeDistanceComparer();</span>
+<span id="L86"><a href="#L86">86</a></span>
+<span id="L87"><a href="#L87">87</a>    private IndexInstancedWriter indexWriter;</span>
+<span id="L88"><a href="#L88">88</a>    private ViewChecker viewChecker;</span>
+<span id="L89"><a href="#L89">89</a>    private PhysicIndexManager physicIndexManager;</span>
+<span id="L90"><a href="#L90">90</a>    private CamGroundFrustum camGroundFrustum;</span>
+<span id="L91"><a href="#L91">91</a></span>
+<span id="L92"><a href="#L92">92</a>    private int rootSize;</span>
+<span id="L93"><a href="#L93">93</a>    private int singleTileRootSize;</span>
+<span id="L94"><a href="#L94">94</a></span>
+<span id="L95"><a href="#L95">95</a>    private void CalculateTerrainOffset()</span>
+<span id="L96"><a href="#L96">96</a>    {</span>
+<span id="L97"><a href="#L97">97</a>        terrainOffset = transform.position;</span>
+<span id="L98"><a href="#L98">98</a>        if (Pivot == PivotType.Center)</span>
+<span id="L99"><a href="#L99">99</a>        {</span>
+<span id="L100"><a href="#L100">100</a>            terrainOffset += new Vector3(-0.5f * TerrainSize, 0, -0.5f * TerrainSize);</span>
+<span id="L101"><a href="#L101">101</a>        }</span>
+<span id="L102"><a href="#L102">102</a>    }</span>
+<span id="L103"><a href="#L103">103</a></span>
+<span id="L104"><a href="#L104">104</a>    public Vector3 terrainOffset;</span>
+<span id="L105"><a href="#L105">105</a>    public static readonly Vector4 DefaultViewEnlarge = new Vector4(0.12f, 0.08f, 0.12f, 0.12f);</span>
+<span id="L106"><a href="#L106">106</a>    </span>
+<span id="L107"><a href="#L107">107</a>    public Vector4 ViewEnlarge { get; set; } = DefaultViewEnlarge;</span>
+<span id="L108"><a href="#L108">108</a></span>
+<span id="L109"><a href="#L109">109</a>    public void CheckInit(bool forceInit = false)</span>
+<span id="L110"><a href="#L110">110</a>    {</span>
+<span id="L111"><a href="#L111">111</a>        // 仅判断 Inited 不够：[ExecuteInEditMode] 下经历编辑器域重载(Domain Reload)后，</span>
+<span id="L112"><a href="#L112">112</a>        // 组件实例会保留、但非序列化的运行时对象(camGroundFrustum / quadDriver / viewChecker 等)会被置空，</span>
+<span id="L113"><a href="#L113">113</a>        // 此时 Inited 可能仍为 true，导致 LateUpdate 直接空引用。用 camGroundFrustum 作为“运行时对象是否存活”的哨兵，</span>
+<span id="L114"><a href="#L114">114</a>        // 一旦丢失就强制重新初始化(这些对象都在本方法里一起创建)。</span>
+<span id="L115"><a href="#L115">115</a>        if (!forceInit &amp;&amp; Inited &amp;&amp; camGroundFrustum != null)</span>
+<span id="L116"><a href="#L116">116</a>        {</span>
+<span id="L117"><a href="#L117">117</a>            return;</span>
+<span id="L118"><a href="#L118">118</a>        }</span>
+<span id="L119"><a href="#L119">119</a>        </span>
+<span id="L120"><a href="#L120">120</a>        vtRenderer = TerrainVT_Manager.GetVTRenderer();</span>
+<span id="L121"><a href="#L121">121</a>        NodeCountNeedForDepth = new int[vtRenderer.MaxTreeDepth + 1];</span>
+<span id="L122"><a href="#L122">122</a></span>
+<span id="L123"><a href="#L123">123</a>        CurrentTreeDepth = 0;</span>
+<span id="L124"><a href="#L124">124</a>        </span>
+<span id="L125"><a href="#L125">125</a>        lastCamPosition = Vector3.negativeInfinity;</span>
+<span id="L126"><a href="#L126">126</a></span>
+<span id="L127"><a href="#L127">127</a>        singleTileTerrainSize = TerrainSize / TileCount;</span>
+<span id="L128"><a href="#L128">128</a>        singleTileRootSize = 1 &lt;&lt; vtRenderer.MaxTreeDepth;</span>
+<span id="L129"><a href="#L129">129</a>        rootSize = singleTileRootSize * TileCount;</span>
+<span id="L130"><a href="#L130">130</a>        terrainSizeRcp = 1.0f / TerrainSize;</span>
+<span id="L131"><a href="#L131">131</a></span>
+<span id="L132"><a href="#L132">132</a>        // IndexRT格式：R8（每像素1字节），编码方案：</span>
+<span id="L133"><a href="#L133">133</a>        //   低7位存 physicIndex（取值范围 [0, 127]，当前 PageCapacity 最大 64，足够）</span>
+<span id="L134"><a href="#L134">134</a>        //   高1位存 availableMip（0 或 1，当 VTRenderer.VTMipCount=1 时，availableMip∈{0,1}）</span>
+<span id="L135"><a href="#L135">135</a>        // nodeParam.x / nodeParam.z / nodeParam.size 不再存入 indexRT，Shader 侧通过</span>
+<span id="L136"><a href="#L136">136</a>        //   _VT_TerrainTileInfo.b (CurrentTreeDepth) + _VT_TerrainTileInfo.g (MaxTreeDepth) 重算</span>
+<span id="L137"><a href="#L137">137</a>        indexRT = new RenderTexture(rootSize, rootSize, 0, RenderTextureFormat.R8, RenderTextureReadWrite.Linear)</span>
+<span id="L138"><a href="#L138">138</a>        {</span>
+<span id="L139"><a href="#L139">139</a>            name = &quot;IndexRT&quot;,</span>
+<span id="L140"><a href="#L140">140</a>            hideFlags = HideFlags.DontSave,</span>
+<span id="L141"><a href="#L141">141</a>            useMipMap = false,</span>
+<span id="L142"><a href="#L142">142</a>            wrapMode = TextureWrapMode.Clamp,</span>
+<span id="L143"><a href="#L143">143</a>            autoGenerateMips = false,</span>
+<span id="L144"><a href="#L144">144</a>            filterMode = FilterMode.Point</span>
+<span id="L145"><a href="#L145">145</a>        };</span>
+<span id="L146"><a href="#L146">146</a>        indexRT.Create();</span>
+<span id="L147"><a href="#L147">147</a></span>
+<span id="L148"><a href="#L148">148</a>        // 每个脏结点占一个实例，同帧脏结点数不会超过 PageCapacity（每个都要占一个 physicIndex）</span>
+<span id="L149"><a href="#L149">149</a>        indexWriter = new IndexInstancedWriter(vtRenderer.FullScreenMesh, indexRT, rootSize, vtRenderer.PageCapacity);</span>
+<span id="L150"><a href="#L150">150</a>        viewChecker = new ViewChecker();</span>
+<span id="L151"><a href="#L151">151</a>        physicIndexManager = new PhysicIndexManager(vtRenderer.PageCapacity);</span>
+<span id="L152"><a href="#L152">152</a>        quadDriver = new QuadDriver(vtRenderer.PageCapacity);</span>
+<span id="L153"><a href="#L153">153</a>        camGroundFrustum = new CamGroundFrustum(WorldPosToTerrainSpaceXZ01, maxViewDistance, ViewEnlarge);</span>
+<span id="L154"><a href="#L154">154</a></span>
+<span id="L155"><a href="#L155">155</a>        UpdateVTMode();</span>
+<span id="L156"><a href="#L156">156</a></span>
+<span id="L157"><a href="#L157">157</a>        needRefreshTiles = true;</span>
+<span id="L158"><a href="#L158">158</a></span>
+<span id="L159"><a href="#L159">159</a>        for (int tileX = 0; tileX &lt; TileCount; ++tileX)</span>
+<span id="L160"><a href="#L160">160</a>        {</span>
+<span id="L161"><a href="#L161">161</a>            for (int tileY = 0; tileY &lt; TileCount; ++tileY)</span>
+<span id="L162"><a href="#L162">162</a>            {</span>
+<span id="L163"><a href="#L163">163</a>                var tileIndex = ConvertTileIndex(tileX, ConvertTileY(tileY));</span>
+<span id="L164"><a href="#L164">164</a>                var tileName = $&quot;Tile_{tileX:00}_{tileY:00}&quot;;</span>
+<span id="L165"><a href="#L165">165</a>                dictTileNameCache[tileIndex] = tileName;</span>
+<span id="L166"><a href="#L166">166</a>                dictTileNameCacheInvert[tileName] = tileIndex;</span>
+<span id="L167"><a href="#L167">167</a>            }</span>
+<span id="L168"><a href="#L168">168</a>        }</span>
+<span id="L169"><a href="#L169">169</a></span>
+<span id="L170"><a href="#L170">170</a>        Inited = true;</span>
+<span id="L171"><a href="#L171">171</a>    }</span>
+<span id="L172"><a href="#L172">172</a></span>
+<span id="L173"><a href="#L173">173</a>    public bool EnableMeshToVT =&gt; false;</span>
+<span id="L174"><a href="#L174">174</a></span>
+<span id="L175"><a href="#L175">175</a>    public static int MaxPixelHeight = 1080; // 最大支持分辨率</span>
+<span id="L176"><a href="#L176">176</a>    private Vector2Int CalcGameRTSizeForVT(Camera gameCamera)</span>
+<span id="L177"><a href="#L177">177</a>    {</span>
+<span id="L178"><a href="#L178">178</a>        var gameRTSize = RenderPipelineUtil.CalcGameRTSize(gameCamera);</span>
+<span id="L179"><a href="#L179">179</a></span>
+<span id="L180"><a href="#L180">180</a>        if (gameRTSize.y &gt; MaxPixelHeight)</span>
+<span id="L181"><a href="#L181">181</a>        {</span>
+<span id="L182"><a href="#L182">182</a>            float aspectRatio = (float) gameRTSize.x / gameRTSize.y;</span>
+<span id="L183"><a href="#L183">183</a>            gameRTSize.y = MaxPixelHeight;</span>
+<span id="L184"><a href="#L184">184</a>            gameRTSize.x = Mathf.RoundToInt(gameRTSize.y * aspectRatio);</span>
+<span id="L185"><a href="#L185">185</a>        }</span>
+<span id="L186"><a href="#L186">186</a></span>
+<span id="L187"><a href="#L187">187</a>        return gameRTSize;</span>
+<span id="L188"><a href="#L188">188</a>    }</span>
+<span id="L189"><a href="#L189">189</a></span>
+<span id="L190"><a href="#L190">190</a>    private int CalcDesiredTreeDepth()</span>
+<span id="L191"><a href="#L191">191</a>    {</span>
+<span id="L192"><a href="#L192">192</a>        var groundPos = camGroundFrustum.frustumGroundPos;</span>
+<span id="L193"><a href="#L193">193</a>        var groundQuarterLength = (groundPos.rightQuarter_WS - groundPos.leftQuarter_WS).magnitude;</span>
+<span id="L194"><a href="#L194">194</a></span>
+<span id="L195"><a href="#L195">195</a>        var gameRTSize = CalcGameRTSizeForVT(TerrainCamera);</span>
+<span id="L196"><a href="#L196">196</a></span>
+<span id="L197"><a href="#L197">197</a>        float gamePixelPerMeter = gameRTSize.x / groundQuarterLength;</span>
+<span id="L198"><a href="#L198">198</a>        var pixelsRealNeeded = gamePixelPerMeter * singleTileTerrainSize;</span>
+<span id="L199"><a href="#L199">199</a></span>
+<span id="L200"><a href="#L200">200</a>        var depthFloat = Mathf.Log(pixelsRealNeeded / VTRenderer.PageSize, 2);</span>
+<span id="L201"><a href="#L201">201</a>        int depth = Mathf.RoundToInt(depthFloat);</span>
+<span id="L202"><a href="#L202">202</a></span>
+<span id="L203"><a href="#L203">203</a>        depth = Mathf.Clamp(depth, vtRenderer.MinTreeDepth, vtRenderer.MaxTreeDepth);</span>
+<span id="L204"><a href="#L204">204</a>        </span>
+<span id="L205"><a href="#L205">205</a>#if UNITY_EDITOR</span>
+<span id="L206"><a href="#L206">206</a>        var pixelDensityUsing = (VTRenderer.PageSize &lt;&lt; depth) / singleTileTerrainSize;</span>
+<span id="L207"><a href="#L207">207</a>        PixelDensity = $&quot;{gamePixelPerMeter}  {pixelDensityUsing}  Depth: {depth} / {depthFloat:N2}&quot;;</span>
+<span id="L208"><a href="#L208">208</a>#endif</span>
+<span id="L209"><a href="#L209">209</a></span>
+<span id="L210"><a href="#L210">210</a>        return depth;</span>
+<span id="L211"><a href="#L211">211</a>    }</span>
+<span id="L212"><a href="#L212">212</a></span>
+<span id="L213"><a href="#L213">213</a>    private int[] NodeCountNeedForDepth;</span>
+<span id="L214"><a href="#L214">214</a>    // 计算：在当前视野下，每层深度需要的结点数量</span>
+<span id="L215"><a href="#L215">215</a>    private void RecalcNodeCountNeedForDepth(int desiredTreeDepth)</span>
+<span id="L216"><a href="#L216">216</a>    {</span>
+<span id="L217"><a href="#L217">217</a>        for (int idx = 0; idx &lt; NodeCountNeedForDepth.Length; ++idx)</span>
+<span id="L218"><a href="#L218">218</a>        {</span>
+<span id="L219"><a href="#L219">219</a>            NodeCountNeedForDepth[idx] = 0;</span>
+<span id="L220"><a href="#L220">220</a>        }</span>
+<span id="L221"><a href="#L221">221</a></span>
+<span id="L222"><a href="#L222">222</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L223"><a href="#L223">223</a>        {</span>
+<span id="L224"><a href="#L224">224</a>            quadTree.CheckNodeCountForDepth(desiredTreeDepth, viewChecker, NodeCountNeedForDepth);</span>
+<span id="L225"><a href="#L225">225</a>        }</span>
+<span id="L226"><a href="#L226">226</a>    }</span>
+<span id="L227"><a href="#L227">227</a></span>
+<span id="L228"><a href="#L228">228</a>    public static int NodeCountExtraBudget = 4; // Mip0（VT最精细Mip，每帧可以绘制的Page数量）</span>
+<span id="L229"><a href="#L229">229</a>    private void UpdateTreeDepth(int desiredTreeDepth)</span>
+<span id="L230"><a href="#L230">230</a>    {</span>
+<span id="L231"><a href="#L231">231</a>        int nextUseTreeDepth = desiredTreeDepth;</span>
+<span id="L232"><a href="#L232">232</a>        while (nextUseTreeDepth &gt; vtRenderer.MinTreeDepth) // 找到结点数量&lt;足够少&gt;的最大的层</span>
+<span id="L233"><a href="#L233">233</a>        {</span>
+<span id="L234"><a href="#L234">234</a>            var needCount = NodeCountNeedForDepth[nextUseTreeDepth];</span>
+<span id="L235"><a href="#L235">235</a>            if (needCount &gt; 0 &amp;&amp; needCount &lt;= vtRenderer.PageCapacity - NodeCountExtraBudget)</span>
+<span id="L236"><a href="#L236">236</a>            {</span>
+<span id="L237"><a href="#L237">237</a>                break;</span>
+<span id="L238"><a href="#L238">238</a>            }</span>
+<span id="L239"><a href="#L239">239</a></span>
+<span id="L240"><a href="#L240">240</a>            --nextUseTreeDepth;</span>
+<span id="L241"><a href="#L241">241</a>        }</span>
+<span id="L242"><a href="#L242">242</a></span>
+<span id="L243"><a href="#L243">243</a>        CurrentTreeDepth = Mathf.Clamp(nextUseTreeDepth, vtRenderer.MinTreeDepth, vtRenderer.MaxTreeDepth);</span>
+<span id="L244"><a href="#L244">244</a>    }</span>
+<span id="L245"><a href="#L245">245</a></span>
+<span id="L246"><a href="#L246">246</a>    public bool IsVTActive =&gt; TerrainVT_Manager.ActiveTerrainVT == this;</span>
+<span id="L247"><a href="#L247">247</a></span>
+<span id="L248"><a href="#L248">248</a>    private bool keepDetailOverrideApplied;</span>
+<span id="L249"><a href="#L249">249</a>    private void SyncKeepDetailOverride()</span>
+<span id="L250"><a href="#L250">250</a>    {</span>
+<span id="L251"><a href="#L251">251</a>        bool shouldKeep = IsVTActive &amp;&amp; KeepDetail;</span>
+<span id="L252"><a href="#L252">252</a>        if (shouldKeep == keepDetailOverrideApplied)</span>
+<span id="L253"><a href="#L253">253</a>        {</span>
+<span id="L254"><a href="#L254">254</a>            return;</span>
+<span id="L255"><a href="#L255">255</a>        }</span>
+<span id="L256"><a href="#L256">256</a></span>
+<span id="L257"><a href="#L257">257</a>        keepDetailOverrideApplied = shouldKeep;</span>
+<span id="L258"><a href="#L258">258</a>        RenderPipelineUtil.SetKeepDetailOverride(shouldKeep);</span>
+<span id="L259"><a href="#L259">259</a>        NeedToForceRedraw = true;</span>
+<span id="L260"><a href="#L260">260</a>    }</span>
+<span id="L261"><a href="#L261">261</a></span>
+<span id="L262"><a href="#L262">262</a>    public void ToggleVTActive(bool isVTActive)</span>
+<span id="L263"><a href="#L263">263</a>    {</span>
+<span id="L264"><a href="#L264">264</a>        if (isVTActive)</span>
+<span id="L265"><a href="#L265">265</a>        {</span>
+<span id="L266"><a href="#L266">266</a>            TerrainVT_Manager.Activate(this);</span>
+<span id="L267"><a href="#L267">267</a>        }</span>
+<span id="L268"><a href="#L268">268</a>        else</span>
+<span id="L269"><a href="#L269">269</a>        {</span>
+<span id="L270"><a href="#L270">270</a>            TerrainVT_Manager.Deactivate(this);</span>
+<span id="L271"><a href="#L271">271</a>        }</span>
+<span id="L272"><a href="#L272">272</a></span>
+<span id="L273"><a href="#L273">273</a>        SyncKeepDetailOverride();</span>
+<span id="L274"><a href="#L274">274</a>        </span>
+<span id="L275"><a href="#L275">275</a>#if UNITY_EDITOR &amp;&amp; AOE_ART</span>
+<span id="L276"><a href="#L276">276</a>        CheckWorldCliffs_InEditor(isVTActive);</span>
+<span id="L277"><a href="#L277">277</a>        CheckDecals_InEditor(isVTActive);</span>
+<span id="L278"><a href="#L278">278</a>        RegisterHierarchyChangedCallback(isVTActive);</span>
+<span id="L279"><a href="#L279">279</a>#endif</span>
+<span id="L280"><a href="#L280">280</a>    }</span>
+<span id="L281"><a href="#L281">281</a>    </span>
+<span id="L282"><a href="#L282">282</a>    private Dictionary&lt;string, int&gt; dictTileNameCacheInvert = new Dictionary&lt;string, int&gt;();</span>
+<span id="L283"><a href="#L283">283</a>    private Dictionary&lt;int, string&gt; dictTileNameCache = new Dictionary&lt;int, string&gt;();</span>
+<span id="L284"><a href="#L284">284</a>    private List&lt;QuadTree&gt; listQuadTree = new List&lt;QuadTree&gt;(25);</span>
+<span id="L285"><a href="#L285">285</a>    private Dictionary&lt;int, Transform&gt; dictTileTransform = new Dictionary&lt;int, Transform&gt;();</span>
+<span id="L286"><a href="#L286">286</a></span>
+<span id="L287"><a href="#L287">287</a>    void Awake()</span>
+<span id="L288"><a href="#L288">288</a>    {</span>
+<span id="L289"><a href="#L289">289</a>        // TerrainVT 与 TerrainVT_MeshToVT 互斥</span>
+<span id="L290"><a href="#L290">290</a>        if (GetComponent&lt;TerrainVT_MeshToVT&gt;() != null)</span>
+<span id="L291"><a href="#L291">291</a>        {</span>
+<span id="L292"><a href="#L292">292</a>            enabled = false;</span>
+<span id="L293"><a href="#L293">293</a>            Destroy(this);</span>
+<span id="L294"><a href="#L294">294</a>            return;</span>
+<span id="L295"><a href="#L295">295</a>        }</span>
+<span id="L296"><a href="#L296">296</a></span>
+<span id="L297"><a href="#L297">297</a>        TerrainVT_Manager.Register(this);</span>
+<span id="L298"><a href="#L298">298</a>    }</span>
+<span id="L299"><a href="#L299">299</a></span>
+<span id="L300"><a href="#L300">300</a>    void OnDestroy()</span>
+<span id="L301"><a href="#L301">301</a>    {</span>
+<span id="L302"><a href="#L302">302</a>        Dispose();</span>
+<span id="L303"><a href="#L303">303</a>    }</span>
+<span id="L304"><a href="#L304">304</a>    </span>
+<span id="L305"><a href="#L305">305</a>    void Dispose()</span>
+<span id="L306"><a href="#L306">306</a>    {</span>
+<span id="L307"><a href="#L307">307</a>        RenderPipelineUtil.DestroyTexture(ref indexRT);</span>
+<span id="L308"><a href="#L308">308</a>        vtRenderer = null;</span>
+<span id="L309"><a href="#L309">309</a>        indexWriter?.Dispose();</span>
+<span id="L310"><a href="#L310">310</a>        viewChecker?.Dispose();</span>
+<span id="L311"><a href="#L311">311</a></span>
+<span id="L312"><a href="#L312">312</a>        dictMeshInfoOneTile?.Clear();</span>
+<span id="L313"><a href="#L313">313</a>        pendingMeshInfoOps.Clear();</span>
+<span id="L314"><a href="#L314">314</a>        pendingAddMeshInfoIndices.Clear();</span>
+<span id="L315"><a href="#L315">315</a>        dictMeshInfo?.Clear();</span>
+<span id="L316"><a href="#L316">316</a>        dictMeshInfo = null;</span>
+<span id="L317"><a href="#L317">317</a></span>
+<span id="L318"><a href="#L318">318</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L319"><a href="#L319">319</a>        {</span>
+<span id="L320"><a href="#L320">320</a>            quadDriver?.ReleaseQuadTree(quadTree);</span>
+<span id="L321"><a href="#L321">321</a>        }</span>
+<span id="L322"><a href="#L322">322</a>        listQuadTree = null;</span>
+<span id="L323"><a href="#L323">323</a>        quadDriver?.Dispose();</span>
+<span id="L324"><a href="#L324">324</a></span>
+<span id="L325"><a href="#L325">325</a>        dictTileTransform.Clear();</span>
+<span id="L326"><a href="#L326">326</a>        UpdateVTMode(true);</span>
+<span id="L327"><a href="#L327">327</a></span>
+<span id="L328"><a href="#L328">328</a>        if (keepDetailOverrideApplied)</span>
+<span id="L329"><a href="#L329">329</a>        {</span>
+<span id="L330"><a href="#L330">330</a>            keepDetailOverrideApplied = false;</span>
+<span id="L331"><a href="#L331">331</a>            RenderPipelineUtil.SetKeepDetailOverride(false);</span>
+<span id="L332"><a href="#L332">332</a>        }</span>
+<span id="L333"><a href="#L333">333</a>        </span>
+<span id="L334"><a href="#L334">334</a>        CameraCtrl = null;</span>
+<span id="L335"><a href="#L335">335</a></span>
+<span id="L336"><a href="#L336">336</a>        Inited = false;</span>
+<span id="L337"><a href="#L337">337</a></span>
+<span id="L338"><a href="#L338">338</a>        TerrainVT_Manager.Deregister(this);</span>
+<span id="L339"><a href="#L339">339</a>    }</span>
+<span id="L340"><a href="#L340">340</a></span>
+<span id="L341"><a href="#L341">341</a>    private int ConvertTileY(int tileY)</span>
+<span id="L342"><a href="#L342">342</a>    {</span>
+<span id="L343"><a href="#L343">343</a>        return IsTileOriginLeftUp ? TileCount - 1 - tileY : tileY;</span>
+<span id="L344"><a href="#L344">344</a>    }</span>
+<span id="L345"><a href="#L345">345</a></span>
+<span id="L346"><a href="#L346">346</a>    public string GetTileName(int tileX, int tileY)</span>
+<span id="L347"><a href="#L347">347</a>    {</span>
+<span id="L348"><a href="#L348">348</a>        int tileIndex = ConvertTileIndex(tileX, tileY);</span>
+<span id="L349"><a href="#L349">349</a>        if (!dictTileNameCache.TryGetValue(tileIndex, out var tileName))</span>
+<span id="L350"><a href="#L350">350</a>        {</span>
+<span id="L351"><a href="#L351">351</a>            tileName = $&quot;Tile_{tileX:00}_{tileY:00}&quot;;</span>
+<span id="L352"><a href="#L352">352</a>            dictTileNameCache[tileIndex] = tileName;</span>
+<span id="L353"><a href="#L353">353</a>        }</span>
+<span id="L354"><a href="#L354">354</a></span>
+<span id="L355"><a href="#L355">355</a>        return tileName;</span>
+<span id="L356"><a href="#L356">356</a>    }</span>
+<span id="L357"><a href="#L357">357</a></span>
+<span id="L358"><a href="#L358">358</a>    private void UpdateTileTransformDict(Transform vtTransform)</span>
+<span id="L359"><a href="#L359">359</a>    {</span>
+<span id="L360"><a href="#L360">360</a>        dictTileTransform.Clear();</span>
+<span id="L361"><a href="#L361">361</a></span>
+<span id="L362"><a href="#L362">362</a>        var childCount = vtTransform.childCount;</span>
+<span id="L363"><a href="#L363">363</a>        for (int idx = 0; idx &lt; childCount; ++idx)</span>
+<span id="L364"><a href="#L364">364</a>        {</span>
+<span id="L365"><a href="#L365">365</a>            var tileTransform = vtTransform.GetChild(idx);</span>
+<span id="L366"><a href="#L366">366</a>            var transformName = tileTransform.name;</span>
+<span id="L367"><a href="#L367">367</a>            if (dictTileNameCacheInvert.TryGetValue(transformName, out var tileIndex))</span>
+<span id="L368"><a href="#L368">368</a>            {</span>
+<span id="L369"><a href="#L369">369</a>                dictTileTransform[tileIndex] = tileTransform;</span>
+<span id="L370"><a href="#L370">370</a>            }</span>
+<span id="L371"><a href="#L371">371</a>        }</span>
+<span id="L372"><a href="#L372">372</a></span>
+<span id="L373"><a href="#L373">373</a>        if (TileCount == 1) // TileCount只有一个时，大部分情况下，TerrainVT组件也是&lt;MeshRenderer&gt;自身</span>
+<span id="L374"><a href="#L374">374</a>        {</span>
+<span id="L375"><a href="#L375">375</a>            var tileName = GetTileName(0, 0);</span>
+<span id="L376"><a href="#L376">376</a>            if (!dictTileTransform.ContainsKey(0))</span>
+<span id="L377"><a href="#L377">377</a>            {</span>
+<span id="L378"><a href="#L378">378</a>                dictTileTransform[0] = vtTransform;</span>
+<span id="L379"><a href="#L379">379</a>            }</span>
+<span id="L380"><a href="#L380">380</a>        }</span>
+<span id="L381"><a href="#L381">381</a>    }</span>
+<span id="L382"><a href="#L382">382</a></span>
+<span id="L383"><a href="#L383">383</a>    private MeshMaterialInfo CreateSingleMaterialMesh(int tileX, int tileY, GameObject tileGo)</span>
+<span id="L384"><a href="#L384">384</a>    {</span>
+<span id="L385"><a href="#L385">385</a>        var MeshRenderer = tileGo.GetComponent&lt;MeshRenderer&gt;();</span>
+<span id="L386"><a href="#L386">386</a>        var terrainMaterial = MeshRenderer.sharedMaterial;</span>
+<span id="L387"><a href="#L387">387</a>        Mesh terrainMesh = null;</span>
+<span id="L388"><a href="#L388">388</a></span>
+<span id="L389"><a href="#L389">389</a>        // var lodByCameraHeight = tileGo.GetComponent&lt;LodByCameraHeight&gt;();</span>
+<span id="L390"><a href="#L390">390</a>        // if (lodByCameraHeight != null)</span>
+<span id="L391"><a href="#L391">391</a>        // {</span>
+<span id="L392"><a href="#L392">392</a>        //     int meshCount = lodByCameraHeight.meshLods.Length;</span>
+<span id="L393"><a href="#L393">393</a>        //     terrainMesh = lodByCameraHeight.meshLods[meshCount - 1];</span>
+<span id="L394"><a href="#L394">394</a>        // }</span>
+<span id="L395"><a href="#L395">395</a></span>
+<span id="L396"><a href="#L396">396</a>        if (terrainMesh == null)</span>
+<span id="L397"><a href="#L397">397</a>        {</span>
+<span id="L398"><a href="#L398">398</a>            var MeshFilter = tileGo.GetComponent&lt;MeshFilter&gt;();</span>
+<span id="L399"><a href="#L399">399</a>            terrainMesh = MeshFilter.sharedMesh;</span>
+<span id="L400"><a href="#L400">400</a>        }</span>
+<span id="L401"><a href="#L401">401</a></span>
+<span id="L402"><a href="#L402">402</a>        var tileInfo = new TileInfo(TileCount, tileX, tileY);</span>
+<span id="L403"><a href="#L403">403</a>        if (terrainMesh == null || terrainMaterial == null)</span>
+<span id="L404"><a href="#L404">404</a>        {</span>
+<span id="L405"><a href="#L405">405</a>            return null;</span>
+<span id="L406"><a href="#L406">406</a>        }</span>
+<span id="L407"><a href="#L407">407</a></span>
+<span id="L408"><a href="#L408">408</a>        return new MeshMaterialInfo(terrainMesh, terrainMaterial, tileInfo);</span>
+<span id="L409"><a href="#L409">409</a>    }</span>
+<span id="L410"><a href="#L410">410</a></span>
+<span id="L411"><a href="#L411">411</a>    public Camera TerrainCamera;</span>
+<span id="L412"><a href="#L412">412</a>    private BaseCameraCtrl CameraCtrl;</span>
+<span id="L413"><a href="#L413">413</a></span>
+<span id="L414"><a href="#L414">414</a>    public static readonly int ID_VT_TerrainInfo = Shader.PropertyToID(&quot;_VT_TerrainInfo&quot;);</span>
+<span id="L415"><a href="#L415">415</a>    public static readonly int ID_VT_TerrainTileInfo = Shader.PropertyToID(&quot;_VT_TerrainTileInfo&quot;);</span>
+<span id="L416"><a href="#L416">416</a>    public static readonly int ID_VT_TerrainHeightInfo = Shader.PropertyToID(&quot;_VT_TerrainHeightInfo&quot;);</span>
+<span id="L417"><a href="#L417">417</a>    public static readonly int ID_VT_MATRIX_VP = Shader.PropertyToID(&quot;_VT_MATRIX_VP&quot;);</span>
+<span id="L418"><a href="#L418">418</a>    public static readonly int ID_VT_CameraTerrainPos = Shader.PropertyToID(&quot;_VT_CameraTerrainPos&quot;);</span>
+<span id="L419"><a href="#L419">419</a>    public static readonly int ID_VT_ShowClip = Shader.PropertyToID(&quot;_VT_ShowClip&quot;);</span>
+<span id="L420"><a href="#L420">420</a>    public static readonly int ID_VT_DebugTexWithNum = Shader.PropertyToID(&quot;_VT_DebugTexWithNum&quot;);</span>
+<span id="L421"><a href="#L421">421</a>    public static readonly int ID_VT_DebugColorRatio = Shader.PropertyToID(&quot;_VT_DebugColorRatio&quot;);</span>
+<span id="L422"><a href="#L422">422</a>    public static readonly int ID_VT_Feedback_MVP = Shader.PropertyToID(&quot;_VT_Feedback_MVP&quot;);</span>
+<span id="L423"><a href="#L423">423</a>    public static readonly int ID_VT_RootSize = Shader.PropertyToID(&quot;_VT_RootSize&quot;);</span>
+<span id="L424"><a href="#L424">424</a>    public static readonly int ID_VT_IndexTex = Shader.PropertyToID(&quot;_VT_IndexTex&quot;);</span>
+<span id="L425"><a href="#L425">425</a></span>
+<span id="L426"><a href="#L426">426</a>    Vector2 WorldPosToTerrainSpaceXZ01(Vector3 worldPos)</span>
+<span id="L427"><a href="#L427">427</a>    {</span>
+<span id="L428"><a href="#L428">428</a>        return new Vector2(</span>
+<span id="L429"><a href="#L429">429</a>            Mathf.Clamp01((worldPos.x - terrainOffset.x) * terrainSizeRcp),</span>
+<span id="L430"><a href="#L430">430</a>            Mathf.Clamp01((worldPos.z - terrainOffset.z) * terrainSizeRcp)</span>
+<span id="L431"><a href="#L431">431</a>        );</span>
+<span id="L432"><a href="#L432">432</a>    }</span>
+<span id="L433"><a href="#L433">433</a></span>
+<span id="L434"><a href="#L434">434</a>    Vector3 WorldPosToTerrainSpace(Vector3 worldPos)</span>
+<span id="L435"><a href="#L435">435</a>    {</span>
+<span id="L436"><a href="#L436">436</a>        var terrainPos01 = WorldPosToTerrainSpaceXZ01(worldPos);</span>
+<span id="L437"><a href="#L437">437</a>        return new Vector3(terrainPos01.x * rootSize, worldPos.y - terrainOffset.y, terrainPos01.y * rootSize);</span>
+<span id="L438"><a href="#L438">438</a>    }</span>
+<span id="L439"><a href="#L439">439</a></span>
+<span id="L440"><a href="#L440">440</a>    /// 把世界空间 Bounds 的 XZ 换算到地形 [0,1] 空间，结果格式与 nodeArea 一致 [xMin, yMin, xMax, yMax]。</span>
+<span id="L441"><a href="#L441">441</a>    /// 对同一个 MeshInfo 而言这是常量，遍历四叉树前算一次即可，不要在每个结点上重复换算。</span>
+<span id="L442"><a href="#L442">442</a>    /// boundsInfo [x: Bounds.min.x, y: Bounds.min.z, z: Bounds.max.x, w: Bounds.max.z]</span>
+<span id="L443"><a href="#L443">443</a>    public Vector4 WorldBoundsToTerrainArea(Vector4 boundsInfo)</span>
+<span id="L444"><a href="#L444">444</a>    {</span>
+<span id="L445"><a href="#L445">445</a>        return new Vector4(</span>
+<span id="L446"><a href="#L446">446</a>            (boundsInfo.x - terrainOffset.x) * terrainSizeRcp,</span>
+<span id="L447"><a href="#L447">447</a>            (boundsInfo.y - terrainOffset.z) * terrainSizeRcp,</span>
+<span id="L448"><a href="#L448">448</a>            (boundsInfo.z - terrainOffset.x) * terrainSizeRcp,</span>
+<span id="L449"><a href="#L449">449</a>            (boundsInfo.w - terrainOffset.z) * terrainSizeRcp);</span>
+<span id="L450"><a href="#L450">450</a>    }</span>
+<span id="L451"><a href="#L451">451</a></span>
+<span id="L452"><a href="#L452">452</a>    public Vector4 TerrainAreaToWorldBounds(Vector4 area)</span>
+<span id="L453"><a href="#L453">453</a>    {</span>
+<span id="L454"><a href="#L454">454</a>        return new Vector4(</span>
+<span id="L455"><a href="#L455">455</a>            area.x * TerrainSize + terrainOffset.x,</span>
+<span id="L456"><a href="#L456">456</a>            area.y * TerrainSize + terrainOffset.z,</span>
+<span id="L457"><a href="#L457">457</a>            area.z * TerrainSize + terrainOffset.x,</span>
+<span id="L458"><a href="#L458">458</a>            area.w * TerrainSize + terrainOffset.z);</span>
+<span id="L459"><a href="#L459">459</a>    }</span>
+<span id="L460"><a href="#L460">460</a></span>
+<span id="L461"><a href="#L461">461</a>    // 两个参数需处于同一空间的 [xMin, yMin, xMax, yMax]（地形 [0,1] 或世界 XZ 均可）</span>
+<span id="L462"><a href="#L462">462</a>    public static bool CheckAreaOverlapsArea(Vector4 meshArea, Vector4 nodeArea)</span>
+<span id="L463"><a href="#L463">463</a>    {</span>
+<span id="L464"><a href="#L464">464</a>        return nodeArea.z &gt; meshArea.x &amp;&amp; nodeArea.x &lt; meshArea.z &amp;&amp;</span>
+<span id="L465"><a href="#L465">465</a>               nodeArea.w &gt; meshArea.y &amp;&amp; nodeArea.y &lt; meshArea.w;</span>
+<span id="L466"><a href="#L466">466</a>    }</span>
+<span id="L467"><a href="#L467">467</a></span>
+<span id="L468"><a href="#L468">468</a>    bool CheckBoundsOverlapsArea(Vector4 boundsInfo, Vector4 area)</span>
+<span id="L469"><a href="#L469">469</a>    {</span>
+<span id="L470"><a href="#L470">470</a>        return CheckAreaOverlapsArea(WorldBoundsToTerrainArea(boundsInfo), area);</span>
+<span id="L471"><a href="#L471">471</a>    }</span>
+<span id="L472"><a href="#L472">472</a></span>
+<span id="L473"><a href="#L473">473</a>    private int CurrentTreeDepth = 0;</span>
+<span id="L474"><a href="#L474">474</a></span>
+<span id="L475"><a href="#L475">475</a>    void LateUpdate()</span>
+<span id="L476"><a href="#L476">476</a>    {</span>
+<span id="L477"><a href="#L477">477</a>        if (!PerfUpdateEnabled) return;</span>
+<span id="L478"><a href="#L478">478</a>        if (!IsVTActive) return;</span>
+<span id="L479"><a href="#L479">479</a>        if (TerrainCamera == null) return;</span>
+<span id="L480"><a href="#L480">480</a></span>
+<span id="L481"><a href="#L481">481</a>        CalculateTerrainOffset();</span>
+<span id="L482"><a href="#L482">482</a>        CheckInit(false);</span>
+<span id="L483"><a href="#L483">483</a>        SyncKeepDetailOverride();</span>
+<span id="L484"><a href="#L484">484</a></span>
+<span id="L485"><a href="#L485">485</a>        bool shouldRecalcNodeCountNeedForDepth = needRefreshTiles;</span>
+<span id="L486"><a href="#L486">486</a>        Profiler.BeginSample(&quot;[VT] RefreshTiles&quot;);</span>
+<span id="L487"><a href="#L487">487</a>        RefreshTiles(false);</span>
+<span id="L488"><a href="#L488">488</a>        Profiler.EndSample();</span>
+<span id="L489"><a href="#L489">489</a></span>
+<span id="L490"><a href="#L490">490</a>        var camTransform = TerrainCamera.transform;</span>
+<span id="L491"><a href="#L491">491</a>        var camPosInTerrainSpace = WorldPosToTerrainSpace(camTransform.position);</span>
+<span id="L492"><a href="#L492">492</a>        if (CameraCtrl != null)</span>
+<span id="L493"><a href="#L493">493</a>        {</span>
+<span id="L494"><a href="#L494">494</a>            camPosInTerrainSpace.y -= CameraCtrl.GetCorePlaneY();</span>
+<span id="L495"><a href="#L495">495</a>        }</span>
+<span id="L496"><a href="#L496">496</a></span>
+<span id="L497"><a href="#L497">497</a>        UpdateVTMode();</span>
+<span id="L498"><a href="#L498">498</a>        CheckDebugView();</span>
+<span id="L499"><a href="#L499">499</a></span>
+<span id="L500"><a href="#L500">500</a>        Profiler.BeginSample(&quot;[VT] UpdateView&quot;);</span>
+<span id="L501"><a href="#L501">501</a>        if (forceViewCheck || CheckCameraMoved(TerrainCamera.transform.position))</span>
+<span id="L502"><a href="#L502">502</a>        {</span>
+<span id="L503"><a href="#L503">503</a>            UpdateViewChecker();</span>
+<span id="L504"><a href="#L504">504</a>            forceViewCheck = false;</span>
+<span id="L505"><a href="#L505">505</a>            shouldRecalcNodeCountNeedForDepth = true;</span>
+<span id="L506"><a href="#L506">506</a>        }</span>
+<span id="L507"><a href="#L507">507</a>        Profiler.EndSample();</span>
+<span id="L508"><a href="#L508">508</a></span>
+<span id="L509"><a href="#L509">509</a>        Profiler.BeginSample(&quot;[VT] TreeDepth&quot;);</span>
+<span id="L510"><a href="#L510">510</a>        quadTreeDistanceComparer.frustumCenter = camGroundFrustum.frustumGroundPos.center_TS01;</span>
+<span id="L511"><a href="#L511">511</a>        listQuadTree.Sort(quadTreeDistanceComparer);</span>
+<span id="L512"><a href="#L512">512</a></span>
+<span id="L513"><a href="#L513">513</a>        {</span>
+<span id="L514"><a href="#L514">514</a>            // 根据像素密度和相机视野，计算并刷新 Tree Depth</span>
+<span id="L515"><a href="#L515">515</a>            int desiredTreeDepth = CalcDesiredTreeDepth();</span>
+<span id="L516"><a href="#L516">516</a>            if (shouldRecalcNodeCountNeedForDepth)</span>
+<span id="L517"><a href="#L517">517</a>            {</span>
+<span id="L518"><a href="#L518">518</a>                RecalcNodeCountNeedForDepth(desiredTreeDepth);</span>
+<span id="L519"><a href="#L519">519</a>            }</span>
+<span id="L520"><a href="#L520">520</a></span>
+<span id="L521"><a href="#L521">521</a>            UpdateTreeDepth(desiredTreeDepth);</span>
+<span id="L522"><a href="#L522">522</a>        }</span>
+<span id="L523"><a href="#L523">523</a>        Profiler.EndSample();</span>
+<span id="L524"><a href="#L524">524</a></span>
+<span id="L525"><a href="#L525">525</a>        Shader.SetGlobalVector(ID_VT_TerrainInfo,</span>
+<span id="L526"><a href="#L526">526</a>            new Vector4(TerrainSize, terrainSizeRcp, terrainOffset.x, terrainOffset.z));</span>
+<span id="L527"><a href="#L527">527</a>        Shader.SetGlobalVector(ID_VT_TerrainTileInfo,</span>
+<span id="L528"><a href="#L528">528</a>            new Vector4(TileCount, vtRenderer.MaxTreeDepth, CurrentTreeDepth, 0));</span>
+<span id="L529"><a href="#L529">529</a></span>
+<span id="L530"><a href="#L530">530</a>        int TreeDepthInvert = vtRenderer.MaxTreeDepth - CurrentTreeDepth;</span>
+<span id="L531"><a href="#L531">531</a>        Shader.SetGlobalVector(ID_VT_TerrainHeightInfo,</span>
+<span id="L532"><a href="#L532">532</a>            new Vector4(TerrainHeightMin, TerrainHeightMax, TreeDepthInvert, terrainOffset.y));</span>
+<span id="L533"><a href="#L533">533</a>        Shader.SetGlobalVector(ID_VT_CameraTerrainPos, camPosInTerrainSpace);</span>
+<span id="L534"><a href="#L534">534</a>        Shader.SetGlobalInt(ID_VT_RootSize, rootSize);</span>
+<span id="L535"><a href="#L535">535</a>        Shader.SetGlobalTexture(ID_VT_IndexTex, indexRT);</span>
+<span id="L536"><a href="#L536">536</a></span>
+<span id="L537"><a href="#L537">537</a>        Profiler.BeginSample(&quot;[VT] ForceRedraw&quot;);</span>
+<span id="L538"><a href="#L538">538</a>        if (NeedToForceRedraw)</span>
+<span id="L539"><a href="#L539">539</a>        {</span>
+<span id="L540"><a href="#L540">540</a>            NeedToForceRedraw = false;</span>
+<span id="L541"><a href="#L541">541</a>            // 这里的 ForceRedraw，本质上是重置所有&lt;可绘制结点&gt;的 AvailableMip，真正的重绘发生在后面的 UpdateByViewRect 函数中</span>
+<span id="L542"><a href="#L542">542</a>            ForceRedraw();</span>
+<span id="L543"><a href="#L543">543</a>        }</span>
+<span id="L544"><a href="#L544">544</a>        Profiler.EndSample();</span>
+<span id="L545"><a href="#L545">545</a></span>
+<span id="L546"><a href="#L546">546</a>        // 在 RefreshTiles 之后、UpdateByViewRect 之前冲刷：新地块已建树，本帧 RedrawAllMips 能被立刻绘制</span>
+<span id="L547"><a href="#L547">547</a>        ProcessPendingMeshInfoOps();</span>
+<span id="L548"><a href="#L548">548</a></span>
+<span id="L549"><a href="#L549">549</a>#if ENABLE_PROFILER</span>
+<span id="L550"><a href="#L550">550</a>        if (GMRenderPassToggle.IsVTSubmitEnabled())</span>
+<span id="L551"><a href="#L551">551</a>        {</span>
+<span id="L552"><a href="#L552">552</a>#endif</span>
+<span id="L553"><a href="#L553">553</a>        Profiler.BeginSample(&quot;[VT] UpdateByViewRect&quot;);</span>
+<span id="L554"><a href="#L554">554</a>        quadDriver.UpdateByViewRect(CurrentTreeDepth, listQuadTree, viewChecker);</span>
+<span id="L555"><a href="#L555">555</a>        Profiler.EndSample();</span>
+<span id="L556"><a href="#L556">556</a></span>
+<span id="L557"><a href="#L557">557</a>        // 本帧攒下的所有 page 绘制与 IndexRT 索引写入，在这里一次性提交给 GPU。</span>
+<span id="L558"><a href="#L558">558</a>        // RenderQuadNode 只会在上面的 UpdateByViewRect 内部被调用到，所以这里是唯一的提交点。</span>
+<span id="L559"><a href="#L559">559</a>        vtRenderer.FlushRenderCommands();</span>
+<span id="L560"><a href="#L560">560</a>        Profiler.BeginSample(&quot;[VT] IndexFlush&quot;);</span>
+<span id="L561"><a href="#L561">561</a>        indexWriter.Flush();</span>
+<span id="L562"><a href="#L562">562</a>        Profiler.EndSample();</span>
+<span id="L563"><a href="#L563">563</a>#if ENABLE_PROFILER</span>
+<span id="L564"><a href="#L564">564</a>        }</span>
+<span id="L565"><a href="#L565">565</a>#endif</span>
+<span id="L566"><a href="#L566">566</a></span>
+<span id="L567"><a href="#L567">567</a>#if UNITY_EDITOR</span>
+<span id="L568"><a href="#L568">568</a>        int usingPageCount = vtRenderer.PageCapacity - physicIndexManager.FreeCount;</span>
+<span id="L569"><a href="#L569">569</a>        MaxUsedPageCount = usingPageCount &gt; MaxUsedPageCount ? usingPageCount : MaxUsedPageCount;</span>
+<span id="L570"><a href="#L570">570</a>        PageUsageInfo = $&quot;【{CurrentTreeDepth}】【{MaxUsedPageCount}】 【{usingPageCount} / {vtRenderer.PageCapacity}:{camPosInTerrainSpace.y:N2}】&quot;;</span>
+<span id="L571"><a href="#L571">571</a></span>
+<span id="L572"><a href="#L572">572</a>        if (RealtimeUpdateInEditor)</span>
+<span id="L573"><a href="#L573">573</a>        {</span>
+<span id="L574"><a href="#L574">574</a>            NeedToForceRedraw = true;</span>
+<span id="L575"><a href="#L575">575</a>        }</span>
+<span id="L576"><a href="#L576">576</a>#endif</span>
+<span id="L577"><a href="#L577">577</a></span>
+<span id="L578"><a href="#L578">578</a></span>
+<span id="L579"><a href="#L579">579</a>#if UNITY_EDITOR &amp;&amp; LINK_TEST</span>
+<span id="L580"><a href="#L580">580</a>        if (renderCounterThisFrameForAllMip &gt; 0)</span>
+<span id="L581"><a href="#L581">581</a>        {</span>
+<span id="L582"><a href="#L582">582</a>            // Debug.Log($&quot;VT.renderCounter 【{Time.frameCount}】 {renderCounterThisFrameForAllMip}  {renderDynamicMeterConsumedThisFrame}&quot;);</span>
+<span id="L583"><a href="#L583">583</a>        }</span>
+<span id="L584"><a href="#L584">584</a>#endif</span>
+<span id="L585"><a href="#L585">585</a>        </span>
+<span id="L586"><a href="#L586">586</a>        renderCounterThisFrameForAllMip = 0;</span>
+<span id="L587"><a href="#L587">587</a>        renderDynamicMeterConsumedThisFrame = 0;</span>
+<span id="L588"><a href="#L588">588</a>    }</span>
+<span id="L589"><a href="#L589">589</a></span>
+<span id="L590"><a href="#L590">590</a>    public void UpdateCameraCtrl(BaseCameraCtrl _cameraCtrl, float _maxViewDistance = DefaultMaxViewDistance)</span>
+<span id="L591"><a href="#L591">591</a>    {</span>
+<span id="L592"><a href="#L592">592</a>        CameraCtrl = _cameraCtrl;</span>
+<span id="L593"><a href="#L593">593</a>        TerrainCamera = CameraCtrl.GetCamera();</span>
+<span id="L594"><a href="#L594">594</a>        SetMaxViewDistance(_maxViewDistance);</span>
+<span id="L595"><a href="#L595">595</a>    }</span>
+<span id="L596"><a href="#L596">596</a></span>
+<span id="L597"><a href="#L597">597</a>    private void UpdateViewChecker()</span>
+<span id="L598"><a href="#L598">598</a>    {</span>
+<span id="L599"><a href="#L599">599</a>        if (CameraCtrl != null)</span>
+<span id="L600"><a href="#L600">600</a>        {</span>
+<span id="L601"><a href="#L601">601</a>            camGroundFrustum.Calculate(TerrainCamera, CameraCtrl.GetCorePlaneY(), CameraCtrl.GetTerrainHeightByWorldPos);</span>
+<span id="L602"><a href="#L602">602</a>        }</span>
+<span id="L603"><a href="#L603">603</a>        else</span>
+<span id="L604"><a href="#L604">604</a>        {</span>
+<span id="L605"><a href="#L605">605</a>            camGroundFrustum.Calculate(TerrainCamera, 0, null);</span>
+<span id="L606"><a href="#L606">606</a>        }</span>
+<span id="L607"><a href="#L607">607</a></span>
+<span id="L608"><a href="#L608">608</a>        viewChecker.UpdateView(validTileArea, camGroundFrustum);</span>
+<span id="L609"><a href="#L609">609</a>    }</span>
+<span id="L610"><a href="#L610">610</a></span>
+<span id="L611"><a href="#L611">611</a>    private void CheckDebugView()</span>
+<span id="L612"><a href="#L612">612</a>    {</span>
+<span id="L613"><a href="#L613">613</a>        if (VTDebugView)</span>
+<span id="L614"><a href="#L614">614</a>        {</span>
+<span id="L615"><a href="#L615">615</a>            TerrainVT_Manager.SKC_VT_DEBUG_VIEW.EnableKeyword();</span>
+<span id="L616"><a href="#L616">616</a>            var debugTex = GenDebugTexture.GetDebugTexture();</span>
+<span id="L617"><a href="#L617">617</a>            foreach (var meshMat in listTerrainMeshMat)</span>
+<span id="L618"><a href="#L618">618</a>            {</span>
+<span id="L619"><a href="#L619">619</a>                var terrainMaterial = meshMat.terrainMaterial;</span>
+<span id="L620"><a href="#L620">620</a>                terrainMaterial.SetMatrix(ID_VT_MATRIX_VP,</span>
+<span id="L621"><a href="#L621">621</a>                    TerrainCamera.projectionMatrix * TerrainCamera.worldToCameraMatrix);</span>
+<span id="L622"><a href="#L622">622</a>                terrainMaterial.SetFloat(ID_VT_ShowClip, ShowClip ? 1 : 0);</span>
+<span id="L623"><a href="#L623">623</a>                terrainMaterial.SetTexture(ID_VT_DebugTexWithNum, debugTex);</span>
+<span id="L624"><a href="#L624">624</a>                terrainMaterial.SetFloat(ID_VT_DebugColorRatio, DebugViewRatio);</span>
+<span id="L625"><a href="#L625">625</a>            }</span>
+<span id="L626"><a href="#L626">626</a>        }</span>
+<span id="L627"><a href="#L627">627</a>        else</span>
+<span id="L628"><a href="#L628">628</a>        {</span>
+<span id="L629"><a href="#L629">629</a>            TerrainVT_Manager.SKC_VT_DEBUG_VIEW.DisableKeyword();</span>
+<span id="L630"><a href="#L630">630</a>        }</span>
+<span id="L631"><a href="#L631">631</a></span>
+<span id="L632"><a href="#L632">632</a>        TerrainVT_Manager.SKC_TANGENT_SPACE_NORMAL_UP.ToggleKeyword(!UseTerrainNormal);</span>
+<span id="L633"><a href="#L633">633</a></span>
+<span id="L634"><a href="#L634">634</a>        if (IndexDebugView)</span>
+<span id="L635"><a href="#L635">635</a>        {</span>
+<span id="L636"><a href="#L636">636</a>            TerrainVT_Manager.SKC_INDEX_DEBUG_VIEW.EnableKeyword();</span>
+<span id="L637"><a href="#L637">637</a>            var debugTex = GenDebugTexture.GetDebugTexture();</span>
+<span id="L638"><a href="#L638">638</a>            foreach (var meshMat in listTerrainMeshMat)</span>
+<span id="L639"><a href="#L639">639</a>            {</span>
+<span id="L640"><a href="#L640">640</a>                var terrainMaterial = meshMat.terrainMaterial;</span>
+<span id="L641"><a href="#L641">641</a>                terrainMaterial.SetTexture(ID_VT_DebugTexWithNum, debugTex);</span>
+<span id="L642"><a href="#L642">642</a>                terrainMaterial.SetFloat(ID_VT_DebugColorRatio, 1.0f);</span>
+<span id="L643"><a href="#L643">643</a>            }</span>
+<span id="L644"><a href="#L644">644</a>        }</span>
+<span id="L645"><a href="#L645">645</a>        else</span>
+<span id="L646"><a href="#L646">646</a>        {</span>
+<span id="L647"><a href="#L647">647</a>            TerrainVT_Manager.SKC_INDEX_DEBUG_VIEW.DisableKeyword();</span>
+<span id="L648"><a href="#L648">648</a>        }</span>
+<span id="L649"><a href="#L649">649</a>    }</span>
+<span id="L650"><a href="#L650">650</a></span>
+<span id="L651"><a href="#L651">651</a>    private bool needRefreshTiles = true;</span>
+<span id="L652"><a href="#L652">652</a>    private HashSet&lt;int&gt; tileIndexToAddQuadTree = new HashSet&lt;int&gt;();</span>
+<span id="L653"><a href="#L653">653</a>    private HashSet&lt;int&gt; tileIndexToDelQuadTree = new HashSet&lt;int&gt;();</span>
+<span id="L654"><a href="#L654">654</a></span>
+<span id="L655"><a href="#L655">655</a>    public void OnTilesUpdated()</span>
+<span id="L656"><a href="#L656">656</a>    {</span>
+<span id="L657"><a href="#L657">657</a>        needRefreshTiles = true;</span>
+<span id="L658"><a href="#L658">658</a>    }</span>
+<span id="L659"><a href="#L659">659</a></span>
+<span id="L660"><a href="#L660">660</a>    /// SplitLod模式下，LOD切换后Mesh/Material已被外部替换，</span>
+<span id="L661"><a href="#L661">661</a>    /// 需要刷新 dictTerrainMeshMat 中缓存的 MeshMaterialInfo 引用，并触发VT重绘</span>
+<span id="L662"><a href="#L662">662</a>    public void RefreshMeshMaterialReferences()</span>
+<span id="L663"><a href="#L663">663</a>    {</span>
+<span id="L664"><a href="#L664">664</a>        if (!Inited) return;</span>
+<span id="L665"><a href="#L665">665</a></span>
+<span id="L666"><a href="#L666">666</a>        foreach (var kv in dictTerrainMeshMat)</span>
+<span id="L667"><a href="#L667">667</a>        {</span>
+<span id="L668"><a href="#L668">668</a>            var tileIndex = kv.Key;</span>
+<span id="L669"><a href="#L669">669</a>            var meshMatInfo = kv.Value;</span>
+<span id="L670"><a href="#L670">670</a></span>
+<span id="L671"><a href="#L671">671</a>            if (!dictTileTransform.TryGetValue(tileIndex, out var tileTransform) || tileTransform == null)</span>
+<span id="L672"><a href="#L672">672</a>                continue;</span>
+<span id="L673"><a href="#L673">673</a></span>
+<span id="L674"><a href="#L674">674</a>            var meshFilter = tileTransform.gameObject.GetComponent&lt;MeshFilter&gt;();</span>
+<span id="L675"><a href="#L675">675</a>            var newMesh = meshFilter.sharedMesh;</span>
+<span id="L676"><a href="#L676">676</a>            meshMatInfo.terrainMesh = newMesh;</span>
+<span id="L677"><a href="#L677">677</a>        }</span>
+<span id="L678"><a href="#L678">678</a>    }</span>
+<span id="L679"><a href="#L679">679</a></span>
+<span id="L680"><a href="#L680">680</a>    // 初始化Tile信息，或者镜头移动，导致Tile信息刷新（包括ListQuadTree的构建）</span>
+<span id="L681"><a href="#L681">681</a>    private void RefreshTiles(bool force)</span>
+<span id="L682"><a href="#L682">682</a>    {</span>
+<span id="L683"><a href="#L683">683</a>        if (!force &amp;&amp; !needRefreshTiles)</span>
+<span id="L684"><a href="#L684">684</a>        {</span>
+<span id="L685"><a href="#L685">685</a>            return;</span>
+<span id="L686"><a href="#L686">686</a>        }</span>
+<span id="L687"><a href="#L687">687</a>        needRefreshTiles = false;</span>
+<span id="L688"><a href="#L688">688</a></span>
+<span id="L689"><a href="#L689">689</a>        // 刷新地块信息列表</span>
+<span id="L690"><a href="#L690">690</a>        tileIndexToAddQuadTree.Clear();</span>
+<span id="L691"><a href="#L691">691</a>        tileIndexToDelQuadTree.Clear();</span>
+<span id="L692"><a href="#L692">692</a></span>
+<span id="L693"><a href="#L693">693</a>        { // 刷新材质与Mesh信息</span>
+<span id="L694"><a href="#L694">694</a>            UpdateTileTransformDict(transform);</span>
+<span id="L695"><a href="#L695">695</a></span>
+<span id="L696"><a href="#L696">696</a>            // 删除过时的</span>
+<span id="L697"><a href="#L697">697</a>            foreach (var kv in dictTerrainMeshMat)</span>
+<span id="L698"><a href="#L698">698</a>            {</span>
+<span id="L699"><a href="#L699">699</a>                var tileIndex = kv.Key;</span>
+<span id="L700"><a href="#L700">700</a>                if (!dictTileTransform.ContainsKey(tileIndex))</span>
+<span id="L701"><a href="#L701">701</a>                {</span>
+<span id="L702"><a href="#L702">702</a>                    tileIndexToDelQuadTree.Add(tileIndex);</span>
+<span id="L703"><a href="#L703">703</a>                }</span>
+<span id="L704"><a href="#L704">704</a>            }</span>
+<span id="L705"><a href="#L705">705</a>            </span>
+<span id="L706"><a href="#L706">706</a>            foreach (var tileIndex in tileIndexToDelQuadTree)</span>
+<span id="L707"><a href="#L707">707</a>            {</span>
+<span id="L708"><a href="#L708">708</a>                dictTerrainMeshMat.Remove(tileIndex);</span>
+<span id="L709"><a href="#L709">709</a>            }</span>
+<span id="L710"><a href="#L710">710</a></span>
+<span id="L711"><a href="#L711">711</a>            // 添加新增的</span>
+<span id="L712"><a href="#L712">712</a>            foreach (var kv in dictTileTransform)</span>
+<span id="L713"><a href="#L713">713</a>            {</span>
+<span id="L714"><a href="#L714">714</a>                var tileIndex = kv.Key;</span>
+<span id="L715"><a href="#L715">715</a>                ConvertTileIndex(tileIndex, out var tileX, out var tileY);</span>
+<span id="L716"><a href="#L716">716</a></span>
+<span id="L717"><a href="#L717">717</a>                var tileTransform = kv.Value;</span>
+<span id="L718"><a href="#L718">718</a>                if (tileTransform != null &amp;&amp; !dictTerrainMeshMat.ContainsKey(tileIndex))</span>
+<span id="L719"><a href="#L719">719</a>                {</span>
+<span id="L720"><a href="#L720">720</a>                    var meshMatInfo = CreateSingleMaterialMesh(tileX, tileY, tileTransform.gameObject);</span>
+<span id="L721"><a href="#L721">721</a>                    if (meshMatInfo != null)</span>
+<span id="L722"><a href="#L722">722</a>                    {</span>
+<span id="L723"><a href="#L723">723</a>                        dictTerrainMeshMat.Add(tileIndex, meshMatInfo);</span>
+<span id="L724"><a href="#L724">724</a>                        tileIndexToAddQuadTree.Add(tileIndex);</span>
+<span id="L725"><a href="#L725">725</a>                    }</span>
+<span id="L726"><a href="#L726">726</a>                }</span>
+<span id="L727"><a href="#L727">727</a>            }</span>
+<span id="L728"><a href="#L728">728</a></span>
+<span id="L729"><a href="#L729">729</a>            listTerrainMeshMat.Clear();</span>
+<span id="L730"><a href="#L730">730</a>            listTerrainMeshMat.AddRange(dictTerrainMeshMat.Values);</span>
+<span id="L731"><a href="#L731">731</a>        }</span>
+<span id="L732"><a href="#L732">732</a></span>
+<span id="L733"><a href="#L733">733</a>        { // 刷新四叉树列表</span>
+<span id="L734"><a href="#L734">734</a>            for (int idx = listQuadTree.Count - 1; idx &gt;= 0; --idx)</span>
+<span id="L735"><a href="#L735">735</a>            {</span>
+<span id="L736"><a href="#L736">736</a>                var quadTree = listQuadTree[idx];</span>
+<span id="L737"><a href="#L737">737</a>                if (tileIndexToDelQuadTree.Contains(quadTree.TileInfo.TileIndex))</span>
+<span id="L738"><a href="#L738">738</a>                {</span>
+<span id="L739"><a href="#L739">739</a>                    quadDriver.ReleaseQuadTree(quadTree);</span>
+<span id="L740"><a href="#L740">740</a>                    listQuadTree.RemoveAt(idx);</span>
+<span id="L741"><a href="#L741">741</a>                }</span>
+<span id="L742"><a href="#L742">742</a>            }</span>
+<span id="L743"><a href="#L743">743</a></span>
+<span id="L744"><a href="#L744">744</a>            foreach (var tileIndex in tileIndexToAddQuadTree)</span>
+<span id="L745"><a href="#L745">745</a>            {</span>
+<span id="L746"><a href="#L746">746</a>                var info = dictTerrainMeshMat[tileIndex];</span>
+<span id="L747"><a href="#L747">747</a>                var quadTree = quadDriver.FetchQuadTree(this, rootSize, singleTileRootSize, info.tileInfo, physicIndexManager);</span>
+<span id="L748"><a href="#L748">748</a>                listQuadTree.Add(quadTree);</span>
+<span id="L749"><a href="#L749">749</a>            }</span>
+<span id="L750"><a href="#L750">750</a>        }</span>
+<span id="L751"><a href="#L751">751</a></span>
+<span id="L752"><a href="#L752">752</a>        CalcValidArea();</span>
+<span id="L753"><a href="#L753">753</a>        </span>
+<span id="L754"><a href="#L754">754</a>#if UNITY_EDITOR &amp;&amp; LINK_TEST</span>
+<span id="L755"><a href="#L755">755</a>        CheckMaterialCompatibility();</span>
+<span id="L756"><a href="#L756">756</a>#endif</span>
+<span id="L757"><a href="#L757">757</a>    }</span>
+<span id="L758"><a href="#L758">758</a></span>
+<span id="L759"><a href="#L759">759</a>    private Vector4 validTileArea = new Vector4(0, 0, 1, 1); // xyzw 分别对应 xMin yMin xMax yMax</span>
+<span id="L760"><a href="#L760">760</a>    private void CalcValidArea()</span>
+<span id="L761"><a href="#L761">761</a>    {</span>
+<span id="L762"><a href="#L762">762</a>        if (listQuadTree.Count == 0)</span>
+<span id="L763"><a href="#L763">763</a>        {</span>
+<span id="L764"><a href="#L764">764</a>            validTileArea = new Vector4(0, 0, 1, 1);</span>
+<span id="L765"><a href="#L765">765</a>            return;</span>
+<span id="L766"><a href="#L766">766</a>        }</span>
+<span id="L767"><a href="#L767">767</a></span>
+<span id="L768"><a href="#L768">768</a>        var firstArea = listQuadTree[0].treeArea;</span>
+<span id="L769"><a href="#L769">769</a>        validTileArea = firstArea;</span>
+<span id="L770"><a href="#L770">770</a>        for (int idx = 1; idx &lt; listQuadTree.Count; ++idx)</span>
+<span id="L771"><a href="#L771">771</a>        {</span>
+<span id="L772"><a href="#L772">772</a>            var quadTree = listQuadTree[idx];</span>
+<span id="L773"><a href="#L773">773</a>            var area = quadTree.treeArea;</span>
+<span id="L774"><a href="#L774">774</a>            validTileArea.x = validTileArea.x &lt; area.x ? validTileArea.x : area.x;</span>
+<span id="L775"><a href="#L775">775</a>            validTileArea.z = validTileArea.z &gt; area.z ? validTileArea.z : area.z; </span>
+<span id="L776"><a href="#L776">776</a>            validTileArea.y = validTileArea.y &lt; area.y ? validTileArea.y : area.y; </span>
+<span id="L777"><a href="#L777">777</a>            validTileArea.w = validTileArea.w &gt; area.w ? validTileArea.w : area.w; </span>
+<span id="L778"><a href="#L778">778</a>        }</span>
+<span id="L779"><a href="#L779">779</a>    }</span>
+<span id="L780"><a href="#L780">780</a></span>
+<span id="L781"><a href="#L781">781</a>#if UNITY_EDITOR</span>
+<span id="L782"><a href="#L782">782</a>    [Header(&quot;每帧强制重绘VT，只在编辑器生效&quot;)]</span>
+<span id="L783"><a href="#L783">783</a>    public bool RealtimeUpdateInEditor = false;</span>
+<span id="L784"><a href="#L784">784</a>    </span>
+<span id="L785"><a href="#L785">785</a>    private void CheckMaterialCompatibility()</span>
+<span id="L786"><a href="#L786">786</a>    {</span>
+<span id="L787"><a href="#L787">787</a>        foreach (var meshMat in listTerrainMeshMat)</span>
+<span id="L788"><a href="#L788">788</a>        {</span>
+<span id="L789"><a href="#L789">789</a>            var terrainMaterial = meshMat.terrainMaterial;</span>
+<span id="L790"><a href="#L790">790</a>            if (!IsMaterialCompatible(terrainMaterial))</span>
+<span id="L791"><a href="#L791">791</a>            {</span>
+<span id="L792"><a href="#L792">792</a>                Debug.LogError(&quot;错误：使用的材质不支持VT，缺少 &lt;RENDERTOVT&gt; Pass&quot;, terrainMaterial);</span>
+<span id="L793"><a href="#L793">793</a>            }</span>
+<span id="L794"><a href="#L794">794</a>        }</span>
+<span id="L795"><a href="#L795">795</a>    }</span>
+<span id="L796"><a href="#L796">796</a>#endif</span>
+<span id="L797"><a href="#L797">797</a></span>
+<span id="L798"><a href="#L798">798</a>    // 本帧动态计量初始值。Mip0 消耗 4，非 Mip0 消耗 1；剩余 &lt; 4 时本帧不再绘制 Mip0</span>
+<span id="L799"><a href="#L799">799</a>    public const int DefaultRenderLimitForMipZero = 16;</span>
+<span id="L800"><a href="#L800">800</a>    private const int DynamicMeterCostMipZero = 4;</span>
+<span id="L801"><a href="#L801">801</a>    private const int DynamicMeterCostNonMipZero = 1;</span>
+<span id="L802"><a href="#L802">802</a>    public static int RenderLimitForMipZero = VTRenderer.VTMipCount &gt; 1</span>
+<span id="L803"><a href="#L803">803</a>        ? DefaultRenderLimitForMipZero</span>
+<span id="L804"><a href="#L804">804</a>        : System.Int32.MaxValue;</span>
+<span id="L805"><a href="#L805">805</a></span>
+<span id="L806"><a href="#L806">806</a>    public static bool PerfUpdateEnabled { get; private set; } = true;</span>
+<span id="L807"><a href="#L807">807</a>    public static int PerfRenderPageBudgetForMipZero =&gt;</span>
+<span id="L808"><a href="#L808">808</a>        RenderLimitForMipZero == System.Int32.MaxValue ? 0 : RenderLimitForMipZero;</span>
+<span id="L809"><a href="#L809">809</a></span>
+<span id="L810"><a href="#L810">810</a>    public static void ConfigurePerfDiagnostic(bool updateEnabled, int renderPageBudgetForMipZero)</span>
+<span id="L811"><a href="#L811">811</a>    {</span>
+<span id="L812"><a href="#L812">812</a>        PerfUpdateEnabled = updateEnabled;</span>
+<span id="L813"><a href="#L813">813</a>        RenderLimitForMipZero = renderPageBudgetForMipZero &gt; 0</span>
+<span id="L814"><a href="#L814">814</a>            ? renderPageBudgetForMipZero</span>
+<span id="L815"><a href="#L815">815</a>            : System.Int32.MaxValue;</span>
+<span id="L816"><a href="#L816">816</a>    }</span>
+<span id="L817"><a href="#L817">817</a></span>
+<span id="L818"><a href="#L818">818</a>    public static void ResetPerfDiagnostic()</span>
+<span id="L819"><a href="#L819">819</a>    {</span>
+<span id="L820"><a href="#L820">820</a>        PerfUpdateEnabled = true;</span>
+<span id="L821"><a href="#L821">821</a>        RenderLimitForMipZero = VTRenderer.VTMipCount &gt; 1</span>
+<span id="L822"><a href="#L822">822</a>            ? DefaultRenderLimitForMipZero</span>
+<span id="L823"><a href="#L823">823</a>            : System.Int32.MaxValue;</span>
+<span id="L824"><a href="#L824">824</a>    }</span>
+<span id="L825"><a href="#L825">825</a></span>
+<span id="L826"><a href="#L826">826</a>    public void RenderQuadNode(QuadNode quadNode)</span>
+<span id="L827"><a href="#L827">827</a>    {</span>
+<span id="L828"><a href="#L828">828</a>#if ENABLE_PROFILER</span>
+<span id="L829"><a href="#L829">829</a>        if (!GMRenderPassToggle.IsVTSubmitEnabled())</span>
+<span id="L830"><a href="#L830">830</a>        {</span>
+<span id="L831"><a href="#L831">831</a>            return;</span>
+<span id="L832"><a href="#L832">832</a>        }</span>
+<span id="L833"><a href="#L833">833</a>#endif</span>
+<span id="L834"><a href="#L834">834</a></span>
+<span id="L835"><a href="#L835">835</a>        if (quadNode.physicTexIndex &lt;= InvalidPhysicIndex)</span>
+<span id="L836"><a href="#L836">836</a>        {</span>
+<span id="L837"><a href="#L837">837</a>#if UNITY_EDITOR &amp;&amp; LINK_TEST</span>
+<span id="L838"><a href="#L838">838</a>            Debug.LogError($&quot;Attempt to Render QuadeNode with physicTexIndex {quadNode.physicTexIndex}&quot;);</span>
+<span id="L839"><a href="#L839">839</a>#endif</span>
+<span id="L840"><a href="#L840">840</a>            return;</span>
+<span id="L841"><a href="#L841">841</a>        }</span>
+<span id="L842"><a href="#L842">842</a></span>
+<span id="L843"><a href="#L843">843</a>        bool isPendingTextureMipmapRedraw = quadNode.HasPendingTextureMipmapRedraw;</span>
+<span id="L844"><a href="#L844">844</a>        if (quadNode.availableMip &lt;= 0 &amp;&amp; !isPendingTextureMipmapRedraw) // 已经绘制完成所有mip</span>
+<span id="L845"><a href="#L845">845</a>        {</span>
+<span id="L846"><a href="#L846">846</a>            return;</span>
+<span id="L847"><a href="#L847">847</a>        }</span>
+<span id="L848"><a href="#L848">848</a></span>
+<span id="L849"><a href="#L849">849</a>        // 绘制 Mip0 受本帧动态计量约束：剩余 &lt; Mip0消耗则拒绝；非Mip0始终绘制</span>
+<span id="L850"><a href="#L850">850</a>        int renderingMip = isPendingTextureMipmapRedraw</span>
+<span id="L851"><a href="#L851">851</a>            ? quadNode.pendingTextureMipmapRedrawMip</span>
+<span id="L852"><a href="#L852">852</a>            : quadNode.availableMip - 1;</span>
+<span id="L853"><a href="#L853">853</a>        if (renderingMip == 0 &amp;&amp;</span>
+<span id="L854"><a href="#L854">854</a>            RenderLimitForMipZero - renderDynamicMeterConsumedThisFrame &lt; DynamicMeterCostMipZero)</span>
+<span id="L855"><a href="#L855">855</a>        {</span>
+<span id="L856"><a href="#L856">856</a>            return;</span>
+<span id="L857"><a href="#L857">857</a>        }</span>
+<span id="L858"><a href="#L858">858</a></span>
+<span id="L859"><a href="#L859">859</a>        var patchInfo = quadNode.GetUVInSingleTile();</span>
+<span id="L860"><a href="#L860">860</a>        var renderTask = new VTRenderer.RenderTask(quadNode.physicTexIndex, renderingMip,</span>
+<span id="L861"><a href="#L861">861</a>            quadNode.tileInfo, patchInfo, quadNode.nodeParam.nodeArea, quadNode.hashMeshInfoIndex);</span>
+<span id="L862"><a href="#L862">862</a>        bool textureMipsReady = vtRenderer.Render(this, renderTask);</span>
+<span id="L863"><a href="#L863">863</a></span>
+<span id="L864"><a href="#L864">864</a>        if (!isPendingTextureMipmapRedraw)</span>
+<span id="L865"><a href="#L865">865</a>        {</span>
+<span id="L866"><a href="#L866">866</a>            quadNode.availableMip = renderingMip;</span>
+<span id="L867"><a href="#L867">867</a>        }</span>
+<span id="L868"><a href="#L868">868</a>        quadNode.pendingTextureMipmapRedrawMip = textureMipsReady ? -1 : renderingMip;</span>
+<span id="L869"><a href="#L869">869</a></span>
+<span id="L870"><a href="#L870">870</a>        var nodeParam = quadNode.nodeParam;</span>
+<span id="L871"><a href="#L871">871</a>        indexWriter.FillSubRegion(quadNode.IndexByteInfo, nodeParam.x, nodeParam.z, nodeParam.size);</span>
+<span id="L872"><a href="#L872">872</a></span>
+<span id="L873"><a href="#L873">873</a>        ++renderCounterThisFrameForAllMip;</span>
+<span id="L874"><a href="#L874">874</a>        renderDynamicMeterConsumedThisFrame += renderingMip == 0</span>
+<span id="L875"><a href="#L875">875</a>            ? DynamicMeterCostMipZero</span>
+<span id="L876"><a href="#L876">876</a>            : DynamicMeterCostNonMipZero;</span>
+<span id="L877"><a href="#L877">877</a>        </span>
+<span id="L878"><a href="#L878">878</a>#if UNITY_EDITOR &amp;&amp; LINK_TEST</span>
+<span id="L879"><a href="#L879">879</a>        // Debug.LogWarning($&quot;VT.RenderQuadNode 【{Time.frameCount}】 {renderCounter}&quot;);</span>
+<span id="L880"><a href="#L880">880</a>#endif</span>
+<span id="L881"><a href="#L881">881</a>    }</span>
+<span id="L882"><a href="#L882">882</a></span>
+<span id="L883"><a href="#L883">883</a>    private int renderCounterThisFrameForAllMip = 0;</span>
+<span id="L884"><a href="#L884">884</a>    private int renderDynamicMeterConsumedThisFrame = 0;</span>
+<span id="L885"><a href="#L885">885</a></span>
+<span id="L886"><a href="#L886">886</a>    public class MeshMaterialInfo</span>
+<span id="L887"><a href="#L887">887</a>    {</span>
+<span id="L888"><a href="#L888">888</a>        public Mesh terrainMesh;</span>
+<span id="L889"><a href="#L889">889</a>        public Material terrainMaterial;</span>
+<span id="L890"><a href="#L890">890</a>        public int renderToVTPassIndex;</span>
+<span id="L891"><a href="#L891">891</a>        public TileInfo tileInfo;</span>
+<span id="L892"><a href="#L892">892</a></span>
+<span id="L893"><a href="#L893">893</a>        public MeshMaterialInfo(Mesh _mesh, Material _material, TileInfo _tileInfo)</span>
+<span id="L894"><a href="#L894">894</a>        {</span>
+<span id="L895"><a href="#L895">895</a>            terrainMesh = _mesh;</span>
+<span id="L896"><a href="#L896">896</a>            terrainMaterial = _material;</span>
+<span id="L897"><a href="#L897">897</a>            renderToVTPassIndex = terrainMaterial.FindPass(PassName_RenderToVT);</span>
+<span id="L898"><a href="#L898">898</a>            tileInfo = _tileInfo;</span>
+<span id="L899"><a href="#L899">899</a>        }</span>
+<span id="L900"><a href="#L900">900</a>    }</span>
+<span id="L901"><a href="#L901">901</a>    private List&lt;MeshMaterialInfo&gt; listTerrainMeshMat = new List&lt;MeshMaterialInfo&gt;();</span>
+<span id="L902"><a href="#L902">902</a>    public Dictionary&lt;int, MeshMaterialInfo&gt; dictTerrainMeshMat = new Dictionary&lt;int, MeshMaterialInfo&gt;();</span>
+<span id="L903"><a href="#L903">903</a>    </span>
+<span id="L904"><a href="#L904">904</a>    // 强制全量重绘一次</span>
+<span id="L905"><a href="#L905">905</a>    public bool NeedToForceRedraw;</span>
+<span id="L906"><a href="#L906">906</a>    private void ForceRedraw()</span>
+<span id="L907"><a href="#L907">907</a>    {</span>
+<span id="L908"><a href="#L908">908</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L909"><a href="#L909">909</a>        {</span>
+<span id="L910"><a href="#L910">910</a>            quadTree.ForceRedraw();</span>
+<span id="L911"><a href="#L911">911</a>        }</span>
+<span id="L912"><a href="#L912">912</a>    }</span>
+<span id="L913"><a href="#L913">913</a></span>
+<span id="L914"><a href="#L914">914</a>    public void UpdateVTMode(bool isDispose = false)</span>
+<span id="L915"><a href="#L915">915</a>    {</span>
+<span id="L916"><a href="#L916">916</a>        if (!IsVTActive) return;</span>
+<span id="L917"><a href="#L917">917</a></span>
+<span id="L918"><a href="#L918">918</a>        bool enableVTEffect = !isDispose &amp;&amp; UseVT &amp;&amp; TerrainCamera.enabled;</span>
+<span id="L919"><a href="#L919">919</a>#if UNITY_EDITOR &amp;&amp; AOE_ART</span>
+<span id="L920"><a href="#L920">920</a>        var tctComp = GetComponent&lt;TerrainChangeTiling&gt;();</span>
+<span id="L921"><a href="#L921">921</a>        if (tctComp != null &amp;&amp; !tctComp.Editor_EnableVTEffectInCity)</span>
+<span id="L922"><a href="#L922">922</a>        {</span>
+<span id="L923"><a href="#L923">923</a>            enableVTEffect = false;</span>
+<span id="L924"><a href="#L924">924</a>        }</span>
+<span id="L925"><a href="#L925">925</a>#endif</span>
+<span id="L926"><a href="#L926">926</a></span>
+<span id="L927"><a href="#L927">927</a>        TerrainVT_Manager.SetUseTerrainVT(enableVTEffect);</span>
+<span id="L928"><a href="#L928">928</a>    }</span>
+<span id="L929"><a href="#L929">929</a></span>
+<span id="L930"><a href="#L930">930</a>    private Vector3 lastCamPosition = Vector3.negativeInfinity;</span>
+<span id="L931"><a href="#L931">931</a>    private const float sqrCamMoveDistThreshold = 1f;</span>
+<span id="L932"><a href="#L932">932</a>    bool CheckCameraMoved(Vector3 camPos)</span>
+<span id="L933"><a href="#L933">933</a>    {</span>
+<span id="L934"><a href="#L934">934</a>        bool cameraMoved = Vector3.SqrMagnitude(camPos - lastCamPosition) &gt;= sqrCamMoveDistThreshold;</span>
+<span id="L935"><a href="#L935">935</a>        if (cameraMoved)</span>
+<span id="L936"><a href="#L936">936</a>        {</span>
+<span id="L937"><a href="#L937">937</a>            lastCamPosition = camPos;</span>
+<span id="L938"><a href="#L938">938</a>        }</span>
+<span id="L939"><a href="#L939">939</a></span>
+<span id="L940"><a href="#L940">940</a>        return cameraMoved;</span>
+<span id="L941"><a href="#L941">941</a>    }</span>
+<span id="L942"><a href="#L942">942</a></span>
+<span id="L943"><a href="#L943">943</a>    private int nextMeshInfoIndex = -1;</span>
+<span id="L944"><a href="#L944">944</a>    public Dictionary&lt;int, MeshInfo&gt; dictMeshInfo = new Dictionary&lt;int, MeshInfo&gt;();</span>
+<span id="L945"><a href="#L945">945</a></span>
+<span id="L946"><a href="#L946">946</a>    /// 按 Tile 存储的包边石 MeshInfo，用于把高度绘制进 VT（WorldY）。</span>
+<span id="L947"><a href="#L947">947</a>    /// key 为 ConvertTileIndex 后的 tileIndex。由 WorldTileStreaming 在 smData 加载/回收时增删。</span>
+<span id="L948"><a href="#L948">948</a>    public Dictionary&lt;int, VTMeshInfoList&gt; dictMeshInfoOneTile = new Dictionary&lt;int, VTMeshInfoList&gt;();</span>
+<span id="L949"><a href="#L949">949</a></span>
+<span id="L950"><a href="#L950">950</a>    /// 大面积地面 MeshInfo 字典，不参与 quadNode.hashMeshInfoIndex，仅在渲染时按 bounds 检测绘制</span>
+<span id="L951"><a href="#L951">951</a>    /// key 为 instanceID</span>
+<span id="L952"><a href="#L952">952</a>    public Dictionary&lt;int, MeshInfo&gt; dictBigAreaGround = new Dictionary&lt;int, MeshInfo&gt;();</span>
+<span id="L953"><a href="#L953">953</a></span>
+<span id="L954"><a href="#L954">954</a>    public enum MeshInfoOp</span>
+<span id="L955"><a href="#L955">955</a>    {</span>
+<span id="L956"><a href="#L956">956</a>        Add,</span>
+<span id="L957"><a href="#L957">957</a>        Del,</span>
+<span id="L958"><a href="#L958">958</a>        Show,</span>
+<span id="L959"><a href="#L959">959</a>        Hide,</span>
+<span id="L960"><a href="#L960">960</a>    }</span>
+<span id="L961"><a href="#L961">961</a></span>
+<span id="L962"><a href="#L962">962</a>    private struct PendingMeshInfoOp</span>
+<span id="L963"><a href="#L963">963</a>    {</span>
+<span id="L964"><a href="#L964">964</a>        public int meshInfoIndex;</span>
+<span id="L965"><a href="#L965">965</a>        public MeshInfo meshInfo;</span>
+<span id="L966"><a href="#L966">966</a>        public MeshInfoOp op;</span>
+<span id="L967"><a href="#L967">967</a></span>
+<span id="L968"><a href="#L968">968</a>        public PendingMeshInfoOp(int meshInfoIndex, MeshInfo meshInfo, MeshInfoOp op)</span>
+<span id="L969"><a href="#L969">969</a>        {</span>
+<span id="L970"><a href="#L970">970</a>            this.meshInfoIndex = meshInfoIndex;</span>
+<span id="L971"><a href="#L971">971</a>            this.meshInfo = meshInfo;</span>
+<span id="L972"><a href="#L972">972</a>            this.op = op;</span>
+<span id="L973"><a href="#L973">973</a>        }</span>
+<span id="L974"><a href="#L974">974</a>    }</span>
+<span id="L975"><a href="#L975">975</a></span>
+<span id="L976"><a href="#L976">976</a>    private readonly Queue&lt;PendingMeshInfoOp&gt; pendingMeshInfoOps = new Queue&lt;PendingMeshInfoOp&gt;(256);</span>
+<span id="L977"><a href="#L977">977</a>    private readonly HashSet&lt;int&gt; pendingAddMeshInfoIndices = new HashSet&lt;int&gt;();</span>
+<span id="L978"><a href="#L978">978</a></span>
+<span id="L979"><a href="#L979">979</a>    public int RegisterMeshInfo(MeshInfo meshInfo)</span>
+<span id="L980"><a href="#L980">980</a>    {</span>
+<span id="L981"><a href="#L981">981</a>        if (!HardwareSupportsDecal || meshInfo == null) return -1;</span>
+<span id="L982"><a href="#L982">982</a></span>
+<span id="L983"><a href="#L983">983</a>        int meshInfoIndex = ++nextMeshInfoIndex;</span>
+<span id="L984"><a href="#L984">984</a>        dictMeshInfo[meshInfoIndex] = meshInfo;</span>
+<span id="L985"><a href="#L985">985</a>        pendingAddMeshInfoIndices.Add(meshInfoIndex);</span>
+<span id="L986"><a href="#L986">986</a>        pendingMeshInfoOps.Enqueue(new PendingMeshInfoOp(meshInfoIndex, meshInfo, MeshInfoOp.Add));</span>
+<span id="L987"><a href="#L987">987</a>        return meshInfoIndex;</span>
+<span id="L988"><a href="#L988">988</a>    }</span>
+<span id="L989"><a href="#L989">989</a></span>
+<span id="L990"><a href="#L990">990</a>    public void DeregisterMeshInfo(int meshInfoIndex)</span>
+<span id="L991"><a href="#L991">991</a>    {</span>
+<span id="L992"><a href="#L992">992</a>        if (dictMeshInfo == null) return;</span>
+<span id="L993"><a href="#L993">993</a></span>
+<span id="L994"><a href="#L994">994</a>        if (!dictMeshInfo.TryGetValue(meshInfoIndex, out var meshInfo))</span>
+<span id="L995"><a href="#L995">995</a>        {</span>
+<span id="L996"><a href="#L996">996</a>            return;</span>
+<span id="L997"><a href="#L997">997</a>        }</span>
+<span id="L998"><a href="#L998">998</a></span>
+<span id="L999"><a href="#L999">999</a>        dictMeshInfo.Remove(meshInfoIndex);</span>
+<span id="L1000"><a href="#L1000">1000</a></span>
+<span id="L1001"><a href="#L1001">1001</a>        // Add 还在队列里：直接取消，避免先插入再删除</span>
+<span id="L1002"><a href="#L1002">1002</a>        if (pendingAddMeshInfoIndices.Remove(meshInfoIndex))</span>
+<span id="L1003"><a href="#L1003">1003</a>        {</span>
+<span id="L1004"><a href="#L1004">1004</a>            return;</span>
+<span id="L1005"><a href="#L1005">1005</a>        }</span>
+<span id="L1006"><a href="#L1006">1006</a></span>
+<span id="L1007"><a href="#L1007">1007</a>        if (listQuadTree == null) return;</span>
+<span id="L1008"><a href="#L1008">1008</a>        pendingMeshInfoOps.Enqueue(new PendingMeshInfoOp(meshInfoIndex, meshInfo, MeshInfoOp.Del));</span>
+<span id="L1009"><a href="#L1009">1009</a>    }</span>
+<span id="L1010"><a href="#L1010">1010</a></span>
+<span id="L1011"><a href="#L1011">1011</a>    private void ProcessPendingMeshInfoOps()</span>
+<span id="L1012"><a href="#L1012">1012</a>    {</span>
+<span id="L1013"><a href="#L1013">1013</a>        int count = pendingMeshInfoOps.Count;</span>
+<span id="L1014"><a href="#L1014">1014</a>        if (count == 0) return;</span>
+<span id="L1015"><a href="#L1015">1015</a></span>
+<span id="L1016"><a href="#L1016">1016</a>        int budget = MaxMeshInfoOpsPerFrame;</span>
+<span id="L1017"><a href="#L1017">1017</a>        if (budget &lt;= 0 || budget &gt; count) budget = count;</span>
+<span id="L1018"><a href="#L1018">1018</a></span>
+<span id="L1019"><a href="#L1019">1019</a>        Profiler.BeginSample(&quot;[VT] PendingMeshInfo&quot;);</span>
+<span id="L1020"><a href="#L1020">1020</a>        int processed = 0;</span>
+<span id="L1021"><a href="#L1021">1021</a>        while (processed &lt; budget &amp;&amp; pendingMeshInfoOps.Count &gt; 0)</span>
+<span id="L1022"><a href="#L1022">1022</a>        {</span>
+<span id="L1023"><a href="#L1023">1023</a>            var op = pendingMeshInfoOps.Dequeue();</span>
+<span id="L1024"><a href="#L1024">1024</a>            if (op.op == MeshInfoOp.Add &amp;&amp; !pendingAddMeshInfoIndices.Remove(op.meshInfoIndex))</span>
+<span id="L1025"><a href="#L1025">1025</a>            {</span>
+<span id="L1026"><a href="#L1026">1026</a>                continue;</span>
+<span id="L1027"><a href="#L1027">1027</a>            }</span>
+<span id="L1028"><a href="#L1028">1028</a></span>
+<span id="L1029"><a href="#L1029">1029</a>            ApplyMeshInfoOp(op.meshInfoIndex, op.meshInfo, op.op);</span>
+<span id="L1030"><a href="#L1030">1030</a>            ++processed;</span>
+<span id="L1031"><a href="#L1031">1031</a>        }</span>
+<span id="L1032"><a href="#L1032">1032</a>        Profiler.EndSample();</span>
+<span id="L1033"><a href="#L1033">1033</a>    }</span>
+<span id="L1034"><a href="#L1034">1034</a></span>
+<span id="L1035"><a href="#L1035">1035</a>    private void ApplyMeshInfoOp(int meshInfoIndex, MeshInfo meshInfo, MeshInfoOp meshInfoOp)</span>
+<span id="L1036"><a href="#L1036">1036</a>    {</span>
+<span id="L1037"><a href="#L1037">1037</a>        if (meshInfo == null || listQuadTree == null) return;</span>
+<span id="L1038"><a href="#L1038">1038</a></span>
+<span id="L1039"><a href="#L1039">1039</a>        var meshArea = WorldBoundsToTerrainArea(meshInfo.boundsInfo);</span>
+<span id="L1040"><a href="#L1040">1040</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L1041"><a href="#L1041">1041</a>        {</span>
+<span id="L1042"><a href="#L1042">1042</a>            quadTree.AddOrDelMeshInfo(meshInfoIndex, meshInfo, meshArea, meshInfoOp);</span>
+<span id="L1043"><a href="#L1043">1043</a>        }</span>
+<span id="L1044"><a href="#L1044">1044</a>    }</span>
+<span id="L1045"><a href="#L1045">1045</a></span>
+<span id="L1046"><a href="#L1046">1046</a>    /// 注册大面积地面 MeshInfo 到 dictBigAreaGround，仅触发 RedrawAllMips，不添加到 hashMeshInfoIndex</span>
+<span id="L1047"><a href="#L1047">1047</a>    public void RegisterBigAreaGround(int instanceID, MeshInfo meshInfo)</span>
+<span id="L1048"><a href="#L1048">1048</a>    {</span>
+<span id="L1049"><a href="#L1049">1049</a>        if (meshInfo == null) return;</span>
+<span id="L1050"><a href="#L1050">1050</a></span>
+<span id="L1051"><a href="#L1051">1051</a>        dictBigAreaGround[instanceID] = meshInfo;</span>
+<span id="L1052"><a href="#L1052">1052</a>        var meshArea = WorldBoundsToTerrainArea(meshInfo.boundsInfo);</span>
+<span id="L1053"><a href="#L1053">1053</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L1054"><a href="#L1054">1054</a>        {</span>
+<span id="L1055"><a href="#L1055">1055</a>            quadTree.RedrawByMeshInfo(meshInfo, meshArea, MeshInfoOp.Add);</span>
+<span id="L1056"><a href="#L1056">1056</a>        }</span>
+<span id="L1057"><a href="#L1057">1057</a>    }</span>
+<span id="L1058"><a href="#L1058">1058</a></span>
+<span id="L1059"><a href="#L1059">1059</a>    /// 从 dictBigAreaGround 中注销指定 instanceID 的 MeshInfo，仅触发 RedrawAllMips，不操作 hashMeshInfoIndex</span>
+<span id="L1060"><a href="#L1060">1060</a>    public void DeregisterBigAreaGround(int instanceID)</span>
+<span id="L1061"><a href="#L1061">1061</a>    {</span>
+<span id="L1062"><a href="#L1062">1062</a>        if (dictBigAreaGround.TryGetValue(instanceID, out var meshInfo))</span>
+<span id="L1063"><a href="#L1063">1063</a>        {</span>
+<span id="L1064"><a href="#L1064">1064</a>            var meshArea = WorldBoundsToTerrainArea(meshInfo.boundsInfo);</span>
+<span id="L1065"><a href="#L1065">1065</a>            foreach (var quadTree in listQuadTree)</span>
+<span id="L1066"><a href="#L1066">1066</a>            {</span>
+<span id="L1067"><a href="#L1067">1067</a>                quadTree.RedrawByMeshInfo(meshInfo, meshArea, MeshInfoOp.Del);</span>
+<span id="L1068"><a href="#L1068">1068</a>            }</span>
+<span id="L1069"><a href="#L1069">1069</a>            dictBigAreaGround.Remove(instanceID);</span>
+<span id="L1070"><a href="#L1070">1070</a>        }</span>
+<span id="L1071"><a href="#L1071">1071</a>    }</span>
+<span id="L1072"><a href="#L1072">1072</a></span>
+<span id="L1073"><a href="#L1073">1073</a>    public void ToggleMeshInfoDisplay(int meshInfoIndex, bool visible)</span>
+<span id="L1074"><a href="#L1074">1074</a>    {</span>
+<span id="L1075"><a href="#L1075">1075</a>        if (dictMeshInfo.TryGetValue(meshInfoIndex, out var meshInfo))</span>
+<span id="L1076"><a href="#L1076">1076</a>        {</span>
+<span id="L1077"><a href="#L1077">1077</a>            if (meshInfo.isVisible == visible) return;</span>
+<span id="L1078"><a href="#L1078">1078</a></span>
+<span id="L1079"><a href="#L1079">1079</a>            // 尚未写入四叉树时只改可见标记，Add 冲刷时会带上最新 isVisible</span>
+<span id="L1080"><a href="#L1080">1080</a>            if (pendingAddMeshInfoIndices.Contains(meshInfoIndex))</span>
+<span id="L1081"><a href="#L1081">1081</a>            {</span>
+<span id="L1082"><a href="#L1082">1082</a>                meshInfo.isVisible = visible;</span>
+<span id="L1083"><a href="#L1083">1083</a>                return;</span>
+<span id="L1084"><a href="#L1084">1084</a>            }</span>
+<span id="L1085"><a href="#L1085">1085</a></span>
+<span id="L1086"><a href="#L1086">1086</a>            MeshInfoOp meshInfoOp = visible ? MeshInfoOp.Show : MeshInfoOp.Hide;</span>
+<span id="L1087"><a href="#L1087">1087</a>            ApplyMeshInfoOp(meshInfoIndex, meshInfo, meshInfoOp);</span>
+<span id="L1088"><a href="#L1088">1088</a>            meshInfo.isVisible = visible;</span>
+<span id="L1089"><a href="#L1089">1089</a>        }</span>
+<span id="L1090"><a href="#L1090">1090</a>    }</span>
+<span id="L1091"><a href="#L1091">1091</a></span>
+<span id="L1092"><a href="#L1092">1092</a>    public void DeregisterMeshInfoList(List&lt;int&gt; listMeshInfoIndex)</span>
+<span id="L1093"><a href="#L1093">1093</a>    {</span>
+<span id="L1094"><a href="#L1094">1094</a>        if (listMeshInfoIndex == null) return;</span>
+<span id="L1095"><a href="#L1095">1095</a></span>
+<span id="L1096"><a href="#L1096">1096</a>        foreach (var meshInfoIndex in listMeshInfoIndex)</span>
+<span id="L1097"><a href="#L1097">1097</a>        {</span>
+<span id="L1098"><a href="#L1098">1098</a>            DeregisterMeshInfo(meshInfoIndex);</span>
+<span id="L1099"><a href="#L1099">1099</a>        }</span>
+<span id="L1100"><a href="#L1100">1100</a>    }</span>
+<span id="L1101"><a href="#L1101">1101</a></span>
+<span id="L1102"><a href="#L1102">1102</a>    public void ConvertTileIndex(int tileIndex, out int tileX, out int tileY)</span>
+<span id="L1103"><a href="#L1103">1103</a>    {</span>
+<span id="L1104"><a href="#L1104">1104</a>        tileX = tileIndex % TileCount;</span>
+<span id="L1105"><a href="#L1105">1105</a>        tileY = tileIndex / TileCount;</span>
+<span id="L1106"><a href="#L1106">1106</a>    }</span>
+<span id="L1107"><a href="#L1107">1107</a></span>
+<span id="L1108"><a href="#L1108">1108</a>    public int ConvertTileIndex(int tileX, int tileY)</span>
+<span id="L1109"><a href="#L1109">1109</a>    {</span>
+<span id="L1110"><a href="#L1110">1110</a>        int tileIndex = tileY * TileCount + tileX;</span>
+<span id="L1111"><a href="#L1111">1111</a>        return tileIndex;</span>
+<span id="L1112"><a href="#L1112">1112</a>    }</span>
+<span id="L1113"><a href="#L1113">1113</a></span>
+<span id="L1114"><a href="#L1114">1114</a>    public int ConvertTileIndex(Vector2Int TileIndex2D)</span>
+<span id="L1115"><a href="#L1115">1115</a>    {</span>
+<span id="L1116"><a href="#L1116">1116</a>        int tileIndex = TileIndex2D.y * TileCount + TileIndex2D.x;</span>
+<span id="L1117"><a href="#L1117">1117</a>        return tileIndex;</span>
+<span id="L1118"><a href="#L1118">1118</a>    }</span>
+<span id="L1119"><a href="#L1119">1119</a></span>
+<span id="L1120"><a href="#L1120">1120</a>    public void AddVTMeshInfoByTile(Vector2Int TileIndex2D, VTMeshInfoList meshInfoList)</span>
+<span id="L1121"><a href="#L1121">1121</a>    {</span>
+<span id="L1122"><a href="#L1122">1122</a>        int tileY = ConvertTileY(TileIndex2D.y);</span>
+<span id="L1123"><a href="#L1123">1123</a>        int TileIndex = ConvertTileIndex(TileIndex2D.x, tileY);</span>
+<span id="L1124"><a href="#L1124">1124</a></span>
+<span id="L1125"><a href="#L1125">1125</a>        if (dictMeshInfoOneTile.TryGetValue(TileIndex, out var oldList))</span>
+<span id="L1126"><a href="#L1126">1126</a>        {</span>
+<span id="L1127"><a href="#L1127">1127</a>            RedrawVTMeshInfoList(oldList);</span>
+<span id="L1128"><a href="#L1128">1128</a>        }</span>
+<span id="L1129"><a href="#L1129">1129</a></span>
+<span id="L1130"><a href="#L1130">1130</a>        meshInfoList?.RefreshUnionBounds();</span>
+<span id="L1131"><a href="#L1131">1131</a>        dictMeshInfoOneTile[TileIndex] = meshInfoList;</span>
+<span id="L1132"><a href="#L1132">1132</a>        RedrawVTMeshInfoList(meshInfoList);</span>
+<span id="L1133"><a href="#L1133">1133</a>    }</span>
+<span id="L1134"><a href="#L1134">1134</a></span>
+<span id="L1135"><a href="#L1135">1135</a>    public void DelVTMeshInfoByTile(Vector2Int TileIndex2D)</span>
+<span id="L1136"><a href="#L1136">1136</a>    {</span>
+<span id="L1137"><a href="#L1137">1137</a>        int tileY = ConvertTileY(TileIndex2D.y);</span>
+<span id="L1138"><a href="#L1138">1138</a>        int TileIndex = ConvertTileIndex(TileIndex2D.x, tileY);</span>
+<span id="L1139"><a href="#L1139">1139</a></span>
+<span id="L1140"><a href="#L1140">1140</a>        if (dictMeshInfoOneTile.TryGetValue(TileIndex, out var meshInfoList))</span>
+<span id="L1141"><a href="#L1141">1141</a>        {</span>
+<span id="L1142"><a href="#L1142">1142</a>            RedrawVTMeshInfoList(meshInfoList);</span>
+<span id="L1143"><a href="#L1143">1143</a>            dictMeshInfoOneTile.Remove(TileIndex);</span>
+<span id="L1144"><a href="#L1144">1144</a>        }</span>
+<span id="L1145"><a href="#L1145">1145</a>    }</span>
+<span id="L1146"><a href="#L1146">1146</a></span>
+<span id="L1147"><a href="#L1147">1147</a>    /// 按包边石列表的 XZ 包围盒并集，只重绘覆盖到的 VT page。</span>
+<span id="L1148"><a href="#L1148">1148</a>    /// 用注册时缓存的 unionBounds，不要逐项重算：list 里的 mesh 可能已被 MeshLODInfo.Clear() 置空，</span>
+<span id="L1149"><a href="#L1149">1149</a>    /// 重算会因为 isValid 全 false 而退化成空操作，恰好漏掉最需要失效的那批 page。</span>
+<span id="L1150"><a href="#L1150">1150</a>    /// 这里的失效范围也因此与 DrawCliffWorldY 的粗筛范围严格一致（两者读同一份 unionBounds）。</span>
+<span id="L1151"><a href="#L1151">1151</a>    private void RedrawVTMeshInfoList(VTMeshInfoList meshInfoList)</span>
+<span id="L1152"><a href="#L1152">1152</a>    {</span>
+<span id="L1153"><a href="#L1153">1153</a>        if (meshInfoList?.listMeshInfo == null || !meshInfoList.hasUnionBounds || listQuadTree == null) return;</span>
+<span id="L1154"><a href="#L1154">1154</a></span>
+<span id="L1155"><a href="#L1155">1155</a>        // RedrawByMeshInfo 只用 meshInfo 判空和读 isVisible，取任意一项即可</span>
+<span id="L1156"><a href="#L1156">1156</a>        MeshInfo dummy = null;</span>
+<span id="L1157"><a href="#L1157">1157</a>        var list = meshInfoList.listMeshInfo;</span>
+<span id="L1158"><a href="#L1158">1158</a>        for (int i = 0; i &lt; list.Count; ++i)</span>
+<span id="L1159"><a href="#L1159">1159</a>        {</span>
+<span id="L1160"><a href="#L1160">1160</a>            if (list[i] != null)</span>
+<span id="L1161"><a href="#L1161">1161</a>            {</span>
+<span id="L1162"><a href="#L1162">1162</a>                dummy = list[i];</span>
+<span id="L1163"><a href="#L1163">1163</a>                break;</span>
+<span id="L1164"><a href="#L1164">1164</a>            }</span>
+<span id="L1165"><a href="#L1165">1165</a>        }</span>
+<span id="L1166"><a href="#L1166">1166</a></span>
+<span id="L1167"><a href="#L1167">1167</a>        if (dummy == null) return;</span>
+<span id="L1168"><a href="#L1168">1168</a></span>
+<span id="L1169"><a href="#L1169">1169</a>        var meshArea = WorldBoundsToTerrainArea(meshInfoList.unionBounds);</span>
+<span id="L1170"><a href="#L1170">1170</a>        foreach (var quadTree in listQuadTree)</span>
+<span id="L1171"><a href="#L1171">1171</a>        {</span>
+<span id="L1172"><a href="#L1172">1172</a>            quadTree.RedrawByMeshInfo(dummy, meshArea, MeshInfoOp.Add);</span>
+<span id="L1173"><a href="#L1173">1173</a>        }</span>
+<span id="L1174"><a href="#L1174">1174</a>    }</span>
+<span id="L1175"><a href="#L1175">1175</a>}</span></pre></html>

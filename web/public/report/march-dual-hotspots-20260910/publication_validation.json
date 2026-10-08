@@ -1,0 +1,2840 @@
+{
+  "passed": true,
+  "sourceReportUnchanged": true,
+  "cases": [
+    "new_static",
+    "new_pan",
+    "new_zoom"
+  ],
+  "rankRows": 13031,
+  "completeRankValuesAndFieldsPreserved": true,
+  "all13EmbeddedImagesBytesUnchanged": [
+    {
+      "source": "plots/new_static-distribution.png",
+      "published": "images/78899ae4567a3462fbb9.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "78899ae4567a3462fbb970e5939f0ee0fe26cd63307c3e13ae2c6bf7563574c6"
+    },
+    {
+      "source": "plots/new_static-timeline.png",
+      "published": "images/aff04b6be1bf32fd7318.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "aff04b6be1bf32fd73185ca7f313e14f450853d5339a4c00b561a787068f429c"
+    },
+    {
+      "source": "static-before.png",
+      "published": "images/2469437cd0f5c0b84b89.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "2469437cd0f5c0b84b894575b0a80c251322cc146d392c4a619ed49a45bdfdfa"
+    },
+    {
+      "source": "static-after.png",
+      "published": "images/153c1f5e866863647ab9.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "153c1f5e866863647ab9b0ee32c462d648e74c4c1447390ee66cca75172fd68c"
+    },
+    {
+      "source": "plots/new_pan-distribution.png",
+      "published": "images/5fefd34672fd037c015a.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "5fefd34672fd037c015a460e384c6dcf616997bdd38318140113ebd723197a29"
+    },
+    {
+      "source": "plots/new_pan-timeline.png",
+      "published": "images/b10d2900c7acc84679d6.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "b10d2900c7acc84679d6a60b6a2370050007ad8426ebcbcec21d431de74ea82b"
+    },
+    {
+      "source": "pan-before.png",
+      "published": "images/2b0dc80d8163848cc481.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "2b0dc80d8163848cc4815d97900b579ab3e9ad0ec47a1676b04866dab07ed1b0"
+    },
+    {
+      "source": "pan-after.png",
+      "published": "images/53fd103e623523f9da05.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "53fd103e623523f9da05d2eb0f27e7e3ae6326dca5713b99e7226486f36c9786"
+    },
+    {
+      "source": "plots/new_zoom-distribution.png",
+      "published": "images/ed787bdce33bf3f64ed6.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "ed787bdce33bf3f64ed641c864bc7e6b69b3721911785bafb7ed1783e28b7349"
+    },
+    {
+      "source": "plots/new_zoom-timeline.png",
+      "published": "images/7083dee484da791605b7.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "7083dee484da791605b79bd039ce638c1cd0e76c2c05b5fa43f5bec97eec99ae"
+    },
+    {
+      "source": "plots/zoom-height-triangles.png",
+      "published": "images/372e4bcc99ccd8a5ad1c.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "372e4bcc99ccd8a5ad1c8276452debe7b0ab5aa83903e244146b46d98fa4d548"
+    },
+    {
+      "source": "zoom-before.png",
+      "published": "images/36d17d150ee02dfb62df.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "36d17d150ee02dfb62df9f2b09cb38fee0768a40291ab673c9a73bed180054ac"
+    },
+    {
+      "source": "zoom-after.png",
+      "published": "images/7525c9227d1623c3987b.webp",
+      "embeddedImageBytesUnchanged": true,
+      "sha256": "7525c9227d1623c3987b4c384c9fd09e93f4ceadda2a3bdf21a37d1f32b3a464"
+    }
+  ],
+  "compressedDataRoundTrips": [
+    {
+      "source": "report.html#rankdata",
+      "published": "data/rankdata.json.gz",
+      "sourceBytes": 7410359,
+      "sourceSha256": "986dbf9caabcd20f33918d71823387983524ebd491b6252d56556ceec8d8137b",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/zoom-height-audit.json",
+      "published": "analysis/zoom-height-audit.json.gz",
+      "sourceBytes": 346493,
+      "sourceSha256": "6b0f9bfa63e210c2752474e210eb798d60cf4fa693d040bdb18bd6572d8dac59",
+      "roundTripExact": true
+    },
+    {
+      "source": "zoom.counters.json",
+      "published": "zoom.counters.json.gz",
+      "sourceBytes": 117062,
+      "sourceSha256": "f7cfc0b78d023669a3d729fbfb9f0514f27fc70cb77a7bf54feafac65e5cfecc",
+      "roundTripExact": true
+    },
+    {
+      "source": "validation.json",
+      "published": "validation.json.gz",
+      "sourceBytes": 43612,
+      "sourceSha256": "6af8e9e2507210e1972397db5d60765f29f28f12a8634c2c4793a94b04c88999",
+      "roundTripExact": true
+    },
+    {
+      "source": "restored-state.json",
+      "published": "restored-state.json.gz",
+      "sourceBytes": 4784,
+      "sourceSha256": "b9ae9ba8265600fd76198d3dcfdfb0216c6bfae5cf3f2df7582789081a4cf268",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/alignment.json",
+      "published": "analysis/alignment.json.gz",
+      "sourceBytes": 2787,
+      "sourceSha256": "4e91d7d74a290fc205186c3b5bc1a99e2b7dbe6bd04c77f434c7756ec1cf4433",
+      "roundTripExact": true
+    },
+    {
+      "source": "source-index.json",
+      "published": "source-index.json.gz",
+      "sourceBytes": 9866,
+      "sourceSha256": "03d3d3c43f4f5ac40aca1cef7e02d35f034e35c2c2cfaf4e8571c0c30664b45e",
+      "roundTripExact": true
+    },
+    {
+      "source": "original-file-index.json",
+      "published": "original-file-index.json.gz",
+      "sourceBytes": 869,
+      "sourceSha256": "6a70ceb77587cfa3ae4e1fb316c6c5d287768e4297fcfe43ee5876fc80de60bc",
+      "roundTripExact": true
+    },
+    {
+      "source": "ui-validation.json",
+      "published": "ui-validation.json.gz",
+      "sourceBytes": 510,
+      "sourceSha256": "b2c2311a3947a4735013ef128c8f1b712d229edb782181281e3fc261ae9f860b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_urp_F937.json",
+      "published": "scopes/proofs/new_static_urp_F937.json.gz",
+      "sourceBytes": 22750,
+      "sourceSha256": "dbd13b6f6ae0e2f94a533e5b921342a5270a7b63f8dcb34f1d5c2e3cf5fe7506",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_static.scopes.json",
+      "published": "analysis/new_static.scopes.json.gz",
+      "sourceBytes": 108612558,
+      "sourceSha256": "ce2b36657c0d8bd0e43edf754a7ce677a8a4e2f2e270951e4b54ff5dfd40b5fb",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_static.cleanup.json",
+      "published": "analysis/new_static.cleanup.json.gz",
+      "sourceBytes": 334615,
+      "sourceSha256": "f4d7dc9a3d3c087ca1e3680b3060aed2e7093181201ee13ef7cf600938366530",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F547.json",
+      "published": "scopes/proofs/new_static_ecs_F547.json.gz",
+      "sourceBytes": 30570,
+      "sourceSha256": "7aec7f19d29e32625254cd5c3d6dab65ec16338ac5f6b9ffd86cd13cc3a80e35",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_heads_F686.json",
+      "published": "scopes/proofs/new_static_heads_F686.json.gz",
+      "sourceBytes": 6124,
+      "sourceSha256": "dec37b99a3c55d524eb8d56c9f697791f9b5ca13c2c7a98e162708a693cb74e2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F1051.json",
+      "published": "scopes/proofs/new_static_map_F1051.json.gz",
+      "sourceBytes": 122920,
+      "sourceSha256": "343d37585a5f7cb0b872dfff23c32a30357f223310c7fd554858ce8895b39286",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F856.json",
+      "published": "scopes/proofs/new_static_map_F856.json.gz",
+      "sourceBytes": 67498,
+      "sourceSha256": "388dc770d095a98582e4117f4f0266c121171b00fdd53997e167eaecb06a58ea",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F842.json",
+      "published": "scopes/proofs/new_static_map_F842.json.gz",
+      "sourceBytes": 28322,
+      "sourceSha256": "4bcf67357910ac184bc5cf4ae9e55fa30d4abce6ded60b1604b82bd81747cda8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_meshui_F517.json",
+      "published": "scopes/proofs/new_static_meshui_F517.json.gz",
+      "sourceBytes": 2102,
+      "sourceSha256": "d22567fadad4d0f9067e3ed66f259880f4b7d3b80db354c7a84446c6b01063a3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_armyline_F61.json",
+      "published": "scopes/proofs/new_static_armyline_F61.json.gz",
+      "sourceBytes": 922,
+      "sourceSha256": "f385bdb0aa577b9e5ee0a19f88985955ea028d1e9237baedba2b8620116aec26",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F628.json",
+      "published": "analysis/proofs/new_static_F628.json.gz",
+      "sourceBytes": 514290,
+      "sourceSha256": "4d9a779b91cb521d6b3917c7745424edef4ac1da8090dfde1d229f0a60237f4d",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_static.distribution.json",
+      "published": "analysis/new_static.distribution.json.gz",
+      "sourceBytes": 1414279,
+      "sourceSha256": "eab42a623d8b7c16adbf36296d3b5b29230e3abc982df8887a63a5f7e861a9d1",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_network_F628.json",
+      "published": "scopes/proofs/new_static_network_F628.json.gz",
+      "sourceBytes": 71831,
+      "sourceSha256": "42c8f09cef7e272de4187f530a192b2fdfdb9e4d1c225bd034c5cbdea31f6e57",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_terrain_F583.json",
+      "published": "scopes/proofs/new_static_terrain_F583.json.gz",
+      "sourceBytes": 2852,
+      "sourceSha256": "8403859719691065f5e3a49f524de24db66b2d19f962eda131c1e50ba48f07d6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_loader_F984.json",
+      "published": "scopes/proofs/new_static_loader_F984.json.gz",
+      "sourceBytes": 17348,
+      "sourceSha256": "e66501cb6d691d603ca47f877680f7b38fce5d655472188952a519b59e6c3edc",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_camera_F899.json",
+      "published": "scopes/proofs/new_static_camera_F899.json.gz",
+      "sourceBytes": 3254,
+      "sourceSha256": "bb78e3f818c66679d4d46a401245f1d4b8300fd93f6974a8bc5686a8d1ac4ea3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_urp_F1065.json",
+      "published": "scopes/proofs/new_pan_urp_F1065.json.gz",
+      "sourceBytes": 32532,
+      "sourceSha256": "88dc74ba2e2166598f974d97f934b87bab1638081c4456fb44b1c206f8be3f38",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_pan.scopes.json",
+      "published": "analysis/new_pan.scopes.json.gz",
+      "sourceBytes": 175538127,
+      "sourceSha256": "6eb30fa28b1d5a4804ca87af1bb608967e3921240a23e6b3a22c43572991b56c",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_pan.cleanup.json",
+      "published": "analysis/new_pan.cleanup.json.gz",
+      "sourceBytes": 881125,
+      "sourceSha256": "67345c0de6315bb6cfd6732e630daa58ec18e9ece34c3691c6f282ad32ac2c33",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F800.json",
+      "published": "scopes/proofs/new_pan_ecs_F800.json.gz",
+      "sourceBytes": 33575,
+      "sourceSha256": "07773327696404dfa1cce9db566e0bca064f4c639e37ee758319528b6c09c7f6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F453.json",
+      "published": "scopes/proofs/new_pan_map_F453.json.gz",
+      "sourceBytes": 138476,
+      "sourceSha256": "40a249c5f98f4a744cf816631cb75d0659387952484cdd8ee9d875e8b0f56a26",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F968.json",
+      "published": "scopes/proofs/new_pan_map_F968.json.gz",
+      "sourceBytes": 106390,
+      "sourceSha256": "8367b86c42b25a38731699ad7de5e509c1e277a06eecfe605948f702d3513f80",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F222.json",
+      "published": "scopes/proofs/new_pan_map_F222.json.gz",
+      "sourceBytes": 21925,
+      "sourceSha256": "c1bf296fd426eb5568ab34eb98f74869eb581cba08eb50319684a676009fc594",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_heads_F811.json",
+      "published": "scopes/proofs/new_pan_heads_F811.json.gz",
+      "sourceBytes": 6122,
+      "sourceSha256": "373d31e9fdb162eb0278996ab1aabd218a711d08383614fc2de598b0cd7a1d6a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_camera_F700.json",
+      "published": "scopes/proofs/new_pan_camera_F700.json.gz",
+      "sourceBytes": 53697,
+      "sourceSha256": "403e0f76e93f0c6e65affa59a2662e4c44f3c36d19bad4b8814ecf61deb63314",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_camera_F500.json",
+      "published": "scopes/proofs/new_pan_camera_F500.json.gz",
+      "sourceBytes": 75944,
+      "sourceSha256": "f546a73af2c2e0507b1edbc87212f932d825b299d003768bf85ea8000c903da2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_meshui_F806.json",
+      "published": "scopes/proofs/new_pan_meshui_F806.json.gz",
+      "sourceBytes": 1785,
+      "sourceSha256": "fcf0b63e17e1643b92cd0dee4ffa2d632872ddb792e7e4ddd5a3764c4c02f2f3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_armyline_F637.json",
+      "published": "scopes/proofs/new_pan_armyline_F637.json.gz",
+      "sourceBytes": 6140,
+      "sourceSha256": "6b3a8977e1308fe9b93c87b0e2b23af6a48034164cf8bfed6a91811fba46e2fc",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_pan.distribution.json",
+      "published": "analysis/new_pan.distribution.json.gz",
+      "sourceBytes": 2781090,
+      "sourceSha256": "501caf2a0b35d2b7649ece327c88c9c73e29100cb09a6759aff1faac81ef1e0d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_terrain_F275.json",
+      "published": "scopes/proofs/new_pan_terrain_F275.json.gz",
+      "sourceBytes": 9275,
+      "sourceSha256": "fcc5b9cf1651921b38a8d2bc0155d681cef169566676e42f06bc4b3dd7530be8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F998.json",
+      "published": "scopes/proofs/new_pan_network_F998.json.gz",
+      "sourceBytes": 25135,
+      "sourceSha256": "d724d630e6de353e7f16a1e54da4c226cfe9785c7914f921aa7caac2208ae20f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F852.json",
+      "published": "scopes/proofs/new_pan_network_F852.json.gz",
+      "sourceBytes": 42445,
+      "sourceSha256": "4d2dd3b5f7e13c9e942488a6526579b6b40d361eb99ef1d0debad2d53c85a914",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_loader_F637.json",
+      "published": "scopes/proofs/new_pan_loader_F637.json.gz",
+      "sourceBytes": 6091,
+      "sourceSha256": "4c51e2b61386dcffa564b05c8aaefdefed2a7e2b21980d5d818a8f06e72f1ef8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_urp_F613.json",
+      "published": "scopes/proofs/new_zoom_urp_F613.json.gz",
+      "sourceBytes": 30028,
+      "sourceSha256": "aca15a310f5fa8d81098761cf2360aff9a7499b6d17cd795c4532b95dab933ec",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_zoom.scopes.json",
+      "published": "analysis/new_zoom.scopes.json.gz",
+      "sourceBytes": 123348505,
+      "sourceSha256": "b3b7e73b269bd63f2c6645065657eb084e8386200c262a8bf578afabfabdf338",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_zoom.cleanup.json",
+      "published": "analysis/new_zoom.cleanup.json.gz",
+      "sourceBytes": 43791,
+      "sourceSha256": "c3b2e248b84d2cb9ddfb43b3e77e5f29acae279510264a5d9248913d519976fe",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F109.json",
+      "published": "scopes/proofs/new_zoom_map_F109.json.gz",
+      "sourceBytes": 88904,
+      "sourceSha256": "6dbb29a4744cfea4f841aa7183c865abcb7c432b47dfa7c8824d197d4eab339e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F391.json",
+      "published": "scopes/proofs/new_zoom_map_F391.json.gz",
+      "sourceBytes": 28193,
+      "sourceSha256": "449623de360973fbb02fed0c4e1444b438d36bfd0a6258f9d9cecb4f33962ef9",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F451.json",
+      "published": "scopes/proofs/new_zoom_map_F451.json.gz",
+      "sourceBytes": 57645,
+      "sourceSha256": "a89f8ff289c47243e618a055aaf2ce2adf3951b760cb7b70b6b817a58f4ea615",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F453.json",
+      "published": "scopes/proofs/new_zoom_map_F453.json.gz",
+      "sourceBytes": 135006,
+      "sourceSha256": "3b5726488160746f176d3328b21bfa5aa0bba0c99a7d1ddced65107305121dff",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F408.json",
+      "published": "scopes/proofs/new_zoom_camera_F408.json.gz",
+      "sourceBytes": 310915,
+      "sourceSha256": "5f687f3905c690a902edfb6ff7a262f3dc2a80d172c43085b19418e64db2cc81",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F559.json",
+      "published": "scopes/proofs/new_zoom_camera_F559.json.gz",
+      "sourceBytes": 245109,
+      "sourceSha256": "21752c3752e6e057edb54847f891cc5fbfcf639261236d530330e2fc37df2964",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F57.json",
+      "published": "scopes/proofs/new_zoom_ecs_F57.json.gz",
+      "sourceBytes": 31166,
+      "sourceSha256": "9ad0ce7553c31a5767e87cd2a673d50149bf538347cc4d6f5b8478356b671bdd",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_loader_F220.json",
+      "published": "scopes/proofs/new_zoom_loader_F220.json.gz",
+      "sourceBytes": 13551,
+      "sourceSha256": "19a63980b0b208b4be2e7c949a9612b04e218358c5d44c8fcc704095f0ac2837",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_loader_F774.json",
+      "published": "scopes/proofs/new_zoom_loader_F774.json.gz",
+      "sourceBytes": 7658,
+      "sourceSha256": "2cdf3d27e8a0e10b8923a5b1fad34fd0d61ac851bf095d4ef568321dcde6bdb9",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F678.json",
+      "published": "scopes/proofs/new_zoom_network_F678.json.gz",
+      "sourceBytes": 20963,
+      "sourceSha256": "25bd828d7f75862eecbf398b4a0f9369e8348e23b011a2a57c9927ae3ef2c6ed",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F640.json",
+      "published": "analysis/proofs/new_zoom_F640.json.gz",
+      "sourceBytes": 420694,
+      "sourceSha256": "1fd83879865111950de3e0ac3cb79248934ad9ef6fb0dbb26e060776500d3a17",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_terrain_F690.json",
+      "published": "scopes/proofs/new_zoom_terrain_F690.json.gz",
+      "sourceBytes": 16378,
+      "sourceSha256": "85af879c529bf8386c8fbabfa7b56da72ed77185d9e174c182d8442d52696791",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_armyline_F678.json",
+      "published": "scopes/proofs/new_zoom_armyline_F678.json.gz",
+      "sourceBytes": 5974,
+      "sourceSha256": "e42b1263fe735046a9a76cf75a0aa42ae80893b903f955faf628e9b0f6860fb4",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/new_zoom.distribution.json",
+      "published": "analysis/new_zoom.distribution.json.gz",
+      "sourceBytes": 4148367,
+      "sourceSha256": "2e24ffc26801f3471fe260dd839a31c8609d439a4104afe28dca7e67193e3ba0",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_meshui_F608.json",
+      "published": "scopes/proofs/new_zoom_meshui_F608.json.gz",
+      "sourceBytes": 458,
+      "sourceSha256": "2f209c65d016ebd788b7813a1d14953f15b5dd225a0afff6f50b7f37f58bf1ab",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_heads_F585.json",
+      "published": "scopes/proofs/new_zoom_heads_F585.json.gz",
+      "sourceBytes": 4757,
+      "sourceSha256": "bb48718378aa18b4d4357a374bef92cc00091644b4ea24b4de642aa87e9a4d3f",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F470.json",
+      "published": "analysis/proofs/new_static_F470.json.gz",
+      "sourceBytes": 329984,
+      "sourceSha256": "648689ab7e9d4803dc19eaf4921ce938566da2ab0bb72fda04b41f086f6a34fb",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F517.json",
+      "published": "analysis/proofs/new_static_F517.json.gz",
+      "sourceBytes": 364072,
+      "sourceSha256": "1b59127530bbe5ea90a5a1cd00952a3ffa460c0cd7b77db4d0118a5de947308b",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F686.json",
+      "published": "analysis/proofs/new_static_F686.json.gz",
+      "sourceBytes": 366884,
+      "sourceSha256": "855492293ec91610404560b235238bff2ec46313cf42b9b51fc5a576e91394d0",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F729.json",
+      "published": "analysis/proofs/new_static_F729.json.gz",
+      "sourceBytes": 326824,
+      "sourceSha256": "1766b4422a109061cff9382aa262f1e54b4ef9e76ba201ec1903744084d25e92",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F821.json",
+      "published": "analysis/proofs/new_static_F821.json.gz",
+      "sourceBytes": 506171,
+      "sourceSha256": "6022886114b3744beb9f6d4531f6c8845a5a9e1b32c83befdb9ae9bf1734ffa1",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F937.json",
+      "published": "analysis/proofs/new_static_F937.json.gz",
+      "sourceBytes": 267397,
+      "sourceSha256": "f984630eef3ff89049f5d1d13240dc176e3b831f1eee97b5962d176be7790ed6",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_static_F1051.json",
+      "published": "analysis/proofs/new_static_F1051.json.gz",
+      "sourceBytes": 387820,
+      "sourceSha256": "0f8074a6c1bb9aeb4bdad6e8e3bb02ee59c48edead8bfde36b52c458bcc3d742",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F453.json",
+      "published": "analysis/proofs/new_pan_F453.json.gz",
+      "sourceBytes": 496174,
+      "sourceSha256": "92557f7eedfff2fbf8cd66a5aa3e1344613f135edb75653e931cc9774f4176f5",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F480.json",
+      "published": "analysis/proofs/new_pan_F480.json.gz",
+      "sourceBytes": 500992,
+      "sourceSha256": "bb15994cc9668cd5abbefc4b92952de3599d7742acf47eb113e256a7706182d1",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F700.json",
+      "published": "analysis/proofs/new_pan_F700.json.gz",
+      "sourceBytes": 398410,
+      "sourceSha256": "dab2f7b1a921ba799b7a29c67dfef5a8b67d065461f79a852913140100ecf488",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F757.json",
+      "published": "analysis/proofs/new_pan_F757.json.gz",
+      "sourceBytes": 410981,
+      "sourceSha256": "3ab51d6d59482fa0e5e9dc098c14efbd60f96d963465d0f1dc53892864618ba7",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F861.json",
+      "published": "analysis/proofs/new_pan_F861.json.gz",
+      "sourceBytes": 443559,
+      "sourceSha256": "0e2d8b7b0ff91d3a923682a587053ba0b7083cfbba65c228eda6916c28e56537",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F878.json",
+      "published": "analysis/proofs/new_pan_F878.json.gz",
+      "sourceBytes": 500530,
+      "sourceSha256": "19acd15c07747f563ff85a0ada1ea328bec805c60fbf2b5d7298f3236639463f",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F968.json",
+      "published": "analysis/proofs/new_pan_F968.json.gz",
+      "sourceBytes": 447709,
+      "sourceSha256": "9a5113f3dc01c21fd61e8cdce1afae99adfd33686b621c9f72adfa52cd631b6b",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_pan_F1065.json",
+      "published": "analysis/proofs/new_pan_F1065.json.gz",
+      "sourceBytes": 422212,
+      "sourceSha256": "b6ba443fdc5b3c20deeae723e23aade178ad2afeacdb2a78d6a075205f3e4a79",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F40.json",
+      "published": "analysis/proofs/new_zoom_F40.json.gz",
+      "sourceBytes": 431317,
+      "sourceSha256": "6459452783015ea1af65a82d60f764f7ec933b8df94a8308a05b97270ff9b39a",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F109.json",
+      "published": "analysis/proofs/new_zoom_F109.json.gz",
+      "sourceBytes": 417609,
+      "sourceSha256": "8df080889f38fda3df0d0b10a698e68d9be0d4ace21de7b1e68b7fa57ba8a920",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F220.json",
+      "published": "analysis/proofs/new_zoom_F220.json.gz",
+      "sourceBytes": 435924,
+      "sourceSha256": "42ae6bbedb2bb49331246422b54d5a113f7af8b53346c7ab6e93c6b22d479b3d",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F391.json",
+      "published": "analysis/proofs/new_zoom_F391.json.gz",
+      "sourceBytes": 375669,
+      "sourceSha256": "7986f4c0ba5e12c471f61c2d59b0c0d98687e05308260903339111425931aa77",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F408.json",
+      "published": "analysis/proofs/new_zoom_F408.json.gz",
+      "sourceBytes": 614324,
+      "sourceSha256": "5c10a0447e2d4e5776af961cf3f6f66ecadc25c0d90792c7f51204ff267d0af8",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F411.json",
+      "published": "analysis/proofs/new_zoom_F411.json.gz",
+      "sourceBytes": 396181,
+      "sourceSha256": "58f371903d6334f99ca509a9bf23a33cdb8532c17ae0983ab7b8303559637fdd",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F451.json",
+      "published": "analysis/proofs/new_zoom_F451.json.gz",
+      "sourceBytes": 411899,
+      "sourceSha256": "513695642694f1f663b56583a279936f26cabe81771e39a3d713b7e8b451b9e9",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F559.json",
+      "published": "analysis/proofs/new_zoom_F559.json.gz",
+      "sourceBytes": 643412,
+      "sourceSha256": "3ee3ae89a9285b167da3d4be9390db9f3f2d74a9b27d5fa267f9c85e69089f9d",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F613.json",
+      "published": "analysis/proofs/new_zoom_F613.json.gz",
+      "sourceBytes": 414568,
+      "sourceSha256": "111499ca3648e620a6536f9b5ec2143b5a62fe2189ca51f3e7d5909e4958c252",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F628.json",
+      "published": "analysis/proofs/new_zoom_F628.json.gz",
+      "sourceBytes": 637927,
+      "sourceSha256": "899d11bff2e83763b18d2cd6e9c39302f003cc339ebc95a2fa113b713b80142a",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F678.json",
+      "published": "analysis/proofs/new_zoom_F678.json.gz",
+      "sourceBytes": 444369,
+      "sourceSha256": "f61c9754c9765fb047b6ad4a61da65ea6aa675d4bb82d26b271d9962accb095f",
+      "roundTripExact": true
+    },
+    {
+      "source": "analysis/proofs/new_zoom_F781.json",
+      "published": "analysis/proofs/new_zoom_F781.json.gz",
+      "sourceBytes": 604269,
+      "sourceSha256": "36b1fbbf6b0ac22a6798077841998c4212ac504afadc8ae4d4844e68ef87ce3c",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F782.json",
+      "published": "scopes/proofs/new_static_map_F782.json.gz",
+      "sourceBytes": 58052,
+      "sourceSha256": "710ece5d1574e1733484879434a4294bcb958116f7d51420658c4485a4316fd1",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F699.json",
+      "published": "scopes/proofs/new_static_map_F699.json.gz",
+      "sourceBytes": 85950,
+      "sourceSha256": "99c3ec7c74a1ba1b0d917a9230d7e712cb3056098b738ee800a524b8e4483385",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F869.json",
+      "published": "scopes/proofs/new_static_map_F869.json.gz",
+      "sourceBytes": 92413,
+      "sourceSha256": "9f770c018114dcbddfb3f2d15783cb79bfa968d652bcdc1b856463721729db0b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F181.json",
+      "published": "scopes/proofs/new_static_map_F181.json.gz",
+      "sourceBytes": 91502,
+      "sourceSha256": "cb72b9d785be7ebf0fd7585671cc2c6db6a2e8d7e9bedd9a8aae8e10b13b526b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F645.json",
+      "published": "scopes/proofs/new_static_map_F645.json.gz",
+      "sourceBytes": 35063,
+      "sourceSha256": "d383c37a0122ce392c5d283d1665cf9691aa54b950f1c250f6682f9a8c9055fc",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F928.json",
+      "published": "scopes/proofs/new_static_map_F928.json.gz",
+      "sourceBytes": 45283,
+      "sourceSha256": "490d53ed4890b5831542d3360acc2ffd2e768eccac8c3106c3162235e40419e3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F800.json",
+      "published": "scopes/proofs/new_static_map_F800.json.gz",
+      "sourceBytes": 13162,
+      "sourceSha256": "f5e34b6fbe81238d8f752a21f6244477a9aac37c1f6e60a5a438d661e1fa7523",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F498.json",
+      "published": "scopes/proofs/new_static_map_F498.json.gz",
+      "sourceBytes": 101947,
+      "sourceSha256": "84434c688bda868cd4ef2f9b6baa1de70d6c241bbc483ddf46adebf35f6f7356",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F938.json",
+      "published": "scopes/proofs/new_static_map_F938.json.gz",
+      "sourceBytes": 60357,
+      "sourceSha256": "f7529ab7f8b34ab05c8bfb054bf5b5f6b936640a9cbb7f2f4a300d8b6dd6e32d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F837.json",
+      "published": "scopes/proofs/new_static_map_F837.json.gz",
+      "sourceBytes": 62031,
+      "sourceSha256": "40a16fa63264a2dbd84c6e46788e89e103a1b74ec8cf2f324e7d6bef750bb269",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F470.json",
+      "published": "scopes/proofs/new_static_map_F470.json.gz",
+      "sourceBytes": 68456,
+      "sourceSha256": "f66d69a82bca970343f0b615889ca21c41f149cd043c5f262de530e7af5b0033",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F492.json",
+      "published": "scopes/proofs/new_static_map_F492.json.gz",
+      "sourceBytes": 47450,
+      "sourceSha256": "c6c6a43fc7feeec476dff2ad30137e74cf769cac6febc52c318b5b02f08653df",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F484.json",
+      "published": "scopes/proofs/new_static_map_F484.json.gz",
+      "sourceBytes": 67105,
+      "sourceSha256": "401351850bb4f325a4ebc56303c201f9e6a9020080c21b19e527c3cfd3d3eee1",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F104.json",
+      "published": "scopes/proofs/new_static_map_F104.json.gz",
+      "sourceBytes": 82758,
+      "sourceSha256": "d41741b2414dacbf0303646963de3b119dc6125d18bee98804d4619381a2d5cf",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F249.json",
+      "published": "scopes/proofs/new_static_map_F249.json.gz",
+      "sourceBytes": 88658,
+      "sourceSha256": "da62ef3577230547b4e8d967de3561e3e01838bd809b3df424ea485dd38cabc2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F860.json",
+      "published": "scopes/proofs/new_static_map_F860.json.gz",
+      "sourceBytes": 67344,
+      "sourceSha256": "ff3f044aaccb61dd0c456d69312eb98648927e82495c813416e624cceb7b0f52",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F854.json",
+      "published": "scopes/proofs/new_static_map_F854.json.gz",
+      "sourceBytes": 68149,
+      "sourceSha256": "c376bea2a46e306594213a20762501b43f74946bb76ed3b56b63d244be5bd959",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F487.json",
+      "published": "scopes/proofs/new_static_map_F487.json.gz",
+      "sourceBytes": 67668,
+      "sourceSha256": "d6b889b74045175ab74d62de2fec444758afb5ac5419fec3660dfe605f9c8197",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F475.json",
+      "published": "scopes/proofs/new_static_map_F475.json.gz",
+      "sourceBytes": 67105,
+      "sourceSha256": "b11c29a4742569eb88985fea011814baebd120681dc4bcb8948d08c7dd17d9e3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F1081.json",
+      "published": "scopes/proofs/new_static_map_F1081.json.gz",
+      "sourceBytes": 165448,
+      "sourceSha256": "05089b5b13eb67ff64494fc62853a6e4377a2d4e6adfb09a65e8597eb49492a2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F228.json",
+      "published": "scopes/proofs/new_static_map_F228.json.gz",
+      "sourceBytes": 104014,
+      "sourceSha256": "8d00967143070654985d90d9db2988f9e7ea6f624923520e3eacfa7e9dbccbf8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F167.json",
+      "published": "scopes/proofs/new_static_map_F167.json.gz",
+      "sourceBytes": 99204,
+      "sourceSha256": "e324e362ff6cd270f241a30a9e9cdb9a2b07f071367b47bcdcdf75ec0f8b8852",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F1112.json",
+      "published": "scopes/proofs/new_static_map_F1112.json.gz",
+      "sourceBytes": 142018,
+      "sourceSha256": "b438f380cf96e50283c13a32677dd9aa9ba55522464604fbda20ae6f3251a946",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F848.json",
+      "published": "scopes/proofs/new_static_map_F848.json.gz",
+      "sourceBytes": 68060,
+      "sourceSha256": "3da20e7b330e8d705ae152a7c86ce5870f3089aca358885b93576aff3b347e29",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F1075.json",
+      "published": "scopes/proofs/new_static_map_F1075.json.gz",
+      "sourceBytes": 111617,
+      "sourceSha256": "fde83669ac0fdd4c819b1932632ca1a846874b90c4dd5de5971e9434032c2a85",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_map_F1034.json",
+      "published": "scopes/proofs/new_static_map_F1034.json.gz",
+      "sourceBytes": 67573,
+      "sourceSha256": "cf9f88411916a44c1184e4386631f7d107f346d45a933ba04c3bdf2360dcdcbe",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_camera_F245.json",
+      "published": "scopes/proofs/new_static_camera_F245.json.gz",
+      "sourceBytes": 3289,
+      "sourceSha256": "649ae60c6ac483eb0ff9f5a18c00f1707b91a57d0c11c59b9a4476196b93884b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_camera_F973.json",
+      "published": "scopes/proofs/new_static_camera_F973.json.gz",
+      "sourceBytes": 3280,
+      "sourceSha256": "23642e2a1cf333ee275698838aefb1afe40df68b602daad8ce8d06f9be181a9d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_network_F1008.json",
+      "published": "scopes/proofs/new_static_network_F1008.json.gz",
+      "sourceBytes": 12277,
+      "sourceSha256": "e6213d35e8b54d42747db90733c24565a7a55e1a7ffe7d571722a2a1fbc6571e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_network_F389.json",
+      "published": "scopes/proofs/new_static_network_F389.json.gz",
+      "sourceBytes": 14740,
+      "sourceSha256": "1ee5b33e1d39e77c83a75158c3bce478aefb1f51110c8cdc8d865b13ae7d5d75",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_network_F630.json",
+      "published": "scopes/proofs/new_static_network_F630.json.gz",
+      "sourceBytes": 1141,
+      "sourceSha256": "d91dc68812d994537070a74e46ffb0149a426a5723a4cb53e9b6a49438e7a3ac",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_heads_F1136.json",
+      "published": "scopes/proofs/new_static_heads_F1136.json.gz",
+      "sourceBytes": 110197,
+      "sourceSha256": "eca3d40501c744d0db259c73f349877fe55a5c0a36a81d91305ee2712b9dbbf8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_heads_F466.json",
+      "published": "scopes/proofs/new_static_heads_F466.json.gz",
+      "sourceBytes": 6143,
+      "sourceSha256": "db099d1bc97235e386c534ebe2c1a3a17d7c26a846a517432d9a95d2b30892bf",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_urp_F537.json",
+      "published": "scopes/proofs/new_static_urp_F537.json.gz",
+      "sourceBytes": 22776,
+      "sourceSha256": "0a4e14774221dccaead28d121c3886321c0e5fa336488b379d519b67960bd157",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_urp_F704.json",
+      "published": "scopes/proofs/new_static_urp_F704.json.gz",
+      "sourceBytes": 22797,
+      "sourceSha256": "866e0804d163f8a9bc5df510627c02b9d9774414e6f9ed245d5f0adfc3271e71",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F235.json",
+      "published": "scopes/proofs/new_static_ecs_F235.json.gz",
+      "sourceBytes": 30529,
+      "sourceSha256": "c7003ebe3b8f020ddea61a82471bfce5f20b244e0ce1f091ab01667c91b9cb73",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F113.json",
+      "published": "scopes/proofs/new_static_ecs_F113.json.gz",
+      "sourceBytes": 33770,
+      "sourceSha256": "f9d1c8cc402f5cd5b080209404de5f120718e3df3a416ff9c5f615076b887d54",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F516.json",
+      "published": "scopes/proofs/new_static_ecs_F516.json.gz",
+      "sourceBytes": 30574,
+      "sourceSha256": "ce6dde5a37782ba23316b54ddc416efc4da9f0921913daf6e4eae7ec7c76565b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F517.json",
+      "published": "scopes/proofs/new_static_ecs_F517.json.gz",
+      "sourceBytes": 30632,
+      "sourceSha256": "c81d8000f446dbb1e361e0c4217a1c03cd09ce8ca014b3bd89768105bec45712",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F64.json",
+      "published": "scopes/proofs/new_static_ecs_F64.json.gz",
+      "sourceBytes": 30633,
+      "sourceSha256": "fd12da05dcaf7f915eeb4ce77d5dc45c191934c3ed46fade663adcf033845329",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F804.json",
+      "published": "scopes/proofs/new_static_ecs_F804.json.gz",
+      "sourceBytes": 31039,
+      "sourceSha256": "5fc5aaf303cffcb2b6be1859284070614776242fd3053afd5c6f46a9d4066335",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F946.json",
+      "published": "scopes/proofs/new_static_ecs_F946.json.gz",
+      "sourceBytes": 30762,
+      "sourceSha256": "193eefb31b0b063636fa7a61f8b6f3b2f948793236099e62e193b192adf15797",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F597.json",
+      "published": "scopes/proofs/new_static_ecs_F597.json.gz",
+      "sourceBytes": 31364,
+      "sourceSha256": "ff51b85bbfc45257e22cc9da730ce2d608255fee3fa789a4676e75a10c7524af",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F83.json",
+      "published": "scopes/proofs/new_static_ecs_F83.json.gz",
+      "sourceBytes": 31015,
+      "sourceSha256": "aade8c7508ffcf753115e833484bdd1e3f9351019a41901af1c46fd8feeb843e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_ecs_F141.json",
+      "published": "scopes/proofs/new_static_ecs_F141.json.gz",
+      "sourceBytes": 30834,
+      "sourceSha256": "176bd53508634743575c606346c4f44656fb5d6bc9d1d615f3451be080fbbd9d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_static_terrain_F388.json",
+      "published": "scopes/proofs/new_static_terrain_F388.json.gz",
+      "sourceBytes": 2859,
+      "sourceSha256": "7f93dd475f1439aeb0eac045ea2d86267beb049e63f82e5263f143d99355a346",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F676.json",
+      "published": "scopes/proofs/new_pan_map_F676.json.gz",
+      "sourceBytes": 149038,
+      "sourceSha256": "826815054911d9e53182b77b51ddca3db7e22b67399fe46fbde2843e40be1192",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F357.json",
+      "published": "scopes/proofs/new_pan_map_F357.json.gz",
+      "sourceBytes": 72471,
+      "sourceSha256": "0d10bc57a27540c9de0ffbe4b0244e4715cc1d5f14e60042b75ff6d23dbed2b5",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F83.json",
+      "published": "scopes/proofs/new_pan_map_F83.json.gz",
+      "sourceBytes": 45422,
+      "sourceSha256": "9f972a2385e2993c317d4c70973983e33f90bfb5b253a7de9afbfddc0ca7da41",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F804.json",
+      "published": "scopes/proofs/new_pan_map_F804.json.gz",
+      "sourceBytes": 89251,
+      "sourceSha256": "c00c2043832e0926fac874f7254f8ce48ecc46a42a985837bedee1924f98a9f6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F941.json",
+      "published": "scopes/proofs/new_pan_map_F941.json.gz",
+      "sourceBytes": 111439,
+      "sourceSha256": "89a0602ac5ccdcf1ddba0cf01b16c2f941b1870367e2b1fbd16b81af3cf37143",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F902.json",
+      "published": "scopes/proofs/new_pan_map_F902.json.gz",
+      "sourceBytes": 124331,
+      "sourceSha256": "6a05593cca52966614b3cb9632b0ec27945b01acb9e0b52279135285bb10dc55",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F74.json",
+      "published": "scopes/proofs/new_pan_map_F74.json.gz",
+      "sourceBytes": 74152,
+      "sourceSha256": "f9400c9abadd198ffdb2274c3c13f523b3d154e92558a8673a1fec7206c5e441",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F80.json",
+      "published": "scopes/proofs/new_pan_map_F80.json.gz",
+      "sourceBytes": 174171,
+      "sourceSha256": "d9c795ce446fb17d6739d5d426aa335a2b5fd54629446d4b923768729bfdb8d6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F731.json",
+      "published": "scopes/proofs/new_pan_map_F731.json.gz",
+      "sourceBytes": 54085,
+      "sourceSha256": "55d5f9898aa6f40b36ebfa22a90c45433c6eb01c0ae3f5fc5a78116d05fa0a43",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F583.json",
+      "published": "scopes/proofs/new_pan_map_F583.json.gz",
+      "sourceBytes": 59999,
+      "sourceSha256": "0eec839742f92eb8ea00e9147c7b6c83055db9a3b08706d7530ca2e211051f59",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F99.json",
+      "published": "scopes/proofs/new_pan_map_F99.json.gz",
+      "sourceBytes": 121772,
+      "sourceSha256": "36d835852bdca7b13e995b3f79179d8b7bf515c6aa74d29c4799f1e6742c24ce",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F617.json",
+      "published": "scopes/proofs/new_pan_map_F617.json.gz",
+      "sourceBytes": 58827,
+      "sourceSha256": "fe5c687f77d0661341c5d2233ebb802c4b04178ce82514634fdf5988a5687688",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F186.json",
+      "published": "scopes/proofs/new_pan_map_F186.json.gz",
+      "sourceBytes": 137859,
+      "sourceSha256": "255c17a9b97123d550b38ac64914cf43716c81eb92e912563cfc4e0be5ecc38d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F442.json",
+      "published": "scopes/proofs/new_pan_map_F442.json.gz",
+      "sourceBytes": 148308,
+      "sourceSha256": "223d77986fd55062278507ef3c19a9edbc4dc79071e3d7a0db2b8646d8dc479d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F657.json",
+      "published": "scopes/proofs/new_pan_map_F657.json.gz",
+      "sourceBytes": 80865,
+      "sourceSha256": "07deb2e58a945dc8cf53ad207c2bcf4eb031c969028848a930af82544dcd9f77",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F308.json",
+      "published": "scopes/proofs/new_pan_map_F308.json.gz",
+      "sourceBytes": 83627,
+      "sourceSha256": "b06ea6e400b1db4604c64e649e2f29479a305a925e7c0e1efd06204cbc479822",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F814.json",
+      "published": "scopes/proofs/new_pan_map_F814.json.gz",
+      "sourceBytes": 116110,
+      "sourceSha256": "fd775a2c0db16ed2b0816460365eb2d2e60426b6a23b8606bde95b81d4ad47e4",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F836.json",
+      "published": "scopes/proofs/new_pan_map_F836.json.gz",
+      "sourceBytes": 38823,
+      "sourceSha256": "645d31ca3edfedddd6128a8ecea040b73f9e91cfdd3b56b8024c89c3fbfe818b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F761.json",
+      "published": "scopes/proofs/new_pan_map_F761.json.gz",
+      "sourceBytes": 181302,
+      "sourceSha256": "e3ae2b884d32c32f8fd0ec920c3dbdd6c49204724ba984fbb341acff5a6dce55",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F1003.json",
+      "published": "scopes/proofs/new_pan_map_F1003.json.gz",
+      "sourceBytes": 155558,
+      "sourceSha256": "a348b865618e4b93d1aca89a7550657681384766be86de6c1d9fe7b630c1e7df",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F534.json",
+      "published": "scopes/proofs/new_pan_map_F534.json.gz",
+      "sourceBytes": 90725,
+      "sourceSha256": "fc81fe26c74577e8ceb0ccbb72210bd012484dec1fff7fd84178828307b92b3d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F274.json",
+      "published": "scopes/proofs/new_pan_map_F274.json.gz",
+      "sourceBytes": 133311,
+      "sourceSha256": "07401541cb5b34e0a62fa0c725a948512576b83a8f557de956a1832f7ea5a273",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F889.json",
+      "published": "scopes/proofs/new_pan_map_F889.json.gz",
+      "sourceBytes": 205280,
+      "sourceSha256": "dc400b6932c9b323741c19b29267b4e043328a39b37f22ee9d49897ccde2fc0b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F837.json",
+      "published": "scopes/proofs/new_pan_map_F837.json.gz",
+      "sourceBytes": 117810,
+      "sourceSha256": "31ab6395b94381fdfd46ca0addae5af5387d1d53cebf26bc5e9f5cdf5903730f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F503.json",
+      "published": "scopes/proofs/new_pan_map_F503.json.gz",
+      "sourceBytes": 47754,
+      "sourceSha256": "e37d7bc7c94538a87cf450f7a4f166bc6ab4e1a6ec4f23f164293f8e232064cb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F1001.json",
+      "published": "scopes/proofs/new_pan_map_F1001.json.gz",
+      "sourceBytes": 70716,
+      "sourceSha256": "5f262b23f1e2e90c8b475d7f4ce886881f5dbc9af58dcff7c44e5b513f4ce1fa",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F858.json",
+      "published": "scopes/proofs/new_pan_map_F858.json.gz",
+      "sourceBytes": 66882,
+      "sourceSha256": "9e094cf0f2a9eea21a09f3990435239281aa1f384530392bc8e6cec1a92dc37e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F209.json",
+      "published": "scopes/proofs/new_pan_map_F209.json.gz",
+      "sourceBytes": 67667,
+      "sourceSha256": "b79f8bb4188524ca01b9c40b4ce21041830d731549a9d84a4357f0230f2e0967",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F784.json",
+      "published": "scopes/proofs/new_pan_map_F784.json.gz",
+      "sourceBytes": 67715,
+      "sourceSha256": "ca0feaa8643958186675d943ecda2fd08e2cf7d769a22c76f1c9f5bcaec4d069",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F228.json",
+      "published": "scopes/proofs/new_pan_map_F228.json.gz",
+      "sourceBytes": 77168,
+      "sourceSha256": "2b0a5daf1a5a72fdb17b6c9c4c9115daaf36bce387fcec29948dc80486576605",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F969.json",
+      "published": "scopes/proofs/new_pan_map_F969.json.gz",
+      "sourceBytes": 100803,
+      "sourceSha256": "a69eb380e32a12b553946cad629582167d84f91392263d72827a009c5b39a1fb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F510.json",
+      "published": "scopes/proofs/new_pan_map_F510.json.gz",
+      "sourceBytes": 66502,
+      "sourceSha256": "1dcf9a8cec2311a8523a62fcf698e42dd3c8bd6f3d31baa8d1aefbceedf6ace0",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F247.json",
+      "published": "scopes/proofs/new_pan_map_F247.json.gz",
+      "sourceBytes": 68601,
+      "sourceSha256": "e8403e893ec9cbe36f148841e7d812ca55bb5b34e0cdc93368791ca170aa1a20",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F934.json",
+      "published": "scopes/proofs/new_pan_map_F934.json.gz",
+      "sourceBytes": 142702,
+      "sourceSha256": "93ceebb24eb6345b0c5cad9df26f15a561ac99f82ec04695fa72510e41ee67fc",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F421.json",
+      "published": "scopes/proofs/new_pan_map_F421.json.gz",
+      "sourceBytes": 66546,
+      "sourceSha256": "6503b3cb6ff714bed27df95fbb65d55b24c14464f6360043119890199adca36d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F263.json",
+      "published": "scopes/proofs/new_pan_map_F263.json.gz",
+      "sourceBytes": 107730,
+      "sourceSha256": "86805c3b67044edac981168e1a0ee8927bfab1e793e9d2c75f5ab9ee4ecfe6aa",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F433.json",
+      "published": "scopes/proofs/new_pan_map_F433.json.gz",
+      "sourceBytes": 67044,
+      "sourceSha256": "af72d451755d8a3ddcbeaf5636cbd00ded6e072dc23fc05f98bae2e9817ca6fb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F306.json",
+      "published": "scopes/proofs/new_pan_map_F306.json.gz",
+      "sourceBytes": 107510,
+      "sourceSha256": "cd2f77acbd43919a813f25c72d38c208c087ede433954b190500c2f3778a0c94",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F982.json",
+      "published": "scopes/proofs/new_pan_map_F982.json.gz",
+      "sourceBytes": 68584,
+      "sourceSha256": "c9499f44c72932f56749e4d8ca32ac091b746337f160d6daf96858e11e4f1432",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F339.json",
+      "published": "scopes/proofs/new_pan_map_F339.json.gz",
+      "sourceBytes": 86962,
+      "sourceSha256": "adab3dbfcdd3403ea5a6c4292079d4af8109964184630e6b81c9568dad7eb141",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F528.json",
+      "published": "scopes/proofs/new_pan_map_F528.json.gz",
+      "sourceBytes": 116254,
+      "sourceSha256": "3ff0395e2225e0805e2da03417f920cb732ada1030517873865c8dd955c6248e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F476.json",
+      "published": "scopes/proofs/new_pan_map_F476.json.gz",
+      "sourceBytes": 115965,
+      "sourceSha256": "f5d884ade5aa8454a21db82532803ea9aae970b0d47ea1a3f2bb786ddc1575dd",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F517.json",
+      "published": "scopes/proofs/new_pan_map_F517.json.gz",
+      "sourceBytes": 95201,
+      "sourceSha256": "918fd815aae58ab0f08a248d70d680c83d1fe69209307f1d4c9d39782eb4af2b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F967.json",
+      "published": "scopes/proofs/new_pan_map_F967.json.gz",
+      "sourceBytes": 147888,
+      "sourceSha256": "2a9537450d9beec4e6030a126475bb7db7037c10b4575ff965b52bcd6fbd000d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F457.json",
+      "published": "scopes/proofs/new_pan_map_F457.json.gz",
+      "sourceBytes": 67131,
+      "sourceSha256": "94bbeb8919fd41cb08f6bdd154520ee75fd8f49d168a78918e43a71e10d26006",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F1034.json",
+      "published": "scopes/proofs/new_pan_map_F1034.json.gz",
+      "sourceBytes": 113672,
+      "sourceSha256": "10e9e4bf0117f43642a9265088ba77650516fd236b40e7030df1b52efb123e96",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F434.json",
+      "published": "scopes/proofs/new_pan_map_F434.json.gz",
+      "sourceBytes": 94501,
+      "sourceSha256": "9c9b8f2c137218b8d7417a38756fb374302ba00921e99c41b63900259d23aacb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F515.json",
+      "published": "scopes/proofs/new_pan_map_F515.json.gz",
+      "sourceBytes": 99695,
+      "sourceSha256": "c79520a48e2e83d6882bab9a6f46c630991e1ff09ee7de7067c137c030ca5830",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F514.json",
+      "published": "scopes/proofs/new_pan_map_F514.json.gz",
+      "sourceBytes": 138841,
+      "sourceSha256": "2a919ba132fe6adc2a576282849464da2c2ed57fe84032414c12a58218d3d628",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F11.json",
+      "published": "scopes/proofs/new_pan_map_F11.json.gz",
+      "sourceBytes": 63714,
+      "sourceSha256": "4de298b4dcc31be19934e7cc18815499120ecb706215eb9c7f0a531b01b62f1a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F259.json",
+      "published": "scopes/proofs/new_pan_map_F259.json.gz",
+      "sourceBytes": 123175,
+      "sourceSha256": "03d070feeaf7640564687d49c5ed229a804bedc2c827d70b77bd22aa697919ed",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F781.json",
+      "published": "scopes/proofs/new_pan_map_F781.json.gz",
+      "sourceBytes": 67790,
+      "sourceSha256": "09c753f6347255974a07cde10e5874010edbb150951452704273c8bf4d971205",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F920.json",
+      "published": "scopes/proofs/new_pan_map_F920.json.gz",
+      "sourceBytes": 102840,
+      "sourceSha256": "e242844f563cf852fcab3838ffb965277a778424c958de724d54a041abdda36c",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F518.json",
+      "published": "scopes/proofs/new_pan_map_F518.json.gz",
+      "sourceBytes": 82575,
+      "sourceSha256": "2f5e57c0cef9ca6ea283492b4306fe2774d53d9ec169f26ba44912fb96746bbb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F152.json",
+      "published": "scopes/proofs/new_pan_map_F152.json.gz",
+      "sourceBytes": 137931,
+      "sourceSha256": "ea2bc586d29eea9270b5b1183a3e098754e485904684597d95f0fab1a2b63026",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F847.json",
+      "published": "scopes/proofs/new_pan_map_F847.json.gz",
+      "sourceBytes": 75937,
+      "sourceSha256": "850f3ddec11b963b82571872e7dc7f6a12c5998a103a4c1d40c48d3c830ecfa3",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F56.json",
+      "published": "scopes/proofs/new_pan_map_F56.json.gz",
+      "sourceBytes": 132950,
+      "sourceSha256": "94f3853520753407b4460cbfcd694742e7c5254a876f6340fa06cfb2a5a3c45e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F322.json",
+      "published": "scopes/proofs/new_pan_map_F322.json.gz",
+      "sourceBytes": 66724,
+      "sourceSha256": "6030fa2530d8bc223bbe80cdafdada3b55ab21ce49ab359987f3782412169af0",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F279.json",
+      "published": "scopes/proofs/new_pan_map_F279.json.gz",
+      "sourceBytes": 148328,
+      "sourceSha256": "527351c77c62d858e2f85c15b098c033a5d0337abdf25d610c51ad4ddfdfc37a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F424.json",
+      "published": "scopes/proofs/new_pan_map_F424.json.gz",
+      "sourceBytes": 62203,
+      "sourceSha256": "e1d65ff9078b694e633de9635dd32cd7ac8ecc244a7a91ce8163096259d8c904",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F897.json",
+      "published": "scopes/proofs/new_pan_map_F897.json.gz",
+      "sourceBytes": 125025,
+      "sourceSha256": "93cad8415d89829f6211a315929c1496996eeb88712ef39198c904ec441d9a37",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F628.json",
+      "published": "scopes/proofs/new_pan_map_F628.json.gz",
+      "sourceBytes": 89046,
+      "sourceSha256": "62d64d0fb0a19d533f8b2b3d2029c1b629b4fed246f777b6f1ce12095cc15250",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F92.json",
+      "published": "scopes/proofs/new_pan_map_F92.json.gz",
+      "sourceBytes": 34099,
+      "sourceSha256": "6576989d867b511cd71c5efc8a85223448ead19735a340197a459aab6682daf0",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_map_F737.json",
+      "published": "scopes/proofs/new_pan_map_F737.json.gz",
+      "sourceBytes": 175897,
+      "sourceSha256": "9e1e965f8cdcf7cf8c4de8524c18da929456bc734d2cd6bf7a43d7a8643d892a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_camera_F351.json",
+      "published": "scopes/proofs/new_pan_camera_F351.json.gz",
+      "sourceBytes": 75839,
+      "sourceSha256": "b987fbc2b9eb1a46a75ee3dcc9d99a454721f1874e7ae27d04e2f832d0633d56",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_camera_F1050.json",
+      "published": "scopes/proofs/new_pan_camera_F1050.json.gz",
+      "sourceBytes": 46115,
+      "sourceSha256": "18ec99b1d5bc3168577d34e762ff53fde8d3aef5703d6964a8f5a948ebe6ad5f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_camera_F789.json",
+      "published": "scopes/proofs/new_pan_camera_F789.json.gz",
+      "sourceBytes": 46037,
+      "sourceSha256": "78163b2c9b487dd4e6743e80d8f09c9ddd5f435085a37fc11fbb5466bb17b13f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F357.json",
+      "published": "scopes/proofs/new_pan_network_F357.json.gz",
+      "sourceBytes": 12273,
+      "sourceSha256": "608e7632088b8461ff01e3488533084e42ed8c20643c745aeff054da31abaaa7",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F356.json",
+      "published": "scopes/proofs/new_pan_network_F356.json.gz",
+      "sourceBytes": 23293,
+      "sourceSha256": "2ef5379406e495f824feb6b09ab06b1e420bf87cbeb5448fb07b1eb58e78c3ce",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F871.json",
+      "published": "scopes/proofs/new_pan_network_F871.json.gz",
+      "sourceBytes": 1150,
+      "sourceSha256": "8d386b62f86e67e3f72e1254f78a9d85479f3a42e056c0667419337675203818",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F516.json",
+      "published": "scopes/proofs/new_pan_network_F516.json.gz",
+      "sourceBytes": 1124,
+      "sourceSha256": "f9909ead8f7999beb85c0d6dbe01622e94737937d022873d283d74007e103165",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_network_F90.json",
+      "published": "scopes/proofs/new_pan_network_F90.json.gz",
+      "sourceBytes": 20124,
+      "sourceSha256": "e5774783eb3ea48b3f179c596bbf84d7b9b61f13ce513acd6aee1c811ddfb73f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_heads_F674.json",
+      "published": "scopes/proofs/new_pan_heads_F674.json.gz",
+      "sourceBytes": 6152,
+      "sourceSha256": "e06f96c2fae1d2a558a7a3018d8c5af6b863d322f9fe1981cad9e55aee0188b5",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_heads_F861.json",
+      "published": "scopes/proofs/new_pan_heads_F861.json.gz",
+      "sourceBytes": 159645,
+      "sourceSha256": "91adcc91c9d4d5933b87206e9ef43caf3aa151520abf90d0773544aa5e10e08a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_heads_F126.json",
+      "published": "scopes/proofs/new_pan_heads_F126.json.gz",
+      "sourceBytes": 18466,
+      "sourceSha256": "a2b861977b6977a1205b2d8e6b4c5d1303a91de1d5e959ebb655c5f615803244",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_urp_F723.json",
+      "published": "scopes/proofs/new_pan_urp_F723.json.gz",
+      "sourceBytes": 30878,
+      "sourceSha256": "a9d13733f623fd6b96fd832266c374a9b5195e4954ea28b74cea7e7613f4161e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_urp_F559.json",
+      "published": "scopes/proofs/new_pan_urp_F559.json.gz",
+      "sourceBytes": 30367,
+      "sourceSha256": "c5bc31f9a07485d818518fc7039d1474e94e00e184b15c142999d475c1599f8d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F620.json",
+      "published": "scopes/proofs/new_pan_ecs_F620.json.gz",
+      "sourceBytes": 31209,
+      "sourceSha256": "657b5e9149336f9bdf26b5e08ba2cbc02ec32c730b11f8cad8182edc0c7bd6a8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F593.json",
+      "published": "scopes/proofs/new_pan_ecs_F593.json.gz",
+      "sourceBytes": 33862,
+      "sourceSha256": "6b6d976fe12419b3e31a6d26028f647711928a7f0ef144327c978f9d183ee44a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F987.json",
+      "published": "scopes/proofs/new_pan_ecs_F987.json.gz",
+      "sourceBytes": 31121,
+      "sourceSha256": "0e13daf564a41d301263506edb7188518438f28531a9c47df05779dc574b000a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F339.json",
+      "published": "scopes/proofs/new_pan_ecs_F339.json.gz",
+      "sourceBytes": 31145,
+      "sourceSha256": "55c5f3ccbe119ac2acd99fd1679ab14b2ba938232dd667bbeacc6acc0df4602a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F1044.json",
+      "published": "scopes/proofs/new_pan_ecs_F1044.json.gz",
+      "sourceBytes": 30930,
+      "sourceSha256": "f90ffe41ecc91daa40d98fda4d5f3b62afec9463bf683028af16054df2d3427a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F221.json",
+      "published": "scopes/proofs/new_pan_ecs_F221.json.gz",
+      "sourceBytes": 30632,
+      "sourceSha256": "36e99ccad4663ed7ea7a8a1d2c55187bf8180d91b5e8c4ced95d59d2b5c9c166",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F693.json",
+      "published": "scopes/proofs/new_pan_ecs_F693.json.gz",
+      "sourceBytes": 31422,
+      "sourceSha256": "32473ed2c5a01e10ddc74acf674f7cd3f807f0219a3568a2a9c6496741a0348e",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F938.json",
+      "published": "scopes/proofs/new_pan_ecs_F938.json.gz",
+      "sourceBytes": 31092,
+      "sourceSha256": "4a3cc52f5ce7d2c4ff44f05d9bbd2b32e54efac5a3337e8e461df73d00baec1b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F32.json",
+      "published": "scopes/proofs/new_pan_ecs_F32.json.gz",
+      "sourceBytes": 31359,
+      "sourceSha256": "1ed1a7af3faa6c9f1b55d1e1c6e580da2afa32263e76ba4601e217e1e0363536",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_ecs_F79.json",
+      "published": "scopes/proofs/new_pan_ecs_F79.json.gz",
+      "sourceBytes": 31358,
+      "sourceSha256": "c37243551d93bf7973c55d07a3115feb707fd9c5fb8e5000788f65ea305330f8",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_loader_F852.json",
+      "published": "scopes/proofs/new_pan_loader_F852.json.gz",
+      "sourceBytes": 16114,
+      "sourceSha256": "36778a3678dd441a809bfff6dc45a5c7abd2a21f2fe1b17db5ed3d06af198e34",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_terrain_F334.json",
+      "published": "scopes/proofs/new_pan_terrain_F334.json.gz",
+      "sourceBytes": 8621,
+      "sourceSha256": "7c969bfa93649bb99a0ddc9874c63651dbbfcd9b2d7ae80a15e8520789e583c2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_pan_terrain_F621.json",
+      "published": "scopes/proofs/new_pan_terrain_F621.json.gz",
+      "sourceBytes": 16135,
+      "sourceSha256": "ccd23c6fb89f3b8c9de28e680eb85a928246c8795772f1280865539dea21403a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F785.json",
+      "published": "scopes/proofs/new_zoom_map_F785.json.gz",
+      "sourceBytes": 81571,
+      "sourceSha256": "49ead85c3e54c89c92c3c099460dafa48d57be49bdee0fcf7db5bbef340c77f1",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F228.json",
+      "published": "scopes/proofs/new_zoom_map_F228.json.gz",
+      "sourceBytes": 100346,
+      "sourceSha256": "12ae635a1699fe68713ad45732ff702c4c9e9f05d309c5a1dd0d129ab7fd2feb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F610.json",
+      "published": "scopes/proofs/new_zoom_map_F610.json.gz",
+      "sourceBytes": 53619,
+      "sourceSha256": "06d9ce7cb9206395675293c32724f95977fcef37933ce71d86fa68c06c33c1d5",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F31.json",
+      "published": "scopes/proofs/new_zoom_map_F31.json.gz",
+      "sourceBytes": 68296,
+      "sourceSha256": "f99d09b8db2286a90fb5707d7f029f46e4eb79778714f9f7636540226b240a09",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F47.json",
+      "published": "scopes/proofs/new_zoom_map_F47.json.gz",
+      "sourceBytes": 98103,
+      "sourceSha256": "f6b964bff7982df4b9acf88f7f6b4b9826044a279b546d08667093d0d835ceaa",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F573.json",
+      "published": "scopes/proofs/new_zoom_map_F573.json.gz",
+      "sourceBytes": 21807,
+      "sourceSha256": "aa002ef1413c900a1bec51f91b667d5196afcd99635d7e47f3519bd88c4138d6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F660.json",
+      "published": "scopes/proofs/new_zoom_map_F660.json.gz",
+      "sourceBytes": 37509,
+      "sourceSha256": "be8ead40bbef38cd0ecc9191fe5e4da82916d0e3962a109c677edbf4db62a924",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F611.json",
+      "published": "scopes/proofs/new_zoom_map_F611.json.gz",
+      "sourceBytes": 56358,
+      "sourceSha256": "464d2f9063031249696c616a24c27c6088b2474af9db42c181ac3d4086ddc744",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F392.json",
+      "published": "scopes/proofs/new_zoom_map_F392.json.gz",
+      "sourceBytes": 69662,
+      "sourceSha256": "e30fed35f285caa374eb3fe1ecc617df3aa436630e3a72cc7d178a3776d82960",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F390.json",
+      "published": "scopes/proofs/new_zoom_map_F390.json.gz",
+      "sourceBytes": 129437,
+      "sourceSha256": "77ef9758331c9aefaeeba402ca5d8d8f9102798453a442ec1acfc0fbb3a95790",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F175.json",
+      "published": "scopes/proofs/new_zoom_map_F175.json.gz",
+      "sourceBytes": 111437,
+      "sourceSha256": "28b40479bbbde16bc965410e7f5c240ea313db7ae016a6f1296c705cbd23dfc4",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F379.json",
+      "published": "scopes/proofs/new_zoom_map_F379.json.gz",
+      "sourceBytes": 98656,
+      "sourceSha256": "c092c3df534e14e6da6ec8b78149d956574412f3a3d3a37f2501843876c9ce3c",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F629.json",
+      "published": "scopes/proofs/new_zoom_map_F629.json.gz",
+      "sourceBytes": 132642,
+      "sourceSha256": "5f45937106e375c98b180f91176d0de75377b26d21f0ecb2d65f78aad03ebb7b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F665.json",
+      "published": "scopes/proofs/new_zoom_map_F665.json.gz",
+      "sourceBytes": 29629,
+      "sourceSha256": "7e77f0f0597e5e840a55f8166da9da469204948720f2f2aea7076777336fd7e7",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F486.json",
+      "published": "scopes/proofs/new_zoom_map_F486.json.gz",
+      "sourceBytes": 38908,
+      "sourceSha256": "f2e770bacc6cf40bac8879830e397ff04b62aa9e5fca5962d04675147bb57c32",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F343.json",
+      "published": "scopes/proofs/new_zoom_map_F343.json.gz",
+      "sourceBytes": 90239,
+      "sourceSha256": "d6001de998270e0da0ccb35ceca169462fbffded0395a9ea77627535ffc511bc",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F411.json",
+      "published": "scopes/proofs/new_zoom_map_F411.json.gz",
+      "sourceBytes": 33839,
+      "sourceSha256": "3f9976f8b4cec883da605753de810cadfa2dc6d1342907a4545cf583f764b132",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F506.json",
+      "published": "scopes/proofs/new_zoom_map_F506.json.gz",
+      "sourceBytes": 31062,
+      "sourceSha256": "e532644ecf84678b44971ebe538fbb56f10f61bf2903be2995fadc71f9234b16",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F683.json",
+      "published": "scopes/proofs/new_zoom_map_F683.json.gz",
+      "sourceBytes": 40392,
+      "sourceSha256": "0fdb4283e787ee0920926f89a96d7e480ed5ce39a03bddd3bae33bb3e75f1b72",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F364.json",
+      "published": "scopes/proofs/new_zoom_map_F364.json.gz",
+      "sourceBytes": 28904,
+      "sourceSha256": "55d4183efae9e0f3bcf44d00da2c65c1c18a3058d07634cd1b0779b3f18010af",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F689.json",
+      "published": "scopes/proofs/new_zoom_map_F689.json.gz",
+      "sourceBytes": 20981,
+      "sourceSha256": "cd3c9eca67a3c4f79914d63d11a277119cec166dbe43b7e4ebb6a28280aabbb7",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F601.json",
+      "published": "scopes/proofs/new_zoom_map_F601.json.gz",
+      "sourceBytes": 28907,
+      "sourceSha256": "06ba3e181e7edffc094ed8816b3f3c72b33e8fb6a2abd666d17a690c852f8a02",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F647.json",
+      "published": "scopes/proofs/new_zoom_map_F647.json.gz",
+      "sourceBytes": 47811,
+      "sourceSha256": "5640bdf51718a21d399c8f54e4702374d22577a835058821cfaa753a8bd14093",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F231.json",
+      "published": "scopes/proofs/new_zoom_map_F231.json.gz",
+      "sourceBytes": 28081,
+      "sourceSha256": "139af551c49357a39ead42ebb04f55685c0f61ad1b412e93b34eacb7248abd54",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F27.json",
+      "published": "scopes/proofs/new_zoom_map_F27.json.gz",
+      "sourceBytes": 77519,
+      "sourceSha256": "bb4ff9d696388a49c24439e2f7d72ed6b97567e183e619a761cf571e82e02cea",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F42.json",
+      "published": "scopes/proofs/new_zoom_map_F42.json.gz",
+      "sourceBytes": 83128,
+      "sourceSha256": "052ce5e1845051302187871b7a99b107f5455d6181455c35fda2399825c64bfa",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F452.json",
+      "published": "scopes/proofs/new_zoom_map_F452.json.gz",
+      "sourceBytes": 206387,
+      "sourceSha256": "f0996a35c04902b7280aaaf6a5f0c8f50c5ad8e2fbe6cd485c0baeeab906c28b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F308.json",
+      "published": "scopes/proofs/new_zoom_map_F308.json.gz",
+      "sourceBytes": 68522,
+      "sourceSha256": "c9e0582d6607553e25492fdbba0ed06f2e2cad2849e1ee9473b36a8c22dd9bbe",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F327.json",
+      "published": "scopes/proofs/new_zoom_map_F327.json.gz",
+      "sourceBytes": 124190,
+      "sourceSha256": "ef0f1bd1425b6a4823b0ef0317c62c8475dd31da467deb61ede85de2cea33b3d",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F64.json",
+      "published": "scopes/proofs/new_zoom_map_F64.json.gz",
+      "sourceBytes": 73071,
+      "sourceSha256": "b1b17d3106685d9be8edd2c9aa730780ba4b3aa86d22469f72f878e9a68968df",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F66.json",
+      "published": "scopes/proofs/new_zoom_map_F66.json.gz",
+      "sourceBytes": 54785,
+      "sourceSha256": "16b45b24c632901c99787ad14708f3ce6fd58d37dc3b63c6d779c5e1be28e090",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_map_F460.json",
+      "published": "scopes/proofs/new_zoom_map_F460.json.gz",
+      "sourceBytes": 67620,
+      "sourceSha256": "2691804b465644248356c85bcf30a54e239e65494ac15b27b83bee913f89b3ff",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F252.json",
+      "published": "scopes/proofs/new_zoom_camera_F252.json.gz",
+      "sourceBytes": 88093,
+      "sourceSha256": "722882ab216d56164008e2e144f7ebdb908440bceed0947347300ceedaa55a04",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F781.json",
+      "published": "scopes/proofs/new_zoom_camera_F781.json.gz",
+      "sourceBytes": 254438,
+      "sourceSha256": "6bf57d231e547bca234c9e1e5747490aae860f49f63155b8ad48cf7d89ad59bb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F608.json",
+      "published": "scopes/proofs/new_zoom_camera_F608.json.gz",
+      "sourceBytes": 268780,
+      "sourceSha256": "bc26c970ca76a59582478f49abc9b97edf7078ffd788cb30a7afb65fdfbf4cf6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F216.json",
+      "published": "scopes/proofs/new_zoom_camera_F216.json.gz",
+      "sourceBytes": 69263,
+      "sourceSha256": "fdee42c9a0744ce237e12d413f702d2fa4bfca034dc4811bf500653e5ee4b97a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F622.json",
+      "published": "scopes/proofs/new_zoom_camera_F622.json.gz",
+      "sourceBytes": 68130,
+      "sourceSha256": "f2a4422eaf37fcc722b82e117eda9bebf19bdf9707ddf7281bf14efb5cf888f2",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F567.json",
+      "published": "scopes/proofs/new_zoom_camera_F567.json.gz",
+      "sourceBytes": 68158,
+      "sourceSha256": "6fbca3b11f25419c4de0d575d25ab9ea637c83680023c72773cc5879135bf473",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F462.json",
+      "published": "scopes/proofs/new_zoom_camera_F462.json.gz",
+      "sourceBytes": 59544,
+      "sourceSha256": "84221d6e57146958005c71fd7a3eb11aaaecc771b3aba59e0933f99afe6fbc98",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_camera_F712.json",
+      "published": "scopes/proofs/new_zoom_camera_F712.json.gz",
+      "sourceBytes": 70342,
+      "sourceSha256": "1874b5e111329e051238414ae4adbd824c7b7f494183d89ad45cfeded2011d64",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F40.json",
+      "published": "scopes/proofs/new_zoom_network_F40.json.gz",
+      "sourceBytes": 12676,
+      "sourceSha256": "63120f80d77a78ed858a9f61aff76b2e20e9684eb94e424c1fbe7ca2ebfcd809",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F775.json",
+      "published": "scopes/proofs/new_zoom_network_F775.json.gz",
+      "sourceBytes": 5963,
+      "sourceSha256": "c865c6042fb340fa6dbc38e4a6db20d42474cfdbe028010b80cb0fc4d3703e30",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F175.json",
+      "published": "scopes/proofs/new_zoom_network_F175.json.gz",
+      "sourceBytes": 19348,
+      "sourceSha256": "a0f82608c6f450eda33fab0bc0001a35159b36012205d5cbc7602f3f85cea4bb",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F774.json",
+      "published": "scopes/proofs/new_zoom_network_F774.json.gz",
+      "sourceBytes": 27671,
+      "sourceSha256": "345c0679631b8dcfdee75cca85745031e2a7f57fe9320383dfdac47b237af400",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F247.json",
+      "published": "scopes/proofs/new_zoom_network_F247.json.gz",
+      "sourceBytes": 17885,
+      "sourceSha256": "050ee2d60315373dc118602d494dd660db0816b5720c5849bee21f5b7a9239c4",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F223.json",
+      "published": "scopes/proofs/new_zoom_network_F223.json.gz",
+      "sourceBytes": 19531,
+      "sourceSha256": "1fef7b124a86ec12732d30a4db6b3380d73324135871b92b9ac571042bf0c1b6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_network_F683.json",
+      "published": "scopes/proofs/new_zoom_network_F683.json.gz",
+      "sourceBytes": 5799,
+      "sourceSha256": "c139ea63dfbb4b866e081ef4b80d1940642acceb4cac497cd6aec9239346bb42",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_heads_F199.json",
+      "published": "scopes/proofs/new_zoom_heads_F199.json.gz",
+      "sourceBytes": 106099,
+      "sourceSha256": "db5feceb86d22dd87d471687a87c31d2eb9386f0beb36bb3db5fd324540d2d4c",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_urp_F611.json",
+      "published": "scopes/proofs/new_zoom_urp_F611.json.gz",
+      "sourceBytes": 32215,
+      "sourceSha256": "cbf5ac5c17ea1bcd318e0edb415708a021312c8abe66bb3526523817625469b6",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_urp_F690.json",
+      "published": "scopes/proofs/new_zoom_urp_F690.json.gz",
+      "sourceBytes": 22839,
+      "sourceSha256": "a782a14fd4a9088e99c75975f2d780ae38e61780223962a85110c032df37acd7",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_urp_F777.json",
+      "published": "scopes/proofs/new_zoom_urp_F777.json.gz",
+      "sourceBytes": 29085,
+      "sourceSha256": "e4c53821ebf263716d26f0f7eae11934792d0ac9272e67232d75efa0f9850501",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F11.json",
+      "published": "scopes/proofs/new_zoom_ecs_F11.json.gz",
+      "sourceBytes": 34299,
+      "sourceSha256": "b714274e118393d1528b438acbbe935939399f731034beea71aa9776d52a483f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F161.json",
+      "published": "scopes/proofs/new_zoom_ecs_F161.json.gz",
+      "sourceBytes": 30803,
+      "sourceSha256": "cefabdc329c8e17790251aba49c6be59387cd1c72847cf07732003806940e66a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F787.json",
+      "published": "scopes/proofs/new_zoom_ecs_F787.json.gz",
+      "sourceBytes": 31375,
+      "sourceSha256": "9e80586dc8efb38864130b4a86383e64764c01dc38cefbeb75412aca56e12615",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F774.json",
+      "published": "scopes/proofs/new_zoom_ecs_F774.json.gz",
+      "sourceBytes": 29717,
+      "sourceSha256": "33e6589ac83349c4072838a179fb6a5877ead6f59df9b079da95aa2cb3e04a11",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F233.json",
+      "published": "scopes/proofs/new_zoom_ecs_F233.json.gz",
+      "sourceBytes": 31284,
+      "sourceSha256": "b455eeaf13914c9864b8ad2889a684d3c48b79a78133f3d00009e87e3197268b",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F597.json",
+      "published": "scopes/proofs/new_zoom_ecs_F597.json.gz",
+      "sourceBytes": 30401,
+      "sourceSha256": "a43060f95863b904d8ad3708293c8e93ab6b2863b9a2e466e2520bf21ba038c9",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F779.json",
+      "published": "scopes/proofs/new_zoom_ecs_F779.json.gz",
+      "sourceBytes": 29801,
+      "sourceSha256": "e40306ef9f1d4a988bfd53dcdca1d87c6d5d652b2fcc3fccf3866e5eb657b77a",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F50.json",
+      "published": "scopes/proofs/new_zoom_ecs_F50.json.gz",
+      "sourceBytes": 30770,
+      "sourceSha256": "359fa477a2ac9dfa053c736204972bd5aac9e1ee7aefcdb2acca51f5eeb7adfa",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F673.json",
+      "published": "scopes/proofs/new_zoom_ecs_F673.json.gz",
+      "sourceBytes": 30351,
+      "sourceSha256": "fa5e1454421da57983e3e5ca7874d78abdcceec4e40c609b13d59c7349dd4e75",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_ecs_F141.json",
+      "published": "scopes/proofs/new_zoom_ecs_F141.json.gz",
+      "sourceBytes": 30808,
+      "sourceSha256": "2e4e5154e5dcc1d087e5bb6963878998ae9a2def0f39b4f0c8ea25e76bd6b7d7",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_armyline_F780.json",
+      "published": "scopes/proofs/new_zoom_armyline_F780.json.gz",
+      "sourceBytes": 5918,
+      "sourceSha256": "865bbec59717ca24035412c443e4eac31c58fa91deb711e982547fa1abec1d48",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_armyline_F444.json",
+      "published": "scopes/proofs/new_zoom_armyline_F444.json.gz",
+      "sourceBytes": 4367,
+      "sourceSha256": "21414f7f3a55c9fc6c0527af93b20b341124a20051a9026982f6dad216feb401",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_loader_F340.json",
+      "published": "scopes/proofs/new_zoom_loader_F340.json.gz",
+      "sourceBytes": 11562,
+      "sourceSha256": "ea93db070e8fa496a59cc1b838ff07a646f47a79467e64b764636ac1b317bc8c",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_terrain_F445.json",
+      "published": "scopes/proofs/new_zoom_terrain_F445.json.gz",
+      "sourceBytes": 12664,
+      "sourceSha256": "ebc0a43bb831613640c103c8fe4d158002815ecd37bc02530b9b4946a886ff7f",
+      "roundTripExact": true
+    },
+    {
+      "source": "scopes/proofs/new_zoom_terrain_F272.json",
+      "published": "scopes/proofs/new_zoom_terrain_F272.json.gz",
+      "sourceBytes": 24027,
+      "sourceSha256": "40810694348ace915aaf3bef29f6798b0b75ff12a87225cdf0cd24bec5c878b2",
+      "roundTripExact": true
+    }
+  ],
+  "allPublishedHtmlLinksAndAnchorsChecked": 17795,
+  "treeMarkerSearchHashesChecked": 564,
+  "legacyNonMarkerTreeQueriesAdjusted": [
+    {
+      "page": "report.html",
+      "originalHref": "scopes/proofs/new_static_ecs_F547.html#ECS%3A%20Initialization%20%2B%20Simulation%20%2B%20Presentation",
+      "publishedHref": "scopes/proofs/new_static_ecs_F547.html#SystemGroup"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "scopes/proofs/new_pan_ecs_F800.html#ECS%3A%20Initialization%20%2B%20Simulation%20%2B%20Presentation",
+      "publishedHref": "scopes/proofs/new_pan_ecs_F800.html#SystemGroup"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "scopes/proofs/new_zoom_ecs_F57.html#ECS%3A%20Initialization%20%2B%20Simulation%20%2B%20Presentation",
+      "publishedHref": "scopes/proofs/new_zoom_ecs_F57.html#SystemGroup"
+    },
+    {
+      "page": "scopes/new_static.html",
+      "originalHref": "proofs/new_static_map_F699.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_static_map_F699.html"
+    },
+    {
+      "page": "scopes/new_static.html",
+      "originalHref": "proofs/new_static_camera_F899.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_static_camera_F899.html"
+    },
+    {
+      "page": "scopes/new_static.html",
+      "originalHref": "proofs/new_static_network_F389.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_static_network_F389.html"
+    },
+    {
+      "page": "scopes/new_pan.html",
+      "originalHref": "proofs/new_pan_map_F941.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_pan_map_F941.html"
+    },
+    {
+      "page": "scopes/new_pan.html",
+      "originalHref": "proofs/new_pan_camera_F500.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_pan_camera_F500.html"
+    },
+    {
+      "page": "scopes/new_pan.html",
+      "originalHref": "proofs/new_pan_network_F871.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_pan_network_F871.html"
+    },
+    {
+      "page": "scopes/new_zoom.html",
+      "originalHref": "proofs/new_zoom_map_F228.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_zoom_map_F228.html"
+    },
+    {
+      "page": "scopes/new_zoom.html",
+      "originalHref": "proofs/new_zoom_camera_F608.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_zoom_camera_F608.html"
+    },
+    {
+      "page": "scopes/new_zoom.html",
+      "originalHref": "proofs/new_zoom_network_F775.html#%E6%9C%AA%E5%88%86%E7%BB%84%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%20Self",
+      "publishedHref": "proofs/new_zoom_network_F775.html"
+    }
+  ],
+  "localCaptureLinksAnnotated": [
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "file:///K:/AI/PerfAnalysisTool_Codebuddy/output/march_dual_hotspots_20260910_215916/"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "static.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "pan.pdata"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.raw"
+    },
+    {
+      "page": "report.html",
+      "originalHref": "zoom.pdata"
+    },
+    {
+      "page": "scopes/new_static.html",
+      "originalHref": "../static.raw"
+    },
+    {
+      "page": "scopes/new_static.html",
+      "originalHref": "../static.pdata"
+    },
+    {
+      "page": "scopes/new_pan.html",
+      "originalHref": "../pan.raw"
+    },
+    {
+      "page": "scopes/new_pan.html",
+      "originalHref": "../pan.pdata"
+    },
+    {
+      "page": "scopes/new_zoom.html",
+      "originalHref": "../zoom.raw"
+    },
+    {
+      "page": "scopes/new_zoom.html",
+      "originalHref": "../zoom.pdata"
+    }
+  ],
+  "rawPdataZipPublished": false,
+  "existingCatalogEntriesUnchanged": true,
+  "remoteDeploymentPerformed": false
+}

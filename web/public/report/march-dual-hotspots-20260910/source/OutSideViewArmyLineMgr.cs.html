@@ -1,0 +1,2081 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>OutSideViewArmyLineMgr.cs</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\CS\Outside\View\OutSideViewArmyLineMgr.cs<br>current local source; phone build commit unverified · SHA256 28a126e3cf375456d07601d5fcfe683e5b60465b43673d5ee5ff9a9fad99a78b</p><pre><span id="L1"><a href="#L1">1</a>// 行军线管理</span>
+<span id="L2"><a href="#L2">2</a>// 1.一个ArmyEntity 对应一个行军线数组 (0号位引导性 1号位行军线)</span>
+<span id="L3"><a href="#L3">3</a>// 2.行军线信息分层 根据当前显示等级 部分行军线不显示（敌方、其他势力、我方等）</span>
+<span id="L4"><a href="#L4">4</a>// 3.to do 追击行军线需要处理信息分层</span>
+<span id="L5"><a href="#L5">5</a></span>
+<span id="L6"><a href="#L6">6</a>using System;</span>
+<span id="L7"><a href="#L7">7</a>using System.Collections.Generic;</span>
+<span id="L8"><a href="#L8">8</a></span>
+<span id="L9"><a href="#L9">9</a>using AOE.Battle;</span>
+<span id="L10"><a href="#L10">10</a>using AOE.DOTS;</span>
+<span id="L11"><a href="#L11">11</a></span>
+<span id="L12"><a href="#L12">12</a>using com.tencent.nk.xlsRes;</span>
+<span id="L13"><a href="#L13">13</a></span>
+<span id="L14"><a href="#L14">14</a>using Unity.Burst;</span>
+<span id="L15"><a href="#L15">15</a>using Unity.Collections;</span>
+<span id="L16"><a href="#L16">16</a>using Unity.Entities;</span>
+<span id="L17"><a href="#L17">17</a>using Unity.Jobs;</span>
+<span id="L18"><a href="#L18">18</a>using Unity.Mathematics;</span>
+<span id="L19"><a href="#L19">19</a>using Unity.Transforms;</span>
+<span id="L20"><a href="#L20">20</a></span>
+<span id="L21"><a href="#L21">21</a>using UnityEngine;</span>
+<span id="L22"><a href="#L22">22</a></span>
+<span id="L23"><a href="#L23">23</a>namespace AOE.Outside</span>
+<span id="L24"><a href="#L24">24</a>{</span>
+<span id="L25"><a href="#L25">25</a>    public class OutSideViewArmyLineMgr : MapSubManagerBase</span>
+<span id="L26"><a href="#L26">26</a>    {</span>
+<span id="L27"><a href="#L27">27</a>        private struct PreviewData</span>
+<span id="L28"><a href="#L28">28</a>        {</span>
+<span id="L29"><a href="#L29">29</a>            public float  speed;</span>
+<span id="L30"><a href="#L30">30</a>            public float3 endPos;</span>
+<span id="L31"><a href="#L31">31</a>            public int    color;</span>
+<span id="L32"><a href="#L32">32</a>        }</span>
+<span id="L33"><a href="#L33">33</a></span>
+<span id="L34"><a href="#L34">34</a>        private int                                       m_moveLineCount;                // 移动行军线数量</span>
+<span id="L35"><a href="#L35">35</a>        private int                                       m_chaserLineCount;              // 追击行军线数量</span>
+<span id="L36"><a href="#L36">36</a>        private int                                       m_previewEmptyEffectID;         // 预览行军线光标特效</span>
+<span id="L37"><a href="#L37">37</a>        private bool                                      m_previewCanArrive;             // 是否可行走</span>
+<span id="L38"><a href="#L38">38</a>        private int                                       m_touchUpEmptyEffectID;         // 松手行军线光标特效</span>
+<span id="L39"><a href="#L39">39</a>        private float                                     m_touchEffectDelayTime;         // 松手行军线光标特效消失倒计时</span>
+<span id="L40"><a href="#L40">40</a>        private Dictionary&lt;long, List&lt;long&gt;&gt;              m_armyToLineDict;               // 当前显示的行军线</span>
+<span id="L41"><a href="#L41">41</a>        private Dictionary&lt;long, int&gt;                     m_lineEffectDict;               // 行军线终点圆特效</span>
+<span id="L42"><a href="#L42">42</a>        private Dictionary&lt;long, float3&gt;                  m_straightLineEndPos;           // 2.0直线行军线终点</span>
+<span id="L43"><a href="#L43">43</a>        private Dictionary&lt;long, float3&gt;                  m_straightLineLastStartPos;     // 上次刷新时的起点，用于变化检测</span>
+<span id="L44"><a href="#L44">44</a>        private Dictionary&lt;int, Dictionary&lt;long, int&gt;&gt;    m_dictEntityMoveLineIds;        // 2.0三方行军线&lt;EntityMoveLineType, &lt;entityId, lineId&gt;&gt;-与army entity无关，根据路点数据创建的行军线</span>
+<span id="L45"><a href="#L45">45</a>        private Dictionary&lt;int, PureMoveLineData&gt;         m_dictEntityMoveLineDatas;      // 2.0三方行军线&lt;lineId, lineData&gt;</span>
+<span id="L46"><a href="#L46">46</a>        private NativeHashMap&lt;int, bool&gt;                  m_nativeMapFinalPosLineId;</span>
+<span id="L47"><a href="#L47">47</a>        private static readonly List&lt;long&gt;                s_reachPointTimeStamps = new List&lt;long&gt;(); // 复用列表，避免每帧 GC</span>
+<span id="L48"><a href="#L48">48</a>        private NativeHashMap&lt;int, FinalExistInViewInfo&gt;  m_nativeMapFinalPosInfo;</span>
+<span id="L49"><a href="#L49">49</a>        private HashSet&lt;int&gt;                              m_setExistEffectGridIndex;      // &lt;gridIndex&gt;</span>
+<span id="L50"><a href="#L50">50</a>        private Dictionary&lt;int, int&gt;                      m_dictFinalPosEffect;           // &lt;gridIndex, effectId&gt;</span>
+<span id="L51"><a href="#L51">51</a>        private List&lt;int&gt;                                 m_listTempToRemoveEffectId;    // &lt;effectId&gt;</span>
+<span id="L52"><a href="#L52">52</a>        private Dictionary&lt;long, ChaserArmyDataWrap[]&gt;    m_armyChaserDict;               // 追击者</span>
+<span id="L53"><a href="#L53">53</a>        private Dictionary&lt;long, PreviewData&gt;             m_armyPreviewDict;              // 预览行军线</span>
+<span id="L54"><a href="#L54">54</a>        private Dictionary&lt;long, List&lt;long&gt;&gt;              m_targetToLineDict;             // 行军终点目标对应的行军线List（一对多）</span>
+<span id="L55"><a href="#L55">55</a>        private Dictionary&lt;long, int&gt;                     m_targetToEffectDict;           // 行军终点目标对应的特效ID （一对一）</span>
+<span id="L56"><a href="#L56">56</a>        private Dictionary&lt;long, List&lt;float3&gt;&gt;            m_armyPredictDict;              // 预测移动行军线的路点</span>
+<span id="L57"><a href="#L57">57</a>        private List&lt;long&gt;                                m_armyPreviewRealPath;          // 服务器真实路径预览行军线</span>
+<span id="L58"><a href="#L58">58</a>        private List&lt;long&gt;                                m_tempLongList1;</span>
+<span id="L59"><a href="#L59">59</a>        private List&lt;long&gt;                                m_tempLongList2;</span>
+<span id="L60"><a href="#L60">60</a>        private List&lt;float3&gt;                              m_tempFloat3List;</span>
+<span id="L61"><a href="#L61">61</a>        </span>
+<span id="L62"><a href="#L62">62</a>        // OnUpdateChaserLine 优化，每帧只更新一个army的追击线</span>
+<span id="L63"><a href="#L63">63</a>        private int        m_chaserTickIndex;</span>
+<span id="L64"><a href="#L64">64</a>        private List&lt;long&gt; m_chaserIDList;</span>
+<span id="L65"><a href="#L65">65</a></span>
+<span id="L66"><a href="#L66">66</a>        public int maxFinalPosEffectCount;</span>
+<span id="L67"><a href="#L67">67</a>        public static bool CheckNullReference = true;</span>
+<span id="L68"><a href="#L68">68</a>        private bool m_loggedMeshLineFull;</span>
+<span id="L69"><a href="#L69">69</a></span>
+<span id="L70"><a href="#L70">70</a>        private EntityMoveLineCreateQueue m_pendingCreateQueue;</span>
+<span id="L71"><a href="#L71">71</a>        private static readonly Unity.Profiling.ProfilerMarker s_processMoveLineQueueMarker =</span>
+<span id="L72"><a href="#L72">72</a>            new Unity.Profiling.ProfilerMarker(&quot;ArmyLine.ProcessPendingCreates&quot;);</span>
+<span id="L73"><a href="#L73">73</a></span>
+<span id="L74"><a href="#L74">74</a>        public int PendingMoveLineCreateCount =&gt; m_pendingCreateQueue?.Count ?? 0;</span>
+<span id="L75"><a href="#L75">75</a>        public int LastMoveLineCreateProcessedCount { get; private set; }</span>
+<span id="L76"><a href="#L76">76</a>        public double LastMoveLineCreateMilliseconds { get; private set; }</span>
+<span id="L77"><a href="#L77">77</a></span>
+<span id="L78"><a href="#L78">78</a>        public override void Init()</span>
+<span id="L79"><a href="#L79">79</a>        {</span>
+<span id="L80"><a href="#L80">80</a>            // 限定数量 + 己方部队数量</span>
+<span id="L81"><a href="#L81">81</a>            var moveLineLimit = ArmyEntityConst.ArmyLineMoveLimit + 12;</span>
+<span id="L82"><a href="#L82">82</a></span>
+<span id="L83"><a href="#L83">83</a>            m_chaserTickIndex           = 0;</span>
+<span id="L84"><a href="#L84">84</a>            m_moveLineCount             = 0;</span>
+<span id="L85"><a href="#L85">85</a>            m_chaserLineCount           = 0;</span>
+<span id="L86"><a href="#L86">86</a>            m_previewEmptyEffectID      = 0;</span>
+<span id="L87"><a href="#L87">87</a>            m_previewCanArrive          = false;</span>
+<span id="L88"><a href="#L88">88</a>            m_touchUpEmptyEffectID      = 0;</span>
+<span id="L89"><a href="#L89">89</a>            m_touchEffectDelayTime      = 0;</span>
+<span id="L90"><a href="#L90">90</a>            m_lineEffectDict            = new Dictionary&lt;long, int&gt;(moveLineLimit);</span>
+<span id="L91"><a href="#L91">91</a>            m_armyToLineDict            = new Dictionary&lt;long, List&lt;long&gt;&gt;(moveLineLimit);</span>
+<span id="L92"><a href="#L92">92</a>            m_straightLineEndPos        = new Dictionary&lt;long, float3&gt;();</span>
+<span id="L93"><a href="#L93">93</a>            m_straightLineLastStartPos  = new Dictionary&lt;long, float3&gt;();</span>
+<span id="L94"><a href="#L94">94</a>            m_dictEntityMoveLineIds     = new Dictionary&lt;int, Dictionary&lt;long, int&gt;&gt;();</span>
+<span id="L95"><a href="#L95">95</a>            m_dictEntityMoveLineDatas   = new Dictionary&lt;int, PureMoveLineData&gt;();</span>
+<span id="L96"><a href="#L96">96</a>            m_nativeMapFinalPosLineId   = new NativeHashMap&lt;int, bool&gt;(moveLineLimit, Allocator.Persistent);</span>
+<span id="L97"><a href="#L97">97</a>            m_nativeMapFinalPosInfo     = new NativeHashMap&lt;int, FinalExistInViewInfo&gt;(moveLineLimit, Allocator.Persistent);</span>
+<span id="L98"><a href="#L98">98</a>            m_setExistEffectGridIndex   = new HashSet&lt;int&gt;();</span>
+<span id="L99"><a href="#L99">99</a>            m_listTempToRemoveEffectId = new List&lt;int&gt;();</span>
+<span id="L100"><a href="#L100">100</a>            m_dictFinalPosEffect        = new Dictionary&lt;int, int&gt;();</span>
+<span id="L101"><a href="#L101">101</a>            m_armyChaserDict            = new Dictionary&lt;long, ChaserArmyDataWrap[]&gt;(ArmyEntityConst.ArmyLineChaserLimit);</span>
+<span id="L102"><a href="#L102">102</a>            m_armyPreviewDict           = new Dictionary&lt;long, PreviewData&gt;(8);</span>
+<span id="L103"><a href="#L103">103</a>            m_armyPredictDict           = new Dictionary&lt;long, List&lt;float3&gt;&gt;(8);</span>
+<span id="L104"><a href="#L104">104</a>            m_armyPreviewRealPath       = new List&lt;long&gt;();</span>
+<span id="L105"><a href="#L105">105</a>            m_targetToLineDict          = new Dictionary&lt;long, List&lt;long&gt;&gt;(8);</span>
+<span id="L106"><a href="#L106">106</a>            m_targetToEffectDict        = new Dictionary&lt;long, int&gt;(8);</span>
+<span id="L107"><a href="#L107">107</a>            m_tempLongList1             = new List&lt;long&gt;(8);</span>
+<span id="L108"><a href="#L108">108</a>            m_tempLongList2             = new List&lt;long&gt;(8);</span>
+<span id="L109"><a href="#L109">109</a>            m_tempFloat3List            = new List&lt;float3&gt;(8);</span>
+<span id="L110"><a href="#L110">110</a>            m_chaserIDList              = new List&lt;long&gt;(ArmyEntityConst.ArmyLineChaserLimit);</span>
+<span id="L111"><a href="#L111">111</a>            maxFinalPosEffectCount      = 0;</span>
+<span id="L112"><a href="#L112">112</a>            m_pendingCreateQueue        = new EntityMoveLineCreateQueue();</span>
+<span id="L113"><a href="#L113">113</a></span>
+<span id="L114"><a href="#L114">114</a>            GameCore.NogcEventManager.RegisterEventHandler((int) EventDefine.BattleComplexChange, OnBattleComplexChangeNtf);</span>
+<span id="L115"><a href="#L115">115</a>        }</span>
+<span id="L116"><a href="#L116">116</a></span>
+<span id="L117"><a href="#L117">117</a>        public override void Release()</span>
+<span id="L118"><a href="#L118">118</a>        {</span>
+<span id="L119"><a href="#L119">119</a>            OnSceneExit();</span>
+<span id="L120"><a href="#L120">120</a></span>
+<span id="L121"><a href="#L121">121</a>            if (m_nativeMapFinalPosLineId.IsCreated)</span>
+<span id="L122"><a href="#L122">122</a>            {</span>
+<span id="L123"><a href="#L123">123</a>                m_nativeMapFinalPosLineId.Dispose();</span>
+<span id="L124"><a href="#L124">124</a>            }</span>
+<span id="L125"><a href="#L125">125</a></span>
+<span id="L126"><a href="#L126">126</a>            if (m_nativeMapFinalPosInfo.IsCreated)</span>
+<span id="L127"><a href="#L127">127</a>            {</span>
+<span id="L128"><a href="#L128">128</a>                m_nativeMapFinalPosInfo.Dispose();</span>
+<span id="L129"><a href="#L129">129</a>            }</span>
+<span id="L130"><a href="#L130">130</a></span>
+<span id="L131"><a href="#L131">131</a>            GameCore.NogcEventManager.UnregisterEventHandler((int) EventDefine.BattleComplexChange, OnBattleComplexChangeNtf);</span>
+<span id="L132"><a href="#L132">132</a>        }</span>
+<span id="L133"><a href="#L133">133</a></span>
+<span id="L134"><a href="#L134">134</a>        public override void OnSceneEnter()</span>
+<span id="L135"><a href="#L135">135</a>        {</span>
+<span id="L136"><a href="#L136">136</a>            if (maxFinalPosEffectCount &lt;= 0)</span>
+<span id="L137"><a href="#L137">137</a>            {</span>
+<span id="L138"><a href="#L138">138</a>                maxFinalPosEffectCount = MapManager.ArmyPerfClipMgr?.GetLimitNumByDeviceLevel(BattleLimitClipTypeEnum.BLCArmyLineFinalPosEffect) ?? 0;</span>
+<span id="L139"><a href="#L139">139</a>            }</span>
+<span id="L140"><a href="#L140">140</a>        }</span>
+<span id="L141"><a href="#L141">141</a></span>
+<span id="L142"><a href="#L142">142</a>        public override void OnSceneExit()</span>
+<span id="L143"><a href="#L143">143</a>        {</span>
+<span id="L144"><a href="#L144">144</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L145"><a href="#L145">145</a>            if (m_previewEmptyEffectID != 0)</span>
+<span id="L146"><a href="#L146">146</a>            {</span>
+<span id="L147"><a href="#L147">147</a>                mapEntityMgr.StopEffect(m_previewEmptyEffectID);</span>
+<span id="L148"><a href="#L148">148</a>                m_previewEmptyEffectID = 0;</span>
+<span id="L149"><a href="#L149">149</a>            }</span>
+<span id="L150"><a href="#L150">150</a></span>
+<span id="L151"><a href="#L151">151</a>            m_previewCanArrive = false;</span>
+<span id="L152"><a href="#L152">152</a></span>
+<span id="L153"><a href="#L153">153</a>            if (m_touchUpEmptyEffectID != 0)</span>
+<span id="L154"><a href="#L154">154</a>            {</span>
+<span id="L155"><a href="#L155">155</a>                mapEntityMgr.StopEffect(m_touchUpEmptyEffectID);</span>
+<span id="L156"><a href="#L156">156</a>                m_touchUpEmptyEffectID = 0;</span>
+<span id="L157"><a href="#L157">157</a>            }</span>
+<span id="L158"><a href="#L158">158</a></span>
+<span id="L159"><a href="#L159">159</a>            foreach (var item in m_lineEffectDict)</span>
+<span id="L160"><a href="#L160">160</a>            {</span>
+<span id="L161"><a href="#L161">161</a>                mapEntityMgr.StopEffect(item.Value);</span>
+<span id="L162"><a href="#L162">162</a>            }</span>
+<span id="L163"><a href="#L163">163</a></span>
+<span id="L164"><a href="#L164">164</a>            m_lineEffectDict.Clear();</span>
+<span id="L165"><a href="#L165">165</a></span>
+<span id="L166"><a href="#L166">166</a>            foreach (var item in m_targetToEffectDict)</span>
+<span id="L167"><a href="#L167">167</a>            {</span>
+<span id="L168"><a href="#L168">168</a>                mapEntityMgr.StopEffect(item.Value);</span>
+<span id="L169"><a href="#L169">169</a>            }</span>
+<span id="L170"><a href="#L170">170</a></span>
+<span id="L171"><a href="#L171">171</a>            m_targetToEffectDict.Clear();</span>
+<span id="L172"><a href="#L172">172</a></span>
+<span id="L173"><a href="#L173">173</a>            foreach (var item in m_armyToLineDict)</span>
+<span id="L174"><a href="#L174">174</a>            {</span>
+<span id="L175"><a href="#L175">175</a>                for (int i = 0; i &lt; (int) MeshLineDefine.ArmyLineIndexType.Max; i++)</span>
+<span id="L176"><a href="#L176">176</a>                {</span>
+<span id="L177"><a href="#L177">177</a>                    var uid = item.Value[i];</span>
+<span id="L178"><a href="#L178">178</a>                    if (uid &gt; 0)</span>
+<span id="L179"><a href="#L179">179</a>                    {</span>
+<span id="L180"><a href="#L180">180</a>                        GameCore.MeshLineMgr.DeleteLine((int) uid);</span>
+<span id="L181"><a href="#L181">181</a>                    }</span>
+<span id="L182"><a href="#L182">182</a>                }</span>
+<span id="L183"><a href="#L183">183</a></span>
+<span id="L184"><a href="#L184">184</a>                GameCore.ListPool.Recycle(item.Value);</span>
+<span id="L185"><a href="#L185">185</a>            }</span>
+<span id="L186"><a href="#L186">186</a></span>
+<span id="L187"><a href="#L187">187</a>            foreach (var item in m_targetToLineDict)</span>
+<span id="L188"><a href="#L188">188</a>            {</span>
+<span id="L189"><a href="#L189">189</a>                GameCore.ListPool.Recycle(item.Value);</span>
+<span id="L190"><a href="#L190">190</a>            }</span>
+<span id="L191"><a href="#L191">191</a>            </span>
+<span id="L192"><a href="#L192">192</a>            foreach (var item in m_armyPredictDict)</span>
+<span id="L193"><a href="#L193">193</a>            {</span>
+<span id="L194"><a href="#L194">194</a>                GameCore.ListPool.Recycle(item.Value);</span>
+<span id="L195"><a href="#L195">195</a>            }</span>
+<span id="L196"><a href="#L196">196</a></span>
+<span id="L197"><a href="#L197">197</a>            DeleteAllPureMoveLines();</span>
+<span id="L198"><a href="#L198">198</a></span>
+<span id="L199"><a href="#L199">199</a>            m_moveLineCount = 0;</span>
+<span id="L200"><a href="#L200">200</a>            m_chaserLineCount = 0;</span>
+<span id="L201"><a href="#L201">201</a>            m_targetToLineDict.Clear();</span>
+<span id="L202"><a href="#L202">202</a>            m_armyToLineDict.Clear();</span>
+<span id="L203"><a href="#L203">203</a>            m_straightLineEndPos.Clear();</span>
+<span id="L204"><a href="#L204">204</a>            m_straightLineLastStartPos.Clear();</span>
+<span id="L205"><a href="#L205">205</a>            m_armyChaserDict.Clear();</span>
+<span id="L206"><a href="#L206">206</a>            m_armyPreviewDict.Clear();</span>
+<span id="L207"><a href="#L207">207</a>            m_armyPredictDict.Clear();</span>
+<span id="L208"><a href="#L208">208</a>            m_chaserIDList.Clear();</span>
+<span id="L209"><a href="#L209">209</a>            m_armyPreviewRealPath.Clear();</span>
+<span id="L210"><a href="#L210">210</a>            m_loggedMeshLineFull = false;</span>
+<span id="L211"><a href="#L211">211</a>        }</span>
+<span id="L212"><a href="#L212">212</a></span>
+<span id="L213"><a href="#L213">213</a>        // ReSharper disable Unity.PerformanceAnalysis</span>
+<span id="L214"><a href="#L214">214</a>        //[Timi.InjectProfiler.AutoProfiler]</span>
+<span id="L215"><a href="#L215">215</a>        public override void OnUpdate(float deltaTime)</span>
+<span id="L216"><a href="#L216">216</a>        {</span>
+<span id="L217"><a href="#L217">217</a>            Timi.InjectProfiler.ProfilerUtil.BeginCpuSample(6);</span>
+<span id="L218"><a href="#L218">218</a>            var armyMgr = MapManager.ArmyEntityManager;</span>
+<span id="L219"><a href="#L219">219</a>            if (armyMgr == null)</span>
+<span id="L220"><a href="#L220">220</a>            {</span>
+<span id="L221"><a href="#L221">221</a>                Timi.InjectProfiler.ProfilerUtil.EndCpuSample();</span>
+<span id="L222"><a href="#L222">222</a>                return;</span>
+<span id="L223"><a href="#L223">223</a>            }</span>
+<span id="L224"><a href="#L224">224</a>            </span>
+<span id="L225"><a href="#L225">225</a>            var mapEffectMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L226"><a href="#L226">226</a>            var mapEntityMgr = MapManager.MapEntityManager;</span>
+<span id="L227"><a href="#L227">227</a>            var entityMgr = GameCore.DotsMgr.EntityMgr;</span>
+<span id="L228"><a href="#L228">228</a>            </span>
+<span id="L229"><a href="#L229">229</a>            UtilArmyProfiler.DoProfilerSampleBegin((int)UtilArmyProfiler.ArmySampleType.ViewLineMgr_OnUpdateChaserLine);</span>
+<span id="L230"><a href="#L230">230</a>            // 刷新追击行军线线头位置 同时删除不在视野内目标的线头</span>
+<span id="L231"><a href="#L231">231</a>            OnUpdateChaserLine(entityMgr, mapEntityMgr);</span>
+<span id="L232"><a href="#L232">232</a>            UtilArmyProfiler.DoProfilerSampleEnd((int)UtilArmyProfiler.ArmySampleType.ViewLineMgr_OnUpdateChaserLine);</span>
+<span id="L233"><a href="#L233">233</a></span>
+<span id="L234"><a href="#L234">234</a>            // 更新行军线目标特效（1.删除已经没有行军线的特效 2.对于异步创建的目标，创建之后需要刷新一下行军线）</span>
+<span id="L235"><a href="#L235">235</a>            OnUpdateLineEffect(mapEffectMgr);</span>
+<span id="L236"><a href="#L236">236</a></span>
+<span id="L237"><a href="#L237">237</a>            // 2.0端到端直线行军线</span>
+<span id="L238"><a href="#L238">238</a>            UpdateStraightMoveLine();</span>
+<span id="L239"><a href="#L239">239</a></span>
+<span id="L240"><a href="#L240">240</a>            // 缩放层会删除Entity 需要动态调整特效状态 (只有己方行军线会显示目标特效）</span>
+<span id="L241"><a href="#L241">241</a>            foreach (var item in m_targetToEffectDict)</span>
+<span id="L242"><a href="#L242">242</a>            {</span>
+<span id="L243"><a href="#L243">243</a>                var wrapperActive = false;</span>
+<span id="L244"><a href="#L244">244</a>                var entity = mapEntityMgr.GetEntity(item.Key);</span>
+<span id="L245"><a href="#L245">245</a>                if (entity != default)</span>
+<span id="L246"><a href="#L246">246</a>                {</span>
+<span id="L247"><a href="#L247">247</a>                    wrapperActive = true;</span>
+<span id="L248"><a href="#L248">248</a>                    mapEffectMgr.SetPos(item.Value, (Vector3) UtilCommon.GetPosition(entity) + ArmyEntityConst.ArmyLineEffectOffset);</span>
+<span id="L249"><a href="#L249">249</a></span>
+<span id="L250"><a href="#L250">250</a>                    if (RenderPipelineConfig.ForceArmyDisable)</span>
+<span id="L251"><a href="#L251">251</a>                    {</span>
+<span id="L252"><a href="#L252">252</a>                        var relation = UtilRelationShip.GetRelation(entity);</span>
+<span id="L253"><a href="#L253">253</a>                        wrapperActive = relation == RelationshipType.Self;</span>
+<span id="L254"><a href="#L254">254</a>                    }</span>
+<span id="L255"><a href="#L255">255</a>                }</span>
+<span id="L256"><a href="#L256">256</a>                </span>
+<span id="L257"><a href="#L257">257</a>                var wrapper = mapEffectMgr.GetWrapper(item.Value);</span>
+<span id="L258"><a href="#L258">258</a>                wrapper?.SetActive(wrapperActive);</span>
+<span id="L259"><a href="#L259">259</a>                // mapEntityMgr.SetScale(item.Value, entity != default ? 1 : 0);</span>
+<span id="L260"><a href="#L260">260</a>            }</span>
+<span id="L261"><a href="#L261">261</a></span>
+<span id="L262"><a href="#L262">262</a>            if (m_touchUpEmptyEffectID != 0 &amp;&amp; m_touchEffectDelayTime &gt; 0)</span>
+<span id="L263"><a href="#L263">263</a>            {</span>
+<span id="L264"><a href="#L264">264</a>                m_touchEffectDelayTime -= deltaTime;</span>
+<span id="L265"><a href="#L265">265</a>                if (m_touchEffectDelayTime &lt;= 0)</span>
+<span id="L266"><a href="#L266">266</a>                {</span>
+<span id="L267"><a href="#L267">267</a>                    mapEffectMgr.StopEffect(m_touchUpEmptyEffectID);</span>
+<span id="L268"><a href="#L268">268</a>                    m_touchUpEmptyEffectID = 0;</span>
+<span id="L269"><a href="#L269">269</a>                }</span>
+<span id="L270"><a href="#L270">270</a>            }</span>
+<span id="L271"><a href="#L271">271</a></span>
+<span id="L272"><a href="#L272">272</a>            foreach (var item in m_armyPredictDict.Keys)</span>
+<span id="L273"><a href="#L273">273</a>            {</span>
+<span id="L274"><a href="#L274">274</a>                RefreshPredictMoveLineStartPos(item);</span>
+<span id="L275"><a href="#L275">275</a>            }</span>
+<span id="L276"><a href="#L276">276</a></span>
+<span id="L277"><a href="#L277">277</a>            // Refresh preview line start positions to follow entity movement</span>
+<span id="L278"><a href="#L278">278</a>            foreach (var item in m_armyPreviewDict)</span>
+<span id="L279"><a href="#L279">279</a>            {</span>
+<span id="L280"><a href="#L280">280</a>                UtilArmyCtrl.RefreshArmyPreviewLineStartPos(item.Key);</span>
+<span id="L281"><a href="#L281">281</a>            }</span>
+<span id="L282"><a href="#L282">282</a></span>
+<span id="L283"><a href="#L283">283</a>            ProcessPendingMoveLineQueue();</span>
+<span id="L284"><a href="#L284">284</a></span>
+<span id="L285"><a href="#L285">285</a>            UpdateEntityMoveLine();</span>
+<span id="L286"><a href="#L286">286</a>            UpdateFinalPosEffect();</span>
+<span id="L287"><a href="#L287">287</a></span>
+<span id="L288"><a href="#L288">288</a>            Timi.InjectProfiler.ProfilerUtil.EndCpuSample();</span>
+<span id="L289"><a href="#L289">289</a>        }</span>
+<span id="L290"><a href="#L290">290</a></span>
+<span id="L291"><a href="#L291">291</a>        #region 预览行军线</span>
+<span id="L292"><a href="#L292">292</a>        public void CreatePreviewLine(long armyEntityID, float speed, List&lt;float3&gt; pathPoints, MeshColor meshColor)</span>
+<span id="L293"><a href="#L293">293</a>        {</span>
+<span id="L294"><a href="#L294">294</a>            if (ArmyEntityConst.BlockAllMarchLine)</span>
+<span id="L295"><a href="#L295">295</a>            {</span>
+<span id="L296"><a href="#L296">296</a>                return;</span>
+<span id="L297"><a href="#L297">297</a>            }</span>
+<span id="L298"><a href="#L298">298</a></span>
+<span id="L299"><a href="#L299">299</a>            CreateArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview, speed, pathPoints, (int) MeshLineDefine.MeshLineUVIndex.PreviewWhite, meshColor, TimeUtil.ServerGameTick * TimeUtil.ServerMsPerTick);</span>
+<span id="L300"><a href="#L300">300</a></span>
+<span id="L301"><a href="#L301">301</a>            m_armyPreviewDict[armyEntityID] = new PreviewData()</span>
+<span id="L302"><a href="#L302">302</a>            {</span>
+<span id="L303"><a href="#L303">303</a>                speed = speed,</span>
+<span id="L304"><a href="#L304">304</a>                endPos = pathPoints[pathPoints.Count - 1],</span>
+<span id="L305"><a href="#L305">305</a>                color = (int) meshColor,</span>
+<span id="L306"><a href="#L306">306</a>            };</span>
+<span id="L307"><a href="#L307">307</a>        }</span>
+<span id="L308"><a href="#L308">308</a></span>
+<span id="L309"><a href="#L309">309</a>        public void RefreshPreviewLine(long armyEntityID, float speed, List&lt;float3&gt; pathPoints, MeshColor meshColor)</span>
+<span id="L310"><a href="#L310">310</a>        {</span>
+<span id="L311"><a href="#L311">311</a>            RefreshArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview, pathPoints, speed, (int) meshColor);</span>
+<span id="L312"><a href="#L312">312</a></span>
+<span id="L313"><a href="#L313">313</a>            m_armyPreviewDict[armyEntityID] = new PreviewData()</span>
+<span id="L314"><a href="#L314">314</a>            {</span>
+<span id="L315"><a href="#L315">315</a>                speed = speed,</span>
+<span id="L316"><a href="#L316">316</a>                endPos = pathPoints[pathPoints.Count - 1],</span>
+<span id="L317"><a href="#L317">317</a>                color = (int) meshColor,</span>
+<span id="L318"><a href="#L318">318</a>            };</span>
+<span id="L319"><a href="#L319">319</a>        }</span>
+<span id="L320"><a href="#L320">320</a></span>
+<span id="L321"><a href="#L321">321</a>        public void RefreshPreviewLineStartPos(long armyEntityID, float3 startPos)</span>
+<span id="L322"><a href="#L322">322</a>        {</span>
+<span id="L323"><a href="#L323">323</a>            if (m_armyPreviewDict.TryGetValue(armyEntityID, out var data))</span>
+<span id="L324"><a href="#L324">324</a>            {</span>
+<span id="L325"><a href="#L325">325</a>                var tempList = GameCore.ListPool.Get&lt;float3&gt;();</span>
+<span id="L326"><a href="#L326">326</a>                tempList.Add(startPos);</span>
+<span id="L327"><a href="#L327">327</a>                tempList.Add(data.endPos);</span>
+<span id="L328"><a href="#L328">328</a></span>
+<span id="L329"><a href="#L329">329</a>                RefreshArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview, tempList, data.speed, data.color);</span>
+<span id="L330"><a href="#L330">330</a></span>
+<span id="L331"><a href="#L331">331</a>                GameCore.ListPool.Recycle(tempList);</span>
+<span id="L332"><a href="#L332">332</a>            }</span>
+<span id="L333"><a href="#L333">333</a>        }</span>
+<span id="L334"><a href="#L334">334</a></span>
+<span id="L335"><a href="#L335">335</a>        public Vector3 GetPreviewLineFinalPos(long armyEntityID)</span>
+<span id="L336"><a href="#L336">336</a>        {</span>
+<span id="L337"><a href="#L337">337</a>            if (m_armyPreviewDict.TryGetValue(armyEntityID, out var data))</span>
+<span id="L338"><a href="#L338">338</a>            {</span>
+<span id="L339"><a href="#L339">339</a>                return data.endPos;</span>
+<span id="L340"><a href="#L340">340</a>            }</span>
+<span id="L341"><a href="#L341">341</a></span>
+<span id="L342"><a href="#L342">342</a>            return Vector3.zero;</span>
+<span id="L343"><a href="#L343">343</a>        }</span>
+<span id="L344"><a href="#L344">344</a></span>
+<span id="L345"><a href="#L345">345</a>        public bool DeletePreviewLine(long armyEntityID)</span>
+<span id="L346"><a href="#L346">346</a>        {</span>
+<span id="L347"><a href="#L347">347</a>            return DeleteArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview);</span>
+<span id="L348"><a href="#L348">348</a>        }</span>
+<span id="L349"><a href="#L349">349</a></span>
+<span id="L350"><a href="#L350">350</a>        public bool IsExistPreviewLine(long armyEntityID)</span>
+<span id="L351"><a href="#L351">351</a>        {</span>
+<span id="L352"><a href="#L352">352</a>            if (m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) == false)</span>
+<span id="L353"><a href="#L353">353</a>            {</span>
+<span id="L354"><a href="#L354">354</a>                return false;</span>
+<span id="L355"><a href="#L355">355</a>            }</span>
+<span id="L356"><a href="#L356">356</a></span>
+<span id="L357"><a href="#L357">357</a>            return indexList[(int) MeshLineDefine.ArmyLineIndexType.Preview] &gt; 0;</span>
+<span id="L358"><a href="#L358">358</a>        }</span>
+<span id="L359"><a href="#L359">359</a>        #endregion</span>
+<span id="L360"><a href="#L360">360</a></span>
+<span id="L361"><a href="#L361">361</a>        #region 移动行军线</span>
+<span id="L362"><a href="#L362">362</a>        public bool IsExistMoveLine(long armyEntityID)</span>
+<span id="L363"><a href="#L363">363</a>        {</span>
+<span id="L364"><a href="#L364">364</a>            if (m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) == false)</span>
+<span id="L365"><a href="#L365">365</a>            {</span>
+<span id="L366"><a href="#L366">366</a>                return false;</span>
+<span id="L367"><a href="#L367">367</a>            }</span>
+<span id="L368"><a href="#L368">368</a></span>
+<span id="L369"><a href="#L369">369</a>            return indexList[(int) MeshLineDefine.ArmyLineIndexType.Move] &gt; 0;</span>
+<span id="L370"><a href="#L370">370</a>        }</span>
+<span id="L371"><a href="#L371">371</a></span>
+<span id="L372"><a href="#L372">372</a>        public bool CanCreateMoveLine(long armyEntityID, MeshColor meshColor)</span>
+<span id="L373"><a href="#L373">373</a>        {</span>
+<span id="L374"><a href="#L374">374</a>            if (ArmyEntityConst.BlockAllMarchLine)</span>
+<span id="L375"><a href="#L375">375</a>            {</span>
+<span id="L376"><a href="#L376">376</a>                return false;</span>
+<span id="L377"><a href="#L377">377</a>            }</span>
+<span id="L378"><a href="#L378">378</a></span>
+<span id="L379"><a href="#L379">379</a>            // 己方队伍移动行军线一定显示</span>
+<span id="L380"><a href="#L380">380</a>            if (meshColor == MeshColor.Green)</span>
+<span id="L381"><a href="#L381">381</a>            {</span>
+<span id="L382"><a href="#L382">382</a>                return true;</span>
+<span id="L383"><a href="#L383">383</a>            }</span>
+<span id="L384"><a href="#L384">384</a>            </span>
+<span id="L385"><a href="#L385">385</a>            // 屏蔽第三方玩家</span>
+<span id="L386"><a href="#L386">386</a>            if (ArmyEntityConst.BlockThirdRelationLine &amp;&amp; meshColor == MeshColor.White)</span>
+<span id="L387"><a href="#L387">387</a>            {</span>
+<span id="L388"><a href="#L388">388</a>                return false;</span>
+<span id="L389"><a href="#L389">389</a>            }</span>
+<span id="L390"><a href="#L390">390</a></span>
+<span id="L391"><a href="#L391">391</a>            // 屏蔽联盟成员</span>
+<span id="L392"><a href="#L392">392</a>            if (ArmyEntityConst.BlockGuildRelationLine &amp;&amp; meshColor == MeshColor.Blue)</span>
+<span id="L393"><a href="#L393">393</a>            {</span>
+<span id="L394"><a href="#L394">394</a>                return false;</span>
+<span id="L395"><a href="#L395">395</a>            }</span>
+<span id="L396"><a href="#L396">396</a></span>
+<span id="L397"><a href="#L397">397</a>            if (MapManager.curSceneType != MapManager.ESceneType.Raid &amp;&amp; !UtilArmyCtrl.StaticCanShowArmyLine(armyEntityID, GetCurrArmyLineCount()))</span>
+<span id="L398"><a href="#L398">398</a>            {</span>
+<span id="L399"><a href="#L399">399</a>                return false;</span>
+<span id="L400"><a href="#L400">400</a>            }</span>
+<span id="L401"><a href="#L401">401</a>            </span>
+<span id="L402"><a href="#L402">402</a>            if (m_moveLineCount &gt;= ArmyEntityConst.ArmyLineMoveLimit)</span>
+<span id="L403"><a href="#L403">403</a>            {</span>
+<span id="L404"><a href="#L404">404</a>                return false;</span>
+<span id="L405"><a href="#L405">405</a>            }</span>
+<span id="L406"><a href="#L406">406</a></span>
+<span id="L407"><a href="#L407">407</a>            return true;</span>
+<span id="L408"><a href="#L408">408</a>        }</span>
+<span id="L409"><a href="#L409">409</a></span>
+<span id="L410"><a href="#L410">410</a>        public void CreateMoveLine(long armyEntityID, float speed, List&lt;float3&gt; pathPoints, MeshColor meshColor, long startTime, long endTime, List&lt;long&gt; timeStamps, bool useDefaultMesh = true)</span>
+<span id="L411"><a href="#L411">411</a>        {</span>
+<span id="L412"><a href="#L412">412</a>            // if (CanCreateMoveLine(armyEntityID, meshColor) == false)</span>
+<span id="L413"><a href="#L413">413</a>            // {</span>
+<span id="L414"><a href="#L414">414</a>            //     return;</span>
+<span id="L415"><a href="#L415">415</a>            // }</span>
+<span id="L416"><a href="#L416">416</a>            if (pathPoints.Count &lt; 2)</span>
+<span id="L417"><a href="#L417">417</a>            {</span>
+<span id="L418"><a href="#L418">418</a>                return;</span>
+<span id="L419"><a href="#L419">419</a>            }</span>
+<span id="L420"><a href="#L420">420</a></span>
+<span id="L421"><a href="#L421">421</a>            var showRealPath = MapManager.OutsideTouchMgr.HasSelectEntity(armyEntityID) || ArmyEntityConst.ForceShowRealPath;</span>
+<span id="L422"><a href="#L422">422</a>            var uvIndex = showRealPath ? (int) MeshLineDefine.MeshLineUVIndex.RealPathWhite : (int) MeshLineDefine.MeshLineUVIndex.StraightLineWhite;</span>
+<span id="L423"><a href="#L423">423</a>            if (showRealPath)</span>
+<span id="L424"><a href="#L424">424</a>            {</span>
+<span id="L425"><a href="#L425">425</a>                if (m_straightLineEndPos.ContainsKey(armyEntityID))</span>
+<span id="L426"><a href="#L426">426</a>                {</span>
+<span id="L427"><a href="#L427">427</a>                    m_straightLineEndPos.Remove(armyEntityID);</span>
+<span id="L428"><a href="#L428">428</a>                }</span>
+<span id="L429"><a href="#L429">429</a>            </span>
+<span id="L430"><a href="#L430">430</a>                CreateArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move, speed, pathPoints, (int) uvIndex, meshColor, startTime, endTime, timeStamps, useDefaultMesh);</span>
+<span id="L431"><a href="#L431">431</a>            }</span>
+<span id="L432"><a href="#L432">432</a>            else</span>
+<span id="L433"><a href="#L433">433</a>            {</span>
+<span id="L434"><a href="#L434">434</a>                // 2.0的移动行军线改为端到端的直线</span>
+<span id="L435"><a href="#L435">435</a>                var targetPos = pathPoints[pathPoints.Count - 1]; </span>
+<span id="L436"><a href="#L436">436</a>                if (!m_straightLineEndPos.TryGetValue(armyEntityID, out var ret))</span>
+<span id="L437"><a href="#L437">437</a>                {</span>
+<span id="L438"><a href="#L438">438</a>                    m_straightLineEndPos.Add(armyEntityID, targetPos);</span>
+<span id="L439"><a href="#L439">439</a>                }</span>
+<span id="L440"><a href="#L440">440</a>                else</span>
+<span id="L441"><a href="#L441">441</a>                {</span>
+<span id="L442"><a href="#L442">442</a>                    m_straightLineEndPos[armyEntityID] = targetPos;</span>
+<span id="L443"><a href="#L443">443</a>                }</span>
+<span id="L444"><a href="#L444">444</a></span>
+<span id="L445"><a href="#L445">445</a>                var tempList = GameCore.ListPool.Get&lt;float3&gt;();</span>
+<span id="L446"><a href="#L446">446</a>                var startPos = UtilArmyCtrl.GetArmyPos(armyEntityID);</span>
+<span id="L447"><a href="#L447">447</a>                tempList.Add(startPos);</span>
+<span id="L448"><a href="#L448">448</a>                tempList.Add(targetPos);</span>
+<span id="L449"><a href="#L449">449</a>                CreateArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move, speed, tempList, (int) uvIndex, meshColor, startTime, 0, null, useDefaultMesh);</span>
+<span id="L450"><a href="#L450">450</a></span>
+<span id="L451"><a href="#L451">451</a>                GameCore.ListPool.Recycle(tempList);</span>
+<span id="L452"><a href="#L452">452</a>            }</span>
+<span id="L453"><a href="#L453">453</a>        }</span>
+<span id="L454"><a href="#L454">454</a></span>
+<span id="L455"><a href="#L455">455</a>        public void UpdateStraightMoveLine()</span>
+<span id="L456"><a href="#L456">456</a>        {</span>
+<span id="L457"><a href="#L457">457</a>            bool enableOpt = ArmyEntityConst.EnableMoveLineRefreshOpt;</span>
+<span id="L458"><a href="#L458">458</a>            float thresholdSq = ArmyEntityConst.EntityMoveLineRefreshThreshold * ArmyEntityConst.EntityMoveLineRefreshThreshold;</span>
+<span id="L459"><a href="#L459">459</a>            foreach (var pair in m_straightLineEndPos)</span>
+<span id="L460"><a href="#L460">460</a>            {</span>
+<span id="L461"><a href="#L461">461</a>                long entityId = pair.Key;</span>
+<span id="L462"><a href="#L462">462</a>                var entity = MapManager.MapEntityManager.GetEntity(entityId);</span>
+<span id="L463"><a href="#L463">463</a>                if (GameCore.DotsMgr.EntityMgr.Exists(entity) == false)</span>
+<span id="L464"><a href="#L464">464</a>                {</span>
+<span id="L465"><a href="#L465">465</a>                    continue;</span>
+<span id="L466"><a href="#L466">466</a>                }</span>
+<span id="L467"><a href="#L467">467</a></span>
+<span id="L468"><a href="#L468">468</a>                var startPos = GameCore.DotsMgr.EntityMgr.GetComponentData&lt;Translation&gt;(entity).Value;</span>
+<span id="L469"><a href="#L469">469</a></span>
+<span id="L470"><a href="#L470">470</a>                if (enableOpt)</span>
+<span id="L471"><a href="#L471">471</a>                {</span>
+<span id="L472"><a href="#L472">472</a>                    if (m_straightLineLastStartPos.TryGetValue(entityId, out var lastPos) &amp;&amp;</span>
+<span id="L473"><a href="#L473">473</a>                        math.distancesq(startPos, lastPos) &lt; thresholdSq)</span>
+<span id="L474"><a href="#L474">474</a>                    {</span>
+<span id="L475"><a href="#L475">475</a>                        continue;</span>
+<span id="L476"><a href="#L476">476</a>                    }</span>
+<span id="L477"><a href="#L477">477</a>                    m_straightLineLastStartPos[entityId] = startPos;</span>
+<span id="L478"><a href="#L478">478</a>                }</span>
+<span id="L479"><a href="#L479">479</a></span>
+<span id="L480"><a href="#L480">480</a>                m_tempFloat3List.Clear();</span>
+<span id="L481"><a href="#L481">481</a>                m_tempFloat3List.Add(startPos);</span>
+<span id="L482"><a href="#L482">482</a>                m_tempFloat3List.Add(pair.Value);</span>
+<span id="L483"><a href="#L483">483</a></span>
+<span id="L484"><a href="#L484">484</a>                RefreshArmyLine(entityId, (int) MeshLineDefine.ArmyLineIndexType.Move, m_tempFloat3List, ArmyEntityConst.ArmyLineSpeed);</span>
+<span id="L485"><a href="#L485">485</a>            }</span>
+<span id="L486"><a href="#L486">486</a>        }</span>
+<span id="L487"><a href="#L487">487</a></span>
+<span id="L488"><a href="#L488">488</a>        public void DeleteMoveLine(long armyEntityID)</span>
+<span id="L489"><a href="#L489">489</a>        {</span>
+<span id="L490"><a href="#L490">490</a>            if (m_straightLineEndPos.TryGetValue(armyEntityID, out var ret))</span>
+<span id="L491"><a href="#L491">491</a>            {</span>
+<span id="L492"><a href="#L492">492</a>                m_straightLineEndPos.Remove(armyEntityID);</span>
+<span id="L493"><a href="#L493">493</a>            }</span>
+<span id="L494"><a href="#L494">494</a>            m_straightLineLastStartPos.Remove(armyEntityID);</span>
+<span id="L495"><a href="#L495">495</a></span>
+<span id="L496"><a href="#L496">496</a>            DeleteArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move);</span>
+<span id="L497"><a href="#L497">497</a>        }</span>
+<span id="L498"><a href="#L498">498</a></span>
+<span id="L499"><a href="#L499">499</a>        public void RefreshMoveLine(long armyEntityID, List&lt;float3&gt; pathPoints)</span>
+<span id="L500"><a href="#L500">500</a>        {</span>
+<span id="L501"><a href="#L501">501</a>            RefreshArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move, pathPoints);</span>
+<span id="L502"><a href="#L502">502</a>        }</span>
+<span id="L503"><a href="#L503">503</a>        #endregion</span>
+<span id="L504"><a href="#L504">504</a></span>
+<span id="L505"><a href="#L505">505</a>        #region 移动预测行军线</span>
+<span id="L506"><a href="#L506">506</a>        public void CreatePredictMoveLine(long armyEntityID, List&lt;float3&gt; pathPoints, int color = (int) MeshColor.Green, int uvIndex = (int) MeshLineDefine.MeshLineUVIndex.RealPathWhite, float speed = 0.5f)</span>
+<span id="L507"><a href="#L507">507</a>        {</span>
+<span id="L508"><a href="#L508">508</a>            if (m_armyPredictDict.TryGetValue(armyEntityID, out var pointList))</span>
+<span id="L509"><a href="#L509">509</a>            {</span>
+<span id="L510"><a href="#L510">510</a>                GameCore.ListPool.Recycle(pointList);</span>
+<span id="L511"><a href="#L511">511</a>            }</span>
+<span id="L512"><a href="#L512">512</a>            m_armyPredictDict[armyEntityID] = pathPoints;</span>
+<span id="L513"><a href="#L513">513</a>            </span>
+<span id="L514"><a href="#L514">514</a>            CreateArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Predict, speed, pathPoints, uvIndex, (MeshColor) color);</span>
+<span id="L515"><a href="#L515">515</a>        }</span>
+<span id="L516"><a href="#L516">516</a></span>
+<span id="L517"><a href="#L517">517</a>        public void DeletePredictMoveLine(long armyEntityID)</span>
+<span id="L518"><a href="#L518">518</a>        {</span>
+<span id="L519"><a href="#L519">519</a>            if (m_armyPredictDict.TryGetValue(armyEntityID, out var pointList))</span>
+<span id="L520"><a href="#L520">520</a>            {</span>
+<span id="L521"><a href="#L521">521</a>                GameCore.ListPool.Recycle(pointList);</span>
+<span id="L522"><a href="#L522">522</a>                m_armyPredictDict.Remove(armyEntityID);</span>
+<span id="L523"><a href="#L523">523</a>                DeleteArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Predict);</span>
+<span id="L524"><a href="#L524">524</a>            }</span>
+<span id="L525"><a href="#L525">525</a>        }</span>
+<span id="L526"><a href="#L526">526</a></span>
+<span id="L527"><a href="#L527">527</a>        public void RefreshPredictMoveLine(long armyEntityID, List&lt;float3&gt; pathPoints)</span>
+<span id="L528"><a href="#L528">528</a>        {</span>
+<span id="L529"><a href="#L529">529</a>            if (m_armyPredictDict.TryGetValue(armyEntityID, out var pointList))</span>
+<span id="L530"><a href="#L530">530</a>            {</span>
+<span id="L531"><a href="#L531">531</a>                GameCore.ListPool.Recycle(pointList);</span>
+<span id="L532"><a href="#L532">532</a>                m_armyPredictDict[armyEntityID] = pathPoints;</span>
+<span id="L533"><a href="#L533">533</a>                RefreshArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Predict, pathPoints);</span>
+<span id="L534"><a href="#L534">534</a>            }</span>
+<span id="L535"><a href="#L535">535</a>        }</span>
+<span id="L536"><a href="#L536">536</a>        </span>
+<span id="L537"><a href="#L537">537</a>        public void RefreshPredictMoveLineStartPos(long armyEntityID)</span>
+<span id="L538"><a href="#L538">538</a>        {</span>
+<span id="L539"><a href="#L539">539</a>            if (m_armyPredictDict.TryGetValue(armyEntityID, out var pathPoints))</span>
+<span id="L540"><a href="#L540">540</a>            {</span>
+<span id="L541"><a href="#L541">541</a>                if (pathPoints.Count &gt; 0)</span>
+<span id="L542"><a href="#L542">542</a>                {</span>
+<span id="L543"><a href="#L543">543</a>                    pathPoints[0] = UtilArmyCtrl.GetArmyPos(armyEntityID);</span>
+<span id="L544"><a href="#L544">544</a>                    RefreshArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Predict, pathPoints);</span>
+<span id="L545"><a href="#L545">545</a>                }</span>
+<span id="L546"><a href="#L546">546</a>            }</span>
+<span id="L547"><a href="#L547">547</a>        }</span>
+<span id="L548"><a href="#L548">548</a>        #endregion</span>
+<span id="L549"><a href="#L549">549</a>        </span>
+<span id="L550"><a href="#L550">550</a>        #region 追击行军线</span>
+<span id="L551"><a href="#L551">551</a>        public void RefreshChaserLine(long armyEntityID, Vector3 startPos, ChaserArmyDataWrap[] chaserArmyDataWraps)</span>
+<span id="L552"><a href="#L552">552</a>        {</span>
+<span id="L553"><a href="#L553">553</a>            if (ArmyEntityConst.BlockChaserLine || ArmyEntityConst.BlockAllMarchLine || chaserArmyDataWraps == null)</span>
+<span id="L554"><a href="#L554">554</a>            {</span>
+<span id="L555"><a href="#L555">555</a>                return;</span>
+<span id="L556"><a href="#L556">556</a>            }</span>
+<span id="L557"><a href="#L557">557</a></span>
+<span id="L558"><a href="#L558">558</a>            if (UtilArmyCtrl.StaticCanShowArmyLine(armyEntityID, GetCurrArmyLineCount()) == false)</span>
+<span id="L559"><a href="#L559">559</a>            {</span>
+<span id="L560"><a href="#L560">560</a>                return;</span>
+<span id="L561"><a href="#L561">561</a>            }</span>
+<span id="L562"><a href="#L562">562</a></span>
+<span id="L563"><a href="#L563">563</a>            if (UtilRelationShip.IsMySelfArmy(armyEntityID) == false &amp;&amp; m_chaserLineCount &gt;= ArmyEntityConst.ArmyLineChaserLimit)</span>
+<span id="L564"><a href="#L564">564</a>            {</span>
+<span id="L565"><a href="#L565">565</a>                return;</span>
+<span id="L566"><a href="#L566">566</a>            }</span>
+<span id="L567"><a href="#L567">567</a>            </span>
+<span id="L568"><a href="#L568">568</a>            m_armyChaserDict[armyEntityID] = chaserArmyDataWraps;</span>
+<span id="L569"><a href="#L569">569</a>            RefreshChaserStartPos(armyEntityID, startPos);</span>
+<span id="L570"><a href="#L570">570</a>            </span>
+<span id="L571"><a href="#L571">571</a>            if (m_chaserIDList.Contains(armyEntityID) == false)</span>
+<span id="L572"><a href="#L572">572</a>            {</span>
+<span id="L573"><a href="#L573">573</a>                m_chaserIDList.Add(armyEntityID);</span>
+<span id="L574"><a href="#L574">574</a>            }</span>
+<span id="L575"><a href="#L575">575</a>        }</span>
+<span id="L576"><a href="#L576">576</a></span>
+<span id="L577"><a href="#L577">577</a>        public void RefreshChaserStartPos(long armyEntityID, Vector3 startPos)</span>
+<span id="L578"><a href="#L578">578</a>        {</span>
+<span id="L579"><a href="#L579">579</a>            if (m_armyChaserDict.TryGetValue(armyEntityID, out var chaserArmyDataWraps))</span>
+<span id="L580"><a href="#L580">580</a>            {</span>
+<span id="L581"><a href="#L581">581</a>                m_tempFloat3List.Clear();</span>
+<span id="L582"><a href="#L582">582</a>                var entityExist = MapManager.MapEntityManager.GetEntity(armyEntityID) != default;</span>
+<span id="L583"><a href="#L583">583</a>                var length = Mathf.Min(chaserArmyDataWraps.Length, MeshLineDefine.ArmyLineIndexType.Max - MeshLineDefine.ArmyLineIndexType.Chaser - 1);</span>
+<span id="L584"><a href="#L584">584</a>                for (int i = 0; i &lt; length; i++)</span>
+<span id="L585"><a href="#L585">585</a>                {</span>
+<span id="L586"><a href="#L586">586</a>                    if (i &gt;= chaserArmyDataWraps.Length)</span>
+<span id="L587"><a href="#L587">587</a>                    {</span>
+<span id="L588"><a href="#L588">588</a>                        break;</span>
+<span id="L589"><a href="#L589">589</a>                    }</span>
+<span id="L590"><a href="#L590">590</a></span>
+<span id="L591"><a href="#L591">591</a>                    var idx = (int) MeshLineDefine.ArmyLineIndexType.Chaser + i;</span>
+<span id="L592"><a href="#L592">592</a>                    var data = chaserArmyDataWraps[i];</span>
+<span id="L593"><a href="#L593">593</a></span>
+<span id="L594"><a href="#L594">594</a>                    // 已经有移动行军线 不需要线头</span>
+<span id="L595"><a href="#L595">595</a>                    // 目标在视野内 不需要线头</span>
+<span id="L596"><a href="#L596">596</a>                    if (entityExist == false || MapManager.MapEntityManager.GetEntity(data.entityId) != default)</span>
+<span id="L597"><a href="#L597">597</a>                    {</span>
+<span id="L598"><a href="#L598">598</a>                        DeleteArmyLine(armyEntityID, idx);</span>
+<span id="L599"><a href="#L599">599</a>                        continue;</span>
+<span id="L600"><a href="#L600">600</a>                    }</span>
+<span id="L601"><a href="#L601">601</a></span>
+<span id="L602"><a href="#L602">602</a>                    // 计算目标位置</span>
+<span id="L603"><a href="#L603">603</a>                    var dir = data.position - startPos;</span>
+<span id="L604"><a href="#L604">604</a>                    var start = startPos + dir.normalized * ArmyEntityConst.ArmyChaserLineLengthMax;</span>
+<span id="L605"><a href="#L605">605</a>                    var final = startPos + dir.normalized * ArmyEntityConst.ArmyChaserLineLengthMin;</span>
+<span id="L606"><a href="#L606">606</a></span>
+<span id="L607"><a href="#L607">607</a>                    m_tempFloat3List.Clear();</span>
+<span id="L608"><a href="#L608">608</a>                    m_tempFloat3List.Add(start);</span>
+<span id="L609"><a href="#L609">609</a>                    m_tempFloat3List.Add(final);</span>
+<span id="L610"><a href="#L610">610</a></span>
+<span id="L611"><a href="#L611">611</a>                    var lineID = GetArmyLineID(armyEntityID, idx);</span>
+<span id="L612"><a href="#L612">612</a>                    if (lineID &gt; 0)</span>
+<span id="L613"><a href="#L613">613</a>                    {</span>
+<span id="L614"><a href="#L614">614</a>                        UtilArmyProfiler.DoProfilerSampleBegin((int)UtilArmyProfiler.ArmySampleType.ViewLineMgr_RefreshArmyLine);</span>
+<span id="L615"><a href="#L615">615</a>                        RefreshArmyLine(armyEntityID, idx, m_tempFloat3List, -1, -1);</span>
+<span id="L616"><a href="#L616">616</a>                        UtilArmyProfiler.DoProfilerSampleEnd((int)UtilArmyProfiler.ArmySampleType.ViewLineMgr_RefreshArmyLine);</span>
+<span id="L617"><a href="#L617">617</a></span>
+<span id="L618"><a href="#L618">618</a>                        RefreshChaserLinePointEffectPos(armyEntityID, idx, final);</span>
+<span id="L619"><a href="#L619">619</a>                    }</span>
+<span id="L620"><a href="#L620">620</a>                    else</span>
+<span id="L621"><a href="#L621">621</a>                    {</span>
+<span id="L622"><a href="#L622">622</a>                        var scale = Vector3.one * ArmyEntityConst.MarchLineBigPointScale;</span>
+<span id="L623"><a href="#L623">623</a>                        var color = UtilRelationShip.GetRelationColor(data.ownerRelationship, data.relationship);</span>
+<span id="L624"><a href="#L624">624</a>                        CreateArmyLine(armyEntityID, idx, ArmyEntityConst.ArmyLineSpeed, m_tempFloat3List, (int) MeshLineDefine.MeshLineUVIndex.RealPathWhite, color, 0, 0, null, false);</span>
+<span id="L625"><a href="#L625">625</a>                        CreateChaserLinePointEffect(armyEntityID, idx, color, final, scale);</span>
+<span id="L626"><a href="#L626">626</a>                    }</span>
+<span id="L627"><a href="#L627">627</a>                }</span>
+<span id="L628"><a href="#L628">628</a>            }</span>
+<span id="L629"><a href="#L629">629</a>        }</span>
+<span id="L630"><a href="#L630">630</a></span>
+<span id="L631"><a href="#L631">631</a>        public void RefreshChaserExistState(long armyEntityID)</span>
+<span id="L632"><a href="#L632">632</a>        {</span>
+<span id="L633"><a href="#L633">633</a>            if (m_armyChaserDict.TryGetValue(armyEntityID, out var chaserArmyDataWraps))</span>
+<span id="L634"><a href="#L634">634</a>            {</span>
+<span id="L635"><a href="#L635">635</a>                var length = Mathf.Min(chaserArmyDataWraps.Length, MeshLineDefine.ArmyLineIndexType.Max - MeshLineDefine.ArmyLineIndexType.Chaser - 1);</span>
+<span id="L636"><a href="#L636">636</a>                for (int i = 0; i &lt; length; i++)</span>
+<span id="L637"><a href="#L637">637</a>                {</span>
+<span id="L638"><a href="#L638">638</a>                    if (i &gt;= chaserArmyDataWraps.Length)</span>
+<span id="L639"><a href="#L639">639</a>                    {</span>
+<span id="L640"><a href="#L640">640</a>                        break;</span>
+<span id="L641"><a href="#L641">641</a>                    }</span>
+<span id="L642"><a href="#L642">642</a></span>
+<span id="L643"><a href="#L643">643</a>                    var idx = (int) MeshLineDefine.ArmyLineIndexType.Chaser + i;</span>
+<span id="L644"><a href="#L644">644</a>                    var data = chaserArmyDataWraps[i];</span>
+<span id="L645"><a href="#L645">645</a></span>
+<span id="L646"><a href="#L646">646</a>                    // 已经有移动行军线 不需要线头</span>
+<span id="L647"><a href="#L647">647</a>                    // 目标在视野内 不需要线头</span>
+<span id="L648"><a href="#L648">648</a>                    if (MapManager.MapEntityManager.GetEntity(data.entityId) != default)</span>
+<span id="L649"><a href="#L649">649</a>                    {</span>
+<span id="L650"><a href="#L650">650</a>                        DeleteArmyLine(armyEntityID, idx);</span>
+<span id="L651"><a href="#L651">651</a>                    }</span>
+<span id="L652"><a href="#L652">652</a>                }</span>
+<span id="L653"><a href="#L653">653</a>            }</span>
+<span id="L654"><a href="#L654">654</a>        }</span>
+<span id="L655"><a href="#L655">655</a>        </span>
+<span id="L656"><a href="#L656">656</a>        public void DeleteChaserLine(long armyEntityID)</span>
+<span id="L657"><a href="#L657">657</a>        {</span>
+<span id="L658"><a href="#L658">658</a>            for (int i = (int) MeshLineDefine.ArmyLineIndexType.Chaser; i &lt; (int) MeshLineDefine.ArmyLineIndexType.Max; i++)</span>
+<span id="L659"><a href="#L659">659</a>            {</span>
+<span id="L660"><a href="#L660">660</a>                DeleteArmyLine(armyEntityID, i);</span>
+<span id="L661"><a href="#L661">661</a>            }</span>
+<span id="L662"><a href="#L662">662</a></span>
+<span id="L663"><a href="#L663">663</a>            m_chaserIDList.Remove(armyEntityID);</span>
+<span id="L664"><a href="#L664">664</a>            m_armyChaserDict.Remove(armyEntityID);</span>
+<span id="L665"><a href="#L665">665</a>        }</span>
+<span id="L666"><a href="#L666">666</a>        </span>
+<span id="L667"><a href="#L667">667</a>        private void OnUpdateChaserLine(EntityManager entityMgr, MapEntityManager mapEntityMgr)</span>
+<span id="L668"><a href="#L668">668</a>        {</span>
+<span id="L669"><a href="#L669">669</a>            if (ArmyEntityConst.ArmyViewLineMgrOptimize)</span>
+<span id="L670"><a href="#L670">670</a>            {</span>
+<span id="L671"><a href="#L671">671</a>                var count = m_chaserIDList.Count;</span>
+<span id="L672"><a href="#L672">672</a>                if (count == 0)</span>
+<span id="L673"><a href="#L673">673</a>                {</span>
+<span id="L674"><a href="#L674">674</a>                    return;</span>
+<span id="L675"><a href="#L675">675</a>                }</span>
+<span id="L676"><a href="#L676">676</a>                </span>
+<span id="L677"><a href="#L677">677</a>                m_chaserTickIndex = Mathf.Clamp((m_chaserTickIndex + 1) % count, 0, count - 1);</span>
+<span id="L678"><a href="#L678">678</a>                var entityID = m_chaserIDList[m_chaserTickIndex];</span>
+<span id="L679"><a href="#L679">679</a>                if (m_armyChaserDict.TryGetValue(entityID, out var chaserArmyDataWraps) == false)</span>
+<span id="L680"><a href="#L680">680</a>                {</span>
+<span id="L681"><a href="#L681">681</a>                    m_chaserIDList.RemoveAt(m_chaserTickIndex);</span>
+<span id="L682"><a href="#L682">682</a>                }</span>
+<span id="L683"><a href="#L683">683</a>                else</span>
+<span id="L684"><a href="#L684">684</a>                {</span>
+<span id="L685"><a href="#L685">685</a>                    var entity = mapEntityMgr.GetEntity(entityID);</span>
+<span id="L686"><a href="#L686">686</a>                    if (entityMgr.Exists(entity) == false)</span>
+<span id="L687"><a href="#L687">687</a>                    {</span>
+<span id="L688"><a href="#L688">688</a>                        DeleteChaserLine(entityID);</span>
+<span id="L689"><a href="#L689">689</a>                    }</span>
+<span id="L690"><a href="#L690">690</a>                    else</span>
+<span id="L691"><a href="#L691">691</a>                    {</span>
+<span id="L692"><a href="#L692">692</a>                        // 暂时需要更新位置，为了删除行军线,后续调处理</span>
+<span id="L693"><a href="#L693">693</a>                        var isMoving = UtilArmyCtrl.IsArmyMoving(entity);</span>
+<span id="L694"><a href="#L694">694</a>                        if (isMoving)</span>
+<span id="L695"><a href="#L695">695</a>                        {</span>
+<span id="L696"><a href="#L696">696</a>                            var pos = UtilCommon.GetPosition(entity);</span>
+<span id="L697"><a href="#L697">697</a>                            RefreshChaserStartPos(entityID, pos);</span>
+<span id="L698"><a href="#L698">698</a>                        }</span>
+<span id="L699"><a href="#L699">699</a>                        else</span>
+<span id="L700"><a href="#L700">700</a>                        {</span>
+<span id="L701"><a href="#L701">701</a>                            // 删除已经在视野内的线头</span>
+<span id="L702"><a href="#L702">702</a>                            var length = Mathf.Min(chaserArmyDataWraps.Length, MeshLineDefine.ArmyLineIndexType.Max - MeshLineDefine.ArmyLineIndexType.Chaser - 1);</span>
+<span id="L703"><a href="#L703">703</a>                            for (int i = 0; i &lt; length; i++)</span>
+<span id="L704"><a href="#L704">704</a>                            {</span>
+<span id="L705"><a href="#L705">705</a>                                if (i &gt;= chaserArmyDataWraps.Length)</span>
+<span id="L706"><a href="#L706">706</a>                                {</span>
+<span id="L707"><a href="#L707">707</a>                                    break;</span>
+<span id="L708"><a href="#L708">708</a>                                }</span>
+<span id="L709"><a href="#L709">709</a></span>
+<span id="L710"><a href="#L710">710</a>                                var idx = (int) MeshLineDefine.ArmyLineIndexType.Chaser + i;</span>
+<span id="L711"><a href="#L711">711</a>                                var data = chaserArmyDataWraps[i];</span>
+<span id="L712"><a href="#L712">712</a></span>
+<span id="L713"><a href="#L713">713</a>                                // 已经有移动行军线 不需要线头</span>
+<span id="L714"><a href="#L714">714</a>                                // 目标在视野内 不需要线头</span>
+<span id="L715"><a href="#L715">715</a>                                if (entityMgr.Exists(mapEntityMgr.GetEntity(data.entityId)))</span>
+<span id="L716"><a href="#L716">716</a>                                {</span>
+<span id="L717"><a href="#L717">717</a>                                    DeleteArmyLine(entityID, idx);</span>
+<span id="L718"><a href="#L718">718</a>                                }</span>
+<span id="L719"><a href="#L719">719</a>                            }</span>
+<span id="L720"><a href="#L720">720</a>                        }</span>
+<span id="L721"><a href="#L721">721</a>                    }</span>
+<span id="L722"><a href="#L722">722</a>                }</span>
+<span id="L723"><a href="#L723">723</a>            }</span>
+<span id="L724"><a href="#L724">724</a>            else</span>
+<span id="L725"><a href="#L725">725</a>            {</span>
+<span id="L726"><a href="#L726">726</a>                m_tempLongList1.Clear();</span>
+<span id="L727"><a href="#L727">727</a>                foreach (var item in m_armyChaserDict)</span>
+<span id="L728"><a href="#L728">728</a>                {</span>
+<span id="L729"><a href="#L729">729</a>                    var entityID = item.Key;</span>
+<span id="L730"><a href="#L730">730</a>                    var chaserArmyDataWraps = item.Value;</span>
+<span id="L731"><a href="#L731">731</a>                </span>
+<span id="L732"><a href="#L732">732</a>                    var entity = mapEntityMgr.GetEntity(entityID);</span>
+<span id="L733"><a href="#L733">733</a>                    if (entityMgr.Exists(entity) == false)</span>
+<span id="L734"><a href="#L734">734</a>                    {</span>
+<span id="L735"><a href="#L735">735</a>                        m_tempLongList1.Add(entityID);</span>
+<span id="L736"><a href="#L736">736</a>                    }</span>
+<span id="L737"><a href="#L737">737</a>                    else</span>
+<span id="L738"><a href="#L738">738</a>                    {</span>
+<span id="L739"><a href="#L739">739</a>                        // 暂时需要更新位置，为了删除行军线,后续调处理</span>
+<span id="L740"><a href="#L740">740</a>                        var isMoving = UtilArmyCtrl.IsArmyMoving(entity);</span>
+<span id="L741"><a href="#L741">741</a>                        if (isMoving)</span>
+<span id="L742"><a href="#L742">742</a>                        {</span>
+<span id="L743"><a href="#L743">743</a>                            var pos = UtilCommon.GetPosition(entity);</span>
+<span id="L744"><a href="#L744">744</a>                            RefreshChaserStartPos(entityID, pos);</span>
+<span id="L745"><a href="#L745">745</a>                        }</span>
+<span id="L746"><a href="#L746">746</a>                        else</span>
+<span id="L747"><a href="#L747">747</a>                        {</span>
+<span id="L748"><a href="#L748">748</a>                            // 删除已经在视野内的线头</span>
+<span id="L749"><a href="#L749">749</a>                            var length = Mathf.Min(chaserArmyDataWraps.Length, MeshLineDefine.ArmyLineIndexType.Max - MeshLineDefine.ArmyLineIndexType.Chaser - 1);</span>
+<span id="L750"><a href="#L750">750</a>                            for (int i = 0; i &lt; length; i++)</span>
+<span id="L751"><a href="#L751">751</a>                            {</span>
+<span id="L752"><a href="#L752">752</a>                                if (i &gt;= chaserArmyDataWraps.Length)</span>
+<span id="L753"><a href="#L753">753</a>                                {</span>
+<span id="L754"><a href="#L754">754</a>                                    break;</span>
+<span id="L755"><a href="#L755">755</a>                                }</span>
+<span id="L756"><a href="#L756">756</a></span>
+<span id="L757"><a href="#L757">757</a>                                var idx = (int) MeshLineDefine.ArmyLineIndexType.Chaser + i;</span>
+<span id="L758"><a href="#L758">758</a>                                var data = chaserArmyDataWraps[i];</span>
+<span id="L759"><a href="#L759">759</a></span>
+<span id="L760"><a href="#L760">760</a>                                // 已经有移动行军线 不需要线头</span>
+<span id="L761"><a href="#L761">761</a>                                // 目标在视野内 不需要线头</span>
+<span id="L762"><a href="#L762">762</a>                                if (entityMgr.Exists(mapEntityMgr.GetEntity(data.entityId)))</span>
+<span id="L763"><a href="#L763">763</a>                                {</span>
+<span id="L764"><a href="#L764">764</a>                                    DeleteArmyLine(entityID, idx);</span>
+<span id="L765"><a href="#L765">765</a>                                }</span>
+<span id="L766"><a href="#L766">766</a>                            }</span>
+<span id="L767"><a href="#L767">767</a>                        }</span>
+<span id="L768"><a href="#L768">768</a>                    }</span>
+<span id="L769"><a href="#L769">769</a>                }</span>
+<span id="L770"><a href="#L770">770</a></span>
+<span id="L771"><a href="#L771">771</a>                foreach (var item in m_tempLongList1)</span>
+<span id="L772"><a href="#L772">772</a>                {</span>
+<span id="L773"><a href="#L773">773</a>                    DeleteChaserLine(item);</span>
+<span id="L774"><a href="#L774">774</a>                }</span>
+<span id="L775"><a href="#L775">775</a>            }</span>
+<span id="L776"><a href="#L776">776</a>        }</span>
+<span id="L777"><a href="#L777">777</a>        #endregion</span>
+<span id="L778"><a href="#L778">778</a>        </span>
+<span id="L779"><a href="#L779">779</a>        #region 真实路径预览行军线</span>
+<span id="L780"><a href="#L780">780</a>        public void CreateRealPathPreviewLine(long armyEntityID, float speed, List&lt;float3&gt; pathPoints, MeshColor meshColor)</span>
+<span id="L781"><a href="#L781">781</a>        {</span>
+<span id="L782"><a href="#L782">782</a>            if (ArmyEntityConst.BlockAllMarchLine)</span>
+<span id="L783"><a href="#L783">783</a>            {</span>
+<span id="L784"><a href="#L784">784</a>                return;</span>
+<span id="L785"><a href="#L785">785</a>            }</span>
+<span id="L786"><a href="#L786">786</a></span>
+<span id="L787"><a href="#L787">787</a>            CreateArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.PreviewRealPath, speed, pathPoints, (int) MeshLineDefine.MeshLineUVIndex.RealPathWhite, meshColor);</span>
+<span id="L788"><a href="#L788">788</a>        }</span>
+<span id="L789"><a href="#L789">789</a>        </span>
+<span id="L790"><a href="#L790">790</a>        public void DeleteRealPathPreviewLine(long armyEntityID)</span>
+<span id="L791"><a href="#L791">791</a>        {</span>
+<span id="L792"><a href="#L792">792</a>            if (ArmyEntityConst.BlockAllMarchLine)</span>
+<span id="L793"><a href="#L793">793</a>            {</span>
+<span id="L794"><a href="#L794">794</a>                return;</span>
+<span id="L795"><a href="#L795">795</a>            }</span>
+<span id="L796"><a href="#L796">796</a></span>
+<span id="L797"><a href="#L797">797</a>            DeleteArmyLine(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.PreviewRealPath);</span>
+<span id="L798"><a href="#L798">798</a>        }</span>
+<span id="L799"><a href="#L799">799</a>        #endregion</span>
+<span id="L800"><a href="#L800">800</a></span>
+<span id="L801"><a href="#L801">801</a>        public int GetCurrArmyLineCount()</span>
+<span id="L802"><a href="#L802">802</a>        {</span>
+<span id="L803"><a href="#L803">803</a>            return m_moveLineCount + m_chaserLineCount;</span>
+<span id="L804"><a href="#L804">804</a>        }</span>
+<span id="L805"><a href="#L805">805</a>        </span>
+<span id="L806"><a href="#L806">806</a>        public void DeleteAllArmyLine()</span>
+<span id="L807"><a href="#L807">807</a>        {</span>
+<span id="L808"><a href="#L808">808</a>            var keyList = m_armyToLineDict.Keys;</span>
+<span id="L809"><a href="#L809">809</a>            foreach (var item in keyList)</span>
+<span id="L810"><a href="#L810">810</a>            {</span>
+<span id="L811"><a href="#L811">811</a>                DeleteArmyLineAll(item);</span>
+<span id="L812"><a href="#L812">812</a>            }</span>
+<span id="L813"><a href="#L813">813</a>        }</span>
+<span id="L814"><a href="#L814">814</a>        </span>
+<span id="L815"><a href="#L815">815</a>        public void DeleteArmyLineAll(long armyEntityID)</span>
+<span id="L816"><a href="#L816">816</a>        {</span>
+<span id="L817"><a href="#L817">817</a>            if (m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) == false)</span>
+<span id="L818"><a href="#L818">818</a>            {</span>
+<span id="L819"><a href="#L819">819</a>                return;</span>
+<span id="L820"><a href="#L820">820</a>            }</span>
+<span id="L821"><a href="#L821">821</a></span>
+<span id="L822"><a href="#L822">822</a>            for (int i = 0; i &lt; indexList.Count; i++)</span>
+<span id="L823"><a href="#L823">823</a>            {</span>
+<span id="L824"><a href="#L824">824</a>                var uid = indexList[i];</span>
+<span id="L825"><a href="#L825">825</a>                if (uid &gt; 0)</span>
+<span id="L826"><a href="#L826">826</a>                {</span>
+<span id="L827"><a href="#L827">827</a>                    DeleteArmyLine(armyEntityID, i);</span>
+<span id="L828"><a href="#L828">828</a>                }</span>
+<span id="L829"><a href="#L829">829</a>            }</span>
+<span id="L830"><a href="#L830">830</a></span>
+<span id="L831"><a href="#L831">831</a>            GameCore.ListPool.Recycle(indexList);</span>
+<span id="L832"><a href="#L832">832</a>            m_armyToLineDict.Remove(armyEntityID);</span>
+<span id="L833"><a href="#L833">833</a>            m_armyPredictDict.Remove(armyEntityID);</span>
+<span id="L834"><a href="#L834">834</a>        }</span>
+<span id="L835"><a href="#L835">835</a></span>
+<span id="L836"><a href="#L836">836</a>        #region 行军线特效</span>
+<span id="L837"><a href="#L837">837</a>        public void CreatePreviewLineEffect(long armyEntityID, string path, Vector3 finalPos, Vector3 scale)</span>
+<span id="L838"><a href="#L838">838</a>        {</span>
+<span id="L839"><a href="#L839">839</a>            var lineID = GetArmyLineID(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview);</span>
+<span id="L840"><a href="#L840">840</a>            if (lineID == ArmyEntityConst.ErrorId)</span>
+<span id="L841"><a href="#L841">841</a>            {</span>
+<span id="L842"><a href="#L842">842</a>                return;</span>
+<span id="L843"><a href="#L843">843</a>            }</span>
+<span id="L844"><a href="#L844">844</a></span>
+<span id="L845"><a href="#L845">845</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L846"><a href="#L846">846</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L847"><a href="#L847">847</a>            {</span>
+<span id="L848"><a href="#L848">848</a>                return;</span>
+<span id="L849"><a href="#L849">849</a>            }</span>
+<span id="L850"><a href="#L850">850</a></span>
+<span id="L851"><a href="#L851">851</a>            if (string.IsNullOrEmpty(path) == false)</span>
+<span id="L852"><a href="#L852">852</a>            {</span>
+<span id="L853"><a href="#L853">853</a>                var finalID = mapEntityMgr.PlayEffect(path, finalPos, Vector3.forward, scale);</span>
+<span id="L854"><a href="#L854">854</a>                if (finalID &gt; 0)</span>
+<span id="L855"><a href="#L855">855</a>                {</span>
+<span id="L856"><a href="#L856">856</a>                    m_lineEffectDict[lineID] = finalID;</span>
+<span id="L857"><a href="#L857">857</a>                }</span>
+<span id="L858"><a href="#L858">858</a>            }</span>
+<span id="L859"><a href="#L859">859</a>        }</span>
+<span id="L860"><a href="#L860">860</a></span>
+<span id="L861"><a href="#L861">861</a>        public void RefreshPreviewLineEffect(long armyEntityID, Vector3 finalPos)</span>
+<span id="L862"><a href="#L862">862</a>        {</span>
+<span id="L863"><a href="#L863">863</a>            var lineID = GetArmyLineID(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Preview);</span>
+<span id="L864"><a href="#L864">864</a>            if (lineID &lt;= 0)</span>
+<span id="L865"><a href="#L865">865</a>            {</span>
+<span id="L866"><a href="#L866">866</a>                return;</span>
+<span id="L867"><a href="#L867">867</a>            }</span>
+<span id="L868"><a href="#L868">868</a></span>
+<span id="L869"><a href="#L869">869</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L870"><a href="#L870">870</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L871"><a href="#L871">871</a>            {</span>
+<span id="L872"><a href="#L872">872</a>                var wrapper = mapEntityMgr.GetWrapper(effectID);</span>
+<span id="L873"><a href="#L873">873</a>                if (wrapper is TrailVisualWrapper trailWrapper)</span>
+<span id="L874"><a href="#L874">874</a>                {</span>
+<span id="L875"><a href="#L875">875</a>                    mapEntityMgr.SetPos(effectID, finalPos);</span>
+<span id="L876"><a href="#L876">876</a>                }</span>
+<span id="L877"><a href="#L877">877</a>            }</span>
+<span id="L878"><a href="#L878">878</a>        }</span>
+<span id="L879"><a href="#L879">879</a></span>
+<span id="L880"><a href="#L880">880</a>        public bool IsExistMoveLineTargetEffect(long armyEntityID, long targetID)</span>
+<span id="L881"><a href="#L881">881</a>        {</span>
+<span id="L882"><a href="#L882">882</a>            return m_targetToEffectDict.TryGetValue(targetID, out var effectID);</span>
+<span id="L883"><a href="#L883">883</a>        }</span>
+<span id="L884"><a href="#L884">884</a></span>
+<span id="L885"><a href="#L885">885</a>        public void CreateMoveLineTargetEffect(long armyEntityID, long targetID, string path, Vector3 finalPos, Vector3 scale, string audioEvt)</span>
+<span id="L886"><a href="#L886">886</a>        {</span>
+<span id="L887"><a href="#L887">887</a>            var lineID = GetArmyLineID(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move);</span>
+<span id="L888"><a href="#L888">888</a>            if (lineID == ArmyEntityConst.ErrorId)</span>
+<span id="L889"><a href="#L889">889</a>            {</span>
+<span id="L890"><a href="#L890">890</a>                return;</span>
+<span id="L891"><a href="#L891">891</a>            }</span>
+<span id="L892"><a href="#L892">892</a></span>
+<span id="L893"><a href="#L893">893</a>            // 保证同一个TargetID 只会有一个特效</span>
+<span id="L894"><a href="#L894">894</a>            // targetEffect是下帧删除 所以需要先添加到LineList</span>
+<span id="L895"><a href="#L895">895</a>            if (m_targetToLineDict.TryGetValue(targetID, out var lineList) == false)</span>
+<span id="L896"><a href="#L896">896</a>            {</span>
+<span id="L897"><a href="#L897">897</a>                lineList = GameCore.ListPool.Get&lt;long&gt;();</span>
+<span id="L898"><a href="#L898">898</a>                lineList.Add(lineID);</span>
+<span id="L899"><a href="#L899">899</a>                m_targetToLineDict[targetID] = lineList;</span>
+<span id="L900"><a href="#L900">900</a>            }</span>
+<span id="L901"><a href="#L901">901</a></span>
+<span id="L902"><a href="#L902">902</a>            if (lineList.Contains(lineID) == false)</span>
+<span id="L903"><a href="#L903">903</a>            {</span>
+<span id="L904"><a href="#L904">904</a>                lineList.Add(lineID);</span>
+<span id="L905"><a href="#L905">905</a>            }</span>
+<span id="L906"><a href="#L906">906</a></span>
+<span id="L907"><a href="#L907">907</a>            if (m_targetToEffectDict.ContainsKey(targetID))</span>
+<span id="L908"><a href="#L908">908</a>            {</span>
+<span id="L909"><a href="#L909">909</a>                return;</span>
+<span id="L910"><a href="#L910">910</a>            }</span>
+<span id="L911"><a href="#L911">911</a></span>
+<span id="L912"><a href="#L912">912</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L913"><a href="#L913">913</a>            if (string.IsNullOrEmpty(path) == false)</span>
+<span id="L914"><a href="#L914">914</a>            {</span>
+<span id="L915"><a href="#L915">915</a>                var dir = Vector3.forward;</span>
+<span id="L916"><a href="#L916">916</a>                var entityMgr = GameCore.DotsMgr.EntityMgr;</span>
+<span id="L917"><a href="#L917">917</a>                var targetEntity = MapManager.MapEntityManager.GetEntity(targetID);</span>
+<span id="L918"><a href="#L918">918</a>                if (entityMgr.HasComponent&lt;ResourceCustomData&gt;(targetEntity))</span>
+<span id="L919"><a href="#L919">919</a>                {</span>
+<span id="L920"><a href="#L920">920</a>                    dir = math.forward(Quaternion.Euler(0, entityMgr.GetComponentData&lt;ResourceCustomData&gt;(targetEntity).Angle, 0));</span>
+<span id="L921"><a href="#L921">921</a>                }</span>
+<span id="L922"><a href="#L922">922</a>                </span>
+<span id="L923"><a href="#L923">923</a>                var effectID = mapEntityMgr.PlayEffect(path, finalPos, dir, scale);</span>
+<span id="L924"><a href="#L924">924</a>                if (effectID &gt; 0)</span>
+<span id="L925"><a href="#L925">925</a>                {</span>
+<span id="L926"><a href="#L926">926</a>                    GameCore.AudioMgr.Play2DSound(audioEvt);</span>
+<span id="L927"><a href="#L927">927</a>                    m_targetToEffectDict[targetID] = effectID;</span>
+<span id="L928"><a href="#L928">928</a>                }</span>
+<span id="L929"><a href="#L929">929</a>            }</span>
+<span id="L930"><a href="#L930">930</a>        }</span>
+<span id="L931"><a href="#L931">931</a></span>
+<span id="L932"><a href="#L932">932</a>        public void CreateChaserLinePointEffect(long armyEntityID, int index, MeshColor color, Vector3 finalPos, Vector3 scale)</span>
+<span id="L933"><a href="#L933">933</a>        {</span>
+<span id="L934"><a href="#L934">934</a>            var lineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L935"><a href="#L935">935</a>            if (lineID == ArmyEntityConst.ErrorId)</span>
+<span id="L936"><a href="#L936">936</a>            {</span>
+<span id="L937"><a href="#L937">937</a>                return;</span>
+<span id="L938"><a href="#L938">938</a>            }</span>
+<span id="L939"><a href="#L939">939</a></span>
+<span id="L940"><a href="#L940">940</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L941"><a href="#L941">941</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L942"><a href="#L942">942</a>            {</span>
+<span id="L943"><a href="#L943">943</a>                mapEntityMgr.StopEffect(effectID);</span>
+<span id="L944"><a href="#L944">944</a>                m_lineEffectDict.Remove(lineID);</span>
+<span id="L945"><a href="#L945">945</a>            }</span>
+<span id="L946"><a href="#L946">946</a>            </span>
+<span id="L947"><a href="#L947">947</a>            if (color != MeshColor.Green &amp;&amp; m_lineEffectDict.Count &gt;= ArmyEntityConst.ArmyLineMaxPointEffectCount)</span>
+<span id="L948"><a href="#L948">948</a>            {</span>
+<span id="L949"><a href="#L949">949</a>                return;</span>
+<span id="L950"><a href="#L950">950</a>            }</span>
+<span id="L951"><a href="#L951">951</a></span>
+<span id="L952"><a href="#L952">952</a>            // 根据行军线颜色判断需要的特效</span>
+<span id="L953"><a href="#L953">953</a>            var prefabID = ArmyEntityConst.MarchArrowEffectWhite;</span>
+<span id="L954"><a href="#L954">954</a>            switch (color)</span>
+<span id="L955"><a href="#L955">955</a>            {</span>
+<span id="L956"><a href="#L956">956</a>                case MeshColor.Green:</span>
+<span id="L957"><a href="#L957">957</a>                    prefabID = ArmyEntityConst.MarchArrowEffectGreen;</span>
+<span id="L958"><a href="#L958">958</a>                    break;</span>
+<span id="L959"><a href="#L959">959</a>                case MeshColor.Red:</span>
+<span id="L960"><a href="#L960">960</a>                    prefabID = ArmyEntityConst.MarchArrowEffectRed;</span>
+<span id="L961"><a href="#L961">961</a>                    break;</span>
+<span id="L962"><a href="#L962">962</a>                case MeshColor.Blue:</span>
+<span id="L963"><a href="#L963">963</a>                    prefabID = ArmyEntityConst.MarchArrowEffectBlue;</span>
+<span id="L964"><a href="#L964">964</a>                    break;</span>
+<span id="L965"><a href="#L965">965</a>                default:</span>
+<span id="L966"><a href="#L966">966</a>                    prefabID = ArmyEntityConst.MarchArrowEffectWhite;</span>
+<span id="L967"><a href="#L967">967</a>                    break;</span>
+<span id="L968"><a href="#L968">968</a>            }</span>
+<span id="L969"><a href="#L969">969</a></span>
+<span id="L970"><a href="#L970">970</a>            var path = MapModelGoMgr.GetModelPath(prefabID);</span>
+<span id="L971"><a href="#L971">971</a>            var finalID = mapEntityMgr.PlayEffect(path, finalPos, Vector3.forward, scale);</span>
+<span id="L972"><a href="#L972">972</a>            if (finalID &gt; 0)</span>
+<span id="L973"><a href="#L973">973</a>            {</span>
+<span id="L974"><a href="#L974">974</a>                m_lineEffectDict[lineID] = finalID;</span>
+<span id="L975"><a href="#L975">975</a>                var wrapper = mapEntityMgr.GetWrapper(finalID);</span>
+<span id="L976"><a href="#L976">976</a>                if (wrapper is TrailVisualWrapper trailWrapper &amp;&amp; trailWrapper.Animator != null)</span>
+<span id="L977"><a href="#L977">977</a>                {</span>
+<span id="L978"><a href="#L978">978</a>                    trailWrapper.Animator.SetTrigger(&quot;entry&quot;);</span>
+<span id="L979"><a href="#L979">979</a>                }</span>
+<span id="L980"><a href="#L980">980</a>            }</span>
+<span id="L981"><a href="#L981">981</a>        }</span>
+<span id="L982"><a href="#L982">982</a></span>
+<span id="L983"><a href="#L983">983</a>        public void CreateMoveLinePointEffect(long armyEntityID, MeshColor color, Vector3 finalPos, Vector3 scale)</span>
+<span id="L984"><a href="#L984">984</a>        {</span>
+<span id="L985"><a href="#L985">985</a>            var lineID = GetArmyLineID(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move);</span>
+<span id="L986"><a href="#L986">986</a>            if (lineID == ArmyEntityConst.ErrorId)</span>
+<span id="L987"><a href="#L987">987</a>            {</span>
+<span id="L988"><a href="#L988">988</a>                return;</span>
+<span id="L989"><a href="#L989">989</a>            }</span>
+<span id="L990"><a href="#L990">990</a></span>
+<span id="L991"><a href="#L991">991</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L992"><a href="#L992">992</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L993"><a href="#L993">993</a>            {</span>
+<span id="L994"><a href="#L994">994</a>                mapEntityMgr.StopEffect(effectID);</span>
+<span id="L995"><a href="#L995">995</a>                m_lineEffectDict.Remove(lineID);</span>
+<span id="L996"><a href="#L996">996</a>            }</span>
+<span id="L997"><a href="#L997">997</a></span>
+<span id="L998"><a href="#L998">998</a>            if (color != MeshColor.Green &amp;&amp; m_lineEffectDict.Count &gt;= ArmyEntityConst.ArmyLineMaxPointEffectCount)</span>
+<span id="L999"><a href="#L999">999</a>            {</span>
+<span id="L1000"><a href="#L1000">1000</a>                return;</span>
+<span id="L1001"><a href="#L1001">1001</a>            }</span>
+<span id="L1002"><a href="#L1002">1002</a></span>
+<span id="L1003"><a href="#L1003">1003</a>            // 根据行军线颜色判断需要的特效</span>
+<span id="L1004"><a href="#L1004">1004</a>            var prefabID = ArmyEntityConst.MarchArrowEffectWhite;</span>
+<span id="L1005"><a href="#L1005">1005</a>            switch (color)</span>
+<span id="L1006"><a href="#L1006">1006</a>            {</span>
+<span id="L1007"><a href="#L1007">1007</a>                case MeshColor.Green:</span>
+<span id="L1008"><a href="#L1008">1008</a>                    prefabID = ArmyEntityConst.MarchArrowEffectGreen;</span>
+<span id="L1009"><a href="#L1009">1009</a>                    break;</span>
+<span id="L1010"><a href="#L1010">1010</a>                case MeshColor.Red:</span>
+<span id="L1011"><a href="#L1011">1011</a>                    prefabID = ArmyEntityConst.MarchArrowEffectRed;</span>
+<span id="L1012"><a href="#L1012">1012</a>                    break;</span>
+<span id="L1013"><a href="#L1013">1013</a>                case MeshColor.Blue:</span>
+<span id="L1014"><a href="#L1014">1014</a>                    prefabID = ArmyEntityConst.MarchArrowEffectBlue;</span>
+<span id="L1015"><a href="#L1015">1015</a>                    break;</span>
+<span id="L1016"><a href="#L1016">1016</a>                default:</span>
+<span id="L1017"><a href="#L1017">1017</a>                    prefabID = ArmyEntityConst.MarchArrowEffectWhite;</span>
+<span id="L1018"><a href="#L1018">1018</a>                    break;</span>
+<span id="L1019"><a href="#L1019">1019</a>            }</span>
+<span id="L1020"><a href="#L1020">1020</a></span>
+<span id="L1021"><a href="#L1021">1021</a>            var path = MapModelGoMgr.GetModelPath(prefabID);</span>
+<span id="L1022"><a href="#L1022">1022</a>            var finalID = mapEntityMgr.PlayEffect(path, finalPos, Vector3.forward, scale, -1, true);</span>
+<span id="L1023"><a href="#L1023">1023</a>            if (finalID &gt; 0)</span>
+<span id="L1024"><a href="#L1024">1024</a>            {</span>
+<span id="L1025"><a href="#L1025">1025</a>                m_lineEffectDict[lineID] = finalID;</span>
+<span id="L1026"><a href="#L1026">1026</a>                var wrapper = mapEntityMgr.GetWrapper(finalID);</span>
+<span id="L1027"><a href="#L1027">1027</a>                if (wrapper is TrailVisualWrapper trailWrapper &amp;&amp; trailWrapper.Animator != null)</span>
+<span id="L1028"><a href="#L1028">1028</a>                {</span>
+<span id="L1029"><a href="#L1029">1029</a>                    trailWrapper.Animator.SetTrigger(&quot;entry&quot;);</span>
+<span id="L1030"><a href="#L1030">1030</a>                }</span>
+<span id="L1031"><a href="#L1031">1031</a>            }</span>
+<span id="L1032"><a href="#L1032">1032</a></span>
+<span id="L1033"><a href="#L1033">1033</a>            // 由于可能存在不可达路径 生成路点的时候刷新指向箭头的位置</span>
+<span id="L1034"><a href="#L1034">1034</a>            if (color == MeshColor.Green &amp;&amp; m_touchUpEmptyEffectID != 0 &amp;&amp; m_targetToLineDict.ContainsKey(armyEntityID) == false)</span>
+<span id="L1035"><a href="#L1035">1035</a>            {</span>
+<span id="L1036"><a href="#L1036">1036</a>                mapEntityMgr.SetPos(m_touchUpEmptyEffectID, finalPos);</span>
+<span id="L1037"><a href="#L1037">1037</a>            }</span>
+<span id="L1038"><a href="#L1038">1038</a>        }</span>
+<span id="L1039"><a href="#L1039">1039</a></span>
+<span id="L1040"><a href="#L1040">1040</a>        public void CreatePreviewLineUniqueEffect(string path, Vector3 finalPos, Vector3 scale, bool autoRelease)</span>
+<span id="L1041"><a href="#L1041">1041</a>        {</span>
+<span id="L1042"><a href="#L1042">1042</a>            var mapEntityEffectMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1043"><a href="#L1043">1043</a>            if (m_touchUpEmptyEffectID == 0)</span>
+<span id="L1044"><a href="#L1044">1044</a>            {</span>
+<span id="L1045"><a href="#L1045">1045</a>                var effectID = mapEntityEffectMgr.PlayEffect(path, finalPos, Vector3.forward, scale);</span>
+<span id="L1046"><a href="#L1046">1046</a>                if (effectID &gt; 0)</span>
+<span id="L1047"><a href="#L1047">1047</a>                {</span>
+<span id="L1048"><a href="#L1048">1048</a>                    m_touchUpEmptyEffectID = effectID;</span>
+<span id="L1049"><a href="#L1049">1049</a>                }</span>
+<span id="L1050"><a href="#L1050">1050</a>            }</span>
+<span id="L1051"><a href="#L1051">1051</a></span>
+<span id="L1052"><a href="#L1052">1052</a>            m_touchEffectDelayTime = autoRelease ? 1.5f : -1;</span>
+<span id="L1053"><a href="#L1053">1053</a></span>
+<span id="L1054"><a href="#L1054">1054</a>            if (autoRelease)</span>
+<span id="L1055"><a href="#L1055">1055</a>            {</span>
+<span id="L1056"><a href="#L1056">1056</a>                GameCore.AudioMgr.Play2DSound(AudioEnumCfg.Play_UI_Troops_Mark);</span>
+<span id="L1057"><a href="#L1057">1057</a>            }</span>
+<span id="L1058"><a href="#L1058">1058</a>        }</span>
+<span id="L1059"><a href="#L1059">1059</a></span>
+<span id="L1060"><a href="#L1060">1060</a>        public void DeletePreviewLineUniqueEffect()</span>
+<span id="L1061"><a href="#L1061">1061</a>        {</span>
+<span id="L1062"><a href="#L1062">1062</a>            if (m_touchUpEmptyEffectID != 0)</span>
+<span id="L1063"><a href="#L1063">1063</a>            {</span>
+<span id="L1064"><a href="#L1064">1064</a>                MapManager.MapEntityEffectMgr.StopEffect(m_touchUpEmptyEffectID);</span>
+<span id="L1065"><a href="#L1065">1065</a>                m_touchUpEmptyEffectID = 0;</span>
+<span id="L1066"><a href="#L1066">1066</a>            }</span>
+<span id="L1067"><a href="#L1067">1067</a>        }</span>
+<span id="L1068"><a href="#L1068">1068</a></span>
+<span id="L1069"><a href="#L1069">1069</a>        public void RefreshPreviewLineUniqueEffectPos(Vector3 finalPos)</span>
+<span id="L1070"><a href="#L1070">1070</a>        {</span>
+<span id="L1071"><a href="#L1071">1071</a>            if (m_touchUpEmptyEffectID != 0)</span>
+<span id="L1072"><a href="#L1072">1072</a>            {</span>
+<span id="L1073"><a href="#L1073">1073</a>                MapManager.MapEntityEffectMgr.SetPos(m_touchUpEmptyEffectID, finalPos);</span>
+<span id="L1074"><a href="#L1074">1074</a>            }</span>
+<span id="L1075"><a href="#L1075">1075</a>        }</span>
+<span id="L1076"><a href="#L1076">1076</a></span>
+<span id="L1077"><a href="#L1077">1077</a>        public void RefreshChaserLinePointEffectPos(long armyEntityID, int index, Vector3 finalPos)</span>
+<span id="L1078"><a href="#L1078">1078</a>        {</span>
+<span id="L1079"><a href="#L1079">1079</a>            var lineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L1080"><a href="#L1080">1080</a>            if (lineID &lt;= 0)</span>
+<span id="L1081"><a href="#L1081">1081</a>            {</span>
+<span id="L1082"><a href="#L1082">1082</a>                return;</span>
+<span id="L1083"><a href="#L1083">1083</a>            }</span>
+<span id="L1084"><a href="#L1084">1084</a></span>
+<span id="L1085"><a href="#L1085">1085</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1086"><a href="#L1086">1086</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L1087"><a href="#L1087">1087</a>            {</span>
+<span id="L1088"><a href="#L1088">1088</a>                var wrapper = mapEntityMgr.GetWrapper(effectID);</span>
+<span id="L1089"><a href="#L1089">1089</a>                if (wrapper is TrailVisualWrapper trailWrapper)</span>
+<span id="L1090"><a href="#L1090">1090</a>                {</span>
+<span id="L1091"><a href="#L1091">1091</a>                    // 当且仅当产生移动距离才重新触发动画</span>
+<span id="L1092"><a href="#L1092">1092</a>                    if (math.abs(trailWrapper.position.x - finalPos.x) &gt; 1 || math.abs(trailWrapper.position.z - finalPos.z) &gt; 1)</span>
+<span id="L1093"><a href="#L1093">1093</a>                    {</span>
+<span id="L1094"><a href="#L1094">1094</a>                        if (trailWrapper.Animator != null)</span>
+<span id="L1095"><a href="#L1095">1095</a>                        {</span>
+<span id="L1096"><a href="#L1096">1096</a>                            trailWrapper.Animator.SetTrigger(&quot;entry&quot;);</span>
+<span id="L1097"><a href="#L1097">1097</a>                        }</span>
+<span id="L1098"><a href="#L1098">1098</a>                    }</span>
+<span id="L1099"><a href="#L1099">1099</a></span>
+<span id="L1100"><a href="#L1100">1100</a>                    mapEntityMgr.SetPos(effectID, finalPos);</span>
+<span id="L1101"><a href="#L1101">1101</a>                }</span>
+<span id="L1102"><a href="#L1102">1102</a>            }</span>
+<span id="L1103"><a href="#L1103">1103</a>        }</span>
+<span id="L1104"><a href="#L1104">1104</a></span>
+<span id="L1105"><a href="#L1105">1105</a>        public void RefreshMoveLinePointEffectPos(long armyEntityID, Vector3 finalPos)</span>
+<span id="L1106"><a href="#L1106">1106</a>        {</span>
+<span id="L1107"><a href="#L1107">1107</a>            var lineID = GetArmyLineID(armyEntityID, (int) MeshLineDefine.ArmyLineIndexType.Move);</span>
+<span id="L1108"><a href="#L1108">1108</a>            if (lineID &lt;= 0)</span>
+<span id="L1109"><a href="#L1109">1109</a>            {</span>
+<span id="L1110"><a href="#L1110">1110</a>                return;</span>
+<span id="L1111"><a href="#L1111">1111</a>            }</span>
+<span id="L1112"><a href="#L1112">1112</a></span>
+<span id="L1113"><a href="#L1113">1113</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1114"><a href="#L1114">1114</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L1115"><a href="#L1115">1115</a>            {</span>
+<span id="L1116"><a href="#L1116">1116</a>                var wrapper = mapEntityMgr.GetWrapper(effectID);</span>
+<span id="L1117"><a href="#L1117">1117</a>                if (wrapper is TrailVisualWrapper trailWrapper)</span>
+<span id="L1118"><a href="#L1118">1118</a>                {</span>
+<span id="L1119"><a href="#L1119">1119</a>                    // 当且仅当产生移动距离才重新触发动画</span>
+<span id="L1120"><a href="#L1120">1120</a>                    if (math.abs(trailWrapper.position.x - finalPos.x) &gt; 1 || math.abs(trailWrapper.position.z - finalPos.z) &gt; 1)</span>
+<span id="L1121"><a href="#L1121">1121</a>                    {</span>
+<span id="L1122"><a href="#L1122">1122</a>                        if (trailWrapper.Animator != null)</span>
+<span id="L1123"><a href="#L1123">1123</a>                        {</span>
+<span id="L1124"><a href="#L1124">1124</a>                            trailWrapper.Animator.SetTrigger(&quot;entry&quot;);</span>
+<span id="L1125"><a href="#L1125">1125</a>                        }</span>
+<span id="L1126"><a href="#L1126">1126</a>                    }</span>
+<span id="L1127"><a href="#L1127">1127</a></span>
+<span id="L1128"><a href="#L1128">1128</a>                    mapEntityMgr.SetPos(effectID, finalPos);</span>
+<span id="L1129"><a href="#L1129">1129</a>                }</span>
+<span id="L1130"><a href="#L1130">1130</a>            }</span>
+<span id="L1131"><a href="#L1131">1131</a>        }</span>
+<span id="L1132"><a href="#L1132">1132</a></span>
+<span id="L1133"><a href="#L1133">1133</a>        public void RefreshPreviewLineEmptyEffect(bool visible, Vector3 finalPos, bool canArrive = true)</span>
+<span id="L1134"><a href="#L1134">1134</a>        {</span>
+<span id="L1135"><a href="#L1135">1135</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1136"><a href="#L1136">1136</a>            if (visible == false &amp;&amp; m_previewEmptyEffectID != 0)</span>
+<span id="L1137"><a href="#L1137">1137</a>            {</span>
+<span id="L1138"><a href="#L1138">1138</a>                mapEntityMgr.StopEffect(m_previewEmptyEffectID);</span>
+<span id="L1139"><a href="#L1139">1139</a>                m_previewEmptyEffectID = 0;</span>
+<span id="L1140"><a href="#L1140">1140</a>                m_previewCanArrive = false;</span>
+<span id="L1141"><a href="#L1141">1141</a>            }</span>
+<span id="L1142"><a href="#L1142">1142</a>            else if (visible)</span>
+<span id="L1143"><a href="#L1143">1143</a>            {</span>
+<span id="L1144"><a href="#L1144">1144</a>                if (m_previewEmptyEffectID == 0 || m_previewCanArrive != canArrive)</span>
+<span id="L1145"><a href="#L1145">1145</a>                {</span>
+<span id="L1146"><a href="#L1146">1146</a>                    if (m_previewEmptyEffectID &gt; 0)</span>
+<span id="L1147"><a href="#L1147">1147</a>                    {</span>
+<span id="L1148"><a href="#L1148">1148</a>                        mapEntityMgr.StopEffect(m_previewEmptyEffectID);</span>
+<span id="L1149"><a href="#L1149">1149</a>                        m_previewEmptyEffectID = 0;</span>
+<span id="L1150"><a href="#L1150">1150</a>                        m_previewCanArrive = false;</span>
+<span id="L1151"><a href="#L1151">1151</a>                    }</span>
+<span id="L1152"><a href="#L1152">1152</a></span>
+<span id="L1153"><a href="#L1153">1153</a>                    var effectCfgId = canArrive ? ArmyEntityConst.MarchArrowDragEffect : ArmyEntityConst.MarchArrowDragNoArrive;</span>
+<span id="L1154"><a href="#L1154">1154</a>                    </span>
+<span id="L1155"><a href="#L1155">1155</a>                    var vector2Int = MapCoordUtil.ConvertWorldPosToGrid(finalPos);</span>
+<span id="L1156"><a href="#L1156">1156</a>                    var subHeight = MapCoordUtil.GetSubHeightByType(vector2Int.x, vector2Int.y, (int) ClientSubHeightType.CSHTDockBridge);</span>
+<span id="L1157"><a href="#L1157">1157</a>                    if (subHeight &gt; 0)</span>
+<span id="L1158"><a href="#L1158">1158</a>                    {</span>
+<span id="L1159"><a href="#L1159">1159</a>                        finalPos = new Vector3(finalPos.x, subHeight, finalPos.z);</span>
+<span id="L1160"><a href="#L1160">1160</a>                    }</span>
+<span id="L1161"><a href="#L1161">1161</a>                    </span>
+<span id="L1162"><a href="#L1162">1162</a>                    var finalID = mapEntityMgr.PlayEffect(MapModelGoMgr.GetModelPath(effectCfgId), finalPos, Vector3.forward, Vector3.one * ArmyEntityConst.ArmyEmptySpaceEffectScaleRatio);</span>
+<span id="L1163"><a href="#L1163">1163</a>                    if (finalID &gt; 0)</span>
+<span id="L1164"><a href="#L1164">1164</a>                    {</span>
+<span id="L1165"><a href="#L1165">1165</a>                        m_previewEmptyEffectID = finalID;</span>
+<span id="L1166"><a href="#L1166">1166</a>                        m_previewCanArrive = canArrive;</span>
+<span id="L1167"><a href="#L1167">1167</a>                    }</span>
+<span id="L1168"><a href="#L1168">1168</a>                }</span>
+<span id="L1169"><a href="#L1169">1169</a>                else</span>
+<span id="L1170"><a href="#L1170">1170</a>                {</span>
+<span id="L1171"><a href="#L1171">1171</a>                    mapEntityMgr.SetPos(m_previewEmptyEffectID, finalPos);</span>
+<span id="L1172"><a href="#L1172">1172</a>                }</span>
+<span id="L1173"><a href="#L1173">1173</a></span>
+<span id="L1174"><a href="#L1174">1174</a>                // 生成预览特效时 删除指向特效</span>
+<span id="L1175"><a href="#L1175">1175</a>                // if (m_touchUpEmptyEffectID != 0)</span>
+<span id="L1176"><a href="#L1176">1176</a>                // {</span>
+<span id="L1177"><a href="#L1177">1177</a>                //     mapEntityMgr.StopEffect(m_touchUpEmptyEffectID);</span>
+<span id="L1178"><a href="#L1178">1178</a>                //     m_touchUpEmptyEffectID = 0;</span>
+<span id="L1179"><a href="#L1179">1179</a>                // }</span>
+<span id="L1180"><a href="#L1180">1180</a>            }</span>
+<span id="L1181"><a href="#L1181">1181</a></span>
+<span id="L1182"><a href="#L1182">1182</a>            LuaMgr.instance.mapEntityOp.OnFreshPreviewLineEmpty(visible, finalPos, canArrive);</span>
+<span id="L1183"><a href="#L1183">1183</a>        }</span>
+<span id="L1184"><a href="#L1184">1184</a></span>
+<span id="L1185"><a href="#L1185">1185</a>        private void DeleteLineEffect(long lineID)</span>
+<span id="L1186"><a href="#L1186">1186</a>        {</span>
+<span id="L1187"><a href="#L1187">1187</a>            var mapEntityMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1188"><a href="#L1188">1188</a>            if (m_lineEffectDict.TryGetValue(lineID, out var effectID))</span>
+<span id="L1189"><a href="#L1189">1189</a>            {</span>
+<span id="L1190"><a href="#L1190">1190</a>                mapEntityMgr.StopEffect(effectID);</span>
+<span id="L1191"><a href="#L1191">1191</a>                m_lineEffectDict.Remove(lineID);</span>
+<span id="L1192"><a href="#L1192">1192</a>            }</span>
+<span id="L1193"><a href="#L1193">1193</a></span>
+<span id="L1194"><a href="#L1194">1194</a>            long targetID = 0;</span>
+<span id="L1195"><a href="#L1195">1195</a>            foreach (var item in m_targetToLineDict)</span>
+<span id="L1196"><a href="#L1196">1196</a>            {</span>
+<span id="L1197"><a href="#L1197">1197</a>                if (item.Value.Contains(lineID))</span>
+<span id="L1198"><a href="#L1198">1198</a>                {</span>
+<span id="L1199"><a href="#L1199">1199</a>                    targetID = item.Key;</span>
+<span id="L1200"><a href="#L1200">1200</a>                    break;</span>
+<span id="L1201"><a href="#L1201">1201</a>                }</span>
+<span id="L1202"><a href="#L1202">1202</a>            }</span>
+<span id="L1203"><a href="#L1203">1203</a></span>
+<span id="L1204"><a href="#L1204">1204</a>            if (m_targetToLineDict.TryGetValue(targetID, out var list))</span>
+<span id="L1205"><a href="#L1205">1205</a>            {</span>
+<span id="L1206"><a href="#L1206">1206</a>                list.Remove(lineID);</span>
+<span id="L1207"><a href="#L1207">1207</a></span>
+<span id="L1208"><a href="#L1208">1208</a>                // 目标点已经没有行军线指向 (移动到下一帧删除、追击移动目标会重新生成行军线导致特效反复创建)</span>
+<span id="L1209"><a href="#L1209">1209</a>                // if (list.Count == 0)</span>
+<span id="L1210"><a href="#L1210">1210</a>                // {</span>
+<span id="L1211"><a href="#L1211">1211</a>                //     m_targetToLineDict.Remove(targetID);</span>
+<span id="L1212"><a href="#L1212">1212</a>                // }</span>
+<span id="L1213"><a href="#L1213">1213</a>                //</span>
+<span id="L1214"><a href="#L1214">1214</a>                // if (m_targetToEffectDict.TryGetValue(targetID, out var targetEffectID))</span>
+<span id="L1215"><a href="#L1215">1215</a>                // {</span>
+<span id="L1216"><a href="#L1216">1216</a>                //     mapEntityMgr.StopEffect(targetEffectID);</span>
+<span id="L1217"><a href="#L1217">1217</a>                //     m_targetToEffectDict.Remove(targetID);</span>
+<span id="L1218"><a href="#L1218">1218</a>                // }</span>
+<span id="L1219"><a href="#L1219">1219</a>            }</span>
+<span id="L1220"><a href="#L1220">1220</a>        }</span>
+<span id="L1221"><a href="#L1221">1221</a></span>
+<span id="L1222"><a href="#L1222">1222</a>        private void OnUpdateLineEffect(MapEntityEffectMgr mapEffectMgr)</span>
+<span id="L1223"><a href="#L1223">1223</a>        {</span>
+<span id="L1224"><a href="#L1224">1224</a>            m_tempLongList1.Clear();</span>
+<span id="L1225"><a href="#L1225">1225</a>            m_tempLongList2.Clear();</span>
+<span id="L1226"><a href="#L1226">1226</a>            foreach (var item in m_targetToLineDict)</span>
+<span id="L1227"><a href="#L1227">1227</a>            {</span>
+<span id="L1228"><a href="#L1228">1228</a>                if (item.Value.Count == 0)</span>
+<span id="L1229"><a href="#L1229">1229</a>                {</span>
+<span id="L1230"><a href="#L1230">1230</a>                    m_tempLongList1.Add(item.Key);</span>
+<span id="L1231"><a href="#L1231">1231</a>                }</span>
+<span id="L1232"><a href="#L1232">1232</a>                else</span>
+<span id="L1233"><a href="#L1233">1233</a>                {</span>
+<span id="L1234"><a href="#L1234">1234</a>                    // 由于异步创建 在创建行军线时还没有目标Entity（如视野外的目标）</span>
+<span id="L1235"><a href="#L1235">1235</a>                    // 当目标Entity创建处理后 需要刷新一下行军线（让行军线指向目标）</span>
+<span id="L1236"><a href="#L1236">1236</a>                    if (m_targetToEffectDict.ContainsKey(item.Key) == false)</span>
+<span id="L1237"><a href="#L1237">1237</a>                    {</span>
+<span id="L1238"><a href="#L1238">1238</a>                        m_tempLongList2.Add(item.Key);</span>
+<span id="L1239"><a href="#L1239">1239</a>                    }</span>
+<span id="L1240"><a href="#L1240">1240</a>                }</span>
+<span id="L1241"><a href="#L1241">1241</a>            }</span>
+<span id="L1242"><a href="#L1242">1242</a></span>
+<span id="L1243"><a href="#L1243">1243</a>            foreach (var item in m_tempLongList1)</span>
+<span id="L1244"><a href="#L1244">1244</a>            {</span>
+<span id="L1245"><a href="#L1245">1245</a>                if (m_targetToLineDict.TryGetValue(item, out var list))</span>
+<span id="L1246"><a href="#L1246">1246</a>                {</span>
+<span id="L1247"><a href="#L1247">1247</a>                    GameCore.ListPool.Recycle(list);</span>
+<span id="L1248"><a href="#L1248">1248</a>                    m_targetToLineDict.Remove(item);</span>
+<span id="L1249"><a href="#L1249">1249</a>                }</span>
+<span id="L1250"><a href="#L1250">1250</a></span>
+<span id="L1251"><a href="#L1251">1251</a>                if (m_targetToEffectDict.TryGetValue(item, out var targetEffectID))</span>
+<span id="L1252"><a href="#L1252">1252</a>                {</span>
+<span id="L1253"><a href="#L1253">1253</a>                    mapEffectMgr.StopEffect(targetEffectID);</span>
+<span id="L1254"><a href="#L1254">1254</a>                    m_targetToEffectDict.Remove(item);</span>
+<span id="L1255"><a href="#L1255">1255</a>                }</span>
+<span id="L1256"><a href="#L1256">1256</a>            }</span>
+<span id="L1257"><a href="#L1257">1257</a></span>
+<span id="L1258"><a href="#L1258">1258</a>            m_tempLongList1.Clear();</span>
+<span id="L1259"><a href="#L1259">1259</a>            foreach (var item in m_tempLongList2)</span>
+<span id="L1260"><a href="#L1260">1260</a>            {</span>
+<span id="L1261"><a href="#L1261">1261</a>                if (m_targetToLineDict.TryGetValue(item, out var lineIDList))</span>
+<span id="L1262"><a href="#L1262">1262</a>                {</span>
+<span id="L1263"><a href="#L1263">1263</a>                    foreach (var moveLineID in lineIDList)</span>
+<span id="L1264"><a href="#L1264">1264</a>                    {</span>
+<span id="L1265"><a href="#L1265">1265</a>                        var armyEntityID = GetArmyEntityID(moveLineID);</span>
+<span id="L1266"><a href="#L1266">1266</a>                        if (armyEntityID != 0)</span>
+<span id="L1267"><a href="#L1267">1267</a>                        {</span>
+<span id="L1268"><a href="#L1268">1268</a>                            m_tempLongList1.Add(armyEntityID);</span>
+<span id="L1269"><a href="#L1269">1269</a>                        }</span>
+<span id="L1270"><a href="#L1270">1270</a>                    }</span>
+<span id="L1271"><a href="#L1271">1271</a>                }</span>
+<span id="L1272"><a href="#L1272">1272</a>            }</span>
+<span id="L1273"><a href="#L1273">1273</a></span>
+<span id="L1274"><a href="#L1274">1274</a>            foreach (var armyEntityID in m_tempLongList1)</span>
+<span id="L1275"><a href="#L1275">1275</a>            {</span>
+<span id="L1276"><a href="#L1276">1276</a>                UtilArmyCtrl.CreateArmyMoveLine(armyEntityID);</span>
+<span id="L1277"><a href="#L1277">1277</a>            }</span>
+<span id="L1278"><a href="#L1278">1278</a>        }</span>
+<span id="L1279"><a href="#L1279">1279</a>        #endregion</span>
+<span id="L1280"><a href="#L1280">1280</a></span>
+<span id="L1281"><a href="#L1281">1281</a>        #region 内部方法</span>
+<span id="L1282"><a href="#L1282">1282</a>        public void CreateArmyLine(long armyEntityID, int index, float speed, List&lt;float3&gt; pathPoints, int uvIndex, MeshColor meshColor, </span>
+<span id="L1283"><a href="#L1283">1283</a>            long startTime = 0, long endTime = 0, List&lt;long&gt; timeStamps = null, bool useDefaultMesh = true)</span>
+<span id="L1284"><a href="#L1284">1284</a>        {</span>
+<span id="L1285"><a href="#L1285">1285</a>            if (m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) == false)</span>
+<span id="L1286"><a href="#L1286">1286</a>            {</span>
+<span id="L1287"><a href="#L1287">1287</a>                UtilArmyProfiler.DoProfilerSampleBegin((int) UtilArmyProfiler.ArmySampleType.ArmyMove_GetListPool);</span>
+<span id="L1288"><a href="#L1288">1288</a>                indexList = GameCore.ListPool.Get&lt;long&gt;(Mathf.CeilToInt(Mathf.Log((int) MeshLineDefine.ArmyLineIndexType.Max + 1)));</span>
+<span id="L1289"><a href="#L1289">1289</a>                for (int i = 0; i &lt; (int) MeshLineDefine.ArmyLineIndexType.Max; i++)</span>
+<span id="L1290"><a href="#L1290">1290</a>                {</span>
+<span id="L1291"><a href="#L1291">1291</a>                    indexList.Add(-1);</span>
+<span id="L1292"><a href="#L1292">1292</a>                }</span>
+<span id="L1293"><a href="#L1293">1293</a></span>
+<span id="L1294"><a href="#L1294">1294</a>                m_armyToLineDict.Add(armyEntityID, indexList);</span>
+<span id="L1295"><a href="#L1295">1295</a>                UtilArmyProfiler.DoProfilerSampleEnd((int) UtilArmyProfiler.ArmySampleType.ArmyMove_GetListPool);</span>
+<span id="L1296"><a href="#L1296">1296</a>            }</span>
+<span id="L1297"><a href="#L1297">1297</a></span>
+<span id="L1298"><a href="#L1298">1298</a>            // 删除原来的行军线</span>
+<span id="L1299"><a href="#L1299">1299</a>            var indexLineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L1300"><a href="#L1300">1300</a>            if (indexLineID &gt; 0)</span>
+<span id="L1301"><a href="#L1301">1301</a>            {</span>
+<span id="L1302"><a href="#L1302">1302</a>                UtilArmyProfiler.DoProfilerSampleBegin((int) UtilArmyProfiler.ArmySampleType.ArmyMove_DeletePreviewLine);</span>
+<span id="L1303"><a href="#L1303">1303</a>                DeleteArmyLine(armyEntityID, index);</span>
+<span id="L1304"><a href="#L1304">1304</a>                UtilArmyProfiler.DoProfilerSampleEnd((int) UtilArmyProfiler.ArmySampleType.ArmyMove_DeletePreviewLine);</span>
+<span id="L1305"><a href="#L1305">1305</a>            }</span>
+<span id="L1306"><a href="#L1306">1306</a>            </span>
+<span id="L1307"><a href="#L1307">1307</a>            if (index == (int) MeshLineDefine.ArmyLineIndexType.Move)</span>
+<span id="L1308"><a href="#L1308">1308</a>            {</span>
+<span id="L1309"><a href="#L1309">1309</a>                m_moveLineCount++;</span>
+<span id="L1310"><a href="#L1310">1310</a>            }</span>
+<span id="L1311"><a href="#L1311">1311</a>            else if (index &gt;= (int) MeshLineDefine.ArmyLineIndexType.Chaser)</span>
+<span id="L1312"><a href="#L1312">1312</a>            {</span>
+<span id="L1313"><a href="#L1313">1313</a>                m_chaserLineCount++;</span>
+<span id="L1314"><a href="#L1314">1314</a>            }</span>
+<span id="L1315"><a href="#L1315">1315</a></span>
+<span id="L1316"><a href="#L1316">1316</a>            var halfWidth = index == (int) MeshLineDefine.ArmyLineIndexType.Preview ? ArmyEntityConst.RealPathMeshLineHalfWidth * 0.125f : -1f;</span>
+<span id="L1317"><a href="#L1317">1317</a></span>
+<span id="L1318"><a href="#L1318">1318</a>            if (CanUseStraightArmyLineMode(MeshLineDefine.ArmyLineIndexType.Move, pathPoints.Count))</span>
+<span id="L1319"><a href="#L1319">1319</a>            {</span>
+<span id="L1320"><a href="#L1320">1320</a>                indexList[index] = GameCore.MeshLineMgr.CreateStraightLine(pathPoints[0], pathPoints[1], uvIndex, (int) meshColor, startTime, endTime, speed, -1, halfWidth, useDefaultMesh);</span>
+<span id="L1321"><a href="#L1321">1321</a>            }</span>
+<span id="L1322"><a href="#L1322">1322</a>            else</span>
+<span id="L1323"><a href="#L1323">1323</a>            {</span>
+<span id="L1324"><a href="#L1324">1324</a>                indexList[index] = GameCore.MeshLineMgr.CreateLine(pathPoints, uvIndex, (int) meshColor, startTime, endTime, speed, index &gt;= (int) MeshLineDefine.ArmyLineIndexType.Chaser, -1, halfWidth, timeStamps, useDefaultMesh);   </span>
+<span id="L1325"><a href="#L1325">1325</a>            }</span>
+<span id="L1326"><a href="#L1326">1326</a>        }</span>
+<span id="L1327"><a href="#L1327">1327</a></span>
+<span id="L1328"><a href="#L1328">1328</a>        public static bool CanUseStraightArmyLineMode(MeshLineDefine.ArmyLineIndexType indexType, int pathPointCount)</span>
+<span id="L1329"><a href="#L1329">1329</a>        {</span>
+<span id="L1330"><a href="#L1330">1330</a>            if (!ArmyEntityConst.MeshLine_UseStraightLineMode)</span>
+<span id="L1331"><a href="#L1331">1331</a>            {</span>
+<span id="L1332"><a href="#L1332">1332</a>                return false;</span>
+<span id="L1333"><a href="#L1333">1333</a>            }</span>
+<span id="L1334"><a href="#L1334">1334</a>            </span>
+<span id="L1335"><a href="#L1335">1335</a>            return indexType == MeshLineDefine.ArmyLineIndexType.Move &amp;&amp; pathPointCount == 2;</span>
+<span id="L1336"><a href="#L1336">1336</a>        }</span>
+<span id="L1337"><a href="#L1337">1337</a></span>
+<span id="L1338"><a href="#L1338">1338</a>        private bool DeleteArmyLine(long armyEntityID, int index)</span>
+<span id="L1339"><a href="#L1339">1339</a>        {</span>
+<span id="L1340"><a href="#L1340">1340</a>            if (m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) == false)</span>
+<span id="L1341"><a href="#L1341">1341</a>            {</span>
+<span id="L1342"><a href="#L1342">1342</a>                return false;</span>
+<span id="L1343"><a href="#L1343">1343</a>            }</span>
+<span id="L1344"><a href="#L1344">1344</a></span>
+<span id="L1345"><a href="#L1345">1345</a>            var lineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L1346"><a href="#L1346">1346</a>            if (lineID &gt; 0)</span>
+<span id="L1347"><a href="#L1347">1347</a>            {</span>
+<span id="L1348"><a href="#L1348">1348</a>                if (index == (int) MeshLineDefine.ArmyLineIndexType.Move)</span>
+<span id="L1349"><a href="#L1349">1349</a>                {</span>
+<span id="L1350"><a href="#L1350">1350</a>                    m_moveLineCount--;</span>
+<span id="L1351"><a href="#L1351">1351</a>                }</span>
+<span id="L1352"><a href="#L1352">1352</a>                else if (index &gt;= (int) MeshLineDefine.ArmyLineIndexType.Chaser)</span>
+<span id="L1353"><a href="#L1353">1353</a>                {</span>
+<span id="L1354"><a href="#L1354">1354</a>                    m_chaserLineCount--;</span>
+<span id="L1355"><a href="#L1355">1355</a>                }</span>
+<span id="L1356"><a href="#L1356">1356</a></span>
+<span id="L1357"><a href="#L1357">1357</a>                DeleteLineEffect(lineID);</span>
+<span id="L1358"><a href="#L1358">1358</a>                indexList[index] = ArmyEntityConst.ErrorId;</span>
+<span id="L1359"><a href="#L1359">1359</a>                GameCore.MeshLineMgr.DeleteLine((int) lineID, index == (int) MeshLineDefine.ArmyLineIndexType.Preview &amp;&amp; ArmyEntityConst.PreviewArmyLineFadeOut);</span>
+<span id="L1360"><a href="#L1360">1360</a></span>
+<span id="L1361"><a href="#L1361">1361</a>                return true;</span>
+<span id="L1362"><a href="#L1362">1362</a>            }</span>
+<span id="L1363"><a href="#L1363">1363</a></span>
+<span id="L1364"><a href="#L1364">1364</a>            return false;</span>
+<span id="L1365"><a href="#L1365">1365</a>        }</span>
+<span id="L1366"><a href="#L1366">1366</a></span>
+<span id="L1367"><a href="#L1367">1367</a>        private void RefreshArmyLine(long armyEntityID, int index, List&lt;float3&gt; pathPoints, float speed = -1, int colorType = -1)</span>
+<span id="L1368"><a href="#L1368">1368</a>        {</span>
+<span id="L1369"><a href="#L1369">1369</a>            var lineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L1370"><a href="#L1370">1370</a>            if (lineID &gt; 0)</span>
+<span id="L1371"><a href="#L1371">1371</a>            {</span>
+<span id="L1372"><a href="#L1372">1372</a>                if (CanUseStraightArmyLineMode((MeshLineDefine.ArmyLineIndexType) index, pathPoints.Count))</span>
+<span id="L1373"><a href="#L1373">1373</a>                {</span>
+<span id="L1374"><a href="#L1374">1374</a>                    if (colorType &gt;= 0)</span>
+<span id="L1375"><a href="#L1375">1375</a>                    {</span>
+<span id="L1376"><a href="#L1376">1376</a>                        GameCore.MeshLineMgr.RefreshLineColor((int) lineID, colorType);</span>
+<span id="L1377"><a href="#L1377">1377</a>                    }</span>
+<span id="L1378"><a href="#L1378">1378</a>                    GameCore.MeshLineMgr.RefreshStraightLinePos((int) lineID, pathPoints[0], pathPoints[1]);</span>
+<span id="L1379"><a href="#L1379">1379</a>                }</span>
+<span id="L1380"><a href="#L1380">1380</a>                else</span>
+<span id="L1381"><a href="#L1381">1381</a>                {</span>
+<span id="L1382"><a href="#L1382">1382</a>                    GameCore.MeshLineMgr.RefreshLine((int) lineID, pathPoints, speed, colorType);</span>
+<span id="L1383"><a href="#L1383">1383</a>                }</span>
+<span id="L1384"><a href="#L1384">1384</a>            }</span>
+<span id="L1385"><a href="#L1385">1385</a>        }</span>
+<span id="L1386"><a href="#L1386">1386</a></span>
+<span id="L1387"><a href="#L1387">1387</a>        public void RefreshArmyLineColor(long armyEntityID, int index, int color)</span>
+<span id="L1388"><a href="#L1388">1388</a>        {</span>
+<span id="L1389"><a href="#L1389">1389</a>            var lineID = GetArmyLineID(armyEntityID, index);</span>
+<span id="L1390"><a href="#L1390">1390</a>            GameCore.MeshLineMgr.RefreshLineColor((int) lineID, color);</span>
+<span id="L1391"><a href="#L1391">1391</a></span>
+<span id="L1392"><a href="#L1392">1392</a>            if (index != (int) MeshLineDefine.ArmyLineIndexType.Move)</span>
+<span id="L1393"><a href="#L1393">1393</a>            {</span>
+<span id="L1394"><a href="#L1394">1394</a>                return;</span>
+<span id="L1395"><a href="#L1395">1395</a>            }</span>
+<span id="L1396"><a href="#L1396">1396</a></span>
+<span id="L1397"><a href="#L1397">1397</a>            // 同一部队的实体线、三方通知线和缩放线必须使用同一颜色。</span>
+<span id="L1398"><a href="#L1398">1398</a>            foreach (var pair in m_dictEntityMoveLineIds)</span>
+<span id="L1399"><a href="#L1399">1399</a>            {</span>
+<span id="L1400"><a href="#L1400">1400</a>                if (pair.Value.TryGetValue(armyEntityID, out var entityLineId) &amp;&amp;</span>
+<span id="L1401"><a href="#L1401">1401</a>                    m_dictEntityMoveLineDatas.TryGetValue(entityLineId, out var moveLineData) &amp;&amp;</span>
+<span id="L1402"><a href="#L1402">1402</a>                    moveLineData.color != color)</span>
+<span id="L1403"><a href="#L1403">1403</a>                {</span>
+<span id="L1404"><a href="#L1404">1404</a>                    moveLineData.color = color;</span>
+<span id="L1405"><a href="#L1405">1405</a>                    m_dictEntityMoveLineDatas[entityLineId] = moveLineData;</span>
+<span id="L1406"><a href="#L1406">1406</a>                    GameCore.MeshLineMgr.RefreshLineColor(entityLineId, color);</span>
+<span id="L1407"><a href="#L1407">1407</a>                }</span>
+<span id="L1408"><a href="#L1408">1408</a>            }</span>
+<span id="L1409"><a href="#L1409">1409</a></span>
+<span id="L1410"><a href="#L1410">1410</a>            m_pendingCreateQueue.RefreshColor(armyEntityID, (int) MeshLineDefine.EntityMoveLineType.EntityMoveLineNtf, color);</span>
+<span id="L1411"><a href="#L1411">1411</a>            m_pendingCreateQueue.RefreshColor(armyEntityID, (int) MeshLineDefine.EntityMoveLineType.InfiniteZoom, color);</span>
+<span id="L1412"><a href="#L1412">1412</a>        }</span>
+<span id="L1413"><a href="#L1413">1413</a></span>
+<span id="L1414"><a href="#L1414">1414</a>        private long GetArmyLineID(long armyEntityID, int index)</span>
+<span id="L1415"><a href="#L1415">1415</a>        {</span>
+<span id="L1416"><a href="#L1416">1416</a>            if (!m_armyToLineDict.TryGetValue(armyEntityID, out var indexList) || index &lt; 0 || index &gt;= indexList.Count)</span>
+<span id="L1417"><a href="#L1417">1417</a>            {</span>
+<span id="L1418"><a href="#L1418">1418</a>                return ArmyEntityConst.ErrorId;</span>
+<span id="L1419"><a href="#L1419">1419</a>            }</span>
+<span id="L1420"><a href="#L1420">1420</a></span>
+<span id="L1421"><a href="#L1421">1421</a>            return indexList[index];</span>
+<span id="L1422"><a href="#L1422">1422</a>        }</span>
+<span id="L1423"><a href="#L1423">1423</a></span>
+<span id="L1424"><a href="#L1424">1424</a>        private long GetArmyEntityID(long moveLineID)</span>
+<span id="L1425"><a href="#L1425">1425</a>        {</span>
+<span id="L1426"><a href="#L1426">1426</a>            foreach (var item in m_armyToLineDict)</span>
+<span id="L1427"><a href="#L1427">1427</a>            {</span>
+<span id="L1428"><a href="#L1428">1428</a>                if (moveLineID == item.Value[(int) MeshLineDefine.ArmyLineIndexType.Move])</span>
+<span id="L1429"><a href="#L1429">1429</a>                {</span>
+<span id="L1430"><a href="#L1430">1430</a>                    return item.Key;</span>
+<span id="L1431"><a href="#L1431">1431</a>                }</span>
+<span id="L1432"><a href="#L1432">1432</a>            }</span>
+<span id="L1433"><a href="#L1433">1433</a>            </span>
+<span id="L1434"><a href="#L1434">1434</a>            return 0;</span>
+<span id="L1435"><a href="#L1435">1435</a>        }</span>
+<span id="L1436"><a href="#L1436">1436</a>        #endregion</span>
+<span id="L1437"><a href="#L1437">1437</a></span>
+<span id="L1438"><a href="#L1438">1438</a>        #region 纯路点数据创建的行军线</span>
+<span id="L1439"><a href="#L1439">1439</a></span>
+<span id="L1440"><a href="#L1440">1440</a>        /// &lt;summary&gt;</span>
+<span id="L1441"><a href="#L1441">1441</a>        /// 删除立即生效，并取消同类型的待创建项，避免分帧后复活已离开视野的线。</span>
+<span id="L1442"><a href="#L1442">1442</a>        /// &lt;/summary&gt;</span>
+<span id="L1443"><a href="#L1443">1443</a>        public void EnqueueDeleteEntityMoveLine(long entityId, int moveLineType)</span>
+<span id="L1444"><a href="#L1444">1444</a>        {</span>
+<span id="L1445"><a href="#L1445">1445</a>            DeleteEntityMoveLine(entityId, moveLineType);</span>
+<span id="L1446"><a href="#L1446">1446</a>        }</span>
+<span id="L1447"><a href="#L1447">1447</a></span>
+<span id="L1448"><a href="#L1448">1448</a>        public void EnqueueCreateEntityMoveLine(MeshLineDefine.EntityMoveLineCreateParam createParam)</span>
+<span id="L1449"><a href="#L1449">1449</a>        {</span>
+<span id="L1450"><a href="#L1450">1450</a>            if (!ArmyEntityConst.EnableMoveLineCreateQueue)</span>
+<span id="L1451"><a href="#L1451">1451</a>            {</span>
+<span id="L1452"><a href="#L1452">1452</a>                CreateEntityMoveLine(createParam);</span>
+<span id="L1453"><a href="#L1453">1453</a>                return;</span>
+<span id="L1454"><a href="#L1454">1454</a>            }</span>
+<span id="L1455"><a href="#L1455">1455</a>            m_pendingCreateQueue.Enqueue(createParam);</span>
+<span id="L1456"><a href="#L1456">1456</a>            RefreshArmyLineColor(createParam.entityId, (int) MeshLineDefine.ArmyLineIndexType.Move, createParam.color);</span>
+<span id="L1457"><a href="#L1457">1457</a>        }</span>
+<span id="L1458"><a href="#L1458">1458</a></span>
+<span id="L1459"><a href="#L1459">1459</a>        private void ProcessPendingMoveLineQueue()</span>
+<span id="L1460"><a href="#L1460">1460</a>        {</span>
+<span id="L1461"><a href="#L1461">1461</a>            LastMoveLineCreateProcessedCount = 0;</span>
+<span id="L1462"><a href="#L1462">1462</a>            LastMoveLineCreateMilliseconds = 0;</span>
+<span id="L1463"><a href="#L1463">1463</a>            if (m_pendingCreateQueue.Count == 0) return;</span>
+<span id="L1464"><a href="#L1464">1464</a></span>
+<span id="L1465"><a href="#L1465">1465</a>            // 运行中关闭开关只影响新请求，旧积压继续按预算排空；不丢失，也不整批阻塞当前帧。</span>
+<span id="L1466"><a href="#L1466">1466</a>            int maxPerFrame = System.Math.Max(1, ArmyEntityConst.MoveLineCreatePerFrame);</span>
+<span id="L1467"><a href="#L1467">1467</a>            double budgetMilliseconds = System.Math.Max(0, ArmyEntityConst.MoveLineCreateBudgetMilliseconds);</span>
+<span id="L1468"><a href="#L1468">1468</a>            long start = System.Diagnostics.Stopwatch.GetTimestamp();</span>
+<span id="L1469"><a href="#L1469">1469</a>            using (s_processMoveLineQueueMarker.Auto())</span>
+<span id="L1470"><a href="#L1470">1470</a>            {</span>
+<span id="L1471"><a href="#L1471">1471</a>                while (LastMoveLineCreateProcessedCount &lt; maxPerFrame &amp;&amp; m_pendingCreateQueue.TryDequeue(out var param))</span>
+<span id="L1472"><a href="#L1472">1472</a>                {</span>
+<span id="L1473"><a href="#L1473">1473</a>                    // 与同步 Lua 入口一致：单条异常不阻断地图更新或后续请求。</span>
+<span id="L1474"><a href="#L1474">1474</a>                    try</span>
+<span id="L1475"><a href="#L1475">1475</a>                    {</span>
+<span id="L1476"><a href="#L1476">1476</a>                        if (param.endTick &gt; 0 &amp;&amp; param.endTick &lt;= TimeUtil.ServerGameTick)</span>
+<span id="L1477"><a href="#L1477">1477</a>                        {</span>
+<span id="L1478"><a href="#L1478">1478</a>                            DeleteEntityMoveLine(param.entityId, param.moveLineType);</span>
+<span id="L1479"><a href="#L1479">1479</a>                        }</span>
+<span id="L1480"><a href="#L1480">1480</a>                        else</span>
+<span id="L1481"><a href="#L1481">1481</a>                        {</span>
+<span id="L1482"><a href="#L1482">1482</a>                            CreateEntityMoveLine(param);</span>
+<span id="L1483"><a href="#L1483">1483</a>                        }</span>
+<span id="L1484"><a href="#L1484">1484</a>                    }</span>
+<span id="L1485"><a href="#L1485">1485</a>                    catch (Exception e) when (CheckNullReference)</span>
+<span id="L1486"><a href="#L1486">1486</a>                    {</span>
+<span id="L1487"><a href="#L1487">1487</a>                        Log.garyLogError(e.ToString());</span>
+<span id="L1488"><a href="#L1488">1488</a>                    }</span>
+<span id="L1489"><a href="#L1489">1489</a>                    LastMoveLineCreateProcessedCount++;</span>
+<span id="L1490"><a href="#L1490">1490</a>                    LastMoveLineCreateMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - start) *</span>
+<span id="L1491"><a href="#L1491">1491</a>                        1000.0 / System.Diagnostics.Stopwatch.Frequency;</span>
+<span id="L1492"><a href="#L1492">1492</a>                    // 至少处理一条；一条创建不可中断，可能超过软时间预算。</span>
+<span id="L1493"><a href="#L1493">1493</a>                    if (budgetMilliseconds &gt; 0 &amp;&amp; LastMoveLineCreateMilliseconds &gt;= budgetMilliseconds) break;</span>
+<span id="L1494"><a href="#L1494">1494</a>                }</span>
+<span id="L1495"><a href="#L1495">1495</a>            }</span>
+<span id="L1496"><a href="#L1496">1496</a>        }</span>
+<span id="L1497"><a href="#L1497">1497</a></span>
+<span id="L1498"><a href="#L1498">1498</a>        /// &lt;summary&gt;</span>
+<span id="L1499"><a href="#L1499">1499</a>        /// 参数传递待优化</span>
+<span id="L1500"><a href="#L1500">1500</a>        /// &lt;/summary&gt;</span>
+<span id="L1501"><a href="#L1501">1501</a>        /// &lt;param name=&quot;createParam&quot;&gt;&lt;/param&gt;</span>
+<span id="L1502"><a href="#L1502">1502</a>        public void CreateEntityMoveLine(MeshLineDefine.EntityMoveLineCreateParam createParam)</span>
+<span id="L1503"><a href="#L1503">1503</a>        {</span>
+<span id="L1504"><a href="#L1504">1504</a>            DeleteEntityMoveLine(createParam.entityId, createParam.moveLineType);</span>
+<span id="L1505"><a href="#L1505">1505</a>            if (createParam.xArray == null || createParam.yArray == null)</span>
+<span id="L1506"><a href="#L1506">1506</a>            {</span>
+<span id="L1507"><a href="#L1507">1507</a>                Log.garyLogError($&quot;CreateEntityMoveLine error, pathPoint exception - xArray is null: {createParam.xArray == null}, yArray is null: {createParam.yArray == null}&quot;);</span>
+<span id="L1508"><a href="#L1508">1508</a>                return;</span>
+<span id="L1509"><a href="#L1509">1509</a>            }</span>
+<span id="L1510"><a href="#L1510">1510</a></span>
+<span id="L1511"><a href="#L1511">1511</a>            if (!m_dictEntityMoveLineIds.TryGetValue(createParam.moveLineType, out var moveLineIds))</span>
+<span id="L1512"><a href="#L1512">1512</a>            {</span>
+<span id="L1513"><a href="#L1513">1513</a>                m_dictEntityMoveLineIds.Add(createParam.moveLineType, moveLineIds = new Dictionary&lt;long, int&gt;());</span>
+<span id="L1514"><a href="#L1514">1514</a>            }</span>
+<span id="L1515"><a href="#L1515">1515</a></span>
+<span id="L1516"><a href="#L1516">1516</a>            if (createParam.xArray.Length &lt;= 1 || createParam.yArray.Length &lt;= 1 || createParam.xArray.Length != createParam.yArray.Length)</span>
+<span id="L1517"><a href="#L1517">1517</a>            {</span>
+<span id="L1518"><a href="#L1518">1518</a>                Log.garyLogError($&quot;CreateEntityMoveLine error, pathPoint not match - xArray: {createParam.xArray.Length}, yArray: {createParam.yArray.Length}&quot;);</span>
+<span id="L1519"><a href="#L1519">1519</a>                return;</span>
+<span id="L1520"><a href="#L1520">1520</a>            }</span>
+<span id="L1521"><a href="#L1521">1521</a></span>
+<span id="L1522"><a href="#L1522">1522</a>            if (createParam.tickOffsets != null &amp;&amp; createParam.tickOffsets.Length &gt; 0 &amp;&amp; createParam.tickOffsets.Length != createParam.xArray.Length)</span>
+<span id="L1523"><a href="#L1523">1523</a>            {</span>
+<span id="L1524"><a href="#L1524">1524</a>                Log.garyLogError($&quot;CreateEntityMoveLine error, tickOffsetsInValid - xArray: {createParam.xArray.Length}, yArray: {createParam.yArray.Length}, tickOffsets: {createParam.tickOffsets.Length}&quot;);</span>
+<span id="L1525"><a href="#L1525">1525</a>                return;</span>
+<span id="L1526"><a href="#L1526">1526</a>            }</span>
+<span id="L1527"><a href="#L1527">1527</a></span>
+<span id="L1528"><a href="#L1528">1528</a>            // 在申请池化列表前校验特殊路点数组，避免后续转换时空引用或越界。</span>
+<span id="L1529"><a href="#L1529">1529</a>            var pathTypeXArray = createParam.pathTypeXArray;</span>
+<span id="L1530"><a href="#L1530">1530</a>            if (pathTypeXArray != null &amp;&amp; pathTypeXArray.Length &gt; 0 &amp;&amp;</span>
+<span id="L1531"><a href="#L1531">1531</a>                (pathTypeXArray.Length != createParam.xArray.Length ||</span>
+<span id="L1532"><a href="#L1532">1532</a>                 createParam.pathTypeYArray == null || createParam.pathTypeYArray.Length != pathTypeXArray.Length ||</span>
+<span id="L1533"><a href="#L1533">1533</a>                 createParam.pathTypeZArray == null || createParam.pathTypeZArray.Length != pathTypeXArray.Length ||</span>
+<span id="L1534"><a href="#L1534">1534</a>                 createParam.pathTypeWArray == null || createParam.pathTypeWArray.Length != pathTypeXArray.Length))</span>
+<span id="L1535"><a href="#L1535">1535</a>            {</span>
+<span id="L1536"><a href="#L1536">1536</a>                Log.garyLogError($&quot;CreateEntityMoveLine error, path types not match. entityId={createParam.entityId}&quot;);</span>
+<span id="L1537"><a href="#L1537">1537</a>                return;</span>
+<span id="L1538"><a href="#L1538">1538</a>            }</span>
+<span id="L1539"><a href="#L1539">1539</a></span>
+<span id="L1540"><a href="#L1540">1540</a>            var power = (int) Mathf.Log((float) createParam.xArray.Length, 2.0f) + 1;</span>
+<span id="L1541"><a href="#L1541">1541</a>            var pathPointList = GameCore.ListPool.Get&lt;float3&gt;(power);</span>
+<span id="L1542"><a href="#L1542">1542</a>            for (int i = 0; i &lt; createParam.xArray.Length; i++)</span>
+<span id="L1543"><a href="#L1543">1543</a>            {</span>
+<span id="L1544"><a href="#L1544">1544</a>                float3 pos = MapCoordUtil.ConvertCellToWorldPos(createParam.xArray[i], createParam.yArray[i]);</span>
+<span id="L1545"><a href="#L1545">1545</a>                pos.y = 0.1f;</span>
+<span id="L1546"><a href="#L1546">1546</a>                pathPointList.Add(pos);</span>
+<span id="L1547"><a href="#L1547">1547</a>            }</span>
+<span id="L1548"><a href="#L1548">1548</a></span>
+<span id="L1549"><a href="#L1549">1549</a>            List&lt;int&gt; tickOffsetList = null;</span>
+<span id="L1550"><a href="#L1550">1550</a>            if (createParam.tickOffsets != null &amp;&amp; createParam.tickOffsets.Length &gt; 0)</span>
+<span id="L1551"><a href="#L1551">1551</a>            {</span>
+<span id="L1552"><a href="#L1552">1552</a>                tickOffsetList = GameCore.ListPool.Get&lt;int&gt;(power);</span>
+<span id="L1553"><a href="#L1553">1553</a>                tickOffsetList.AddRange(createParam.tickOffsets);</span>
+<span id="L1554"><a href="#L1554">1554</a>            }</span>
+<span id="L1555"><a href="#L1555">1555</a>            </span>
+<span id="L1556"><a href="#L1556">1556</a>            //pathType </span>
+<span id="L1557"><a href="#L1557">1557</a>            List&lt;Vector4&gt; pathTypesList = null;</span>
+<span id="L1558"><a href="#L1558">1558</a>            if (pathTypeXArray != null &amp;&amp; pathTypeXArray.Length &gt; 0)</span>
+<span id="L1559"><a href="#L1559">1559</a>            {</span>
+<span id="L1560"><a href="#L1560">1560</a>                pathTypesList = GameCore.ListPool.Get&lt;Vector4&gt;(power);</span>
+<span id="L1561"><a href="#L1561">1561</a>                for (var i = 0; i &lt; pathTypeXArray.Length; i++)</span>
+<span id="L1562"><a href="#L1562">1562</a>                {</span>
+<span id="L1563"><a href="#L1563">1563</a>                    pathTypesList.Add(new Vector4(pathTypeXArray[i], createParam.pathTypeYArray[i], </span>
+<span id="L1564"><a href="#L1564">1564</a>                        createParam.pathTypeZArray[i], createParam.pathTypeWArray[i]));</span>
+<span id="L1565"><a href="#L1565">1565</a>                }</span>
+<span id="L1566"><a href="#L1566">1566</a>            }</span>
+<span id="L1567"><a href="#L1567">1567</a></span>
+<span id="L1568"><a href="#L1568">1568</a>            var startPos = pathPointList[0];</span>
+<span id="L1569"><a href="#L1569">1569</a>            var endPos = pathPointList[pathPointList.Count - 1];</span>
+<span id="L1570"><a href="#L1570">1570</a></span>
+<span id="L1571"><a href="#L1571">1571</a>            var moveLineData = new PureMoveLineData()</span>
+<span id="L1572"><a href="#L1572">1572</a>            {</span>
+<span id="L1573"><a href="#L1573">1573</a>                entityId       = createParam.entityId,</span>
+<span id="L1574"><a href="#L1574">1574</a>                pathPointList  = pathPointList,</span>
+<span id="L1575"><a href="#L1575">1575</a>                tickOffsetList = tickOffsetList,</span>
+<span id="L1576"><a href="#L1576">1576</a>                startTick      = createParam.startTick,</span>
+<span id="L1577"><a href="#L1577">1577</a>                endTick        = createParam.endTick,</span>
+<span id="L1578"><a href="#L1578">1578</a>                color          = createParam.color,</span>
+<span id="L1579"><a href="#L1579">1579</a>                pathTypes      = pathTypesList,</span>
+<span id="L1580"><a href="#L1580">1580</a></span>
+<span id="L1581"><a href="#L1581">1581</a>                curPos         = startPos,</span>
+<span id="L1582"><a href="#L1582">1582</a>                startPos       = startPos,</span>
+<span id="L1583"><a href="#L1583">1583</a>                endPos         = endPos,</span>
+<span id="L1584"><a href="#L1584">1584</a></span>
+<span id="L1585"><a href="#L1585">1585</a>                curPathIndex   = 0,</span>
+<span id="L1586"><a href="#L1586">1586</a>                lineId         = 0,</span>
+<span id="L1587"><a href="#L1587">1587</a>                calTerrainHeight = createParam.autoCalTerrainHeight,</span>
+<span id="L1588"><a href="#L1588">1588</a>            };</span>
+<span id="L1589"><a href="#L1589">1589</a>            </span>
+<span id="L1590"><a href="#L1590">1590</a>            RefreshEntityMoveLineCurPos(ref moveLineData);</span>
+<span id="L1591"><a href="#L1591">1591</a>            if (!moveLineData.isPathValid)</span>
+<span id="L1592"><a href="#L1592">1592</a>            {</span>
+<span id="L1593"><a href="#L1593">1593</a>                GameCore.ListPool.Recycle(pathPointList);</span>
+<span id="L1594"><a href="#L1594">1594</a>                if (tickOffsetList != null) GameCore.ListPool.Recycle(tickOffsetList);</span>
+<span id="L1595"><a href="#L1595">1595</a>                if (pathTypesList != null) GameCore.ListPool.Recycle(pathTypesList);</span>
+<span id="L1596"><a href="#L1596">1596</a>                return;</span>
+<span id="L1597"><a href="#L1597">1597</a>            }</span>
+<span id="L1598"><a href="#L1598">1598</a></span>
+<span id="L1599"><a href="#L1599">1599</a>            var useDefaultMesh = createParam.color == (int) MeshColor.Green;</span>
+<span id="L1600"><a href="#L1600">1600</a>            int lineId;</span>
+<span id="L1601"><a href="#L1601">1601</a>            if (ArmyEntityConst.MeshLine_UseStraightLineMode)</span>
+<span id="L1602"><a href="#L1602">1602</a>            {</span>
+<span id="L1603"><a href="#L1603">1603</a>                lineId = GameCore.MeshLineMgr.CreateStraightLine(moveLineData.curPos, moveLineData.endPos, (int) MeshLineDefine.MeshLineUVIndex.StraightLineWhite, </span>
+<span id="L1604"><a href="#L1604">1604</a>                    createParam.color, createParam.startTick, createParam.endTick, ArmyEntityConst.ArmyLineSpeed, -1f, -1f, useDefaultMesh);</span>
+<span id="L1605"><a href="#L1605">1605</a>            }</span>
+<span id="L1606"><a href="#L1606">1606</a>            else</span>
+<span id="L1607"><a href="#L1607">1607</a>            {</span>
+<span id="L1608"><a href="#L1608">1608</a>                lineId = GameCore.MeshLineMgr.CreateLine(moveLineData.curPos, moveLineData.endPos, (int) MeshLineDefine.MeshLineUVIndex.StraightLineWhite, </span>
+<span id="L1609"><a href="#L1609">1609</a>                    createParam.color, createParam.startTick, createParam.endTick, ArmyEntityConst.ArmyLineSpeed, false, -1, -1f, null, useDefaultMesh);</span>
+<span id="L1610"><a href="#L1610">1610</a>            }</span>
+<span id="L1611"><a href="#L1611">1611</a></span>
+<span id="L1612"><a href="#L1612">1612</a>            if (lineId &lt;= ArmyEntityConst.ErrorId)</span>
+<span id="L1613"><a href="#L1613">1613</a>            {</span>
+<span id="L1614"><a href="#L1614">1614</a>                if (!m_loggedMeshLineFull)</span>
+<span id="L1615"><a href="#L1615">1615</a>                {</span>
+<span id="L1616"><a href="#L1616">1616</a>                    m_loggedMeshLineFull = true;</span>
+<span id="L1617"><a href="#L1617">1617</a>                    Log.garyLogError($&quot;CreateEntityMoveLine: MeshLine buffer full, line creation failed. entityId={createParam.entityId}, dictCount={m_dictEntityMoveLineDatas.Count}&quot;);</span>
+<span id="L1618"><a href="#L1618">1618</a>                }</span>
+<span id="L1619"><a href="#L1619">1619</a>                GameCore.ListPool.Recycle(pathPointList);</span>
+<span id="L1620"><a href="#L1620">1620</a>                if (tickOffsetList != null) GameCore.ListPool.Recycle(tickOffsetList);</span>
+<span id="L1621"><a href="#L1621">1621</a>                if (pathTypesList != null) GameCore.ListPool.Recycle(pathTypesList);</span>
+<span id="L1622"><a href="#L1622">1622</a>                return;</span>
+<span id="L1623"><a href="#L1623">1623</a>            }</span>
+<span id="L1624"><a href="#L1624">1624</a></span>
+<span id="L1625"><a href="#L1625">1625</a>            moveLineData.lineId = lineId;</span>
+<span id="L1626"><a href="#L1626">1626</a>            moveLineData.lastRefreshedCurPos = moveLineData.curPos;</span>
+<span id="L1627"><a href="#L1627">1627</a>            m_dictEntityMoveLineDatas.Add(lineId, moveLineData);</span>
+<span id="L1628"><a href="#L1628">1628</a></span>
+<span id="L1629"><a href="#L1629">1629</a>            var finalPos = endPos;</span>
+<span id="L1630"><a href="#L1630">1630</a>            finalPos.y = MapCoordUtil.GetTerrainHeight(finalPos);</span>
+<span id="L1631"><a href="#L1631">1631</a>            m_nativeMapFinalPosLineId.Add(lineId, true);</span>
+<span id="L1632"><a href="#L1632">1632</a>            m_nativeMapFinalPosInfo.Add(lineId, new FinalExistInViewInfo() { finalPos = finalPos, isInView = false, gridIndex = -1 });</span>
+<span id="L1633"><a href="#L1633">1633</a></span>
+<span id="L1634"><a href="#L1634">1634</a>            moveLineIds.Add(createParam.entityId, lineId);</span>
+<span id="L1635"><a href="#L1635">1635</a>            RefreshArmyLineColor(createParam.entityId, (int) MeshLineDefine.ArmyLineIndexType.Move, createParam.color);</span>
+<span id="L1636"><a href="#L1636">1636</a>        }</span>
+<span id="L1637"><a href="#L1637">1637</a></span>
+<span id="L1638"><a href="#L1638">1638</a>        //刷新PureMoveLineData的坐标数据</span>
+<span id="L1639"><a href="#L1639">1639</a>        private void RefreshEntityMoveLineCurPos(ref PureMoveLineData moveLineData)</span>
+<span id="L1640"><a href="#L1640">1640</a>        {</span>
+<span id="L1641"><a href="#L1641">1641</a>            var curGameTick = TimeUtil.ServerGameTick;</span>
+<span id="L1642"><a href="#L1642">1642</a>            if (moveLineData.tickOffsetList == null || moveLineData.tickOffsetList.Count == 0)</span>
+<span id="L1643"><a href="#L1643">1643</a>            {</span>
+<span id="L1644"><a href="#L1644">1644</a>                if (moveLineData.pathPointList.Count &lt; 2)</span>
+<span id="L1645"><a href="#L1645">1645</a>                {</span>
+<span id="L1646"><a href="#L1646">1646</a>                    Log.garyLogWarning($&quot;RefreshEntityMoveLineCurPos oveLineData.pathPointList.Count({moveLineData.pathPointList.Count}) &lt; 2&quot;);</span>
+<span id="L1647"><a href="#L1647">1647</a>                    moveLineData.isPathValid = false;</span>
+<span id="L1648"><a href="#L1648">1648</a>                }</span>
+<span id="L1649"><a href="#L1649">1649</a>                else</span>
+<span id="L1650"><a href="#L1650">1650</a>                {</span>
+<span id="L1651"><a href="#L1651">1651</a>                    if (moveLineData.endTick &lt;= curGameTick)</span>
+<span id="L1652"><a href="#L1652">1652</a>                    {</span>
+<span id="L1653"><a href="#L1653">1653</a>                        moveLineData.isPathValid = false;</span>
+<span id="L1654"><a href="#L1654">1654</a>                    }</span>
+<span id="L1655"><a href="#L1655">1655</a>                    else</span>
+<span id="L1656"><a href="#L1656">1656</a>                    {</span>
+<span id="L1657"><a href="#L1657">1657</a>                        var deltaTick = moveLineData.endTick - moveLineData.startTick;</span>
+<span id="L1658"><a href="#L1658">1658</a>                        if (deltaTick &gt; 0)</span>
+<span id="L1659"><a href="#L1659">1659</a>                        {</span>
+<span id="L1660"><a href="#L1660">1660</a>                            if (moveLineData.calTerrainHeight)</span>
+<span id="L1661"><a href="#L1661">1661</a>                            {</span>
+<span id="L1662"><a href="#L1662">1662</a>                                moveLineData.endPos.y = MapCoordUtil.GetTerrainHeight(moveLineData.endPos);</span>
+<span id="L1663"><a href="#L1663">1663</a>                                moveLineData.startPos.y = MapCoordUtil.GetTerrainHeight(moveLineData.startPos);</span>
+<span id="L1664"><a href="#L1664">1664</a>                            }</span>
+<span id="L1665"><a href="#L1665">1665</a>                            var ratio = (curGameTick - moveLineData.startTick) * 1.0f / deltaTick;</span>
+<span id="L1666"><a href="#L1666">1666</a>                            var curPos = moveLineData.startPos + (moveLineData.endPos - moveLineData.startPos) * ratio;</span>
+<span id="L1667"><a href="#L1667">1667</a>                            moveLineData.curPos = curPos;</span>
+<span id="L1668"><a href="#L1668">1668</a>                            </span>
+<span id="L1669"><a href="#L1669">1669</a>                            moveLineData.isPathValid = true;</span>
+<span id="L1670"><a href="#L1670">1670</a>                        }</span>
+<span id="L1671"><a href="#L1671">1671</a>                        else</span>
+<span id="L1672"><a href="#L1672">1672</a>                        {</span>
+<span id="L1673"><a href="#L1673">1673</a>                            moveLineData.isPathValid = false;</span>
+<span id="L1674"><a href="#L1674">1674</a>                        }</span>
+<span id="L1675"><a href="#L1675">1675</a>                    }</span>
+<span id="L1676"><a href="#L1676">1676</a>                }</span>
+<span id="L1677"><a href="#L1677">1677</a>            }</span>
+<span id="L1678"><a href="#L1678">1678</a>            else</span>
+<span id="L1679"><a href="#L1679">1679</a>            {</span>
+<span id="L1680"><a href="#L1680">1680</a>                if (moveLineData.tickOffsetList.Count == moveLineData.pathPointList.Count)</span>
+<span id="L1681"><a href="#L1681">1681</a>                {</span>
+<span id="L1682"><a href="#L1682">1682</a>                    if (moveLineData.curPathIndex &gt;= 0)</span>
+<span id="L1683"><a href="#L1683">1683</a>                    {</span>
+<span id="L1684"><a href="#L1684">1684</a>                        // 将 tickOffsetList + startTick 转换为 reachPointTimeStamps（复用静态列表，无 GC）</span>
+<span id="L1685"><a href="#L1685">1685</a>                        s_reachPointTimeStamps.Clear();</span>
+<span id="L1686"><a href="#L1686">1686</a>                        for (int i = 0; i &lt; moveLineData.tickOffsetList.Count; i++)</span>
+<span id="L1687"><a href="#L1687">1687</a>                        {</span>
+<span id="L1688"><a href="#L1688">1688</a>                            s_reachPointTimeStamps.Add(moveLineData.startTick + moveLineData.tickOffsetList[i]);</span>
+<span id="L1689"><a href="#L1689">1689</a>                        }</span>
+<span id="L1690"><a href="#L1690">1690</a>                        if (moveLineData.calTerrainHeight)</span>
+<span id="L1691"><a href="#L1691">1691</a>                        {</span>
+<span id="L1692"><a href="#L1692">1692</a>                            moveLineData.endPos.y = MapCoordUtil.GetTerrainHeight(moveLineData.endPos);</span>
+<span id="L1693"><a href="#L1693">1693</a>                            moveLineData.startPos.y = MapCoordUtil.GetTerrainHeight(moveLineData.startPos);</span>
+<span id="L1694"><a href="#L1694">1694</a>                        }</span>
+<span id="L1695"><a href="#L1695">1695</a>                        UtilPathPoint.CaculateCurPosByTimestamp(</span>
+<span id="L1696"><a href="#L1696">1696</a>                            out var curPos, out _, out _, out var curTargetIndex,</span>
+<span id="L1697"><a href="#L1697">1697</a>                            moveLineData.pathPointList, s_reachPointTimeStamps, curGameTick,</span>
+<span id="L1698"><a href="#L1698">1698</a>                            moveLineData.pathTypes, out var hasSpPath);</span>
+<span id="L1699"><a href="#L1699">1699</a></span>
+<span id="L1700"><a href="#L1700">1700</a>                        if (moveLineData.calTerrainHeight &amp;&amp; (!hasSpPath))</span>
+<span id="L1701"><a href="#L1701">1701</a>                        {</span>
+<span id="L1702"><a href="#L1702">1702</a>                            curPos.y = MapCoordUtil.GetTerrainHeight(curPos);</span>
+<span id="L1703"><a href="#L1703">1703</a>                        }</span>
+<span id="L1704"><a href="#L1704">1704</a>                        // curTargetIndex 指向目标点，curPathIndex 记录当前所在段的起始点索引</span>
+<span id="L1705"><a href="#L1705">1705</a>                        moveLineData.curPos       = curPos;</span>
+<span id="L1706"><a href="#L1706">1706</a>                        moveLineData.curPathIndex = math.max(0, curTargetIndex - 1);</span>
+<span id="L1707"><a href="#L1707">1707</a>                        moveLineData.isPathValid  = true;</span>
+<span id="L1708"><a href="#L1708">1708</a>                    }</span>
+<span id="L1709"><a href="#L1709">1709</a>                    else</span>
+<span id="L1710"><a href="#L1710">1710</a>                    {</span>
+<span id="L1711"><a href="#L1711">1711</a>                        Log.garyLogError($&quot;RefreshEntityMoveLineCurPos curPathIndex({moveLineData.curPathIndex}) &lt; 0&quot;);</span>
+<span id="L1712"><a href="#L1712">1712</a>                        moveLineData.isPathValid = false;</span>
+<span id="L1713"><a href="#L1713">1713</a>                    }</span>
+<span id="L1714"><a href="#L1714">1714</a>                }</span>
+<span id="L1715"><a href="#L1715">1715</a>                else</span>
+<span id="L1716"><a href="#L1716">1716</a>                {</span>
+<span id="L1717"><a href="#L1717">1717</a>                    Log.garyLogWarning($&quot;RefreshEntityMoveLineCurPos.tickOffsetList.Count({moveLineData.tickOffsetList.Count}) != pathPointList.Count({moveLineData.pathPointList.Count})&quot;);</span>
+<span id="L1718"><a href="#L1718">1718</a>                    moveLineData.isPathValid = false;</span>
+<span id="L1719"><a href="#L1719">1719</a>                }</span>
+<span id="L1720"><a href="#L1720">1720</a>            }</span>
+<span id="L1721"><a href="#L1721">1721</a>        }</span>
+<span id="L1722"><a href="#L1722">1722</a></span>
+<span id="L1723"><a href="#L1723">1723</a>        struct FinalExistInViewInfo</span>
+<span id="L1724"><a href="#L1724">1724</a>        {</span>
+<span id="L1725"><a href="#L1725">1725</a>            public float3 finalPos;</span>
+<span id="L1726"><a href="#L1726">1726</a>            public bool   isInView;</span>
+<span id="L1727"><a href="#L1727">1727</a>            public int    gridIndex;</span>
+<span id="L1728"><a href="#L1728">1728</a>        }</span>
+<span id="L1729"><a href="#L1729">1729</a></span>
+<span id="L1730"><a href="#L1730">1730</a>        [BurstCompile]</span>
+<span id="L1731"><a href="#L1731">1731</a>        private struct CheckFinalPosInViewJob : IJob</span>
+<span id="L1732"><a href="#L1732">1732</a>        {</span>
+<span id="L1733"><a href="#L1733">1733</a>            public NativeArray&lt;int&gt;                           finalPosLineIds;</span>
+<span id="L1734"><a href="#L1734">1734</a>            public NativeHashMap&lt;int, FinalExistInViewInfo&gt;   finalPosViewInfo;</span>
+<span id="L1735"><a href="#L1735">1735</a>            </span>
+<span id="L1736"><a href="#L1736">1736</a>            public float unitBlockWidth;</span>
+<span id="L1737"><a href="#L1737">1737</a>            public float unitBlockHeight;</span>
+<span id="L1738"><a href="#L1738">1738</a>            public float unitRowOffset;</span>
+<span id="L1739"><a href="#L1739">1739</a>            public float unitColOffset;</span>
+<span id="L1740"><a href="#L1740">1740</a>            public int   gridIndexCodef;</span>
+<span id="L1741"><a href="#L1741">1741</a></span>
+<span id="L1742"><a href="#L1742">1742</a>            [ReadOnly] public float4x4  cameraVPMatrix;</span>
+<span id="L1743"><a href="#L1743">1743</a>            // [ReadOnly] public bool      isCameraValid;</span>
+<span id="L1744"><a href="#L1744">1744</a>            </span>
+<span id="L1745"><a href="#L1745">1745</a>            public void Execute()</span>
+<span id="L1746"><a href="#L1746">1746</a>            {</span>
+<span id="L1747"><a href="#L1747">1747</a>                for (int i = 0; i &lt; finalPosLineIds.Length; ++ i)</span>
+<span id="L1748"><a href="#L1748">1748</a>                {</span>
+<span id="L1749"><a href="#L1749">1749</a>                    var lineId = finalPosLineIds[i];</span>
+<span id="L1750"><a href="#L1750">1750</a>                    var info = finalPosViewInfo[lineId];</span>
+<span id="L1751"><a href="#L1751">1751</a>                    info.isInView = OutsideUtilBurst.CheckPosIsInScreenView(cameraVPMatrix, info.finalPos);</span>
+<span id="L1752"><a href="#L1752">1752</a>                    if (info.isInView &amp;&amp; info.gridIndex &lt; 0)</span>
+<span id="L1753"><a href="#L1753">1753</a>                    {</span>
+<span id="L1754"><a href="#L1754">1754</a>                        OutsideUtilBurst.ConvertWorldPosToGrid(info.finalPos, unitBlockWidth, unitBlockHeight, unitRowOffset, unitColOffset, out var grid);</span>
+<span id="L1755"><a href="#L1755">1755</a>                        info.gridIndex = grid.x * gridIndexCodef + grid.y;    </span>
+<span id="L1756"><a href="#L1756">1756</a>                    }</span>
+<span id="L1757"><a href="#L1757">1757</a></span>
+<span id="L1758"><a href="#L1758">1758</a>                    finalPosViewInfo[lineId] = info;</span>
+<span id="L1759"><a href="#L1759">1759</a>                }</span>
+<span id="L1760"><a href="#L1760">1760</a>            }</span>
+<span id="L1761"><a href="#L1761">1761</a>        }</span>
+<span id="L1762"><a href="#L1762">1762</a></span>
+<span id="L1763"><a href="#L1763">1763</a>        private void UpdateFinalPosEffect()</span>
+<span id="L1764"><a href="#L1764">1764</a>        {</span>
+<span id="L1765"><a href="#L1765">1765</a>            var effectMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L1766"><a href="#L1766">1766</a>            int maxCount = System.Math.Max(0, maxFinalPosEffectCount);</span>
+<span id="L1767"><a href="#L1767">1767</a>            m_setExistEffectGridIndex.Clear();</span>
+<span id="L1768"><a href="#L1768">1768</a>            if (maxCount == 0 || m_nativeMapFinalPosInfo.Count() == 0)</span>
+<span id="L1769"><a href="#L1769">1769</a>            {</span>
+<span id="L1770"><a href="#L1770">1770</a>                RecycleFinalPosEffects(effectMgr, maxCount);</span>
+<span id="L1771"><a href="#L1771">1771</a>                return;</span>
+<span id="L1772"><a href="#L1772">1772</a>            }</span>
+<span id="L1773"><a href="#L1773">1773</a></span>
+<span id="L1774"><a href="#L1774">1774</a>            var cameraManager = CameraUtil.GetCurOutsideCameraCtrl();</span>
+<span id="L1775"><a href="#L1775">1775</a>            if (cameraManager == null)</span>
+<span id="L1776"><a href="#L1776">1776</a>            {</span>
+<span id="L1777"><a href="#L1777">1777</a>                return;</span>
+<span id="L1778"><a href="#L1778">1778</a>            }</span>
+<span id="L1779"><a href="#L1779">1779</a></span>
+<span id="L1780"><a href="#L1780">1780</a>            var camera = cameraManager?.GetGameCamera();</span>
+<span id="L1781"><a href="#L1781">1781</a>            if (camera == null)</span>
+<span id="L1782"><a href="#L1782">1782</a>            {</span>
+<span id="L1783"><a href="#L1783">1783</a>                return;</span>
+<span id="L1784"><a href="#L1784">1784</a>            }</span>
+<span id="L1785"><a href="#L1785">1785</a></span>
+<span id="L1786"><a href="#L1786">1786</a>            float4x4 cameraVP = (float4x4) (camera.projectionMatrix * camera.worldToCameraMatrix);</span>
+<span id="L1787"><a href="#L1787">1787</a>            NativeArray&lt;int&gt; lineIdArray = m_nativeMapFinalPosInfo.GetKeyArray(Allocator.TempJob);</span>
+<span id="L1788"><a href="#L1788">1788</a>            try</span>
+<span id="L1789"><a href="#L1789">1789</a>            {</span>
+<span id="L1790"><a href="#L1790">1790</a>                var job = new CheckFinalPosInViewJob</span>
+<span id="L1791"><a href="#L1791">1791</a>                {</span>
+<span id="L1792"><a href="#L1792">1792</a>                    finalPosLineIds = lineIdArray,</span>
+<span id="L1793"><a href="#L1793">1793</a>                    finalPosViewInfo = m_nativeMapFinalPosInfo,</span>
+<span id="L1794"><a href="#L1794">1794</a></span>
+<span id="L1795"><a href="#L1795">1795</a>                    unitBlockWidth            = OutMapDef.UnitBlockWidth,</span>
+<span id="L1796"><a href="#L1796">1796</a>                    unitBlockHeight           = OutMapDef.UnitBlockHeight,</span>
+<span id="L1797"><a href="#L1797">1797</a>                    unitRowOffset             = OutMapDef.UnitRowOffset,</span>
+<span id="L1798"><a href="#L1798">1798</a>                    unitColOffset             = OutMapDef.UnitColOffset,</span>
+<span id="L1799"><a href="#L1799">1799</a>                    gridIndexCodef            = OutMapDef.GridIndexCoef,</span>
+<span id="L1800"><a href="#L1800">1800</a></span>
+<span id="L1801"><a href="#L1801">1801</a>                    cameraVPMatrix            = cameraVP,</span>
+<span id="L1802"><a href="#L1802">1802</a>                    // isCameraValid             = isCameraValid,</span>
+<span id="L1803"><a href="#L1803">1803</a>                };</span>
+<span id="L1804"><a href="#L1804">1804</a>                job.Run();</span>
+<span id="L1805"><a href="#L1805">1805</a></span>
+<span id="L1806"><a href="#L1806">1806</a>                // 先收集可见地格，再回收离开视野或超额的实例，已有可见实例优先保留。</span>
+<span id="L1807"><a href="#L1807">1807</a>                for (int i = 0; i &lt; lineIdArray.Length; ++ i)</span>
+<span id="L1808"><a href="#L1808">1808</a>                {</span>
+<span id="L1809"><a href="#L1809">1809</a>                    var info = m_nativeMapFinalPosInfo[lineIdArray[i]];</span>
+<span id="L1810"><a href="#L1810">1810</a>                    if (info.isInView)</span>
+<span id="L1811"><a href="#L1811">1811</a>                    {</span>
+<span id="L1812"><a href="#L1812">1812</a>                        m_setExistEffectGridIndex.Add(info.gridIndex);</span>
+<span id="L1813"><a href="#L1813">1813</a>                    }</span>
+<span id="L1814"><a href="#L1814">1814</a>                }</span>
+<span id="L1815"><a href="#L1815">1815</a>                int pendingCount = RecycleFinalPosEffects(effectMgr, maxCount);</span>
+<span id="L1816"><a href="#L1816">1816</a>                int curEffectCount = m_dictFinalPosEffect.Count;</span>
+<span id="L1817"><a href="#L1817">1817</a>                int createLimit = System.Math.Max(0, ArmyEntityConst.FinalPosEffectCreatePerFrame);</span>
+<span id="L1818"><a href="#L1818">1818</a>                int createCount = 0;</span>
+<span id="L1819"><a href="#L1819">1819</a>                for (int i = 0; i &lt; lineIdArray.Length; ++ i)</span>
+<span id="L1820"><a href="#L1820">1820</a>                {</span>
+<span id="L1821"><a href="#L1821">1821</a>                    // 同时限制存量、当帧尝试数和未完成加载，避免冷资源就绪后集中实例化。</span>
+<span id="L1822"><a href="#L1822">1822</a>                    if (curEffectCount &gt;= maxCount || createCount &gt;= createLimit || pendingCount &gt;= createLimit)</span>
+<span id="L1823"><a href="#L1823">1823</a>                    {</span>
+<span id="L1824"><a href="#L1824">1824</a>                        break;</span>
+<span id="L1825"><a href="#L1825">1825</a>                    }</span>
+<span id="L1826"><a href="#L1826">1826</a></span>
+<span id="L1827"><a href="#L1827">1827</a>                    var info = m_nativeMapFinalPosInfo[lineIdArray[i]];</span>
+<span id="L1828"><a href="#L1828">1828</a>                    if (info.isInView &amp;&amp; m_setExistEffectGridIndex.Remove(info.gridIndex) &amp;&amp; !m_dictFinalPosEffect.ContainsKey(info.gridIndex))</span>
+<span id="L1829"><a href="#L1829">1829</a>                    {</span>
+<span id="L1830"><a href="#L1830">1830</a>                        createCount++;</span>
+<span id="L1831"><a href="#L1831">1831</a>                        var path = MapModelGoMgr.GetModelPath(ArmyEntityConst.MarchArrowEffectRed);</span>
+<span id="L1832"><a href="#L1832">1832</a>                        var finalID = effectMgr.PlayEffect(path, info.finalPos, Vector3.forward, ArmyEntityConst.MarchLineBigPointScale * Vector3.one, -1, true);</span>
+<span id="L1833"><a href="#L1833">1833</a>                        if (finalID &gt; 0)</span>
+<span id="L1834"><a href="#L1834">1834</a>                        {</span>
+<span id="L1835"><a href="#L1835">1835</a>                            m_dictFinalPosEffect[info.gridIndex] = finalID;</span>
+<span id="L1836"><a href="#L1836">1836</a>                            curEffectCount++; // 申请成功立即占名额，包含异步加载中的实例。</span>
+<span id="L1837"><a href="#L1837">1837</a>                            if (effectMgr.GetWrapper(finalID)?.IsLoading == true)</span>
+<span id="L1838"><a href="#L1838">1838</a>                            {</span>
+<span id="L1839"><a href="#L1839">1839</a>                                pendingCount++;</span>
+<span id="L1840"><a href="#L1840">1840</a>                            }</span>
+<span id="L1841"><a href="#L1841">1841</a>                        }</span>
+<span id="L1842"><a href="#L1842">1842</a>                    }</span>
+<span id="L1843"><a href="#L1843">1843</a>                }</span>
+<span id="L1844"><a href="#L1844">1844</a>            }</span>
+<span id="L1845"><a href="#L1845">1845</a>            finally</span>
+<span id="L1846"><a href="#L1846">1846</a>            {</span>
+<span id="L1847"><a href="#L1847">1847</a>                lineIdArray.Dispose();</span>
+<span id="L1848"><a href="#L1848">1848</a>            }</span>
+<span id="L1849"><a href="#L1849">1849</a>        }</span>
+<span id="L1850"><a href="#L1850">1850</a></span>
+<span id="L1851"><a href="#L1851">1851</a>        private int RecycleFinalPosEffects(MapEntityEffectMgr effectMgr, int maxCount)</span>
+<span id="L1852"><a href="#L1852">1852</a>        {</span>
+<span id="L1853"><a href="#L1853">1853</a>            int keptCount = 0;</span>
+<span id="L1854"><a href="#L1854">1854</a>            int pendingCount = 0;</span>
+<span id="L1855"><a href="#L1855">1855</a>            m_listTempToRemoveEffectId.Clear();</span>
+<span id="L1856"><a href="#L1856">1856</a>            foreach (var pair in m_dictFinalPosEffect) // &lt;gridIndex, effectId&gt;</span>
+<span id="L1857"><a href="#L1857">1857</a>            {</span>
+<span id="L1858"><a href="#L1858">1858</a>                if (!m_setExistEffectGridIndex.Contains(pair.Key) || keptCount &gt;= maxCount)</span>
+<span id="L1859"><a href="#L1859">1859</a>                {</span>
+<span id="L1860"><a href="#L1860">1860</a>                    effectMgr.StopEffect(pair.Value);</span>
+<span id="L1861"><a href="#L1861">1861</a>                    m_listTempToRemoveEffectId.Add(pair.Key);</span>
+<span id="L1862"><a href="#L1862">1862</a>                }</span>
+<span id="L1863"><a href="#L1863">1863</a>                else</span>
+<span id="L1864"><a href="#L1864">1864</a>                {</span>
+<span id="L1865"><a href="#L1865">1865</a>                    keptCount++;</span>
+<span id="L1866"><a href="#L1866">1866</a>                    if (effectMgr.GetWrapper(pair.Value)?.IsLoading == true)</span>
+<span id="L1867"><a href="#L1867">1867</a>                    {</span>
+<span id="L1868"><a href="#L1868">1868</a>                        pendingCount++;</span>
+<span id="L1869"><a href="#L1869">1869</a>                    }</span>
+<span id="L1870"><a href="#L1870">1870</a>                }</span>
+<span id="L1871"><a href="#L1871">1871</a>            }</span>
+<span id="L1872"><a href="#L1872">1872</a></span>
+<span id="L1873"><a href="#L1873">1873</a>            foreach (var removeId in m_listTempToRemoveEffectId)</span>
+<span id="L1874"><a href="#L1874">1874</a>            {</span>
+<span id="L1875"><a href="#L1875">1875</a>                m_dictFinalPosEffect.Remove(removeId);</span>
+<span id="L1876"><a href="#L1876">1876</a>            }</span>
+<span id="L1877"><a href="#L1877">1877</a>            return pendingCount;</span>
+<span id="L1878"><a href="#L1878">1878</a>        }</span>
+<span id="L1879"><a href="#L1879">1879</a></span>
+<span id="L1880"><a href="#L1880">1880</a>        private int m_entityMoveLineUpdateIndex;</span>
+<span id="L1881"><a href="#L1881">1881</a></span>
+<span id="L1882"><a href="#L1882">1882</a>        private void UpdateEntityMoveLine()</span>
+<span id="L1883"><a href="#L1883">1883</a>        {</span>
+<span id="L1884"><a href="#L1884">1884</a>            if (m_dictEntityMoveLineDatas.Count == 0) return;</span>
+<span id="L1885"><a href="#L1885">1885</a></span>
+<span id="L1886"><a href="#L1886">1886</a>            bool enableOpt = ArmyEntityConst.EnableMoveLineRefreshOpt;</span>
+<span id="L1887"><a href="#L1887">1887</a>            int maxPerFrame = ArmyEntityConst.EntityMoveLineRefreshPerFrame;</span>
+<span id="L1888"><a href="#L1888">1888</a>            float thresholdSq = ArmyEntityConst.EntityMoveLineRefreshThreshold * ArmyEntityConst.EntityMoveLineRefreshThreshold;</span>
+<span id="L1889"><a href="#L1889">1889</a></span>
+<span id="L1890"><a href="#L1890">1890</a>            int iterIndex = 0;</span>
+<span id="L1891"><a href="#L1891">1891</a>            int processedCount = 0;</span>
+<span id="L1892"><a href="#L1892">1892</a>            bool reachedStart = !enableOpt || m_entityMoveLineUpdateIndex == 0;</span>
+<span id="L1893"><a href="#L1893">1893</a></span>
+<span id="L1894"><a href="#L1894">1894</a>            foreach (var pair in m_dictEntityMoveLineIds)</span>
+<span id="L1895"><a href="#L1895">1895</a>            {</span>
+<span id="L1896"><a href="#L1896">1896</a>                var moveLineIds = pair.Value;</span>
+<span id="L1897"><a href="#L1897">1897</a>                foreach (var pairLineId in moveLineIds)</span>
+<span id="L1898"><a href="#L1898">1898</a>                {</span>
+<span id="L1899"><a href="#L1899">1899</a>                    var lineId = pairLineId.Value;</span>
+<span id="L1900"><a href="#L1900">1900</a>                    if (!m_dictEntityMoveLineDatas.TryGetValue(lineId, out var moveLineData))</span>
+<span id="L1901"><a href="#L1901">1901</a>                        continue;</span>
+<span id="L1902"><a href="#L1902">1902</a></span>
+<span id="L1903"><a href="#L1903">1903</a>                    iterIndex++;</span>
+<span id="L1904"><a href="#L1904">1904</a>                    if (!reachedStart)</span>
+<span id="L1905"><a href="#L1905">1905</a>                    {</span>
+<span id="L1906"><a href="#L1906">1906</a>                        if (iterIndex &lt;= m_entityMoveLineUpdateIndex)</span>
+<span id="L1907"><a href="#L1907">1907</a>                            continue;</span>
+<span id="L1908"><a href="#L1908">1908</a>                        reachedStart = true;</span>
+<span id="L1909"><a href="#L1909">1909</a>                    }</span>
+<span id="L1910"><a href="#L1910">1910</a></span>
+<span id="L1911"><a href="#L1911">1911</a>                    RefreshEntityMoveLineCurPos(ref moveLineData);</span>
+<span id="L1912"><a href="#L1912">1912</a>                    if (moveLineData.lineId &gt; 0 &amp;&amp; moveLineData.isPathValid)</span>
+<span id="L1913"><a href="#L1913">1913</a>                    {</span>
+<span id="L1914"><a href="#L1914">1914</a>                        bool needRefresh = !enableOpt || math.distancesq(moveLineData.curPos, moveLineData.lastRefreshedCurPos) &gt; thresholdSq;</span>
+<span id="L1915"><a href="#L1915">1915</a>                        if (needRefresh)</span>
+<span id="L1916"><a href="#L1916">1916</a>                        {</span>
+<span id="L1917"><a href="#L1917">1917</a>                            if (ArmyEntityConst.MeshLine_UseStraightLineMode)</span>
+<span id="L1918"><a href="#L1918">1918</a>                            {</span>
+<span id="L1919"><a href="#L1919">1919</a>                                GameCore.MeshLineMgr.RefreshStraightLinePos((int) moveLineData.lineId, moveLineData.curPos, moveLineData.endPos);</span>
+<span id="L1920"><a href="#L1920">1920</a>                            }</span>
+<span id="L1921"><a href="#L1921">1921</a>                            else</span>
+<span id="L1922"><a href="#L1922">1922</a>                            {</span>
+<span id="L1923"><a href="#L1923">1923</a>                                GameCore.MeshLineMgr.RefreshLine((int) moveLineData.lineId, moveLineData.curPos, moveLineData.endPos, ArmyEntityConst.ArmyLineSpeed, moveLineData.color);</span>
+<span id="L1924"><a href="#L1924">1924</a>                            }</span>
+<span id="L1925"><a href="#L1925">1925</a>                            moveLineData.lastRefreshedCurPos = moveLineData.curPos;</span>
+<span id="L1926"><a href="#L1926">1926</a>                        }</span>
+<span id="L1927"><a href="#L1927">1927</a>                    }</span>
+<span id="L1928"><a href="#L1928">1928</a>                    m_dictEntityMoveLineDatas[lineId] = moveLineData;</span>
+<span id="L1929"><a href="#L1929">1929</a></span>
+<span id="L1930"><a href="#L1930">1930</a>                    processedCount++;</span>
+<span id="L1931"><a href="#L1931">1931</a>                    if (enableOpt &amp;&amp; processedCount &gt;= maxPerFrame)</span>
+<span id="L1932"><a href="#L1932">1932</a>                    {</span>
+<span id="L1933"><a href="#L1933">1933</a>                        m_entityMoveLineUpdateIndex = iterIndex;</span>
+<span id="L1934"><a href="#L1934">1934</a>                        return;</span>
+<span id="L1935"><a href="#L1935">1935</a>                    }</span>
+<span id="L1936"><a href="#L1936">1936</a>                }</span>
+<span id="L1937"><a href="#L1937">1937</a>            }</span>
+<span id="L1938"><a href="#L1938">1938</a>            m_entityMoveLineUpdateIndex = 0;</span>
+<span id="L1939"><a href="#L1939">1939</a>        }</span>
+<span id="L1940"><a href="#L1940">1940</a>        </span>
+<span id="L1941"><a href="#L1941">1941</a>        /// &lt;summary&gt;</span>
+<span id="L1942"><a href="#L1942">1942</a>        /// 删除行军线</span>
+<span id="L1943"><a href="#L1943">1943</a>        /// &lt;/summary&gt;</span>
+<span id="L1944"><a href="#L1944">1944</a>        /// &lt;param name=&quot;entityId&quot;&gt;&lt;/param&gt;</span>
+<span id="L1945"><a href="#L1945">1945</a>        /// &lt;param name=&quot;moveLineType&quot;, type=&quot;EntityMoveLineType&quot;&gt;&lt;/param&gt;</span>
+<span id="L1946"><a href="#L1946">1946</a>        public void DeleteEntityMoveLine(long entityId, int moveLineType)</span>
+<span id="L1947"><a href="#L1947">1947</a>        {</span>
+<span id="L1948"><a href="#L1948">1948</a>            m_pendingCreateQueue.Cancel(entityId, moveLineType);</span>
+<span id="L1949"><a href="#L1949">1949</a>            if (m_dictEntityMoveLineIds.TryGetValue(moveLineType, out var moveLineIds))</span>
+<span id="L1950"><a href="#L1950">1950</a>            {</span>
+<span id="L1951"><a href="#L1951">1951</a>                if (moveLineIds.TryGetValue(entityId, out var lineId))</span>
+<span id="L1952"><a href="#L1952">1952</a>                {</span>
+<span id="L1953"><a href="#L1953">1953</a>                    if (lineId &gt; 0)</span>
+<span id="L1954"><a href="#L1954">1954</a>                    {</span>
+<span id="L1955"><a href="#L1955">1955</a>                        GameCore.MeshLineMgr.DeleteLine(lineId);</span>
+<span id="L1956"><a href="#L1956">1956</a>                    }</span>
+<span id="L1957"><a href="#L1957">1957</a>                    </span>
+<span id="L1958"><a href="#L1958">1958</a>                    if (m_dictEntityMoveLineDatas.TryGetValue(lineId, out var lineData))</span>
+<span id="L1959"><a href="#L1959">1959</a>                    {</span>
+<span id="L1960"><a href="#L1960">1960</a>                        GameCore.ListPool.Recycle(lineData.pathPointList);</span>
+<span id="L1961"><a href="#L1961">1961</a>                        if (lineData.tickOffsetList != null)</span>
+<span id="L1962"><a href="#L1962">1962</a>                        {</span>
+<span id="L1963"><a href="#L1963">1963</a>                            GameCore.ListPool.Recycle(lineData.tickOffsetList);</span>
+<span id="L1964"><a href="#L1964">1964</a>                        }</span>
+<span id="L1965"><a href="#L1965">1965</a>                        if (lineData.pathTypes != null)</span>
+<span id="L1966"><a href="#L1966">1966</a>                        {</span>
+<span id="L1967"><a href="#L1967">1967</a>                            GameCore.ListPool.Recycle(lineData.pathTypes);</span>
+<span id="L1968"><a href="#L1968">1968</a>                        }</span>
+<span id="L1969"><a href="#L1969">1969</a></span>
+<span id="L1970"><a href="#L1970">1970</a>                        m_dictEntityMoveLineDatas.Remove(lineId);</span>
+<span id="L1971"><a href="#L1971">1971</a>                    }</span>
+<span id="L1972"><a href="#L1972">1972</a></span>
+<span id="L1973"><a href="#L1973">1973</a>                    m_nativeMapFinalPosInfo.Remove(lineId);</span>
+<span id="L1974"><a href="#L1974">1974</a>                    m_nativeMapFinalPosLineId.Remove(lineId);</span>
+<span id="L1975"><a href="#L1975">1975</a></span>
+<span id="L1976"><a href="#L1976">1976</a>                    moveLineIds.Remove(entityId);</span>
+<span id="L1977"><a href="#L1977">1977</a>                }</span>
+<span id="L1978"><a href="#L1978">1978</a>            }</span>
+<span id="L1979"><a href="#L1979">1979</a>        }</span>
+<span id="L1980"><a href="#L1980">1980</a></span>
+<span id="L1981"><a href="#L1981">1981</a>        public void DeleteAllPureMoveLines()</span>
+<span id="L1982"><a href="#L1982">1982</a>        {</span>
+<span id="L1983"><a href="#L1983">1983</a>            m_pendingCreateQueue.Clear();</span>
+<span id="L1984"><a href="#L1984">1984</a>            LastMoveLineCreateProcessedCount = 0;</span>
+<span id="L1985"><a href="#L1985">1985</a>            LastMoveLineCreateMilliseconds = 0;</span>
+<span id="L1986"><a href="#L1986">1986</a>            m_entityMoveLineUpdateIndex = 0;</span>
+<span id="L1987"><a href="#L1987">1987</a>            foreach (var pair in m_dictEntityMoveLineDatas)</span>
+<span id="L1988"><a href="#L1988">1988</a>            {</span>
+<span id="L1989"><a href="#L1989">1989</a>                var lineId = pair.Key;</span>
+<span id="L1990"><a href="#L1990">1990</a>                var lineData = pair.Value;</span>
+<span id="L1991"><a href="#L1991">1991</a>                if (lineId &gt; 0)</span>
+<span id="L1992"><a href="#L1992">1992</a>                {</span>
+<span id="L1993"><a href="#L1993">1993</a>                    GameCore.MeshLineMgr.DeleteLine(lineId);</span>
+<span id="L1994"><a href="#L1994">1994</a>                }</span>
+<span id="L1995"><a href="#L1995">1995</a></span>
+<span id="L1996"><a href="#L1996">1996</a>                GameCore.ListPool.Recycle(lineData.pathPointList);</span>
+<span id="L1997"><a href="#L1997">1997</a>                if (lineData.tickOffsetList != null)</span>
+<span id="L1998"><a href="#L1998">1998</a>                {</span>
+<span id="L1999"><a href="#L1999">1999</a>                    GameCore.ListPool.Recycle(lineData.tickOffsetList);</span>
+<span id="L2000"><a href="#L2000">2000</a>                }</span>
+<span id="L2001"><a href="#L2001">2001</a>                if (lineData.pathTypes != null)</span>
+<span id="L2002"><a href="#L2002">2002</a>                {</span>
+<span id="L2003"><a href="#L2003">2003</a>                    GameCore.ListPool.Recycle(lineData.pathTypes);</span>
+<span id="L2004"><a href="#L2004">2004</a>                }</span>
+<span id="L2005"><a href="#L2005">2005</a>            }</span>
+<span id="L2006"><a href="#L2006">2006</a>            </span>
+<span id="L2007"><a href="#L2007">2007</a>            m_dictEntityMoveLineDatas.Clear();</span>
+<span id="L2008"><a href="#L2008">2008</a>            m_dictEntityMoveLineIds.Clear();</span>
+<span id="L2009"><a href="#L2009">2009</a></span>
+<span id="L2010"><a href="#L2010">2010</a>            var effectMgr = MapManager.MapEntityEffectMgr;</span>
+<span id="L2011"><a href="#L2011">2011</a>            foreach (var pair in m_dictFinalPosEffect)</span>
+<span id="L2012"><a href="#L2012">2012</a>            {</span>
+<span id="L2013"><a href="#L2013">2013</a>                effectMgr.StopEffect(pair.Value);</span>
+<span id="L2014"><a href="#L2014">2014</a>            }</span>
+<span id="L2015"><a href="#L2015">2015</a></span>
+<span id="L2016"><a href="#L2016">2016</a>            m_dictFinalPosEffect.Clear();</span>
+<span id="L2017"><a href="#L2017">2017</a>            m_setExistEffectGridIndex.Clear();</span>
+<span id="L2018"><a href="#L2018">2018</a>            m_listTempToRemoveEffectId.Clear();</span>
+<span id="L2019"><a href="#L2019">2019</a></span>
+<span id="L2020"><a href="#L2020">2020</a>            if (m_nativeMapFinalPosInfo.IsCreated)</span>
+<span id="L2021"><a href="#L2021">2021</a>            {</span>
+<span id="L2022"><a href="#L2022">2022</a>                m_nativeMapFinalPosInfo.Clear();</span>
+<span id="L2023"><a href="#L2023">2023</a>            }</span>
+<span id="L2024"><a href="#L2024">2024</a></span>
+<span id="L2025"><a href="#L2025">2025</a>            if (m_nativeMapFinalPosLineId.IsCreated)</span>
+<span id="L2026"><a href="#L2026">2026</a>            {</span>
+<span id="L2027"><a href="#L2027">2027</a>                m_nativeMapFinalPosLineId.Clear();</span>
+<span id="L2028"><a href="#L2028">2028</a>            }</span>
+<span id="L2029"><a href="#L2029">2029</a>        }</span>
+<span id="L2030"><a href="#L2030">2030</a></span>
+<span id="L2031"><a href="#L2031">2031</a>        /// &lt;summary&gt;</span>
+<span id="L2032"><a href="#L2032">2032</a>        /// 断线登出回调：清空所有三方行军线，避免残留过期数据。</span>
+<span id="L2033"><a href="#L2033">2033</a>        /// 重连成功后由服务器重新下发 YzEntityMoveLineNtf.fullUpdateLine 重建。</span>
+<span id="L2034"><a href="#L2034">2034</a>        /// &lt;/summary&gt;</span>
+<span id="L2035"><a href="#L2035">2035</a>        public override void OnLoggedOut()</span>
+<span id="L2036"><a href="#L2036">2036</a>        {</span>
+<span id="L2037"><a href="#L2037">2037</a>            DeleteAllPureMoveLines();</span>
+<span id="L2038"><a href="#L2038">2038</a>        }</span>
+<span id="L2039"><a href="#L2039">2039</a>        #endregion</span>
+<span id="L2040"><a href="#L2040">2040</a></span>
+<span id="L2041"><a href="#L2041">2041</a>        // 战场复杂度改变</span>
+<span id="L2042"><a href="#L2042">2042</a>        private void OnBattleComplexChangeNtf(Params args)</span>
+<span id="L2043"><a href="#L2043">2043</a>        {</span>
+<span id="L2044"><a href="#L2044">2044</a>            var oldComplexType = args[0];</span>
+<span id="L2045"><a href="#L2045">2045</a>            var newComplexType = args[1];</span>
+<span id="L2046"><a href="#L2046">2046</a></span>
+<span id="L2047"><a href="#L2047">2047</a>            // 进入简化模式，战场更复杂 需要删除当前部分已经显示行军线</span>
+<span id="L2048"><a href="#L2048">2048</a>            if (oldComplexType &lt; newComplexType)</span>
+<span id="L2049"><a href="#L2049">2049</a>            {</span>
+<span id="L2050"><a href="#L2050">2050</a>                var tempList = GameCore.ListPool.Get&lt;long&gt;();</span>
+<span id="L2051"><a href="#L2051">2051</a>                foreach (var item in m_armyToLineDict)</span>
+<span id="L2052"><a href="#L2052">2052</a>                {</span>
+<span id="L2053"><a href="#L2053">2053</a>                    var showFlag = UtilArmyCtrl.StaticCanShowArmyLine(item.Key);</span>
+<span id="L2054"><a href="#L2054">2054</a>                    if (!showFlag)</span>
+<span id="L2055"><a href="#L2055">2055</a>                    {</span>
+<span id="L2056"><a href="#L2056">2056</a>                        tempList.Add(item.Key);</span>
+<span id="L2057"><a href="#L2057">2057</a>                    }</span>
+<span id="L2058"><a href="#L2058">2058</a>                }</span>
+<span id="L2059"><a href="#L2059">2059</a></span>
+<span id="L2060"><a href="#L2060">2060</a>                foreach (var id in tempList)</span>
+<span id="L2061"><a href="#L2061">2061</a>                {</span>
+<span id="L2062"><a href="#L2062">2062</a>                    DeleteArmyLineAll(id);</span>
+<span id="L2063"><a href="#L2063">2063</a>                }</span>
+<span id="L2064"><a href="#L2064">2064</a>            }</span>
+<span id="L2065"><a href="#L2065">2065</a>            else</span>
+<span id="L2066"><a href="#L2066">2066</a>            {</span>
+<span id="L2067"><a href="#L2067">2067</a>                var allArmies = MapManager.ArmyEntityManager?.GetArmyEntityDictionary() ?? null;</span>
+<span id="L2068"><a href="#L2068">2068</a>                if (allArmies != null)</span>
+<span id="L2069"><a href="#L2069">2069</a>                {</span>
+<span id="L2070"><a href="#L2070">2070</a>                    foreach (var item in allArmies)</span>
+<span id="L2071"><a href="#L2071">2071</a>                    {</span>
+<span id="L2072"><a href="#L2072">2072</a>                        if (!m_armyToLineDict.ContainsKey(item.Key) &amp;&amp; UtilArmyCtrl.StaticCanShowArmyLine(item.Key, GetCurrArmyLineCount()))</span>
+<span id="L2073"><a href="#L2073">2073</a>                        {</span>
+<span id="L2074"><a href="#L2074">2074</a>                            UtilArmyCtrl.CreateArmyMoveLine(item.Key);</span>
+<span id="L2075"><a href="#L2075">2075</a>                        }</span>
+<span id="L2076"><a href="#L2076">2076</a>                    }</span>
+<span id="L2077"><a href="#L2077">2077</a>                }</span>
+<span id="L2078"><a href="#L2078">2078</a>            }</span>
+<span id="L2079"><a href="#L2079">2079</a>        }</span>
+<span id="L2080"><a href="#L2080">2080</a>    }</span>
+<span id="L2081"><a href="#L2081">2081</a>}</span></pre></html>

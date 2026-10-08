@@ -28,5 +28,20 @@
       "Xcode Summary",
       "Metal Shader"
     ]
+  },
+  {
+    "id": "march-dual-hotspots-20260910",
+    "title": "名城压测性能采集分析 · 2026-09-10",
+    "collectedAt": "2026-09-10 22:04–22:09",
+    "model": "24072PX77C",
+    "version": "Development Build 0.0.999.977",
+    "quality": "原报告未明确记录画质；自动简化实际状态为1",
+    "href": "/cpu/report/march-dual-hotspots-20260910/report.html",
+    "summary": "名城1226,175的静止、往返移动与无极缩放采集；展示PlayerLoop完整分解、持续与间歇热点、模块方案卡片、完整调用树和源码证据。每种操作只录一次，保留热机现场限制。",
+    "sources": [
+      "Unity Profiler",
+      "渲染计数器",
+      "温控与频率"
+    ]
   }
 ]

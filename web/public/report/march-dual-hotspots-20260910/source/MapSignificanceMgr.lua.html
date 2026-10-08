@@ -1,0 +1,1970 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>MapSignificanceMgr.lua</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\.Lua\Outside\Map\Core\MapSignificanceMgr.lua<br>current local source; phone build commit unverified · SHA256 7237acf3edfd8f9db12f10e30cb901f9dd1bca4f487c81f2a5318496eaa2780a</p><pre><span id="L1"><a href="#L1">1</a>---野外重要度任务管理器</span>
+<span id="L2"><a href="#L2">2</a>---@class MapSignificanceMgr:Entity</span>
+<span id="L3"><a href="#L3">3</a>---@field MapSignificanceTaskFactory MapSignificanceTaskFactory</span>
+<span id="L4"><a href="#L4">4</a>---@field _commonTaskLinkedList LinkedList</span>
+<span id="L5"><a href="#L5">5</a>local cls = Class(&quot;MapSignificanceMgr&quot;, Entity)</span>
+<span id="L6"><a href="#L6">6</a>require(&quot;Outside.Map.SignificanceTask.MapSignificanceDefine&quot;)</span>
+<span id="L7"><a href="#L7">7</a>---@type MapCoreMgr</span>
+<span id="L8"><a href="#L8">8</a>local mapCore = require(&quot;Outside.Map.Core.MapCoreMgr&quot;).New()</span>
+<span id="L9"><a href="#L9">9</a>local OutsideSubEntityMgr = CS.AOE.GameCore.OutsideSubEntityMgr</span>
+<span id="L10"><a href="#L10">10</a>local OutsideMapPerfDiagnostic = CS.AOE.Outside.OutsideMapPerfDiagnostic</span>
+<span id="L11"><a href="#L11">11</a>local InfiniteZoomUtils = CS.AOE.Outside.InfiniteZoomUtils</span>
+<span id="L12"><a href="#L12">12</a>local MapSignificanceEntityTask = require(&quot;Outside.Map.SignificanceTask.MapSignificanceEntityTask&quot;)</span>
+<span id="L13"><a href="#L13">13</a>local MapSignificanceInfiniteZoomTask = require(&quot;Outside.Map.SignificanceTask.MapSignificanceInfiniteZoomTask&quot;)</span>
+<span id="L14"><a href="#L14">14</a>local MapSignificanceTaskFactoryCls = require(&quot;Outside.Map.SignificanceTask.MapSignificanceTaskFactory&quot;)</span>
+<span id="L15"><a href="#L15">15</a>local MapSignificanceTaskSchedulerCls = require(&quot;Outside.Map.SignificanceTask.MapSignificanceTaskScheduler&quot;)</span>
+<span id="L16"><a href="#L16">16</a>local OutsideVisibilityGM = require(&quot;Outside.Map.Visual.OutsideVisibilityGM&quot;)</span>
+<span id="L17"><a href="#L17">17</a></span>
+<span id="L18"><a href="#L18">18</a>local MapSignificanceTaskFactory = nil</span>
+<span id="L19"><a href="#L19">19</a>local MapSignificanceTaskScheduler = nil</span>
+<span id="L20"><a href="#L20">20</a></span>
+<span id="L21"><a href="#L21">21</a>-- Lua热更性能A/B：暂停Lua调度器驱动SubEntity任务。</span>
+<span id="L22"><a href="#L22">22</a>-- 仅暂停实际Execute，创建/销毁请求仍会进入C#队列；恢复前建议重进大地图以清理积压任务。</span>
+<span id="L23"><a href="#L23">23</a>cls.PerfBlockSubEntityExecute = false</span>
+<span id="L24"><a href="#L24">24</a></span>
+<span id="L25"><a href="#L25">25</a>function cls:SetPerfBlockSubEntityExecute(block)</span>
+<span id="L26"><a href="#L26">26</a>    block = block == true</span>
+<span id="L27"><a href="#L27">27</a>    if self.PerfBlockSubEntityExecute == block then</span>
+<span id="L28"><a href="#L28">28</a>        return</span>
+<span id="L29"><a href="#L29">29</a>    end</span>
+<span id="L30"><a href="#L30">30</a></span>
+<span id="L31"><a href="#L31">31</a>    if block then</span>
+<span id="L32"><a href="#L32">32</a>        -- 高优任务由C# OnUpdate自驱，不经过下面两个Lua Consume入口；一起暂停才能形成完整A/B。</span>
+<span id="L33"><a href="#L33">33</a>        self._perfSubEntityTreeHighPriorityLoad = OutsideSubEntityMgr.TreeHighPriorityLoad</span>
+<span id="L34"><a href="#L34">34</a>        self._perfSubEntityHighPriorityAABBArea = OutsideSubEntityMgr.HighPriorityLoadAABBArea</span>
+<span id="L35"><a href="#L35">35</a>        OutsideSubEntityMgr.TreeHighPriorityLoad = false</span>
+<span id="L36"><a href="#L36">36</a>        OutsideSubEntityMgr.HighPriorityLoadAABBArea = 0</span>
+<span id="L37"><a href="#L37">37</a>    else</span>
+<span id="L38"><a href="#L38">38</a>        if self._perfSubEntityTreeHighPriorityLoad ~= nil then</span>
+<span id="L39"><a href="#L39">39</a>            OutsideSubEntityMgr.TreeHighPriorityLoad = self._perfSubEntityTreeHighPriorityLoad</span>
+<span id="L40"><a href="#L40">40</a>            self._perfSubEntityTreeHighPriorityLoad = nil</span>
+<span id="L41"><a href="#L41">41</a>        end</span>
+<span id="L42"><a href="#L42">42</a>        if self._perfSubEntityHighPriorityAABBArea ~= nil then</span>
+<span id="L43"><a href="#L43">43</a>            OutsideSubEntityMgr.HighPriorityLoadAABBArea = self._perfSubEntityHighPriorityAABBArea</span>
+<span id="L44"><a href="#L44">44</a>            self._perfSubEntityHighPriorityAABBArea = nil</span>
+<span id="L45"><a href="#L45">45</a>        end</span>
+<span id="L46"><a href="#L46">46</a>    end</span>
+<span id="L47"><a href="#L47">47</a></span>
+<span id="L48"><a href="#L48">48</a>    self.PerfBlockSubEntityExecute = block</span>
+<span id="L49"><a href="#L49">49</a>end</span>
+<span id="L50"><a href="#L50">50</a></span>
+<span id="L51"><a href="#L51">51</a>function cls:IsPerfBlockSubEntityExecute()</span>
+<span id="L52"><a href="#L52">52</a>    return self.PerfBlockSubEntityExecute == true</span>
+<span id="L53"><a href="#L53">53</a>end</span>
+<span id="L54"><a href="#L54">54</a></span>
+<span id="L55"><a href="#L55">55</a>function cls:OnInit()</span>
+<span id="L56"><a href="#L56">56</a>    self.MapSignificanceTaskFactory = MapSignificanceTaskFactoryCls.New()</span>
+<span id="L57"><a href="#L57">57</a>    MapSignificanceTaskFactory = self.MapSignificanceTaskFactory</span>
+<span id="L58"><a href="#L58">58</a>    self.MapSignificanceTaskFactory:Init()</span>
+<span id="L59"><a href="#L59">59</a></span>
+<span id="L60"><a href="#L60">60</a>    self.MapSignificanceTaskScheduler = MapSignificanceTaskSchedulerCls.New()</span>
+<span id="L61"><a href="#L61">61</a>    MapSignificanceTaskScheduler = self.MapSignificanceTaskScheduler</span>
+<span id="L62"><a href="#L62">62</a>    MapSignificanceTaskScheduler:Init()</span>
+<span id="L63"><a href="#L63">63</a>    self._ownerEntityTaskId = 0</span>
+<span id="L64"><a href="#L64">64</a></span>
+<span id="L65"><a href="#L65">65</a>    self._taskUniqueId = 0</span>
+<span id="L66"><a href="#L66">66</a>    self:InitCommonTask()</span>
+<span id="L67"><a href="#L67">67</a>    self:InitEntityTask()</span>
+<span id="L68"><a href="#L68">68</a>    self:InitLocalResTask()</span>
+<span id="L69"><a href="#L69">69</a>    self:InitInfiniteZoomTask()</span>
+<span id="L70"><a href="#L70">70</a></span>
+<span id="L71"><a href="#L71">71</a>    self:InitSyncTask()</span>
+<span id="L72"><a href="#L72">72</a>    self:InitSignificanceTaskName()</span>
+<span id="L73"><a href="#L73">73</a>    self:InitSignificanceTaskProcessFunction()</span>
+<span id="L74"><a href="#L74">74</a>    self:InitPrepareData()</span>
+<span id="L75"><a href="#L75">75</a></span>
+<span id="L76"><a href="#L76">76</a>    self.isSyncMode = false    --true: 同步模式 / false: 异步模式</span>
+<span id="L77"><a href="#L77">77</a>    self.isDynamicMode = true  --true: 时间片动态调整 / false: 时间片严格模式</span>
+<span id="L78"><a href="#L78">78</a>    --#if ENABLE_PROFILER</span>
+<span id="L79"><a href="#L79">79</a>    self._samplersProcessTask = {}</span>
+<span id="L80"><a href="#L80">80</a>    --#endif</span>
+<span id="L81"><a href="#L81">81</a></span>
+<span id="L82"><a href="#L82">82</a>    self.significanceTaskCountDic = {}</span>
+<span id="L83"><a href="#L83">83</a>    self.significanceTaskTimeDic = {}</span>
+<span id="L84"><a href="#L84">84</a>    self.lastNormalFrame = 0</span>
+<span id="L85"><a href="#L85">85</a>    self.mgrMaxUpdateTime = {}</span>
+<span id="L86"><a href="#L86">86</a></span>
+<span id="L87"><a href="#L87">87</a>    -- diagnostic: per-frame icon task counters, incremented by InfiniteZoomMapEntityCtrl / MapGoEffectCtrl</span>
+<span id="L88"><a href="#L88">88</a>    self._iconTaskStats = { created = 0, refreshed = 0, removed = 0, bigCityRefresh = 0, bigCityUI = 0 }</span>
+<span id="L89"><a href="#L89">89</a>end</span>
+<span id="L90"><a href="#L90">90</a></span>
+<span id="L91"><a href="#L91">91</a>function cls:OnCleanUp()</span>
+<span id="L92"><a href="#L92">92</a>    self:_Release()</span>
+<span id="L93"><a href="#L93">93</a></span>
+<span id="L94"><a href="#L94">94</a>    mgr.pool:RemovePool(self._entityTaskPool)</span>
+<span id="L95"><a href="#L95">95</a>    self._entityTaskPool = nil</span>
+<span id="L96"><a href="#L96">96</a></span>
+<span id="L97"><a href="#L97">97</a>    FuncUtil.PCall(self.MapSignificanceTaskFactory.CleanUp, self.MapSignificanceTaskFactory)</span>
+<span id="L98"><a href="#L98">98</a>    FuncUtil.PCall(self.MapSignificanceTaskScheduler.CleanUp, self.MapSignificanceTaskScheduler)</span>
+<span id="L99"><a href="#L99">99</a>end</span>
+<span id="L100"><a href="#L100">100</a></span>
+<span id="L101"><a href="#L101">101</a>function cls:_Release()</span>
+<span id="L102"><a href="#L102">102</a>    self:ClearCommonTask()</span>
+<span id="L103"><a href="#L103">103</a>    self:ClearEntityTask()</span>
+<span id="L104"><a href="#L104">104</a>    self:ClearLocalResTask()</span>
+<span id="L105"><a href="#L105">105</a>    self:ClearInfiniteZoomTask()</span>
+<span id="L106"><a href="#L106">106</a></span>
+<span id="L107"><a href="#L107">107</a>    self:ClearSyncTask()</span>
+<span id="L108"><a href="#L108">108</a>    self:CleanUpPrepareData()</span>
+<span id="L109"><a href="#L109">109</a></span>
+<span id="L110"><a href="#L110">110</a>    self._taskUniqueId = 0</span>
+<span id="L111"><a href="#L111">111</a></span>
+<span id="L112"><a href="#L112">112</a>    TblUtil.Clear(self.significanceTaskCountDic)</span>
+<span id="L113"><a href="#L113">113</a>    TblUtil.Clear(self.significanceTaskTimeDic)</span>
+<span id="L114"><a href="#L114">114</a>end</span>
+<span id="L115"><a href="#L115">115</a></span>
+<span id="L116"><a href="#L116">116</a>function cls:OnSubMgrLoggedIn()</span>
+<span id="L117"><a href="#L117">117</a></span>
+<span id="L118"><a href="#L118">118</a>end</span>
+<span id="L119"><a href="#L119">119</a></span>
+<span id="L120"><a href="#L120">120</a>function cls:OnSubMgrLoggedOut()</span>
+<span id="L121"><a href="#L121">121</a>    self:_Release()</span>
+<span id="L122"><a href="#L122">122</a>end</span>
+<span id="L123"><a href="#L123">123</a></span>
+<span id="L124"><a href="#L124">124</a>function cls:OnSceneEnter(params)</span>
+<span id="L125"><a href="#L125">125</a>    self:InitSyncMode(params.name)</span>
+<span id="L126"><a href="#L126">126</a>end</span>
+<span id="L127"><a href="#L127">127</a></span>
+<span id="L128"><a href="#L128">128</a>function cls:OnSceneExit()</span>
+<span id="L129"><a href="#L129">129</a>    self:_Release(true)</span>
+<span id="L130"><a href="#L130">130</a>end</span>
+<span id="L131"><a href="#L131">131</a></span>
+<span id="L132"><a href="#L132">132</a>---@private</span>
+<span id="L133"><a href="#L133">133</a>function cls:InitSyncMode(sceneName)</span>
+<span id="L134"><a href="#L134">134</a>    self.isSyncMode = sceneName ~= SceneName.Outside</span>
+<span id="L135"><a href="#L135">135</a>end</span>
+<span id="L136"><a href="#L136">136</a></span>
+<span id="L137"><a href="#L137">137</a>function cls:GetTaskUniqueId()</span>
+<span id="L138"><a href="#L138">138</a>    self._taskUniqueId = self._taskUniqueId + 1</span>
+<span id="L139"><a href="#L139">139</a></span>
+<span id="L140"><a href="#L140">140</a>    return self._taskUniqueId</span>
+<span id="L141"><a href="#L141">141</a>end</span>
+<span id="L142"><a href="#L142">142</a></span>
+<span id="L143"><a href="#L143">143</a>function cls:InitSignificanceTaskName()</span>
+<span id="L144"><a href="#L144">144</a>    self._significanceTaskName = {}</span>
+<span id="L145"><a href="#L145">145</a>    for taskName, taskType in pairs(EMapSignificanceTaskType) do</span>
+<span id="L146"><a href="#L146">146</a>        self._significanceTaskName[taskType] = taskName</span>
+<span id="L147"><a href="#L147">147</a>    end</span>
+<span id="L148"><a href="#L148">148</a>end</span>
+<span id="L149"><a href="#L149">149</a></span>
+<span id="L150"><a href="#L150">150</a>--region common task</span>
+<span id="L151"><a href="#L151">151</a>function cls:InitCommonTask()</span>
+<span id="L152"><a href="#L152">152</a>    self._commonTasksByUniqueId = {}</span>
+<span id="L153"><a href="#L153">153</a>    self._commonTaskLinkedList = LinkedList.New()</span>
+<span id="L154"><a href="#L154">154</a>end</span>
+<span id="L155"><a href="#L155">155</a></span>
+<span id="L156"><a href="#L156">156</a>function cls:ClearCommonTask()</span>
+<span id="L157"><a href="#L157">157</a>    for _, task in pairs(self._commonTasksByUniqueId) do</span>
+<span id="L158"><a href="#L158">158</a>        self.MapSignificanceTaskFactory:PutTask(task)</span>
+<span id="L159"><a href="#L159">159</a>    end</span>
+<span id="L160"><a href="#L160">160</a>    self._commonTasksByUniqueId = {}</span>
+<span id="L161"><a href="#L161">161</a>    self._commonTaskLinkedList:Clear()</span>
+<span id="L162"><a href="#L162">162</a>end</span>
+<span id="L163"><a href="#L163">163</a>--endregion</span>
+<span id="L164"><a href="#L164">164</a></span>
+<span id="L165"><a href="#L165">165</a>--region LocalResEntity task</span>
+<span id="L166"><a href="#L166">166</a>function cls:InitLocalResTask()</span>
+<span id="L167"><a href="#L167">167</a>    self._localResTasksByGridIndex = {}</span>
+<span id="L168"><a href="#L168">168</a>    self._localResTaskLinkedList = LinkedList.New()</span>
+<span id="L169"><a href="#L169">169</a>end</span>
+<span id="L170"><a href="#L170">170</a></span>
+<span id="L171"><a href="#L171">171</a>function cls:ClearLocalResTask()</span>
+<span id="L172"><a href="#L172">172</a>    for _, task in pairs(self._localResTasksByGridIndex) do</span>
+<span id="L173"><a href="#L173">173</a>        self.MapSignificanceTaskFactory:PutTask(task)</span>
+<span id="L174"><a href="#L174">174</a>    end</span>
+<span id="L175"><a href="#L175">175</a></span>
+<span id="L176"><a href="#L176">176</a>    self._localResTasksByGridIndex = {}</span>
+<span id="L177"><a href="#L177">177</a>    self._localResTaskLinkedList:Clear()</span>
+<span id="L178"><a href="#L178">178</a>end</span>
+<span id="L179"><a href="#L179">179</a>--endregion</span>
+<span id="L180"><a href="#L180">180</a></span>
+<span id="L181"><a href="#L181">181</a>--region entity task</span>
+<span id="L182"><a href="#L182">182</a>---@private</span>
+<span id="L183"><a href="#L183">183</a>function cls:InitEntityTask()</span>
+<span id="L184"><a href="#L184">184</a>    self._priorityEntityDic = {}</span>
+<span id="L185"><a href="#L185">185</a>    self._priorityEntityHistoryDic = {}</span>
+<span id="L186"><a href="#L186">186</a>    self._entitySignificanceTaskLinkedList = LinkedList.New()</span>
+<span id="L187"><a href="#L187">187</a>    self._entitySignificanceTaskLinkedListForDestroy = LinkedList.New()</span>
+<span id="L188"><a href="#L188">188</a></span>
+<span id="L189"><a href="#L189">189</a>    self._entityTasksByEntityId = {}</span>
+<span id="L190"><a href="#L190">190</a>    self._entityTaskPool = mgr.pool:CreatePool({</span>
+<span id="L191"><a href="#L191">191</a>        name = &quot;MapSignificanceEntityTask&quot;,</span>
+<span id="L192"><a href="#L192">192</a>        createFunc = function()</span>
+<span id="L193"><a href="#L193">193</a>            return MapSignificanceEntityTask.New()</span>
+<span id="L194"><a href="#L194">194</a>        end,</span>
+<span id="L195"><a href="#L195">195</a>    --   onTakeFunc = function(task)</span>
+<span id="L196"><a href="#L196">196</a>    --       task:Init()</span>
+<span id="L197"><a href="#L197">197</a>    --   end,</span>
+<span id="L198"><a href="#L198">198</a>        onPutFunc = function(task)</span>
+<span id="L199"><a href="#L199">199</a>            task:CleanUp()</span>
+<span id="L200"><a href="#L200">200</a>        end,</span>
+<span id="L201"><a href="#L201">201</a>        type = PoolType.NoRehash,</span>
+<span id="L202"><a href="#L202">202</a>        initSize = 300,</span>
+<span id="L203"><a href="#L203">203</a>        -- maxSize = 500,</span>
+<span id="L204"><a href="#L204">204</a>    })</span>
+<span id="L205"><a href="#L205">205</a>end</span>
+<span id="L206"><a href="#L206">206</a></span>
+<span id="L207"><a href="#L207">207</a>---@private</span>
+<span id="L208"><a href="#L208">208</a>function cls:ClearEntityTask()</span>
+<span id="L209"><a href="#L209">209</a>    for _, entityTask in pairs(self._entityTasksByEntityId) do</span>
+<span id="L210"><a href="#L210">210</a>        self._entityTaskPool:Put(entityTask)</span>
+<span id="L211"><a href="#L211">211</a>    end</span>
+<span id="L212"><a href="#L212">212</a>    self._entityTasksByEntityId = {}</span>
+<span id="L213"><a href="#L213">213</a></span>
+<span id="L214"><a href="#L214">214</a>    TblUtil.Clear(self._priorityEntityDic)</span>
+<span id="L215"><a href="#L215">215</a>    TblUtil.Clear(self._priorityEntityHistoryDic)</span>
+<span id="L216"><a href="#L216">216</a>    self._entitySignificanceTaskLinkedList:Clear()</span>
+<span id="L217"><a href="#L217">217</a>    self._entitySignificanceTaskLinkedListForDestroy:Clear()</span>
+<span id="L218"><a href="#L218">218</a>end</span>
+<span id="L219"><a href="#L219">219</a></span>
+<span id="L220"><a href="#L220">220</a>---@private</span>
+<span id="L221"><a href="#L221">221</a>---@return MapSignificanceEntityTask</span>
+<span id="L222"><a href="#L222">222</a>function cls:TakeEntityTask(entityId)</span>
+<span id="L223"><a href="#L223">223</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L224"><a href="#L224">224</a>    if not entityTask then</span>
+<span id="L225"><a href="#L225">225</a>        entityTask = self._entityTaskPool:Take()</span>
+<span id="L226"><a href="#L226">226</a>        entityTask:Init(entityId)</span>
+<span id="L227"><a href="#L227">227</a>        self._entityTasksByEntityId[entityId] = entityTask</span>
+<span id="L228"><a href="#L228">228</a>    end</span>
+<span id="L229"><a href="#L229">229</a></span>
+<span id="L230"><a href="#L230">230</a>    return entityTask</span>
+<span id="L231"><a href="#L231">231</a>end</span>
+<span id="L232"><a href="#L232">232</a></span>
+<span id="L233"><a href="#L233">233</a>---@param entityTask MapSignificanceEntityTask</span>
+<span id="L234"><a href="#L234">234</a>function cls:PutEntityTask(entityTask)</span>
+<span id="L235"><a href="#L235">235</a>    self._entityTasksByEntityId[entityTask.entityId] = nil</span>
+<span id="L236"><a href="#L236">236</a>    self._entityTaskPool:Put(entityTask)</span>
+<span id="L237"><a href="#L237">237</a>end</span>
+<span id="L238"><a href="#L238">238</a></span>
+<span id="L239"><a href="#L239">239</a>function cls:OnEntityTaskAddSignificanceTask(significanceTask)</span>
+<span id="L240"><a href="#L240">240</a>    if significanceTask.inDestroyList and MapSignificanceDefine.EnableDestoryQueue then</span>
+<span id="L241"><a href="#L241">241</a>        self._entitySignificanceTaskLinkedListForDestroy:AddLast(significanceTask)</span>
+<span id="L242"><a href="#L242">242</a>    else</span>
+<span id="L243"><a href="#L243">243</a>        self._entitySignificanceTaskLinkedList:AddLast(significanceTask)</span>
+<span id="L244"><a href="#L244">244</a>    end</span>
+<span id="L245"><a href="#L245">245</a>end</span>
+<span id="L246"><a href="#L246">246</a></span>
+<span id="L247"><a href="#L247">247</a>function cls:OnEntityTaskRemoveSignificanceTask(significanceTask)</span>
+<span id="L248"><a href="#L248">248</a>    if significanceTask then</span>
+<span id="L249"><a href="#L249">249</a>        if significanceTask.inDestroyList and MapSignificanceDefine.EnableDestoryQueue then</span>
+<span id="L250"><a href="#L250">250</a>            self._entitySignificanceTaskLinkedListForDestroy:Remove(significanceTask)</span>
+<span id="L251"><a href="#L251">251</a>        else</span>
+<span id="L252"><a href="#L252">252</a>            self._entitySignificanceTaskLinkedList:Remove(significanceTask)</span>
+<span id="L253"><a href="#L253">253</a>        end</span>
+<span id="L254"><a href="#L254">254</a>    end</span>
+<span id="L255"><a href="#L255">255</a>end</span>
+<span id="L256"><a href="#L256">256</a></span>
+<span id="L257"><a href="#L257">257</a>function cls:GetEntityTaskByEntityId(entityId)</span>
+<span id="L258"><a href="#L258">258</a>    if not self._entityTasksByEntityId then</span>
+<span id="L259"><a href="#L259">259</a>        return nil</span>
+<span id="L260"><a href="#L260">260</a>    end</span>
+<span id="L261"><a href="#L261">261</a></span>
+<span id="L262"><a href="#L262">262</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L263"><a href="#L263">263</a>    if not entityTask then</span>
+<span id="L264"><a href="#L264">264</a>        return nil</span>
+<span id="L265"><a href="#L265">265</a>    end</span>
+<span id="L266"><a href="#L266">266</a></span>
+<span id="L267"><a href="#L267">267</a>    return entityTask</span>
+<span id="L268"><a href="#L268">268</a>end</span>
+<span id="L269"><a href="#L269">269</a></span>
+<span id="L270"><a href="#L270">270</a>function cls:GetEntitySignificanceTask(entityId, taskType)</span>
+<span id="L271"><a href="#L271">271</a>    if not self._entityTasksByEntityId then</span>
+<span id="L272"><a href="#L272">272</a>        return nil</span>
+<span id="L273"><a href="#L273">273</a>    end</span>
+<span id="L274"><a href="#L274">274</a></span>
+<span id="L275"><a href="#L275">275</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L276"><a href="#L276">276</a>    if not entityTask then</span>
+<span id="L277"><a href="#L277">277</a>        return nil</span>
+<span id="L278"><a href="#L278">278</a>    end</span>
+<span id="L279"><a href="#L279">279</a></span>
+<span id="L280"><a href="#L280">280</a>    local task = entityTask:GetSignificanceTask(taskType)</span>
+<span id="L281"><a href="#L281">281</a>    return task</span>
+<span id="L282"><a href="#L282">282</a>end</span>
+<span id="L283"><a href="#L283">283</a></span>
+<span id="L284"><a href="#L284">284</a>function cls:GetEntitySignificanceTaskCount(entityId)</span>
+<span id="L285"><a href="#L285">285</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L286"><a href="#L286">286</a>    if entityTask then</span>
+<span id="L287"><a href="#L287">287</a>        return entityTask:GetSignificanceTaskCount()</span>
+<span id="L288"><a href="#L288">288</a>    end</span>
+<span id="L289"><a href="#L289">289</a></span>
+<span id="L290"><a href="#L290">290</a>    return 0</span>
+<span id="L291"><a href="#L291">291</a>end</span>
+<span id="L292"><a href="#L292">292</a></span>
+<span id="L293"><a href="#L293">293</a>function cls:GetEntitySignificanceFirstTaskType(entityId)</span>
+<span id="L294"><a href="#L294">294</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L295"><a href="#L295">295</a>    local firstTask = entityTask and entityTask:First()</span>
+<span id="L296"><a href="#L296">296</a>    return firstTask and firstTask.taskType</span>
+<span id="L297"><a href="#L297">297</a>end</span>
+<span id="L298"><a href="#L298">298</a></span>
+<span id="L299"><a href="#L299">299</a>function cls:GetTotalCountOfSignificanceTask()</span>
+<span id="L300"><a href="#L300">300</a>    return self._entitySignificanceTaskLinkedList:Length()</span>
+<span id="L301"><a href="#L301">301</a>end</span>
+<span id="L302"><a href="#L302">302</a></span>
+<span id="L303"><a href="#L303">303</a>function cls:GetTotalCountOfDestroySignificanceTask()</span>
+<span id="L304"><a href="#L304">304</a>    return self._entitySignificanceTaskLinkedListForDestroy:Length()</span>
+<span id="L305"><a href="#L305">305</a>end</span>
+<span id="L306"><a href="#L306">306</a></span>
+<span id="L307"><a href="#L307">307</a>function cls:GetTotalCountOfInfiniteZoomTask()</span>
+<span id="L308"><a href="#L308">308</a>    return self._infiniteZoomTaskCount</span>
+<span id="L309"><a href="#L309">309</a>end</span>
+<span id="L310"><a href="#L310">310</a></span>
+<span id="L311"><a href="#L311">311</a>--#if ENABLE_PROFILER</span>
+<span id="L312"><a href="#L312">312</a>local sampler_ForceConsumeEntityTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.ForceConsumeEntityTask&quot;)</span>
+<span id="L313"><a href="#L313">313</a>--#endif</span>
+<span id="L314"><a href="#L314">314</a>function cls:ForceConsumeEntityTask(entityId)</span>
+<span id="L315"><a href="#L315">315</a>    -- mgr.garyLog:Info(&quot;[zombie] ForceConsumeEntityTask entityId : %s&quot;, entityId)</span>
+<span id="L316"><a href="#L316">316</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L317"><a href="#L317">317</a>    if not entityTask then</span>
+<span id="L318"><a href="#L318">318</a>        return nil</span>
+<span id="L319"><a href="#L319">319</a>    end</span>
+<span id="L320"><a href="#L320">320</a></span>
+<span id="L321"><a href="#L321">321</a>    --#if ENABLE_PROFILER</span>
+<span id="L322"><a href="#L322">322</a>    ProfilerUtil.SamplerBegin(sampler_ForceConsumeEntityTask)</span>
+<span id="L323"><a href="#L323">323</a>    --#endif</span>
+<span id="L324"><a href="#L324">324</a>    entityTask:ForceConsumeAllTask()</span>
+<span id="L325"><a href="#L325">325</a>    --#if ENABLE_PROFILER</span>
+<span id="L326"><a href="#L326">326</a>    ProfilerUtil.SamplerEnd(sampler_ForceConsumeEntityTask)</span>
+<span id="L327"><a href="#L327">327</a>    --#endif</span>
+<span id="L328"><a href="#L328">328</a>end</span>
+<span id="L329"><a href="#L329">329</a>--endregion</span>
+<span id="L330"><a href="#L330">330</a></span>
+<span id="L331"><a href="#L331">331</a>--region infiniteZoomTask</span>
+<span id="L332"><a href="#L332">332</a>---@private</span>
+<span id="L333"><a href="#L333">333</a>function cls:InitInfiniteZoomTask()</span>
+<span id="L334"><a href="#L334">334</a>    self._infiniteZoomTasks = {}</span>
+<span id="L335"><a href="#L335">335</a>    self._infiniteZoomTaskCount = 0</span>
+<span id="L336"><a href="#L336">336</a>    self._infiniteZoomTaskPool = mgr.pool:CreatePool({</span>
+<span id="L337"><a href="#L337">337</a>        name = &quot;MapSignificanceInfiniteZoomTask&quot;,</span>
+<span id="L338"><a href="#L338">338</a>        createFunc = function()</span>
+<span id="L339"><a href="#L339">339</a>            return MapSignificanceInfiniteZoomTask.New()</span>
+<span id="L340"><a href="#L340">340</a>        end,</span>
+<span id="L341"><a href="#L341">341</a></span>
+<span id="L342"><a href="#L342">342</a>        onTakeFunc = function(task)</span>
+<span id="L343"><a href="#L343">343</a>            --   task:Init()</span>
+<span id="L344"><a href="#L344">344</a>        end,</span>
+<span id="L345"><a href="#L345">345</a></span>
+<span id="L346"><a href="#L346">346</a>        onPutFunc = function(task)</span>
+<span id="L347"><a href="#L347">347</a>            task:CleanUp()</span>
+<span id="L348"><a href="#L348">348</a>        end,</span>
+<span id="L349"><a href="#L349">349</a></span>
+<span id="L350"><a href="#L350">350</a>        type = PoolType.NoRehash,</span>
+<span id="L351"><a href="#L351">351</a>        initSize = 300,</span>
+<span id="L352"><a href="#L352">352</a>        -- maxSize = 500,</span>
+<span id="L353"><a href="#L353">353</a>    })</span>
+<span id="L354"><a href="#L354">354</a>end</span>
+<span id="L355"><a href="#L355">355</a></span>
+<span id="L356"><a href="#L356">356</a>---@private</span>
+<span id="L357"><a href="#L357">357</a>function cls:ClearInfiniteZoomTask()</span>
+<span id="L358"><a href="#L358">358</a>    for _, infiniteZoomTask in pairs(self._infiniteZoomTasks) do</span>
+<span id="L359"><a href="#L359">359</a>        self._infiniteZoomTaskPool:Put(infiniteZoomTask)</span>
+<span id="L360"><a href="#L360">360</a>    end</span>
+<span id="L361"><a href="#L361">361</a>    TblUtil.Clear(self._infiniteZoomTasks)</span>
+<span id="L362"><a href="#L362">362</a>    self._infiniteZoomTaskCount = 0</span>
+<span id="L363"><a href="#L363">363</a>end</span>
+<span id="L364"><a href="#L364">364</a></span>
+<span id="L365"><a href="#L365">365</a>---@private</span>
+<span id="L366"><a href="#L366">366</a>---@return MapSignificanceInfiniteZoomTask</span>
+<span id="L367"><a href="#L367">367</a>function cls:TakeInfiniteZoomTask(uniqueId)</span>
+<span id="L368"><a href="#L368">368</a>    local infiniteZoomTask = self._infiniteZoomTasks[uniqueId]</span>
+<span id="L369"><a href="#L369">369</a>    if not infiniteZoomTask then</span>
+<span id="L370"><a href="#L370">370</a>        infiniteZoomTask = self._infiniteZoomTaskPool:Take()</span>
+<span id="L371"><a href="#L371">371</a>        infiniteZoomTask:Init(uniqueId, self.MapSignificanceTaskFactory)</span>
+<span id="L372"><a href="#L372">372</a>        self._infiniteZoomTasks[uniqueId] = infiniteZoomTask</span>
+<span id="L373"><a href="#L373">373</a>        self._infiniteZoomTaskCount = self._infiniteZoomTaskCount + 1</span>
+<span id="L374"><a href="#L374">374</a>    end</span>
+<span id="L375"><a href="#L375">375</a></span>
+<span id="L376"><a href="#L376">376</a>    return infiniteZoomTask</span>
+<span id="L377"><a href="#L377">377</a>end</span>
+<span id="L378"><a href="#L378">378</a></span>
+<span id="L379"><a href="#L379">379</a>---@param infiniteZoomTask MapSignificanceInfiniteZoomTask</span>
+<span id="L380"><a href="#L380">380</a>function cls:PutInfiniteZoomTask(infiniteZoomTask)</span>
+<span id="L381"><a href="#L381">381</a>    self._infiniteZoomTasks[infiniteZoomTask.uniqueId] = nil</span>
+<span id="L382"><a href="#L382">382</a>    self._infiniteZoomTaskPool:Put(infiniteZoomTask)</span>
+<span id="L383"><a href="#L383">383</a>    self._infiniteZoomTaskCount = self._infiniteZoomTaskCount - 1</span>
+<span id="L384"><a href="#L384">384</a>end</span>
+<span id="L385"><a href="#L385">385</a></span>
+<span id="L386"><a href="#L386">386</a>---@param uniqueId number</span>
+<span id="L387"><a href="#L387">387</a>---@param operation EMapSignificanceOperation</span>
+<span id="L388"><a href="#L388">388</a>function cls:RequestTask_ZoomGuildMember(uniqueId, operation)</span>
+<span id="L389"><a href="#L389">389</a>    local infiniteZoomTask = self._infiniteZoomTasks[uniqueId]</span>
+<span id="L390"><a href="#L390">390</a>    local significanceTask = nil</span>
+<span id="L391"><a href="#L391">391</a>    if operation == EMapSignificanceOperation.Remove then</span>
+<span id="L392"><a href="#L392">392</a>        -- local syncTask = self:GetSyncTask(EMapSignificanceTaskType.ZoomGuildMember)</span>
+<span id="L393"><a href="#L393">393</a>        -- syncTask.uniqueId = uniqueId</span>
+<span id="L394"><a href="#L394">394</a>        -- self:ProcessSignificanceTask_InfiniteZoom(syncTask)</span>
+<span id="L395"><a href="#L395">395</a>        -- 为了视觉体验，同步处理删除</span>
+<span id="L396"><a href="#L396">396</a>        mgr.infiniteZoomMgr.MapEntityCtrl:RemoveMapEntityIcon(uniqueId)</span>
+<span id="L397"><a href="#L397">397</a></span>
+<span id="L398"><a href="#L398">398</a>        if infiniteZoomTask ~= nil then</span>
+<span id="L399"><a href="#L399">399</a>            infiniteZoomTask:SetTask_Del()</span>
+<span id="L400"><a href="#L400">400</a>            self._infiniteZoomTaskPool:Put(infiniteZoomTask)</span>
+<span id="L401"><a href="#L401">401</a>            self._infiniteZoomTasks[uniqueId] = nil</span>
+<span id="L402"><a href="#L402">402</a>            self._infiniteZoomTaskCount = self._infiniteZoomTaskCount - 1</span>
+<span id="L403"><a href="#L403">403</a>        end</span>
+<span id="L404"><a href="#L404">404</a></span>
+<span id="L405"><a href="#L405">405</a>        return</span>
+<span id="L406"><a href="#L406">406</a>    else</span>
+<span id="L407"><a href="#L407">407</a>        if infiniteZoomTask then</span>
+<span id="L408"><a href="#L408">408</a>            significanceTask = infiniteZoomTask:HasTask(operation)</span>
+<span id="L409"><a href="#L409">409</a>            if significanceTask ~= nil then</span>
+<span id="L410"><a href="#L410">410</a>                return</span>
+<span id="L411"><a href="#L411">411</a>            end</span>
+<span id="L412"><a href="#L412">412</a>        end</span>
+<span id="L413"><a href="#L413">413</a>    end</span>
+<span id="L414"><a href="#L414">414</a></span>
+<span id="L415"><a href="#L415">415</a>    if significanceTask == nil then</span>
+<span id="L416"><a href="#L416">416</a>        infiniteZoomTask = self:TakeInfiniteZoomTask(uniqueId)</span>
+<span id="L417"><a href="#L417">417</a>        significanceTask = MapSignificanceTaskFactory:TakeTask_ZoomGuildMember()</span>
+<span id="L418"><a href="#L418">418</a>    end</span>
+<span id="L419"><a href="#L419">419</a></span>
+<span id="L420"><a href="#L420">420</a>    significanceTask.uniqueId = uniqueId</span>
+<span id="L421"><a href="#L421">421</a>    significanceTask.operation = operation</span>
+<span id="L422"><a href="#L422">422</a></span>
+<span id="L423"><a href="#L423">423</a>    infiniteZoomTask:SetTask(significanceTask)</span>
+<span id="L424"><a href="#L424">424</a>end</span>
+<span id="L425"><a href="#L425">425</a></span>
+<span id="L426"><a href="#L426">426</a>function cls:ProcessSignificanceTask_ZoomGuildMember(significanceTask)</span>
+<span id="L427"><a href="#L427">427</a>    local entityId = significanceTask.uniqueId</span>
+<span id="L428"><a href="#L428">428</a>    local operation = significanceTask.operation</span>
+<span id="L429"><a href="#L429">429</a>    if operation == EMapSignificanceOperation.Add then</span>
+<span id="L430"><a href="#L430">430</a></span>
+<span id="L431"><a href="#L431">431</a>        UtilArmyProfile:Begin(&quot;ZoomGuildMemberAdd&quot;)</span>
+<span id="L432"><a href="#L432">432</a>        local guildData = mgr.infiniteZoomMgr.MapGoEffectCtrl:GetMemberDataByEntityId(entityId)</span>
+<span id="L433"><a href="#L433">433</a>        if guildData then</span>
+<span id="L434"><a href="#L434">434</a>            mgr.infiniteZoomMgr.MapEntityCtrl:CreateMapEntityIcon(guildData)</span>
+<span id="L435"><a href="#L435">435</a>        end</span>
+<span id="L436"><a href="#L436">436</a>        UtilArmyProfile:End(&quot;ZoomGuildMemberAdd&quot;)</span>
+<span id="L437"><a href="#L437">437</a></span>
+<span id="L438"><a href="#L438">438</a>    elseif operation == EMapSignificanceOperation.Remove then</span>
+<span id="L439"><a href="#L439">439</a>        mgr.infiniteZoomMgr.MapEntityCtrl:RemoveMapEntityIcon(entityId)</span>
+<span id="L440"><a href="#L440">440</a>    elseif operation == EMapSignificanceOperation.Refresh then</span>
+<span id="L441"><a href="#L441">441</a>        UtilArmyProfile:Begin(&quot;ZoomGuildMemberRefresh&quot;)</span>
+<span id="L442"><a href="#L442">442</a>        mgr.infiniteZoomMgr.MapEntityCtrl:RefreshMapEntityIconViewData(entityId)</span>
+<span id="L443"><a href="#L443">443</a>        UtilArmyProfile:End(&quot;ZoomGuildMemberRefresh&quot;)</span>
+<span id="L444"><a href="#L444">444</a></span>
+<span id="L445"><a href="#L445">445</a>    end</span>
+<span id="L446"><a href="#L446">446</a>end</span>
+<span id="L447"><a href="#L447">447</a></span>
+<span id="L448"><a href="#L448">448</a>function cls:ProcessSignificanceTask_MapEntityMerge(significanceTask)</span>
+<span id="L449"><a href="#L449">449</a>    local entityId = significanceTask.entityId</span>
+<span id="L450"><a href="#L450">450</a>    -- For Debug Old Attr</span>
+<span id="L451"><a href="#L451">451</a>    -- local oldAttr = mgr.attr:GetEntityAttr(entityId)</span>
+<span id="L452"><a href="#L452">452</a>    </span>
+<span id="L453"><a href="#L453">453</a>    mgr.attr:DecodeAndMergeWorldEntity(entityId)</span>
+<span id="L454"><a href="#L454">454</a></span>
+<span id="L455"><a href="#L455">455</a>    local entityAttr = mgr.attr:GetEntityAttr(entityId)</span>
+<span id="L456"><a href="#L456">456</a>    if not entityAttr then</span>
+<span id="L457"><a href="#L457">457</a>        mgr.xuanguoLog:Error(string.format(&quot;EntityId[%d] entityAttr is nil&quot;,entityId))</span>
+<span id="L458"><a href="#L458">458</a>        return</span>
+<span id="L459"><a href="#L459">459</a>    end</span>
+<span id="L460"><a href="#L460">460</a></span>
+<span id="L461"><a href="#L461">461</a>    entityAttr.entityId = entityId</span>
+<span id="L462"><a href="#L462">462</a>    mapCore:ProcessEntityAttr(entityAttr, significanceTask.isFullUpdate, false, significanceTask.viewLayer)</span>
+<span id="L463"><a href="#L463">463</a>end</span>
+<span id="L464"><a href="#L464">464</a></span>
+<span id="L465"><a href="#L465">465</a>--endregion</span>
+<span id="L466"><a href="#L466">466</a></span>
+<span id="L467"><a href="#L467">467</a>--region sync task</span>
+<span id="L468"><a href="#L468">468</a>function cls:InitSyncTask()</span>
+<span id="L469"><a href="#L469">469</a>    self._syncTasksByType = {}</span>
+<span id="L470"><a href="#L470">470</a>end</span>
+<span id="L471"><a href="#L471">471</a></span>
+<span id="L472"><a href="#L472">472</a>function cls:ClearSyncTask()</span>
+<span id="L473"><a href="#L473">473</a>    for taskType, significanceTask in pairs(self._syncTasksByType) do</span>
+<span id="L474"><a href="#L474">474</a>        self.MapSignificanceTaskFactory:PutTask(significanceTask)</span>
+<span id="L475"><a href="#L475">475</a>    end</span>
+<span id="L476"><a href="#L476">476</a></span>
+<span id="L477"><a href="#L477">477</a>    self._syncTasksByType = {}</span>
+<span id="L478"><a href="#L478">478</a>end</span>
+<span id="L479"><a href="#L479">479</a></span>
+<span id="L480"><a href="#L480">480</a>function cls:GetSyncTask(taskType)</span>
+<span id="L481"><a href="#L481">481</a>    local significanceTask = self._syncTasksByType[taskType]</span>
+<span id="L482"><a href="#L482">482</a>    if significanceTask == nil then</span>
+<span id="L483"><a href="#L483">483</a>        significanceTask = self.MapSignificanceTaskFactory:TakeTask(taskType)</span>
+<span id="L484"><a href="#L484">484</a>        self._syncTasksByType[taskType] = significanceTask</span>
+<span id="L485"><a href="#L485">485</a>    end</span>
+<span id="L486"><a href="#L486">486</a></span>
+<span id="L487"><a href="#L487">487</a>    return significanceTask</span>
+<span id="L488"><a href="#L488">488</a>end</span>
+<span id="L489"><a href="#L489">489</a>--endregion</span>
+<span id="L490"><a href="#L490">490</a></span>
+<span id="L491"><a href="#L491">491</a>--#if ENABLE_PROFILER</span>
+<span id="L492"><a href="#L492">492</a>local sampler_OnUpdate = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.sampler_OnUpdate&quot;)</span>
+<span id="L493"><a href="#L493">493</a>--#endif</span>
+<span id="L494"><a href="#L494">494</a></span>
+<span id="L495"><a href="#L495">495</a>-- [AOE.AutoProfiler]</span>
+<span id="L496"><a href="#L496">496</a>function cls:OnUpdate()</span>
+<span id="L497"><a href="#L497">497</a>    --#if UNITY_EDITOR</span>
+<span id="L498"><a href="#L498">498</a>    TblUtil.Clear(self.significanceTaskTimeDic)</span>
+<span id="L499"><a href="#L499">499</a>    CS.AOE.Editor.EditorLuaCall.AddSignificanceTaskData(self.significanceTaskCountDic)</span>
+<span id="L500"><a href="#L500">500</a>    --#endif</span>
+<span id="L501"><a href="#L501">501</a>    --#if ENABLE_PROFILER</span>
+<span id="L502"><a href="#L502">502</a>    ProfilerUtil.SamplerBegin(sampler_OnUpdate)--sherwinprofiler</span>
+<span id="L503"><a href="#L503">503</a>    --#endif</span>
+<span id="L504"><a href="#L504">504</a>    ProfilerUtil.BeginCpuSample(102)  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L505"><a href="#L505">505</a>    -- diagnostic: push pending task counts for InfiniteZoomMgr grid stats dump</span>
+<span id="L506"><a href="#L506">506</a>    if OutsideMapPerfDiagnostic.GridStatsDumpEnabled then</span>
+<span id="L507"><a href="#L507">507</a>        local pending, pendingToOrder = self.MapSignificanceTaskScheduler:GetPendingCounts()</span>
+<span id="L508"><a href="#L508">508</a>        InfiniteZoomUtils.PushZoomPendingTaskCount(pending, pendingToOrder)</span>
+<span id="L509"><a href="#L509">509</a>    end</span>
+<span id="L510"><a href="#L510">510</a>    self:UpdatePrepareTask()</span>
+<span id="L511"><a href="#L511">511</a>    self:UpdateHighFreqPrepareData()</span>
+<span id="L512"><a href="#L512">512</a>    self.MapSignificanceTaskScheduler:ProcessTaskOrder()</span>
+<span id="L513"><a href="#L513">513</a>    self:ProcessSignificanceTasks()</span>
+<span id="L514"><a href="#L514">514</a>    ProfilerUtil.EndCpuSample()  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L515"><a href="#L515">515</a>    --#if ENABLE_PROFILER</span>
+<span id="L516"><a href="#L516">516</a>    ProfilerUtil.SamplerEnd(sampler_OnUpdate)--sherwinprofiler</span>
+<span id="L517"><a href="#L517">517</a>    --#endif</span>
+<span id="L518"><a href="#L518">518</a></span>
+<span id="L519"><a href="#L519">519</a>    -- diagnostic: push per-frame icon task counters for InfiniteZoomMgr stats dump</span>
+<span id="L520"><a href="#L520">520</a>    local iconTaskStats = self._iconTaskStats</span>
+<span id="L521"><a href="#L521">521</a>    if OutsideMapPerfDiagnostic.GridStatsDumpEnabled then</span>
+<span id="L522"><a href="#L522">522</a>        InfiniteZoomUtils.PushIconTaskCount(iconTaskStats.created, iconTaskStats.refreshed,</span>
+<span id="L523"><a href="#L523">523</a>            iconTaskStats.removed, iconTaskStats.bigCityRefresh, iconTaskStats.bigCityUI)</span>
+<span id="L524"><a href="#L524">524</a>    end</span>
+<span id="L525"><a href="#L525">525</a>    iconTaskStats.created = 0</span>
+<span id="L526"><a href="#L526">526</a>    iconTaskStats.refreshed = 0</span>
+<span id="L527"><a href="#L527">527</a>    iconTaskStats.removed = 0</span>
+<span id="L528"><a href="#L528">528</a>    iconTaskStats.bigCityRefresh = 0</span>
+<span id="L529"><a href="#L529">529</a>    iconTaskStats.bigCityUI = 0</span>
+<span id="L530"><a href="#L530">530</a></span>
+<span id="L531"><a href="#L531">531</a>    --#if UNITY_EDITOR</span>
+<span id="L532"><a href="#L532">532</a>    CS.AOE.Editor.EditorLuaCall.AddSignificanceTaskTimeData(self.significanceTaskTimeDic)</span>
+<span id="L533"><a href="#L533">533</a>    --#endif</span>
+<span id="L534"><a href="#L534">534</a>end</span>
+<span id="L535"><a href="#L535">535</a></span>
+<span id="L536"><a href="#L536">536</a>--region PrepareTask</span>
+<span id="L537"><a href="#L537">537</a>local FlatPrepareDataIndex = 0</span>
+<span id="L538"><a href="#L538">538</a>local PrepareTaskDuraion = 0</span>
+<span id="L539"><a href="#L539">539</a>function cls:InitPrepareData()</span>
+<span id="L540"><a href="#L540">540</a>    self._flatPrepareData = {}</span>
+<span id="L541"><a href="#L541">541</a>    FlatPrepareDataIndex = 0</span>
+<span id="L542"><a href="#L542">542</a>    self._highFreqPrepareData = {}</span>
+<span id="L543"><a href="#L543">543</a>    self._highFreqIndex = 0</span>
+<span id="L544"><a href="#L544">544</a>end</span>
+<span id="L545"><a href="#L545">545</a></span>
+<span id="L546"><a href="#L546">546</a>function cls:CleanUpPrepareData()</span>
+<span id="L547"><a href="#L547">547</a>    self._flatPrepareData = {}</span>
+<span id="L548"><a href="#L548">548</a>    TblUtil.Clear(self._highFreqPrepareData)</span>
+<span id="L549"><a href="#L549">549</a>    FlatPrepareDataIndex = 0</span>
+<span id="L550"><a href="#L550">550</a>    self._highFreqIndex = 0</span>
+<span id="L551"><a href="#L551">551</a>end</span>
+<span id="L552"><a href="#L552">552</a></span>
+<span id="L553"><a href="#L553">553</a>function cls:WritePrepareData_FullUpdateEntity(fullUpdateEntity, viewLayer)</span>
+<span id="L554"><a href="#L554">554</a>    local flatPrepareData = self._flatPrepareData</span>
+<span id="L555"><a href="#L555">555</a>    for _, entityAttr in ipairs(fullUpdateEntity) do</span>
+<span id="L556"><a href="#L556">556</a></span>
+<span id="L557"><a href="#L557">557</a>        local isIgnore = false</span>
+<span id="L558"><a href="#L558">558</a>        -- if(_G.IsReportVersion)then</span>
+<span id="L559"><a href="#L559">559</a>        --     ---@type NetNs.proto_WorldEntityAttr</span>
+<span id="L560"><a href="#L560">560</a>        --     local attr = entityAttr</span>
+<span id="L561"><a href="#L561">561</a>        --     local entityType = attr.entityType</span>
+<span id="L562"><a href="#L562">562</a>        --     if(entityType == CfgNs.WorldEntityType.WET_MingChengMainBuilding)then</span>
+<span id="L563"><a href="#L563">563</a>        --         ---@type NetNs.proto_BigWorldCityAttr</span>
+<span id="L564"><a href="#L564">564</a>        --         local bigCityInfo = WorldUtil.GetAttrComponent(entityAttr, CfgNs.EntityComponentType.ECT_Self_BigWorldCity)</span>
+<span id="L565"><a href="#L565">565</a>        --         local mainBuildingCityId = bigCityInfo.id</span>
+<span id="L566"><a href="#L566">566</a>        --         local cfg = mgr.bigCityMgr:GetMainBuildingOfflineDataByCityId(mainBuildingCityId)</span>
+<span id="L567"><a href="#L567">567</a>        --         if(cfg and cfg.templateId == 216)then</span>
+<span id="L568"><a href="#L568">568</a>        --             isIgnore = true</span>
+<span id="L569"><a href="#L569">569</a>        --         end</span>
+<span id="L570"><a href="#L570">570</a>        --     end</span>
+<span id="L571"><a href="#L571">571</a>        --     if(entityType == CfgNs.WorldEntityType.WET_MingChengCityGate)then</span>
+<span id="L572"><a href="#L572">572</a>        --         ---@type NetNs.proto_MingChengCityGateAttr</span>
+<span id="L573"><a href="#L573">573</a>        --         local mingChengCityGate = WorldUtil.GetAttrComponent(entityAttr, CfgNs.EntityComponentType.ECT_Self_MingChengCityGate)</span>
+<span id="L574"><a href="#L574">574</a>        --         local mainBuildingCityId = mingChengCityGate.belongCityId</span>
+<span id="L575"><a href="#L575">575</a>        --         if(mainBuildingCityId)then</span>
+<span id="L576"><a href="#L576">576</a>        --             local cfg = mgr.bigCityMgr:GetMainBuildingOfflineDataByCityId(mainBuildingCityId)</span>
+<span id="L577"><a href="#L577">577</a>        --             if(cfg and cfg.templateId == 216)then</span>
+<span id="L578"><a href="#L578">578</a>        --                 isIgnore = true</span>
+<span id="L579"><a href="#L579">579</a>        --             end</span>
+<span id="L580"><a href="#L580">580</a>        --         end</span>
+<span id="L581"><a href="#L581">581</a>        --     end</span>
+<span id="L582"><a href="#L582">582</a>        -- end</span>
+<span id="L583"><a href="#L583">583</a>        if(not (IgnoreEntityType and IgnoreEntityType[entityAttr.entityType]))then</span>
+<span id="L584"><a href="#L584">584</a>            if(not isIgnore)then</span>
+<span id="L585"><a href="#L585">585</a>                FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L586"><a href="#L586">586</a>                flatPrepareData[FlatPrepareDataIndex] = 1</span>
+<span id="L587"><a href="#L587">587</a></span>
+<span id="L588"><a href="#L588">588</a>                FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L589"><a href="#L589">589</a>                flatPrepareData[FlatPrepareDataIndex] = entityAttr</span>
+<span id="L590"><a href="#L590">590</a></span>
+<span id="L591"><a href="#L591">591</a>                FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L592"><a href="#L592">592</a>                flatPrepareData[FlatPrepareDataIndex] = viewLayer</span>
+<span id="L593"><a href="#L593">593</a>            end</span>
+<span id="L594"><a href="#L594">594</a>        end</span>
+<span id="L595"><a href="#L595">595</a>    end</span>
+<span id="L596"><a href="#L596">596</a>end</span>
+<span id="L597"><a href="#L597">597</a></span>
+<span id="L598"><a href="#L598">598</a>function cls:WritePrepareData_ChangeUpdateEntity(changeUpdateEntity, viewLayer)</span>
+<span id="L599"><a href="#L599">599</a>    local flatPrepareData = self._flatPrepareData</span>
+<span id="L600"><a href="#L600">600</a>    for _, entityAttr in ipairs(changeUpdateEntity) do</span>
+<span id="L601"><a href="#L601">601</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L602"><a href="#L602">602</a>        flatPrepareData[FlatPrepareDataIndex] = 2</span>
+<span id="L603"><a href="#L603">603</a>        </span>
+<span id="L604"><a href="#L604">604</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L605"><a href="#L605">605</a>        flatPrepareData[FlatPrepareDataIndex] = entityAttr</span>
+<span id="L606"><a href="#L606">606</a>        </span>
+<span id="L607"><a href="#L607">607</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L608"><a href="#L608">608</a>        flatPrepareData[FlatPrepareDataIndex] = viewLayer</span>
+<span id="L609"><a href="#L609">609</a>    end</span>
+<span id="L610"><a href="#L610">610</a>end</span>
+<span id="L611"><a href="#L611">611</a></span>
+<span id="L612"><a href="#L612">612</a>function cls:WritePrepareData_DeleteInfo(deleteInfo)</span>
+<span id="L613"><a href="#L613">613</a>    local flatPrepareData = self._flatPrepareData</span>
+<span id="L614"><a href="#L614">614</a>    for _, entityDeleteInfo in ipairs(deleteInfo) do</span>
+<span id="L615"><a href="#L615">615</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L616"><a href="#L616">616</a>        flatPrepareData[FlatPrepareDataIndex] = 3</span>
+<span id="L617"><a href="#L617">617</a></span>
+<span id="L618"><a href="#L618">618</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L619"><a href="#L619">619</a>        flatPrepareData[FlatPrepareDataIndex] = entityDeleteInfo</span>
+<span id="L620"><a href="#L620">620</a></span>
+<span id="L621"><a href="#L621">621</a>        FlatPrepareDataIndex = FlatPrepareDataIndex + 1</span>
+<span id="L622"><a href="#L622">622</a>        flatPrepareData[FlatPrepareDataIndex] = 0</span>
+<span id="L623"><a href="#L623">623</a>    end</span>
+<span id="L624"><a href="#L624">624</a>end</span>
+<span id="L625"><a href="#L625">625</a></span>
+<span id="L626"><a href="#L626">626</a>--#if ENABLE_PROFILER</span>
+<span id="L627"><a href="#L627">627</a>local sampler_UpdatePrepareTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.UpdatePrepareTask&quot;)</span>
+<span id="L628"><a href="#L628">628</a>--#endif</span>
+<span id="L629"><a href="#L629">629</a>-- [AOE.AutoProfiler]</span>
+<span id="L630"><a href="#L630">630</a>function cls:UpdatePrepareTask()</span>
+<span id="L631"><a href="#L631">631</a>    ProfilerUtil.BeginCpuSample(106)  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L632"><a href="#L632">632</a>    --#if ENABLE_PROFILER</span>
+<span id="L633"><a href="#L633">633</a>    ProfilerUtil.SamplerBegin(sampler_UpdatePrepareTask)</span>
+<span id="L634"><a href="#L634">634</a>    --#endif</span>
+<span id="L635"><a href="#L635">635</a>    local startTime = U3D.Time.realtimeSinceStartup</span>
+<span id="L636"><a href="#L636">636</a>    local prepareData = self._flatPrepareData</span>
+<span id="L637"><a href="#L637">637</a>    for i = 1, FlatPrepareDataIndex, 3 do</span>
+<span id="L638"><a href="#L638">638</a>        local dataType = prepareData[i]</span>
+<span id="L639"><a href="#L639">639</a>        if dataType == 1 then</span>
+<span id="L640"><a href="#L640">640</a>            local entityAttr = prepareData[i + 1]</span>
+<span id="L641"><a href="#L641">641</a>            local viewLayer = prepareData[i + 2]</span>
+<span id="L642"><a href="#L642">642</a>            mapCore:CreateMapObject(entityAttr, false, viewLayer)</span>
+<span id="L643"><a href="#L643">643</a>        elseif dataType == 2 then</span>
+<span id="L644"><a href="#L644">644</a>            local entityAttr = prepareData[i + 1]</span>
+<span id="L645"><a href="#L645">645</a>            local viewLayer = prepareData[i + 2]</span>
+<span id="L646"><a href="#L646">646</a>            mapCore:RefreshMapObject(entityAttr, false, viewLayer)</span>
+<span id="L647"><a href="#L647">647</a>        else</span>
+<span id="L648"><a href="#L648">648</a>            local deleteInfo = prepareData[i + 1]</span>
+<span id="L649"><a href="#L649">649</a>            mapCore:ProcessDeleteInfo(deleteInfo)</span>
+<span id="L650"><a href="#L650">650</a>        end</span>
+<span id="L651"><a href="#L651">651</a>    end</span>
+<span id="L652"><a href="#L652">652</a></span>
+<span id="L653"><a href="#L653">653</a>    FlatPrepareDataIndex = 0</span>
+<span id="L654"><a href="#L654">654</a>    PrepareTaskDuraion = U3D.Time.realtimeSinceStartup - startTime</span>
+<span id="L655"><a href="#L655">655</a>    --#if ENABLE_PROFILER</span>
+<span id="L656"><a href="#L656">656</a>    ProfilerUtil.SamplerEnd(sampler_UpdatePrepareTask)</span>
+<span id="L657"><a href="#L657">657</a>    --#endif</span>
+<span id="L658"><a href="#L658">658</a>    ProfilerUtil.EndCpuSample()  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L659"><a href="#L659">659</a>end</span>
+<span id="L660"><a href="#L660">660</a>--endregion</span>
+<span id="L661"><a href="#L661">661</a></span>
+<span id="L662"><a href="#L662">662</a>function cls:AddHighFreqPrepareData(data, subTaskType)</span>
+<span id="L663"><a href="#L663">663</a>    table.insert(self._highFreqPrepareData, data)</span>
+<span id="L664"><a href="#L664">664</a>    table.insert(self._highFreqPrepareData, subTaskType)</span>
+<span id="L665"><a href="#L665">665</a>    self._highFreqIndex = self._highFreqIndex + 2</span>
+<span id="L666"><a href="#L666">666</a>end</span>
+<span id="L667"><a href="#L667">667</a></span>
+<span id="L668"><a href="#L668">668</a>function cls:UpdateHighFreqPrepareData()</span>
+<span id="L669"><a href="#L669">669</a>    for i = 1, self._highFreqIndex, 2 do</span>
+<span id="L670"><a href="#L670">670</a>        local data = self._highFreqPrepareData[i]</span>
+<span id="L671"><a href="#L671">671</a>        local type = self._highFreqPrepareData[i + 1]</span>
+<span id="L672"><a href="#L672">672</a>        mapCore:RefreshMapObject(data, false, 0, type)</span>
+<span id="L673"><a href="#L673">673</a>    end</span>
+<span id="L674"><a href="#L674">674</a>    TblUtil.Clear(self._highFreqPrepareData)</span>
+<span id="L675"><a href="#L675">675</a>    self._highFreqIndex = 0</span>
+<span id="L676"><a href="#L676">676</a>end</span>
+<span id="L677"><a href="#L677">677</a></span>
+<span id="L678"><a href="#L678">678</a>--region task requests</span>
+<span id="L679"><a href="#L679">679</a>--#if ENABLE_PROFILER</span>
+<span id="L680"><a href="#L680">680</a>local sampler_RequestTask_MapObjInit = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapObjInit&quot;)</span>
+<span id="L681"><a href="#L681">681</a>--#endif</span>
+<span id="L682"><a href="#L682">682</a>function cls:RequestTask_MapObjInit(entityAttr, isLocal, viewLayer)</span>
+<span id="L683"><a href="#L683">683</a>    -- mgr.garyLog:Info(&quot;RequestTask_MapObjInit : %s&quot;, entityAttr.entityId)</span>
+<span id="L684"><a href="#L684">684</a>    if not entityAttr.entityId then</span>
+<span id="L685"><a href="#L685">685</a>        mgr.jojoLog:Error(&quot;[server]服务器下发的entity中entityId是空&quot;)</span>
+<span id="L686"><a href="#L686">686</a>        return</span>
+<span id="L687"><a href="#L687">687</a>    end</span>
+<span id="L688"><a href="#L688">688</a></span>
+<span id="L689"><a href="#L689">689</a>    if self.isSyncMode then</span>
+<span id="L690"><a href="#L690">690</a>        self:RequestTaskSync_MapObjInit(entityAttr, isLocal, viewLayer)</span>
+<span id="L691"><a href="#L691">691</a>        return 0</span>
+<span id="L692"><a href="#L692">692</a>    end</span>
+<span id="L693"><a href="#L693">693</a></span>
+<span id="L694"><a href="#L694">694</a>    --#if ENABLE_PROFILER</span>
+<span id="L695"><a href="#L695">695</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapObjInit)</span>
+<span id="L696"><a href="#L696">696</a>    --#endif</span>
+<span id="L697"><a href="#L697">697</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_MapObjInit()</span>
+<span id="L698"><a href="#L698">698</a>    significanceTask.entityId = entityAttr.entityId</span>
+<span id="L699"><a href="#L699">699</a>    significanceTask.entityAttr = entityAttr</span>
+<span id="L700"><a href="#L700">700</a>    significanceTask.isLocal = isLocal</span>
+<span id="L701"><a href="#L701">701</a>    significanceTask.viewLayer = viewLayer</span>
+<span id="L702"><a href="#L702">702</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L703"><a href="#L703">703</a></span>
+<span id="L704"><a href="#L704">704</a>    local entityTask = self:TakeEntityTask(entityAttr.entityId)</span>
+<span id="L705"><a href="#L705">705</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L706"><a href="#L706">706</a></span>
+<span id="L707"><a href="#L707">707</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L708"><a href="#L708">708</a></span>
+<span id="L709"><a href="#L709">709</a>    --#if ENABLE_PROFILER</span>
+<span id="L710"><a href="#L710">710</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapObjInit)</span>
+<span id="L711"><a href="#L711">711</a>    --#endif</span>
+<span id="L712"><a href="#L712">712</a></span>
+<span id="L713"><a href="#L713">713</a>    return significanceTask.taskUniqueId</span>
+<span id="L714"><a href="#L714">714</a>end</span>
+<span id="L715"><a href="#L715">715</a></span>
+<span id="L716"><a href="#L716">716</a>function cls:RequestTaskSync_MapObjInit(entityAttr, isLocal, viewLayer)</span>
+<span id="L717"><a href="#L717">717</a>    local entityTask = self._entityTasksByEntityId[entityAttr.entityId]</span>
+<span id="L718"><a href="#L718">718</a>    if entityTask then</span>
+<span id="L719"><a href="#L719">719</a>        entityTask:ClearAllTask()</span>
+<span id="L720"><a href="#L720">720</a>    end</span>
+<span id="L721"><a href="#L721">721</a></span>
+<span id="L722"><a href="#L722">722</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.MapObjInit)</span>
+<span id="L723"><a href="#L723">723</a>    syncTask.entityId = entityAttr.entityId</span>
+<span id="L724"><a href="#L724">724</a>    syncTask.entityAttr = entityAttr</span>
+<span id="L725"><a href="#L725">725</a>    syncTask.isLocal = isLocal</span>
+<span id="L726"><a href="#L726">726</a>    syncTask.viewLayer = viewLayer</span>
+<span id="L727"><a href="#L727">727</a></span>
+<span id="L728"><a href="#L728">728</a>    self:ProcessSignificanceTask(syncTask)</span>
+<span id="L729"><a href="#L729">729</a></span>
+<span id="L730"><a href="#L730">730</a>    syncTask:CleanUp()</span>
+<span id="L731"><a href="#L731">731</a>end</span>
+<span id="L732"><a href="#L732">732</a></span>
+<span id="L733"><a href="#L733">733</a>function cls:RequestTask_MapEntityMerge(entityId, isFullUpdate, viewLayer)</span>
+<span id="L734"><a href="#L734">734</a>    if self.isSyncMode then</span>
+<span id="L735"><a href="#L735">735</a>        self:RequestTaskSync_MapEntityMerge(entityId, isFullUpdate, viewLayer)</span>
+<span id="L736"><a href="#L736">736</a>        return 0</span>
+<span id="L737"><a href="#L737">737</a>    end</span>
+<span id="L738"><a href="#L738">738</a></span>
+<span id="L739"><a href="#L739">739</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask(EMapSignificanceTaskType.MapEntityMerge)</span>
+<span id="L740"><a href="#L740">740</a>    significanceTask.entityId = entityId</span>
+<span id="L741"><a href="#L741">741</a>    significanceTask.isLocal = false</span>
+<span id="L742"><a href="#L742">742</a>    significanceTask.viewLayer = viewLayer</span>
+<span id="L743"><a href="#L743">743</a>    significanceTask.isFullUpdate = isFullUpdate</span>
+<span id="L744"><a href="#L744">744</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L745"><a href="#L745">745</a></span>
+<span id="L746"><a href="#L746">746</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L747"><a href="#L747">747</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L748"><a href="#L748">748</a></span>
+<span id="L749"><a href="#L749">749</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L750"><a href="#L750">750</a></span>
+<span id="L751"><a href="#L751">751</a>    return significanceTask.taskUniqueId</span>
+<span id="L752"><a href="#L752">752</a>end</span>
+<span id="L753"><a href="#L753">753</a></span>
+<span id="L754"><a href="#L754">754</a>function cls:RequestTaskSync_MapEntityMerge(entityId, isFullUpdate, viewLayer)</span>
+<span id="L755"><a href="#L755">755</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.MapEntityMerge)</span>
+<span id="L756"><a href="#L756">756</a>    syncTask.taskType = EMapSignificanceTaskType.MapEntityMerge</span>
+<span id="L757"><a href="#L757">757</a>    syncTask.entityId = entityId</span>
+<span id="L758"><a href="#L758">758</a>    syncTask.isLocal = false</span>
+<span id="L759"><a href="#L759">759</a>    syncTask.viewLayer = viewLayer</span>
+<span id="L760"><a href="#L760">760</a>    syncTask.isFullUpdate = isFullUpdate</span>
+<span id="L761"><a href="#L761">761</a>    self:ProcessSignificanceTask(syncTask)</span>
+<span id="L762"><a href="#L762">762</a></span>
+<span id="L763"><a href="#L763">763</a>    syncTask:CleanUp()</span>
+<span id="L764"><a href="#L764">764</a>end</span>
+<span id="L765"><a href="#L765">765</a></span>
+<span id="L766"><a href="#L766">766</a>function cls:GetRefreshSubTask(entityId, subTaskType)</span>
+<span id="L767"><a href="#L767">767</a>    local entityTask = self:GetEntityTaskByEntityId(entityId)</span>
+<span id="L768"><a href="#L768">768</a>    return entityTask and entityTask:GetSignificanceTaskBySubType(subTaskType)</span>
+<span id="L769"><a href="#L769">769</a>end</span>
+<span id="L770"><a href="#L770">770</a></span>
+<span id="L771"><a href="#L771">771</a>--#if ENABLE_PROFILER</span>
+<span id="L772"><a href="#L772">772</a>local sampler_RequestTask_MapObjRefresh = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapObjRefresh&quot;)</span>
+<span id="L773"><a href="#L773">773</a>--#endif</span>
+<span id="L774"><a href="#L774">774</a>function cls:RequestTask_MapObjRefresh(entityAttr, isLocal, viewLayer, subTaskType)</span>
+<span id="L775"><a href="#L775">775</a>    if self.isSyncMode then</span>
+<span id="L776"><a href="#L776">776</a>        self:RequestTaskSync_MapObjRefresh(entityAttr, isLocal, viewLayer, subTaskType)</span>
+<span id="L777"><a href="#L777">777</a>        return 0</span>
+<span id="L778"><a href="#L778">778</a>    end</span>
+<span id="L779"><a href="#L779">779</a></span>
+<span id="L780"><a href="#L780">780</a>    if subTaskType then</span>
+<span id="L781"><a href="#L781">781</a>        local task = self:GetRefreshSubTask(entityAttr.entityId, subTaskType)</span>
+<span id="L782"><a href="#L782">782</a>        if task then</span>
+<span id="L783"><a href="#L783">783</a>            task.entityAttr = entityAttr</span>
+<span id="L784"><a href="#L784">784</a>            return</span>
+<span id="L785"><a href="#L785">785</a>        end</span>
+<span id="L786"><a href="#L786">786</a>    end</span>
+<span id="L787"><a href="#L787">787</a></span>
+<span id="L788"><a href="#L788">788</a>    --#if ENABLE_PROFILER</span>
+<span id="L789"><a href="#L789">789</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapObjRefresh)</span>
+<span id="L790"><a href="#L790">790</a>    --#endif</span>
+<span id="L791"><a href="#L791">791</a>    </span>
+<span id="L792"><a href="#L792">792</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_MapObjRefresh()</span>
+<span id="L793"><a href="#L793">793</a>    significanceTask.entityId = entityAttr.entityId</span>
+<span id="L794"><a href="#L794">794</a>    significanceTask.entityAttr = entityAttr</span>
+<span id="L795"><a href="#L795">795</a>    significanceTask.isLocal = isLocal</span>
+<span id="L796"><a href="#L796">796</a>    significanceTask.viewLayer = viewLayer</span>
+<span id="L797"><a href="#L797">797</a>    significanceTask.subTaskType = subTaskType</span>
+<span id="L798"><a href="#L798">798</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L799"><a href="#L799">799</a>    </span>
+<span id="L800"><a href="#L800">800</a>    --TODO：考虑是做成RefreshTask队列还是先merge数据只保留一个RefreshTask</span>
+<span id="L801"><a href="#L801">801</a>    local entityTask = self:TakeEntityTask(entityAttr.entityId)</span>
+<span id="L802"><a href="#L802">802</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L803"><a href="#L803">803</a></span>
+<span id="L804"><a href="#L804">804</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L805"><a href="#L805">805</a>    --#if ENABLE_PROFILER</span>
+<span id="L806"><a href="#L806">806</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapObjRefresh)</span>
+<span id="L807"><a href="#L807">807</a>    --#endif</span>
+<span id="L808"><a href="#L808">808</a></span>
+<span id="L809"><a href="#L809">809</a>    return significanceTask.taskUniqueId</span>
+<span id="L810"><a href="#L810">810</a>end</span>
+<span id="L811"><a href="#L811">811</a>function cls:RequestTaskSync_MapObjRefresh(entityAttr, isLocal, viewLayer, subTaskType)</span>
+<span id="L812"><a href="#L812">812</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.MapObjRefresh)</span>
+<span id="L813"><a href="#L813">813</a>    syncTask.entityId = entityAttr.entityId</span>
+<span id="L814"><a href="#L814">814</a>    syncTask.entityAttr = entityAttr</span>
+<span id="L815"><a href="#L815">815</a>    syncTask.isLocal = isLocal</span>
+<span id="L816"><a href="#L816">816</a>    syncTask.viewLayer = viewLayer</span>
+<span id="L817"><a href="#L817">817</a>    syncTask.subTaskType = subTaskType</span>
+<span id="L818"><a href="#L818">818</a></span>
+<span id="L819"><a href="#L819">819</a>    self:ProcessSignificanceTask(syncTask)</span>
+<span id="L820"><a href="#L820">820</a></span>
+<span id="L821"><a href="#L821">821</a>    syncTask:CleanUp()</span>
+<span id="L822"><a href="#L822">822</a>end</span>
+<span id="L823"><a href="#L823">823</a></span>
+<span id="L824"><a href="#L824">824</a>--#if ENABLE_PROFILER</span>
+<span id="L825"><a href="#L825">825</a>local sampler_RequestTask_MapObjCleanUp_Init = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapObjCleanUp_Init&quot;)</span>
+<span id="L826"><a href="#L826">826</a>local sampler_RequestTask_MapObjCleanUp_Set = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapObjCleanUp_Set&quot;)</span>
+<span id="L827"><a href="#L827">827</a>--#endif</span>
+<span id="L828"><a href="#L828">828</a>function cls:RequestTask_MapObjCleanUp(entityId, deleteInfo, deleteReason)</span>
+<span id="L829"><a href="#L829">829</a>    if self.isSyncMode then</span>
+<span id="L830"><a href="#L830">830</a>        self:RequestTaskSync_MapObjCleanUp(entityId, deleteInfo)</span>
+<span id="L831"><a href="#L831">831</a></span>
+<span id="L832"><a href="#L832">832</a>        return 0</span>
+<span id="L833"><a href="#L833">833</a>    end</span>
+<span id="L834"><a href="#L834">834</a></span>
+<span id="L835"><a href="#L835">835</a>    --#if ENABLE_PROFILER</span>
+<span id="L836"><a href="#L836">836</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapObjCleanUp_Init)</span>
+<span id="L837"><a href="#L837">837</a>    --#endif</span>
+<span id="L838"><a href="#L838">838</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_MapObjCleanUp()</span>
+<span id="L839"><a href="#L839">839</a>    significanceTask.entityId = entityId</span>
+<span id="L840"><a href="#L840">840</a>    significanceTask.deleteInfo = deleteInfo</span>
+<span id="L841"><a href="#L841">841</a>    significanceTask.deleteReason = deleteReason</span>
+<span id="L842"><a href="#L842">842</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L843"><a href="#L843">843</a></span>
+<span id="L844"><a href="#L844">844</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L845"><a href="#L845">845</a>    --#if ENABLE_PROFILER</span>
+<span id="L846"><a href="#L846">846</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapObjCleanUp_Init)</span>
+<span id="L847"><a href="#L847">847</a>    --#endif</span>
+<span id="L848"><a href="#L848">848</a>    --#if ENABLE_PROFILER</span>
+<span id="L849"><a href="#L849">849</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapObjCleanUp_Set)</span>
+<span id="L850"><a href="#L850">850</a>    --#endif</span>
+<span id="L851"><a href="#L851">851</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L852"><a href="#L852">852</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L853"><a href="#L853">853</a>    --#if ENABLE_PROFILER</span>
+<span id="L854"><a href="#L854">854</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapObjCleanUp_Set)</span>
+<span id="L855"><a href="#L855">855</a>    --#endif</span>
+<span id="L856"><a href="#L856">856</a>end</span>
+<span id="L857"><a href="#L857">857</a>function cls:RequestTaskSync_MapObjCleanUp(entityId, deleteInfo, deleteReason)</span>
+<span id="L858"><a href="#L858">858</a>    --服务器填替换本地资源田时，需走立即删除逻辑。也可以考虑做个轻量级的逻辑：变更容器Id，刷新Data和Entity。</span>
+<span id="L859"><a href="#L859">859</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L860"><a href="#L860">860</a>    if entityTask then</span>
+<span id="L861"><a href="#L861">861</a>        entityTask:ClearAllTask()</span>
+<span id="L862"><a href="#L862">862</a>    end</span>
+<span id="L863"><a href="#L863">863</a></span>
+<span id="L864"><a href="#L864">864</a>    local isDelayed = false</span>
+<span id="L865"><a href="#L865">865</a>    if deleteInfo ~= nil then</span>
+<span id="L866"><a href="#L866">866</a>        isDelayed = mapCore.DataCtrl:AddDelayedDeleteInfo(deleteInfo)</span>
+<span id="L867"><a href="#L867">867</a>    end</span>
+<span id="L868"><a href="#L868">868</a></span>
+<span id="L869"><a href="#L869">869</a>    if not isDelayed then</span>
+<span id="L870"><a href="#L870">870</a>        mapCore.MapEntityCtrl:RemoveEntity(entityId, nil, deleteInfo)</span>
+<span id="L871"><a href="#L871">871</a>        mapCore.DataCtrl:RemoveDataByEntityId(entityId)</span>
+<span id="L872"><a href="#L872">872</a>    end</span>
+<span id="L873"><a href="#L873">873</a>end</span>
+<span id="L874"><a href="#L874">874</a></span>
+<span id="L875"><a href="#L875">875</a>function cls:RequestTask_MapEntityAdd(entityId)</span>
+<span id="L876"><a href="#L876">876</a>    if not OutsideVisibilityGM.IsVisible(&quot;mapEntity&quot;) then</span>
+<span id="L877"><a href="#L877">877</a>        return 0</span>
+<span id="L878"><a href="#L878">878</a>    end</span>
+<span id="L879"><a href="#L879">879</a></span>
+<span id="L880"><a href="#L880">880</a>    if self.isSyncMode then</span>
+<span id="L881"><a href="#L881">881</a>        self:RequestTaskSync_MapEntityAdd(entityId)</span>
+<span id="L882"><a href="#L882">882</a></span>
+<span id="L883"><a href="#L883">883</a>        return 0</span>
+<span id="L884"><a href="#L884">884</a>    end</span>
+<span id="L885"><a href="#L885">885</a></span>
+<span id="L886"><a href="#L886">886</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_MapEntityAdd()</span>
+<span id="L887"><a href="#L887">887</a>    significanceTask.entityId = entityId</span>
+<span id="L888"><a href="#L888">888</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L889"><a href="#L889">889</a></span>
+<span id="L890"><a href="#L890">890</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L891"><a href="#L891">891</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L892"><a href="#L892">892</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L893"><a href="#L893">893</a></span>
+<span id="L894"><a href="#L894">894</a>    return significanceTask.taskUniqueId</span>
+<span id="L895"><a href="#L895">895</a>end</span>
+<span id="L896"><a href="#L896">896</a></span>
+<span id="L897"><a href="#L897">897</a>function cls:RequestTaskSync_MapEntityAdd(entityId, gridIndex)</span>
+<span id="L898"><a href="#L898">898</a>    if not OutsideVisibilityGM.IsVisible(&quot;mapEntity&quot;) then</span>
+<span id="L899"><a href="#L899">899</a>        return 0</span>
+<span id="L900"><a href="#L900">900</a>    end</span>
+<span id="L901"><a href="#L901">901</a></span>
+<span id="L902"><a href="#L902">902</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.MapEntityAdd)</span>
+<span id="L903"><a href="#L903">903</a>    syncTask.entityId = entityId</span>
+<span id="L904"><a href="#L904">904</a></span>
+<span id="L905"><a href="#L905">905</a>    self:ProcessSignificanceTask(syncTask)</span>
+<span id="L906"><a href="#L906">906</a></span>
+<span id="L907"><a href="#L907">907</a>    syncTask:CleanUp()</span>
+<span id="L908"><a href="#L908">908</a>end</span>
+<span id="L909"><a href="#L909">909</a></span>
+<span id="L910"><a href="#L910">910</a>--#if ENABLE_PROFILER</span>
+<span id="L911"><a href="#L911">911</a>local sampler_RequestTask_MapEntityRemove = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapEntityRemove&quot;)</span>
+<span id="L912"><a href="#L912">912</a>local sampler_RequestTask_MapEntityRemove_TakeTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapEntityRemove_TakeTask&quot;)</span>
+<span id="L913"><a href="#L913">913</a>local sampler_RequestTask_MapEntityRemove_InitTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapEntityRemove_InitTask&quot;)</span>
+<span id="L914"><a href="#L914">914</a>local sampler_RequestTask_MapEntityRemove_TakeEntityTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapEntityRemove_TakeEntityTask&quot;)</span>
+<span id="L915"><a href="#L915">915</a>local sampler_RequestTask_MapEntityRemove_SetEntityTask = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_MapEntityRemove_SetEntityTask&quot;)</span>
+<span id="L916"><a href="#L916">916</a>--#endif</span>
+<span id="L917"><a href="#L917">917</a>function cls:RequestTask_MapEntityRemove(entityId)</span>
+<span id="L918"><a href="#L918">918</a>    if self.isSyncMode then</span>
+<span id="L919"><a href="#L919">919</a>        self:RequestTaskSync_MapEntityRemove(entityId)</span>
+<span id="L920"><a href="#L920">920</a></span>
+<span id="L921"><a href="#L921">921</a>        return 0</span>
+<span id="L922"><a href="#L922">922</a>    end</span>
+<span id="L923"><a href="#L923">923</a></span>
+<span id="L924"><a href="#L924">924</a>    --#if ENABLE_PROFILER</span>
+<span id="L925"><a href="#L925">925</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapEntityRemove)</span>
+<span id="L926"><a href="#L926">926</a>    --#endif</span>
+<span id="L927"><a href="#L927">927</a>    --#if ENABLE_PROFILER</span>
+<span id="L928"><a href="#L928">928</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapEntityRemove_TakeTask)</span>
+<span id="L929"><a href="#L929">929</a>    --#endif</span>
+<span id="L930"><a href="#L930">930</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_MapEntityRemove()</span>
+<span id="L931"><a href="#L931">931</a>    --#if ENABLE_PROFILER</span>
+<span id="L932"><a href="#L932">932</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapEntityRemove_TakeTask)</span>
+<span id="L933"><a href="#L933">933</a>    --#endif</span>
+<span id="L934"><a href="#L934">934</a>    --#if ENABLE_PROFILER</span>
+<span id="L935"><a href="#L935">935</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapEntityRemove_InitTask)</span>
+<span id="L936"><a href="#L936">936</a>    --#endif</span>
+<span id="L937"><a href="#L937">937</a>    significanceTask.entityId = entityId</span>
+<span id="L938"><a href="#L938">938</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L939"><a href="#L939">939</a>    --#if ENABLE_PROFILER</span>
+<span id="L940"><a href="#L940">940</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapEntityRemove_InitTask)</span>
+<span id="L941"><a href="#L941">941</a>    --#endif</span>
+<span id="L942"><a href="#L942">942</a>    --#if ENABLE_PROFILER</span>
+<span id="L943"><a href="#L943">943</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapEntityRemove_TakeEntityTask)</span>
+<span id="L944"><a href="#L944">944</a>    --#endif</span>
+<span id="L945"><a href="#L945">945</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L946"><a href="#L946">946</a>    --#if ENABLE_PROFILER</span>
+<span id="L947"><a href="#L947">947</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapEntityRemove_TakeEntityTask)</span>
+<span id="L948"><a href="#L948">948</a>    --#endif</span>
+<span id="L949"><a href="#L949">949</a>    --#if ENABLE_PROFILER</span>
+<span id="L950"><a href="#L950">950</a>    -- ProfilerUtil.SamplerBegin(sampler_RequestTask_MapEntityRemove_SetEntityTask)</span>
+<span id="L951"><a href="#L951">951</a>    --#endif</span>
+<span id="L952"><a href="#L952">952</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L953"><a href="#L953">953</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L954"><a href="#L954">954</a>    --#if ENABLE_PROFILER</span>
+<span id="L955"><a href="#L955">955</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapEntityRemove_SetEntityTask)</span>
+<span id="L956"><a href="#L956">956</a>    --#endif</span>
+<span id="L957"><a href="#L957">957</a>    --#if ENABLE_PROFILER</span>
+<span id="L958"><a href="#L958">958</a>    -- ProfilerUtil.SamplerEnd(sampler_RequestTask_MapEntityRemove)</span>
+<span id="L959"><a href="#L959">959</a>    --#endif</span>
+<span id="L960"><a href="#L960">960</a>end</span>
+<span id="L961"><a href="#L961">961</a>function cls:RequestTaskSync_MapEntityRemove(entityId)</span>
+<span id="L962"><a href="#L962">962</a>    -- local syncTask = self:GetSyncTask(EMapSignificanceTaskType.MapEntityRemove)</span>
+<span id="L963"><a href="#L963">963</a>    -- syncTask.entityId = entityId</span>
+<span id="L964"><a href="#L964">964</a></span>
+<span id="L965"><a href="#L965">965</a>    -- self:ProcessSignificanceTask(syncTask)</span>
+<span id="L966"><a href="#L966">966</a></span>
+<span id="L967"><a href="#L967">967</a>    -- syncTask:CleanUp()</span>
+<span id="L968"><a href="#L968">968</a></span>
+<span id="L969"><a href="#L969">969</a>    mapCore.MapEntityCtrl:RemoveEntity(entityId)</span>
+<span id="L970"><a href="#L970">970</a>end</span>
+<span id="L971"><a href="#L971">971</a></span>
+<span id="L972"><a href="#L972">972</a>function cls:RequestTask_ZoomEntityAdd(entityId)</span>
+<span id="L973"><a href="#L973">973</a>    if self.isSyncMode then</span>
+<span id="L974"><a href="#L974">974</a>        self:RequestTaskSync_ZoomEntityAdd(entityId)</span>
+<span id="L975"><a href="#L975">975</a></span>
+<span id="L976"><a href="#L976">976</a>        return 0</span>
+<span id="L977"><a href="#L977">977</a>    end</span>
+<span id="L978"><a href="#L978">978</a></span>
+<span id="L979"><a href="#L979">979</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_ZoomEntityAdd()</span>
+<span id="L980"><a href="#L980">980</a>    significanceTask.entityId = entityId</span>
+<span id="L981"><a href="#L981">981</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L982"><a href="#L982">982</a></span>
+<span id="L983"><a href="#L983">983</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L984"><a href="#L984">984</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L985"><a href="#L985">985</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L986"><a href="#L986">986</a>end</span>
+<span id="L987"><a href="#L987">987</a>function cls:RequestTaskSync_ZoomEntityAdd(entityId)</span>
+<span id="L988"><a href="#L988">988</a>    local entityData = mapCore.DataCtrl:GetDataByEntityId(entityId)</span>
+<span id="L989"><a href="#L989">989</a>    if entityData ~= nil then</span>
+<span id="L990"><a href="#L990">990</a>        mgr.infiniteZoomMgr.MapEntityCtrl:CreateMapEntityIcon(entityData)</span>
+<span id="L991"><a href="#L991">991</a>    end</span>
+<span id="L992"><a href="#L992">992</a>end</span>
+<span id="L993"><a href="#L993">993</a></span>
+<span id="L994"><a href="#L994">994</a>function cls:RequestTask_ZoomEntityRemove(entityId)</span>
+<span id="L995"><a href="#L995">995</a>    if self.isSyncMode then</span>
+<span id="L996"><a href="#L996">996</a>        self:RequestTaskSync_ZoomEntityRemove(entityId)</span>
+<span id="L997"><a href="#L997">997</a></span>
+<span id="L998"><a href="#L998">998</a>        return 0</span>
+<span id="L999"><a href="#L999">999</a>    end</span>
+<span id="L1000"><a href="#L1000">1000</a></span>
+<span id="L1001"><a href="#L1001">1001</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_ZoomEntityRemove()</span>
+<span id="L1002"><a href="#L1002">1002</a>    significanceTask.entityId = entityId</span>
+<span id="L1003"><a href="#L1003">1003</a>    significanceTask.taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L1004"><a href="#L1004">1004</a></span>
+<span id="L1005"><a href="#L1005">1005</a>    local entityTask = self:TakeEntityTask(entityId)</span>
+<span id="L1006"><a href="#L1006">1006</a>    entityTask:SetEntityTask(significanceTask)</span>
+<span id="L1007"><a href="#L1007">1007</a>    self.MapSignificanceTaskScheduler:AddEntityTask(entityTask)</span>
+<span id="L1008"><a href="#L1008">1008</a>end</span>
+<span id="L1009"><a href="#L1009">1009</a>function cls:RequestTaskSync_ZoomEntityRemove(entityId)</span>
+<span id="L1010"><a href="#L1010">1010</a>    mgr.infiniteZoomMgr.MapEntityCtrl:RemoveMapEntityIcon(entityId)</span>
+<span id="L1011"><a href="#L1011">1011</a>end</span>
+<span id="L1012"><a href="#L1012">1012</a></span>
+<span id="L1013"><a href="#L1013">1013</a>---@param entityId number @map entity uniqueId</span>
+<span id="L1014"><a href="#L1014">1014</a>function cls:RequestTask_FloatUIInit(entityId, uiName, entity)</span>
+<span id="L1015"><a href="#L1015">1015</a>    if self.isSyncMode then</span>
+<span id="L1016"><a href="#L1016">1016</a>        self:RequestTaskSync_FloatUIInit(entityId, uiName, entity)</span>
+<span id="L1017"><a href="#L1017">1017</a>        return 0</span>
+<span id="L1018"><a href="#L1018">1018</a>    end</span>
+<span id="L1019"><a href="#L1019">1019</a></span>
+<span id="L1020"><a href="#L1020">1020</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_FloatUIInit()</span>
+<span id="L1021"><a href="#L1021">1021</a>    local taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L1022"><a href="#L1022">1022</a>    significanceTask.taskUniqueId = taskUniqueId</span>
+<span id="L1023"><a href="#L1023">1023</a>    significanceTask.entityId = entityId</span>
+<span id="L1024"><a href="#L1024">1024</a>    significanceTask.entity = entity</span>
+<span id="L1025"><a href="#L1025">1025</a>    significanceTask.uiName = uiName</span>
+<span id="L1026"><a href="#L1026">1026</a></span>
+<span id="L1027"><a href="#L1027">1027</a>    self._commonTasksByUniqueId[taskUniqueId] = significanceTask</span>
+<span id="L1028"><a href="#L1028">1028</a>    self._commonTaskLinkedList:AddLast(significanceTask)</span>
+<span id="L1029"><a href="#L1029">1029</a></span>
+<span id="L1030"><a href="#L1030">1030</a>    return taskUniqueId</span>
+<span id="L1031"><a href="#L1031">1031</a>end</span>
+<span id="L1032"><a href="#L1032">1032</a>function cls:RequestTaskSync_FloatUIInit(entityId, uiName, entity)</span>
+<span id="L1033"><a href="#L1033">1033</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.FloatUIInit)</span>
+<span id="L1034"><a href="#L1034">1034</a>    syncTask.entityId = entityId</span>
+<span id="L1035"><a href="#L1035">1035</a>    syncTask.uiName = uiName</span>
+<span id="L1036"><a href="#L1036">1036</a></span>
+<span id="L1037"><a href="#L1037">1037</a>    self:ProcessSignificanceTask(syncTask, entity)</span>
+<span id="L1038"><a href="#L1038">1038</a></span>
+<span id="L1039"><a href="#L1039">1039</a>    syncTask:CleanUp()</span>
+<span id="L1040"><a href="#L1040">1040</a>end</span>
+<span id="L1041"><a href="#L1041">1041</a></span>
+<span id="L1042"><a href="#L1042">1042</a>--#if ENABLE_PROFILER</span>
+<span id="L1043"><a href="#L1043">1043</a>local samplerRequestTask_LocalResEntityAdd = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_LocalResEntityAdd&quot;)</span>
+<span id="L1044"><a href="#L1044">1044</a>local samplerRequestTask_LocalResEntityAdd_Take = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_LocalResEntityAdd_Take&quot;)</span>
+<span id="L1045"><a href="#L1045">1045</a>local samplerRequestTask_LocalResEntityAdd_Assign = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_LocalResEntityAdd_Assign&quot;)</span>
+<span id="L1046"><a href="#L1046">1046</a>local samplerRequestTask_LocalResEntityAdd_AddLast = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_LocalResEntityAdd_AddLast&quot;)</span>
+<span id="L1047"><a href="#L1047">1047</a>local samplerRequestTask_LocalResEntityRemove = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.RequestTask_LocalResEntityRemove&quot;)</span>
+<span id="L1048"><a href="#L1048">1048</a>--#endif</span>
+<span id="L1049"><a href="#L1049">1049</a>function cls:RequestTask_LocalResEntityAdd(gridIndex)</span>
+<span id="L1050"><a href="#L1050">1050</a>    if self.isSyncMode then</span>
+<span id="L1051"><a href="#L1051">1051</a>        self:RequestTaskSync_LocalResEntityAdd(gridIndex)</span>
+<span id="L1052"><a href="#L1052">1052</a></span>
+<span id="L1053"><a href="#L1053">1053</a>        return 0</span>
+<span id="L1054"><a href="#L1054">1054</a>    end</span>
+<span id="L1055"><a href="#L1055">1055</a></span>
+<span id="L1056"><a href="#L1056">1056</a>    --#if ENABLE_PROFILER</span>
+<span id="L1057"><a href="#L1057">1057</a>    -- ProfilerUtil.SamplerBegin(samplerRequestTask_LocalResEntityAdd)</span>
+<span id="L1058"><a href="#L1058">1058</a>    --#endif</span>
+<span id="L1059"><a href="#L1059">1059</a>    local localResTask = self._localResTasksByGridIndex[gridIndex]</span>
+<span id="L1060"><a href="#L1060">1060</a>    if localResTask then</span>
+<span id="L1061"><a href="#L1061">1061</a>        if localResTask.bAdd then</span>
+<span id="L1062"><a href="#L1062">1062</a>            --#if ENABLE_PROFILER</span>
+<span id="L1063"><a href="#L1063">1063</a>            -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityAdd)</span>
+<span id="L1064"><a href="#L1064">1064</a>            --#endif</span>
+<span id="L1065"><a href="#L1065">1065</a>            return</span>
+<span id="L1066"><a href="#L1066">1066</a>        end</span>
+<span id="L1067"><a href="#L1067">1067</a>    else</span>
+<span id="L1068"><a href="#L1068">1068</a>        --#if ENABLE_PROFILER</span>
+<span id="L1069"><a href="#L1069">1069</a>        -- ProfilerUtil.SamplerBegin(samplerRequestTask_LocalResEntityAdd_Take)</span>
+<span id="L1070"><a href="#L1070">1070</a>        --#endif</span>
+<span id="L1071"><a href="#L1071">1071</a>        localResTask = MapSignificanceTaskFactory:TakeTask_MapLocalResEntity()</span>
+<span id="L1072"><a href="#L1072">1072</a>        --#if ENABLE_PROFILER</span>
+<span id="L1073"><a href="#L1073">1073</a>        -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityAdd_Take)</span>
+<span id="L1074"><a href="#L1074">1074</a>        --#endif</span>
+<span id="L1075"><a href="#L1075">1075</a>        --#if ENABLE_PROFILER</span>
+<span id="L1076"><a href="#L1076">1076</a>        -- ProfilerUtil.SamplerBegin(samplerRequestTask_LocalResEntityAdd_Assign)</span>
+<span id="L1077"><a href="#L1077">1077</a>        --#endif</span>
+<span id="L1078"><a href="#L1078">1078</a>        -- local taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L1079"><a href="#L1079">1079</a>        -- localResTask.taskUniqueId = taskUniqueId</span>
+<span id="L1080"><a href="#L1080">1080</a>        localResTask.gridIndex = gridIndex</span>
+<span id="L1081"><a href="#L1081">1081</a>        self._localResTasksByGridIndex[gridIndex] = localResTask</span>
+<span id="L1082"><a href="#L1082">1082</a>        --#if ENABLE_PROFILER</span>
+<span id="L1083"><a href="#L1083">1083</a>        -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityAdd_Assign)</span>
+<span id="L1084"><a href="#L1084">1084</a>        --#endif</span>
+<span id="L1085"><a href="#L1085">1085</a>        --#if ENABLE_PROFILER</span>
+<span id="L1086"><a href="#L1086">1086</a>        -- ProfilerUtil.SamplerBegin(samplerRequestTask_LocalResEntityAdd_AddLast)</span>
+<span id="L1087"><a href="#L1087">1087</a>        --#endif</span>
+<span id="L1088"><a href="#L1088">1088</a>        self._localResTaskLinkedList:AddLast(localResTask)</span>
+<span id="L1089"><a href="#L1089">1089</a></span>
+<span id="L1090"><a href="#L1090">1090</a>        --#if ENABLE_PROFILER</span>
+<span id="L1091"><a href="#L1091">1091</a>        -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityAdd_AddLast)</span>
+<span id="L1092"><a href="#L1092">1092</a>        --#endif</span>
+<span id="L1093"><a href="#L1093">1093</a>    end</span>
+<span id="L1094"><a href="#L1094">1094</a></span>
+<span id="L1095"><a href="#L1095">1095</a>    localResTask.bAdd = true</span>
+<span id="L1096"><a href="#L1096">1096</a>    -- --#if ENABLE_PROFILER</span>
+<span id="L1097"><a href="#L1097">1097</a>    -- -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityAdd)</span>
+<span id="L1098"><a href="#L1098">1098</a>    -- --#endif</span>
+<span id="L1099"><a href="#L1099">1099</a></span>
+<span id="L1100"><a href="#L1100">1100</a>    return 0</span>
+<span id="L1101"><a href="#L1101">1101</a>end</span>
+<span id="L1102"><a href="#L1102">1102</a>function cls:RequestTaskSync_LocalResEntityAdd(gridIndex)</span>
+<span id="L1103"><a href="#L1103">1103</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.LocalResEntity)</span>
+<span id="L1104"><a href="#L1104">1104</a>    syncTask.gridIndex = gridIndex</span>
+<span id="L1105"><a href="#L1105">1105</a>    syncTask.bAdd = true</span>
+<span id="L1106"><a href="#L1106">1106</a></span>
+<span id="L1107"><a href="#L1107">1107</a>    self:ProcessSignificanceTask(syncTask)</span>
+<span id="L1108"><a href="#L1108">1108</a></span>
+<span id="L1109"><a href="#L1109">1109</a>    syncTask:CleanUp()</span>
+<span id="L1110"><a href="#L1110">1110</a>end</span>
+<span id="L1111"><a href="#L1111">1111</a></span>
+<span id="L1112"><a href="#L1112">1112</a>function cls:RequestTask_LocalResEntityRemove(gridIndex)</span>
+<span id="L1113"><a href="#L1113">1113</a>    --#if ENABLE_PROFILER</span>
+<span id="L1114"><a href="#L1114">1114</a>    -- ProfilerUtil.SamplerBegin(samplerRequestTask_LocalResEntityRemove)</span>
+<span id="L1115"><a href="#L1115">1115</a>    --#endif</span>
+<span id="L1116"><a href="#L1116">1116</a>    local localResTask = self._localResTasksByGridIndex[gridIndex]</span>
+<span id="L1117"><a href="#L1117">1117</a>    if localResTask then</span>
+<span id="L1118"><a href="#L1118">1118</a>        if not localResTask.bAdd then</span>
+<span id="L1119"><a href="#L1119">1119</a>            --#if ENABLE_PROFILER</span>
+<span id="L1120"><a href="#L1120">1120</a>            -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityRemove)</span>
+<span id="L1121"><a href="#L1121">1121</a>            --#endif</span>
+<span id="L1122"><a href="#L1122">1122</a>            return</span>
+<span id="L1123"><a href="#L1123">1123</a>        end</span>
+<span id="L1124"><a href="#L1124">1124</a>    else</span>
+<span id="L1125"><a href="#L1125">1125</a>        localResTask = MapSignificanceTaskFactory:TakeTask_MapLocalResEntity()</span>
+<span id="L1126"><a href="#L1126">1126</a>        -- local taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L1127"><a href="#L1127">1127</a>        -- localResTask.taskUniqueId = taskUniqueId</span>
+<span id="L1128"><a href="#L1128">1128</a>        localResTask.gridIndex = gridIndex</span>
+<span id="L1129"><a href="#L1129">1129</a>        self._localResTasksByGridIndex[gridIndex] = localResTask</span>
+<span id="L1130"><a href="#L1130">1130</a>        self._localResTaskLinkedList:AddLast(localResTask)</span>
+<span id="L1131"><a href="#L1131">1131</a>    end</span>
+<span id="L1132"><a href="#L1132">1132</a></span>
+<span id="L1133"><a href="#L1133">1133</a>    localResTask.bAdd = false</span>
+<span id="L1134"><a href="#L1134">1134</a>    -- mgr.mapCore.LocalEntityMgr.LocalResEntityHandler:RemoveLocalResEntity(gridIndex, true)</span>
+<span id="L1135"><a href="#L1135">1135</a>    --#if ENABLE_PROFILER</span>
+<span id="L1136"><a href="#L1136">1136</a>    -- ProfilerUtil.SamplerEnd(samplerRequestTask_LocalResEntityRemove)</span>
+<span id="L1137"><a href="#L1137">1137</a>    --#endif</span>
+<span id="L1138"><a href="#L1138">1138</a></span>
+<span id="L1139"><a href="#L1139">1139</a>    return 0</span>
+<span id="L1140"><a href="#L1140">1140</a>end</span>
+<span id="L1141"><a href="#L1141">1141</a></span>
+<span id="L1142"><a href="#L1142">1142</a>function cls:RequestTask_ArmyHeadUI(entityId, entity)</span>
+<span id="L1143"><a href="#L1143">1143</a>    if self.isSyncMode then</span>
+<span id="L1144"><a href="#L1144">1144</a>            self:RequestTaskSync_ArmyHeadUI(entityId, entity)</span>
+<span id="L1145"><a href="#L1145">1145</a></span>
+<span id="L1146"><a href="#L1146">1146</a>        return 0</span>
+<span id="L1147"><a href="#L1147">1147</a>    end</span>
+<span id="L1148"><a href="#L1148">1148</a></span>
+<span id="L1149"><a href="#L1149">1149</a>    local significanceTask = MapSignificanceTaskFactory:TakeTask_ArmyHeadUI()</span>
+<span id="L1150"><a href="#L1150">1150</a>    local taskUniqueId = self:GetTaskUniqueId()</span>
+<span id="L1151"><a href="#L1151">1151</a>    significanceTask.entityId = entityId</span>
+<span id="L1152"><a href="#L1152">1152</a>    significanceTask.taskUniqueId = taskUniqueId</span>
+<span id="L1153"><a href="#L1153">1153</a></span>
+<span id="L1154"><a href="#L1154">1154</a>    self._commonTasksByUniqueId[taskUniqueId] = significanceTask</span>
+<span id="L1155"><a href="#L1155">1155</a>    self._commonTaskLinkedList:AddLast(significanceTask)</span>
+<span id="L1156"><a href="#L1156">1156</a></span>
+<span id="L1157"><a href="#L1157">1157</a>    return significanceTask.taskUniqueId</span>
+<span id="L1158"><a href="#L1158">1158</a>end</span>
+<span id="L1159"><a href="#L1159">1159</a>function cls:RequestTaskSync_ArmyHeadUI(entityId, entity)</span>
+<span id="L1160"><a href="#L1160">1160</a>    local syncTask = self:GetSyncTask(EMapSignificanceTaskType.ArmyHeadUI)</span>
+<span id="L1161"><a href="#L1161">1161</a>    syncTask.entityId = entityId</span>
+<span id="L1162"><a href="#L1162">1162</a></span>
+<span id="L1163"><a href="#L1163">1163</a>    self:ProcessSignificanceTask(syncTask, entity)</span>
+<span id="L1164"><a href="#L1164">1164</a></span>
+<span id="L1165"><a href="#L1165">1165</a>    syncTask:CleanUp()</span>
+<span id="L1166"><a href="#L1166">1166</a>end</span>
+<span id="L1167"><a href="#L1167">1167</a></span>
+<span id="L1168"><a href="#L1168">1168</a>---任务解注册</span>
+<span id="L1169"><a href="#L1169">1169</a>---@param taskUniqueId number @任务唯一Id</span>
+<span id="L1170"><a href="#L1170">1170</a>function cls:RemoveCommonTaskByUniqueId(taskUniqueId)</span>
+<span id="L1171"><a href="#L1171">1171</a>    local significanceTask = self._commonTasksByUniqueId[taskUniqueId]</span>
+<span id="L1172"><a href="#L1172">1172</a>    if significanceTask then</span>
+<span id="L1173"><a href="#L1173">1173</a>        self._commonTaskLinkedList:Remove(significanceTask)</span>
+<span id="L1174"><a href="#L1174">1174</a>        self._commonTasksByUniqueId[taskUniqueId] = nil</span>
+<span id="L1175"><a href="#L1175">1175</a>        MapSignificanceTaskFactory:PutTask(significanceTask)</span>
+<span id="L1176"><a href="#L1176">1176</a>    end</span>
+<span id="L1177"><a href="#L1177">1177</a>end</span>
+<span id="L1178"><a href="#L1178">1178</a></span>
+<span id="L1179"><a href="#L1179">1179</a>function cls:RemoveCommonTask(significanceTask)</span>
+<span id="L1180"><a href="#L1180">1180</a>    if significanceTask then</span>
+<span id="L1181"><a href="#L1181">1181</a>        if self._commonTasksByUniqueId[significanceTask.taskUniqueId] ~= nil then</span>
+<span id="L1182"><a href="#L1182">1182</a>            self._commonTaskLinkedList:Remove(significanceTask)</span>
+<span id="L1183"><a href="#L1183">1183</a>            self._commonTasksByUniqueId[significanceTask.taskUniqueId] = nil</span>
+<span id="L1184"><a href="#L1184">1184</a>            MapSignificanceTaskFactory:PutTask(significanceTask) </span>
+<span id="L1185"><a href="#L1185">1185</a>            return true</span>
+<span id="L1186"><a href="#L1186">1186</a>        else</span>
+<span id="L1187"><a href="#L1187">1187</a>            -- mgr.log:Error(&quot;[sig]===RemoveTask failed=== %s : &quot;, significanceTask.taskUniqueId)</span>
+<span id="L1188"><a href="#L1188">1188</a>            return false</span>
+<span id="L1189"><a href="#L1189">1189</a>        end</span>
+<span id="L1190"><a href="#L1190">1190</a>    end</span>
+<span id="L1191"><a href="#L1191">1191</a>end</span>
+<span id="L1192"><a href="#L1192">1192</a></span>
+<span id="L1193"><a href="#L1193">1193</a>function cls:RemoveLocalResTask(significanceTask)</span>
+<span id="L1194"><a href="#L1194">1194</a>    if significanceTask then</span>
+<span id="L1195"><a href="#L1195">1195</a>        self._localResTaskLinkedList:Remove(significanceTask)</span>
+<span id="L1196"><a href="#L1196">1196</a>        self._localResTasksByGridIndex[significanceTask.gridIndex] = nil</span>
+<span id="L1197"><a href="#L1197">1197</a>        MapSignificanceTaskFactory:PutTask(significanceTask)</span>
+<span id="L1198"><a href="#L1198">1198</a>    end</span>
+<span id="L1199"><a href="#L1199">1199</a>end</span>
+<span id="L1200"><a href="#L1200">1200</a>--endregion</span>
+<span id="L1201"><a href="#L1201">1201</a></span>
+<span id="L1202"><a href="#L1202">1202</a>--region process task</span>
+<span id="L1203"><a href="#L1203">1203</a>-- ---@param taskA MapSignificanceTaskFactory</span>
+<span id="L1204"><a href="#L1204">1204</a>-- ---@param taskB MapSignificanceTaskFactory</span>
+<span id="L1205"><a href="#L1205">1205</a>-- local function taskSortMethod(taskA, taskB)</span>
+<span id="L1206"><a href="#L1206">1206</a>--     --TODO: 构建任务时，需要初始化排序参数：isMyself, Camera Distance, </span>
+<span id="L1207"><a href="#L1207">1207</a>--     if taskA.isMyself ~= taskB.isMyself then</span>
+<span id="L1208"><a href="#L1208">1208</a>--         return taskA.isMyself</span>
+<span id="L1209"><a href="#L1209">1209</a>--     end</span>
+<span id="L1210"><a href="#L1210">1210</a></span>
+<span id="L1211"><a href="#L1211">1211</a>--     if taskA.taskType ~= taskB.taskType then</span>
+<span id="L1212"><a href="#L1212">1212</a>--         return taskA.taskType &lt; taskB.taskType</span>
+<span id="L1213"><a href="#L1213">1213</a>--     end</span>
+<span id="L1214"><a href="#L1214">1214</a></span>
+<span id="L1215"><a href="#L1215">1215</a>--     local offsetA = math.abs(taskA.gridX - self._curCameraFocusX) + math.abs(taskA.gridY - self._curCameraFocusY)</span>
+<span id="L1216"><a href="#L1216">1216</a>--     local offsetB = math.abs(taskB.gridX - self._curCameraFocusX) + math.abs(taskB.gridY - self._curCameraFocusY)</span>
+<span id="L1217"><a href="#L1217">1217</a>--     if offsetA ~= offsetB then</span>
+<span id="L1218"><a href="#L1218">1218</a>--         return offsetA &lt; offsetB</span>
+<span id="L1219"><a href="#L1219">1219</a>--     end</span>
+<span id="L1220"><a href="#L1220">1220</a></span>
+<span id="L1221"><a href="#L1221">1221</a>--     return taskA.taskUniqueId &lt; taskB.taskUniqueId</span>
+<span id="L1222"><a href="#L1222">1222</a>-- end</span>
+<span id="L1223"><a href="#L1223">1223</a></span>
+<span id="L1224"><a href="#L1224">1224</a>-- function cls:SortTasks()</span>
+<span id="L1225"><a href="#L1225">1225</a>--     local x, y = mgr.mapVisual.CameraCtrl:GetCurrentViewPosGridXY()</span>
+<span id="L1226"><a href="#L1226">1226</a>--     self._curCameraFocusX = x</span>
+<span id="L1227"><a href="#L1227">1227</a>--     self._curCameraFocusY = y</span>
+<span id="L1228"><a href="#L1228">1228</a>--     -- table.sort(self._taskList, taskSortMethod)</span>
+<span id="L1229"><a href="#L1229">1229</a>-- end</span>
+<span id="L1230"><a href="#L1230">1230</a></span>
+<span id="L1231"><a href="#L1231">1231</a>--#if ENABLE_PROFILER</span>
+<span id="L1232"><a href="#L1232">1232</a>local sampler_ProcessTasks             = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.ProcessTasks&quot;)</span>
+<span id="L1233"><a href="#L1233">1233</a>local sampler_ProcessEntityTask        = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.EntityTask&quot;)</span>
+<span id="L1234"><a href="#L1234">1234</a>local sampler_ProcessInfiniteZoomTask  = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.InfiniteZoomTask&quot;)</span>
+<span id="L1235"><a href="#L1235">1235</a>local sampler_ProcessCommonTask        = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.CommonTask&quot;)</span>
+<span id="L1236"><a href="#L1236">1236</a>local sampler_ProcessLocalResEntity    = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.LocalResEntity&quot;)</span>
+<span id="L1237"><a href="#L1237">1237</a>local sampler_ProcessOutsideSubEntity  = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.OutsideSubEntityMgr&quot;)</span>
+<span id="L1238"><a href="#L1238">1238</a>local sampler_ProcessForceSubEntity    = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.ForceSubEntity&quot;)</span>
+<span id="L1239"><a href="#L1239">1239</a>local sampler_ProcessFlag              = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.Flag&quot;)</span>
+<span id="L1240"><a href="#L1240">1240</a>local sampler_ProcessPriorityEntityTask= U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.PriorityEntityTask&quot;)</span>
+<span id="L1241"><a href="#L1241">1241</a>local sampler_ProcessTimeoutTask       = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.TimeoutTask&quot;)</span>
+<span id="L1242"><a href="#L1242">1242</a>local sampler_ProcessDestroyTask       = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.DestroyEntity&quot;)</span>
+<span id="L1243"><a href="#L1243">1243</a>local sampler_ProcessSelfTask          = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.SelfTask&quot;)</span>
+<span id="L1244"><a href="#L1244">1244</a>--#endif</span>
+<span id="L1245"><a href="#L1245">1245</a></span>
+<span id="L1246"><a href="#L1246">1246</a>local totalTaskDuration = 0</span>
+<span id="L1247"><a href="#L1247">1247</a>local taskProcessStartTime = 0</span>
+<span id="L1248"><a href="#L1248">1248</a>-- local entityTaskMaxDuration = MapSignificanceDefine.TotalBucket</span>
+<span id="L1249"><a href="#L1249">1249</a></span>
+<span id="L1250"><a href="#L1250">1250</a>local ESignificanceProcessType = {</span>
+<span id="L1251"><a href="#L1251">1251</a>    Default   = 0, --EntityTask</span>
+<span id="L1252"><a href="#L1252">1252</a>    HeadUI    = 1,</span>
+<span id="L1253"><a href="#L1253">1253</a>    LocalRes  = 2,</span>
+<span id="L1254"><a href="#L1254">1254</a>    SubEntity = 3,</span>
+<span id="L1255"><a href="#L1255">1255</a>    Flag      = 4,</span>
+<span id="L1256"><a href="#L1256">1256</a>    Max       = 4,</span>
+<span id="L1257"><a href="#L1257">1257</a>}</span>
+<span id="L1258"><a href="#L1258">1258</a></span>
+<span id="L1259"><a href="#L1259">1259</a>local NeedAdjustProcessType = {</span>
+<span id="L1260"><a href="#L1260">1260</a>    [ESignificanceProcessType.HeadUI]    = false,</span>
+<span id="L1261"><a href="#L1261">1261</a>    [ESignificanceProcessType.LocalRes]  = false,</span>
+<span id="L1262"><a href="#L1262">1262</a>    [ESignificanceProcessType.SubEntity] = false,</span>
+<span id="L1263"><a href="#L1263">1263</a>    [ESignificanceProcessType.Flag]      = false,</span>
+<span id="L1264"><a href="#L1264">1264</a>}</span>
+<span id="L1265"><a href="#L1265">1265</a></span>
+<span id="L1266"><a href="#L1266">1266</a>local TimeoutProcessType = {</span>
+<span id="L1267"><a href="#L1267">1267</a>    [ESignificanceProcessType.HeadUI]    = 0,</span>
+<span id="L1268"><a href="#L1268">1268</a>    [ESignificanceProcessType.LocalRes]  = 0,</span>
+<span id="L1269"><a href="#L1269">1269</a>    [ESignificanceProcessType.SubEntity] = 0,</span>
+<span id="L1270"><a href="#L1270">1270</a>    [ESignificanceProcessType.Flag]      = 0,</span>
+<span id="L1271"><a href="#L1271">1271</a>}</span>
+<span id="L1272"><a href="#L1272">1272</a></span>
+<span id="L1273"><a href="#L1273">1273</a>local LastAdjustProcessType = ESignificanceProcessType.Default</span>
+<span id="L1274"><a href="#L1274">1274</a>local CurAdjustProcessType = ESignificanceProcessType.Default</span>
+<span id="L1275"><a href="#L1275">1275</a></span>
+<span id="L1276"><a href="#L1276">1276</a>function cls:ReadyForProcessTask()</span>
+<span id="L1277"><a href="#L1277">1277</a>    totalTaskDuration = PrepareTaskDuraion</span>
+<span id="L1278"><a href="#L1278">1278</a>    LastAdjustProcessType = CurAdjustProcessType</span>
+<span id="L1279"><a href="#L1279">1279</a>    CurAdjustProcessType = ESignificanceProcessType.Default</span>
+<span id="L1280"><a href="#L1280">1280</a></span>
+<span id="L1281"><a href="#L1281">1281</a>    if self.isDynamicMode then</span>
+<span id="L1282"><a href="#L1282">1282</a>        local curTime = U3D.Time.realtimeSinceStartup</span>
+<span id="L1283"><a href="#L1283">1283</a>        local headUITaskCount = self._commonTaskLinkedList:Length()</span>
+<span id="L1284"><a href="#L1284">1284</a>        if headUITaskCount &gt; 0 then</span>
+<span id="L1285"><a href="#L1285">1285</a>            if TimeoutProcessType[ESignificanceProcessType.HeadUI] == 0 then</span>
+<span id="L1286"><a href="#L1286">1286</a>                TimeoutProcessType[ESignificanceProcessType.HeadUI] = curTime</span>
+<span id="L1287"><a href="#L1287">1287</a>            end</span>
+<span id="L1288"><a href="#L1288">1288</a>        end</span>
+<span id="L1289"><a href="#L1289">1289</a>        if headUITaskCount &gt; 10 or curTime - TimeoutProcessType[ESignificanceProcessType.HeadUI] &gt; 1 then</span>
+<span id="L1290"><a href="#L1290">1290</a>            NeedAdjustProcessType[ESignificanceProcessType.HeadUI] = true</span>
+<span id="L1291"><a href="#L1291">1291</a>        else</span>
+<span id="L1292"><a href="#L1292">1292</a>            NeedAdjustProcessType[ESignificanceProcessType.HeadUI] = false</span>
+<span id="L1293"><a href="#L1293">1293</a>        end</span>
+<span id="L1294"><a href="#L1294">1294</a></span>
+<span id="L1295"><a href="#L1295">1295</a>        local localResTaskCount = self._localResTaskLinkedList:Length()</span>
+<span id="L1296"><a href="#L1296">1296</a>        if localResTaskCount &gt; 0 then</span>
+<span id="L1297"><a href="#L1297">1297</a>            if TimeoutProcessType[ESignificanceProcessType.LocalRes] == 0 then</span>
+<span id="L1298"><a href="#L1298">1298</a>                TimeoutProcessType[ESignificanceProcessType.LocalRes] = curTime</span>
+<span id="L1299"><a href="#L1299">1299</a>            end</span>
+<span id="L1300"><a href="#L1300">1300</a>        end</span>
+<span id="L1301"><a href="#L1301">1301</a>        if localResTaskCount &gt; 10 or curTime - TimeoutProcessType[ESignificanceProcessType.LocalRes] &gt; 1 then</span>
+<span id="L1302"><a href="#L1302">1302</a>            NeedAdjustProcessType[ESignificanceProcessType.LocalRes] = true</span>
+<span id="L1303"><a href="#L1303">1303</a>        else</span>
+<span id="L1304"><a href="#L1304">1304</a>            NeedAdjustProcessType[ESignificanceProcessType.LocalRes] = false</span>
+<span id="L1305"><a href="#L1305">1305</a>        end</span>
+<span id="L1306"><a href="#L1306">1306</a></span>
+<span id="L1307"><a href="#L1307">1307</a>        local hasTask_SubEntity = OutsideSubEntityMgr:HasTask()</span>
+<span id="L1308"><a href="#L1308">1308</a>        if hasTask_SubEntity then</span>
+<span id="L1309"><a href="#L1309">1309</a>            if TimeoutProcessType[ESignificanceProcessType.SubEntity] == 0 then</span>
+<span id="L1310"><a href="#L1310">1310</a>                TimeoutProcessType[ESignificanceProcessType.SubEntity] = curTime</span>
+<span id="L1311"><a href="#L1311">1311</a>            end</span>
+<span id="L1312"><a href="#L1312">1312</a>        end</span>
+<span id="L1313"><a href="#L1313">1313</a>        if curTime - TimeoutProcessType[ESignificanceProcessType.SubEntity] &gt; 0 then</span>
+<span id="L1314"><a href="#L1314">1314</a>            NeedAdjustProcessType[ESignificanceProcessType.SubEntity] = true</span>
+<span id="L1315"><a href="#L1315">1315</a>        else</span>
+<span id="L1316"><a href="#L1316">1316</a>            NeedAdjustProcessType[ESignificanceProcessType.SubEntity] = false</span>
+<span id="L1317"><a href="#L1317">1317</a>        end</span>
+<span id="L1318"><a href="#L1318">1318</a></span>
+<span id="L1319"><a href="#L1319">1319</a>        if curTime - TimeoutProcessType[ESignificanceProcessType.Flag] &gt; 1 then</span>
+<span id="L1320"><a href="#L1320">1320</a>            NeedAdjustProcessType[ESignificanceProcessType.Flag] = true</span>
+<span id="L1321"><a href="#L1321">1321</a>        else</span>
+<span id="L1322"><a href="#L1322">1322</a>            NeedAdjustProcessType[ESignificanceProcessType.Flag] = false</span>
+<span id="L1323"><a href="#L1323">1323</a>        end</span>
+<span id="L1324"><a href="#L1324">1324</a></span>
+<span id="L1325"><a href="#L1325">1325</a>        for i = 1, ESignificanceProcessType.Max do</span>
+<span id="L1326"><a href="#L1326">1326</a>            local processType = (LastAdjustProcessType + i) % ESignificanceProcessType.Max</span>
+<span id="L1327"><a href="#L1327">1327</a>            if NeedAdjustProcessType[processType] then</span>
+<span id="L1328"><a href="#L1328">1328</a>                CurAdjustProcessType = processType</span>
+<span id="L1329"><a href="#L1329">1329</a></span>
+<span id="L1330"><a href="#L1330">1330</a>                break</span>
+<span id="L1331"><a href="#L1331">1331</a>            end</span>
+<span id="L1332"><a href="#L1332">1332</a>        end</span>
+<span id="L1333"><a href="#L1333">1333</a>    end</span>
+<span id="L1334"><a href="#L1334">1334</a></span>
+<span id="L1335"><a href="#L1335">1335</a>    -- entityTaskMaxDuration = CurAdjustProcessType ~= ESignificanceProcessType.Default and MapSignificanceDefine.TotalBucket - 0.001 or MapSignificanceDefine.TotalBucket</span>
+<span id="L1336"><a href="#L1336">1336</a>end</span>
+<span id="L1337"><a href="#L1337">1337</a></span>
+<span id="L1338"><a href="#L1338">1338</a>function cls:CanProcessTask()</span>
+<span id="L1339"><a href="#L1339">1339</a>    return totalTaskDuration &lt; self:GetMgrMaxUpdateTime(TimeFrameType.MapSignificanceMgr)</span>
+<span id="L1340"><a href="#L1340">1340</a>end</span>
+<span id="L1341"><a href="#L1341">1341</a></span>
+<span id="L1342"><a href="#L1342">1342</a>local function StartProcessTask()</span>
+<span id="L1343"><a href="#L1343">1343</a>    taskProcessStartTime = U3D.Time.realtimeSinceStartup</span>
+<span id="L1344"><a href="#L1344">1344</a>end</span>
+<span id="L1345"><a href="#L1345">1345</a></span>
+<span id="L1346"><a href="#L1346">1346</a>local function EndProcessTask()</span>
+<span id="L1347"><a href="#L1347">1347</a>    totalTaskDuration = totalTaskDuration + (U3D.Time.realtimeSinceStartup - taskProcessStartTime)</span>
+<span id="L1348"><a href="#L1348">1348</a>end</span>
+<span id="L1349"><a href="#L1349">1349</a></span>
+<span id="L1350"><a href="#L1350">1350</a>---任务处理</span>
+<span id="L1351"><a href="#L1351">1351</a>---@private</span>
+<span id="L1352"><a href="#L1352">1352</a>-- [AOE.AutoProfiler]</span>
+<span id="L1353"><a href="#L1353">1353</a>function cls:ProcessSignificanceTasks()</span>
+<span id="L1354"><a href="#L1354">1354</a>    ProfilerUtil.BeginCpuSample(107)  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L1355"><a href="#L1355">1355</a>    --#if ENABLE_PROFILER</span>
+<span id="L1356"><a href="#L1356">1356</a>    ProfilerUtil.SamplerBegin(sampler_ProcessTasks)</span>
+<span id="L1357"><a href="#L1357">1357</a>    --#endif</span>
+<span id="L1358"><a href="#L1358">1358</a></span>
+<span id="L1359"><a href="#L1359">1359</a>    self:ReadyForProcessTask()</span>
+<span id="L1360"><a href="#L1360">1360</a></span>
+<span id="L1361"><a href="#L1361">1361</a>    --#if ENABLE_PROFILER</span>
+<span id="L1362"><a href="#L1362">1362</a>    ProfilerUtil.SamplerBegin(sampler_ProcessForceSubEntity)</span>
+<span id="L1363"><a href="#L1363">1363</a>    --#endif</span>
+<span id="L1364"><a href="#L1364">1364</a></span>
+<span id="L1365"><a href="#L1365">1365</a>    self:ConsumeTasks_ForceSubEntity()</span>
+<span id="L1366"><a href="#L1366">1366</a></span>
+<span id="L1367"><a href="#L1367">1367</a>    --#if ENABLE_PROFILER</span>
+<span id="L1368"><a href="#L1368">1368</a>    ProfilerUtil.SamplerEnd(sampler_ProcessForceSubEntity)</span>
+<span id="L1369"><a href="#L1369">1369</a>    -- ProfilerUtil.SamplerBegin(sampler_ProcessSelfTask)</span>
+<span id="L1370"><a href="#L1370">1370</a>    --#endif</span>
+<span id="L1371"><a href="#L1371">1371</a></span>
+<span id="L1372"><a href="#L1372">1372</a>    self:ConsumeTasks_Self()</span>
+<span id="L1373"><a href="#L1373">1373</a></span>
+<span id="L1374"><a href="#L1374">1374</a>    --#if ENABLE_PROFILER</span>
+<span id="L1375"><a href="#L1375">1375</a>    -- ProfilerUtil.SamplerEnd(sampler_ProcessSelfTask)</span>
+<span id="L1376"><a href="#L1376">1376</a>    ProfilerUtil.SamplerBegin(sampler_ProcessPriorityEntityTask)</span>
+<span id="L1377"><a href="#L1377">1377</a>    --#endif</span>
+<span id="L1378"><a href="#L1378">1378</a></span>
+<span id="L1379"><a href="#L1379">1379</a>    self:ConsumeTasks_PriorityMapEntity()</span>
+<span id="L1380"><a href="#L1380">1380</a></span>
+<span id="L1381"><a href="#L1381">1381</a>    --#if ENABLE_PROFILER</span>
+<span id="L1382"><a href="#L1382">1382</a>    ProfilerUtil.SamplerEnd(sampler_ProcessPriorityEntityTask)</span>
+<span id="L1383"><a href="#L1383">1383</a>    ProfilerUtil.SamplerBegin(sampler_ProcessTimeoutTask)</span>
+<span id="L1384"><a href="#L1384">1384</a>    --#endif</span>
+<span id="L1385"><a href="#L1385">1385</a></span>
+<span id="L1386"><a href="#L1386">1386</a>    self:ConsumeTasks_Timeout()</span>
+<span id="L1387"><a href="#L1387">1387</a></span>
+<span id="L1388"><a href="#L1388">1388</a>    --#if ENABLE_PROFILER</span>
+<span id="L1389"><a href="#L1389">1389</a>    ProfilerUtil.SamplerEnd(sampler_ProcessTimeoutTask)</span>
+<span id="L1390"><a href="#L1390">1390</a>    ProfilerUtil.SamplerBegin(sampler_ProcessInfiniteZoomTask)</span>
+<span id="L1391"><a href="#L1391">1391</a>    --#endif</span>
+<span id="L1392"><a href="#L1392">1392</a></span>
+<span id="L1393"><a href="#L1393">1393</a>    self:ConsumeTasks_InfiniteZoom()</span>
+<span id="L1394"><a href="#L1394">1394</a></span>
+<span id="L1395"><a href="#L1395">1395</a>    --#if ENABLE_PROFILER</span>
+<span id="L1396"><a href="#L1396">1396</a>    ProfilerUtil.SamplerEnd(sampler_ProcessInfiniteZoomTask)</span>
+<span id="L1397"><a href="#L1397">1397</a>    ProfilerUtil.SamplerBegin(sampler_ProcessEntityTask)</span>
+<span id="L1398"><a href="#L1398">1398</a>    --#endif</span>
+<span id="L1399"><a href="#L1399">1399</a></span>
+<span id="L1400"><a href="#L1400">1400</a>    self:ConsumeTasks_MapEntity()</span>
+<span id="L1401"><a href="#L1401">1401</a>    </span>
+<span id="L1402"><a href="#L1402">1402</a>    --#if ENABLE_PROFILER</span>
+<span id="L1403"><a href="#L1403">1403</a>    ProfilerUtil.SamplerEnd(sampler_ProcessEntityTask)</span>
+<span id="L1404"><a href="#L1404">1404</a>    ProfilerUtil.SamplerBegin(sampler_ProcessCommonTask)</span>
+<span id="L1405"><a href="#L1405">1405</a>    --#endif</span>
+<span id="L1406"><a href="#L1406">1406</a></span>
+<span id="L1407"><a href="#L1407">1407</a>    self:ConsumeTasks_Common()</span>
+<span id="L1408"><a href="#L1408">1408</a></span>
+<span id="L1409"><a href="#L1409">1409</a>    --#if ENABLE_PROFILER</span>
+<span id="L1410"><a href="#L1410">1410</a>    ProfilerUtil.SamplerEnd(sampler_ProcessCommonTask)</span>
+<span id="L1411"><a href="#L1411">1411</a>    ProfilerUtil.SamplerBegin(sampler_ProcessLocalResEntity)</span>
+<span id="L1412"><a href="#L1412">1412</a>    --#endif</span>
+<span id="L1413"><a href="#L1413">1413</a></span>
+<span id="L1414"><a href="#L1414">1414</a>    self:ConsumeTasks_LocalResEntity()</span>
+<span id="L1415"><a href="#L1415">1415</a></span>
+<span id="L1416"><a href="#L1416">1416</a>    --#if ENABLE_PROFILER</span>
+<span id="L1417"><a href="#L1417">1417</a>    ProfilerUtil.SamplerEnd(sampler_ProcessLocalResEntity)</span>
+<span id="L1418"><a href="#L1418">1418</a>    ProfilerUtil.SamplerBegin(sampler_ProcessOutsideSubEntity)</span>
+<span id="L1419"><a href="#L1419">1419</a>    --#endif</span>
+<span id="L1420"><a href="#L1420">1420</a></span>
+<span id="L1421"><a href="#L1421">1421</a>    self:ConsumeTasks_SubEntity()</span>
+<span id="L1422"><a href="#L1422">1422</a></span>
+<span id="L1423"><a href="#L1423">1423</a>    --#if ENABLE_PROFILER</span>
+<span id="L1424"><a href="#L1424">1424</a>    ProfilerUtil.SamplerEnd(sampler_ProcessOutsideSubEntity)</span>
+<span id="L1425"><a href="#L1425">1425</a>    ProfilerUtil.SamplerBegin(sampler_ProcessDestroyTask)</span>
+<span id="L1426"><a href="#L1426">1426</a>    --#endif</span>
+<span id="L1427"><a href="#L1427">1427</a></span>
+<span id="L1428"><a href="#L1428">1428</a>    self:ConsumeTasks_MapEntityForDestroy()</span>
+<span id="L1429"><a href="#L1429">1429</a></span>
+<span id="L1430"><a href="#L1430">1430</a>    --#if ENABLE_PROFILER</span>
+<span id="L1431"><a href="#L1431">1431</a>    ProfilerUtil.SamplerEnd(sampler_ProcessDestroyTask)</span>
+<span id="L1432"><a href="#L1432">1432</a>    ProfilerUtil.SamplerEnd(sampler_ProcessTasks)</span>
+<span id="L1433"><a href="#L1433">1433</a>    --#endif</span>
+<span id="L1434"><a href="#L1434">1434</a>    ProfilerUtil.EndCpuSample()  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L1435"><a href="#L1435">1435</a>end</span>
+<span id="L1436"><a href="#L1436">1436</a></span>
+<span id="L1437"><a href="#L1437">1437</a>-- 优先处理超时任务</span>
+<span id="L1438"><a href="#L1438">1438</a>function cls:ConsumeTasks_Timeout()</span>
+<span id="L1439"><a href="#L1439">1439</a>    ProfilerUtil.BeginCpuSample(103)  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L1440"><a href="#L1440">1440</a>    if NeedAdjustProcessType[ESignificanceProcessType.HeadUI] then</span>
+<span id="L1441"><a href="#L1441">1441</a>        self:ConsumeTasks_Common()</span>
+<span id="L1442"><a href="#L1442">1442</a>    elseif NeedAdjustProcessType[ESignificanceProcessType.LocalRes] then</span>
+<span id="L1443"><a href="#L1443">1443</a>        self:ConsumeTasks_LocalResEntity()</span>
+<span id="L1444"><a href="#L1444">1444</a>    elseif NeedAdjustProcessType[ESignificanceProcessType.SubEntity] then</span>
+<span id="L1445"><a href="#L1445">1445</a>        self:ConsumeTasks_SubEntity()</span>
+<span id="L1446"><a href="#L1446">1446</a>    end</span>
+<span id="L1447"><a href="#L1447">1447</a>    ProfilerUtil.EndCpuSample()  -- 本行代码根据[AOE.AutoProfiler]自动生成</span>
+<span id="L1448"><a href="#L1448">1448</a>end</span>
+<span id="L1449"><a href="#L1449">1449</a></span>
+<span id="L1450"><a href="#L1450">1450</a>function cls:ConsumeTasks_InfiniteZoom()</span>
+<span id="L1451"><a href="#L1451">1451</a>    while self:CanProcessTask() do</span>
+<span id="L1452"><a href="#L1452">1452</a>        local curTask = nil</span>
+<span id="L1453"><a href="#L1453">1453</a>        for uniqueId, infiniteZoomTask in pairs(self._infiniteZoomTasks) do</span>
+<span id="L1454"><a href="#L1454">1454</a>            curTask = infiniteZoomTask:PopTask()</span>
+<span id="L1455"><a href="#L1455">1455</a>            if curTask ~= nil then</span>
+<span id="L1456"><a href="#L1456">1456</a>                break</span>
+<span id="L1457"><a href="#L1457">1457</a>            else</span>
+<span id="L1458"><a href="#L1458">1458</a>                self:PutInfiniteZoomTask(infiniteZoomTask)</span>
+<span id="L1459"><a href="#L1459">1459</a>            end</span>
+<span id="L1460"><a href="#L1460">1460</a>        end</span>
+<span id="L1461"><a href="#L1461">1461</a></span>
+<span id="L1462"><a href="#L1462">1462</a>        if curTask ~= nil then</span>
+<span id="L1463"><a href="#L1463">1463</a>            StartProcessTask()</span>
+<span id="L1464"><a href="#L1464">1464</a>            FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1465"><a href="#L1465">1465</a>            MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1466"><a href="#L1466">1466</a>            EndProcessTask()</span>
+<span id="L1467"><a href="#L1467">1467</a>        else</span>
+<span id="L1468"><a href="#L1468">1468</a>            break</span>
+<span id="L1469"><a href="#L1469">1469</a>        end</span>
+<span id="L1470"><a href="#L1470">1470</a>    end</span>
+<span id="L1471"><a href="#L1471">1471</a>end</span>
+<span id="L1472"><a href="#L1472">1472</a></span>
+<span id="L1473"><a href="#L1473">1473</a>--1.优先处理跟我相关的任务</span>
+<span id="L1474"><a href="#L1474">1474</a>function cls:ConsumeTasks_Self()</span>
+<span id="L1475"><a href="#L1475">1475</a>    while self:CanProcessTask() do</span>
+<span id="L1476"><a href="#L1476">1476</a>        local curTask = nil</span>
+<span id="L1477"><a href="#L1477">1477</a>        if self._ownerEntityTaskId &lt;= 0 then</span>
+<span id="L1478"><a href="#L1478">1478</a>            self._ownerEntityTaskId = self.MapSignificanceTaskScheduler:PopOwnerTask()</span>
+<span id="L1479"><a href="#L1479">1479</a>        end</span>
+<span id="L1480"><a href="#L1480">1480</a></span>
+<span id="L1481"><a href="#L1481">1481</a>        if self._ownerEntityTaskId &gt; 0 then</span>
+<span id="L1482"><a href="#L1482">1482</a>            local entityTask = self._entityTasksByEntityId[self._ownerEntityTaskId]</span>
+<span id="L1483"><a href="#L1483">1483</a>            if entityTask then</span>
+<span id="L1484"><a href="#L1484">1484</a>                curTask = entityTask:PopTask()</span>
+<span id="L1485"><a href="#L1485">1485</a>                if curTask == nil then</span>
+<span id="L1486"><a href="#L1486">1486</a>                    self.MapSignificanceTaskScheduler:RemoveEntityTask(entityTask)</span>
+<span id="L1487"><a href="#L1487">1487</a>                    self._ownerEntityTaskId = 0</span>
+<span id="L1488"><a href="#L1488">1488</a></span>
+<span id="L1489"><a href="#L1489">1489</a>                    self:PutEntityTask(entityTask)</span>
+<span id="L1490"><a href="#L1490">1490</a>                    self._entityTasksByEntityId[self._ownerEntityTaskId] = nil</span>
+<span id="L1491"><a href="#L1491">1491</a>                end</span>
+<span id="L1492"><a href="#L1492">1492</a>            else</span>
+<span id="L1493"><a href="#L1493">1493</a>                self._ownerEntityTaskId = 0</span>
+<span id="L1494"><a href="#L1494">1494</a>            end</span>
+<span id="L1495"><a href="#L1495">1495</a>        end</span>
+<span id="L1496"><a href="#L1496">1496</a></span>
+<span id="L1497"><a href="#L1497">1497</a>        if curTask ~= nil then</span>
+<span id="L1498"><a href="#L1498">1498</a>            StartProcessTask()</span>
+<span id="L1499"><a href="#L1499">1499</a>            FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1500"><a href="#L1500">1500</a>            self:OnEntityTaskRemoveSignificanceTask(curTask)</span>
+<span id="L1501"><a href="#L1501">1501</a>            MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1502"><a href="#L1502">1502</a>            EndProcessTask()</span>
+<span id="L1503"><a href="#L1503">1503</a>        else</span>
+<span id="L1504"><a href="#L1504">1504</a>            break</span>
+<span id="L1505"><a href="#L1505">1505</a>        end</span>
+<span id="L1506"><a href="#L1506">1506</a>    end</span>
+<span id="L1507"><a href="#L1507">1507</a>end</span>
+<span id="L1508"><a href="#L1508">1508</a></span>
+<span id="L1509"><a href="#L1509">1509</a>--2.任务调度管理器没有cover到的任务</span>
+<span id="L1510"><a href="#L1510">1510</a>function cls:ConsumeTasks_MapEntity()</span>
+<span id="L1511"><a href="#L1511">1511</a>    while self:CanProcessTask() do</span>
+<span id="L1512"><a href="#L1512">1512</a>        local curTask = self._entitySignificanceTaskLinkedList:First()</span>
+<span id="L1513"><a href="#L1513">1513</a>        if curTask ~= nil then</span>
+<span id="L1514"><a href="#L1514">1514</a>            local entityTask = self:GetEntityTaskByEntityId(curTask.entityId)</span>
+<span id="L1515"><a href="#L1515">1515</a>            if entityTask then</span>
+<span id="L1516"><a href="#L1516">1516</a>                entityTask:RemoveSignificanceTask(curTask)</span>
+<span id="L1517"><a href="#L1517">1517</a>            -- else</span>
+<span id="L1518"><a href="#L1518">1518</a>            --     mgr.log:Error(&quot;cannt find entityTask : %s&quot;, curTask.entityId)</span>
+<span id="L1519"><a href="#L1519">1519</a>            end</span>
+<span id="L1520"><a href="#L1520">1520</a></span>
+<span id="L1521"><a href="#L1521">1521</a>            StartProcessTask()</span>
+<span id="L1522"><a href="#L1522">1522</a>            FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1523"><a href="#L1523">1523</a>            self:OnEntityTaskRemoveSignificanceTask(curTask)</span>
+<span id="L1524"><a href="#L1524">1524</a>            MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1525"><a href="#L1525">1525</a>            EndProcessTask()</span>
+<span id="L1526"><a href="#L1526">1526</a></span>
+<span id="L1527"><a href="#L1527">1527</a>            if entityTask and entityTask:IsEmpty() then</span>
+<span id="L1528"><a href="#L1528">1528</a>                self:PutEntityTask(entityTask)</span>
+<span id="L1529"><a href="#L1529">1529</a>            end</span>
+<span id="L1530"><a href="#L1530">1530</a>        else</span>
+<span id="L1531"><a href="#L1531">1531</a>            break</span>
+<span id="L1532"><a href="#L1532">1532</a>        end</span>
+<span id="L1533"><a href="#L1533">1533</a>    end</span>
+<span id="L1534"><a href="#L1534">1534</a>end</span>
+<span id="L1535"><a href="#L1535">1535</a></span>
+<span id="L1536"><a href="#L1536">1536</a>function cls:ConsumeTasks_PriorityMapEntity()</span>
+<span id="L1537"><a href="#L1537">1537</a>    for entityId, _ in pairs(self._priorityEntityDic) do</span>
+<span id="L1538"><a href="#L1538">1538</a>        local entityTask = self:GetEntityTaskByEntityId(entityId)</span>
+<span id="L1539"><a href="#L1539">1539</a>        if entityTask then</span>
+<span id="L1540"><a href="#L1540">1540</a>            while not entityTask:IsEmpty() do</span>
+<span id="L1541"><a href="#L1541">1541</a>                local curTask = entityTask:PopTask()</span>
+<span id="L1542"><a href="#L1542">1542</a>                if curTask then</span>
+<span id="L1543"><a href="#L1543">1543</a>                    StartProcessTask()</span>
+<span id="L1544"><a href="#L1544">1544</a>                    local combatAttr = WorldUtil.GetAttrComponent(curTask.entityAttr, CfgNs.EntityComponentType.ECT_Common_BaseCombat)</span>
+<span id="L1545"><a href="#L1545">1545</a>                    local refrsh = combatAttr?.combatState == CfgNs.CombatState.CS_Defeated</span>
+<span id="L1546"><a href="#L1546">1546</a></span>
+<span id="L1547"><a href="#L1547">1547</a>                    -- 只刷新败退状态的数据和败退后移动的数据（两个数据不是一起来的）</span>
+<span id="L1548"><a href="#L1548">1548</a>                    if entityTask:IsEmpty() or refrsh then </span>
+<span id="L1549"><a href="#L1549">1549</a>                        FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1550"><a href="#L1550">1550</a>                    end</span>
+<span id="L1551"><a href="#L1551">1551</a></span>
+<span id="L1552"><a href="#L1552">1552</a>                    self:OnEntityTaskRemoveSignificanceTask(curTask)</span>
+<span id="L1553"><a href="#L1553">1553</a>                    MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1554"><a href="#L1554">1554</a>                    EndProcessTask()</span>
+<span id="L1555"><a href="#L1555">1555</a>                end</span>
+<span id="L1556"><a href="#L1556">1556</a>            end</span>
+<span id="L1557"><a href="#L1557">1557</a></span>
+<span id="L1558"><a href="#L1558">1558</a>            if entityTask:IsEmpty() then</span>
+<span id="L1559"><a href="#L1559">1559</a>                self._priorityEntityDic[entityId] = nil</span>
+<span id="L1560"><a href="#L1560">1560</a>                self:PutEntityTask(entityTask)</span>
+<span id="L1561"><a href="#L1561">1561</a>            end</span>
+<span id="L1562"><a href="#L1562">1562</a>        else</span>
+<span id="L1563"><a href="#L1563">1563</a>            self._priorityEntityDic[entityId] = nil</span>
+<span id="L1564"><a href="#L1564">1564</a>        end</span>
+<span id="L1565"><a href="#L1565">1565</a></span>
+<span id="L1566"><a href="#L1566">1566</a>        if self:CanProcessTask() then</span>
+<span id="L1567"><a href="#L1567">1567</a>            break</span>
+<span id="L1568"><a href="#L1568">1568</a>        end</span>
+<span id="L1569"><a href="#L1569">1569</a>    end</span>
+<span id="L1570"><a href="#L1570">1570</a>end</span>
+<span id="L1571"><a href="#L1571">1571</a></span>
+<span id="L1572"><a href="#L1572">1572</a>function cls:ConsumeTasks_MapEntityForDestroy()</span>
+<span id="L1573"><a href="#L1573">1573</a>    while self:CanProcessTask() do</span>
+<span id="L1574"><a href="#L1574">1574</a>        local curTask = self._entitySignificanceTaskLinkedListForDestroy:First()</span>
+<span id="L1575"><a href="#L1575">1575</a>        if curTask ~= nil then</span>
+<span id="L1576"><a href="#L1576">1576</a>            local entityTask = self:GetEntityTaskByEntityId(curTask.entityId)</span>
+<span id="L1577"><a href="#L1577">1577</a>            if entityTask then</span>
+<span id="L1578"><a href="#L1578">1578</a>                entityTask:RemoveSignificanceTask(curTask)</span>
+<span id="L1579"><a href="#L1579">1579</a>            -- else</span>
+<span id="L1580"><a href="#L1580">1580</a>            --     mgr.log:Error(&quot;cannt find entityTask : %s&quot;, curTask.entityId)</span>
+<span id="L1581"><a href="#L1581">1581</a>            end</span>
+<span id="L1582"><a href="#L1582">1582</a>        end</span>
+<span id="L1583"><a href="#L1583">1583</a></span>
+<span id="L1584"><a href="#L1584">1584</a>        if curTask ~= nil then</span>
+<span id="L1585"><a href="#L1585">1585</a>            StartProcessTask()</span>
+<span id="L1586"><a href="#L1586">1586</a>            FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1587"><a href="#L1587">1587</a>            self:OnEntityTaskRemoveSignificanceTask(curTask)</span>
+<span id="L1588"><a href="#L1588">1588</a>            MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1589"><a href="#L1589">1589</a>            EndProcessTask()</span>
+<span id="L1590"><a href="#L1590">1590</a>        else</span>
+<span id="L1591"><a href="#L1591">1591</a>            break</span>
+<span id="L1592"><a href="#L1592">1592</a>        end</span>
+<span id="L1593"><a href="#L1593">1593</a>    end</span>
+<span id="L1594"><a href="#L1594">1594</a>end</span>
+<span id="L1595"><a href="#L1595">1595</a></span>
+<span id="L1596"><a href="#L1596">1596</a>function cls:ConsumeTasks_Common()</span>
+<span id="L1597"><a href="#L1597">1597</a>    while self:CanProcessTask() do</span>
+<span id="L1598"><a href="#L1598">1598</a>        local significanceTask = self._commonTaskLinkedList:First()</span>
+<span id="L1599"><a href="#L1599">1599</a>        if not significanceTask then</span>
+<span id="L1600"><a href="#L1600">1600</a>            break</span>
+<span id="L1601"><a href="#L1601">1601</a>        end</span>
+<span id="L1602"><a href="#L1602">1602</a></span>
+<span id="L1603"><a href="#L1603">1603</a>        StartProcessTask()</span>
+<span id="L1604"><a href="#L1604">1604</a>        local entity = significanceTask.entity or nil</span>
+<span id="L1605"><a href="#L1605">1605</a>        FuncUtil.PCall(self.ProcessSignificanceTask, self, significanceTask, entity)</span>
+<span id="L1606"><a href="#L1606">1606</a>        if not self:RemoveCommonTask(significanceTask) then</span>
+<span id="L1607"><a href="#L1607">1607</a>            -- self._taskLinkedList:Remove(significanceTask)</span>
+<span id="L1608"><a href="#L1608">1608</a>        end</span>
+<span id="L1609"><a href="#L1609">1609</a>        EndProcessTask()</span>
+<span id="L1610"><a href="#L1610">1610</a>    end</span>
+<span id="L1611"><a href="#L1611">1611</a>end</span>
+<span id="L1612"><a href="#L1612">1612</a></span>
+<span id="L1613"><a href="#L1613">1613</a>function cls:ConsumeTasks_LocalResEntity()</span>
+<span id="L1614"><a href="#L1614">1614</a>    while self:CanProcessTask() do</span>
+<span id="L1615"><a href="#L1615">1615</a>        local significanceTask = self._localResTaskLinkedList:First()</span>
+<span id="L1616"><a href="#L1616">1616</a>        if not significanceTask then</span>
+<span id="L1617"><a href="#L1617">1617</a>            break</span>
+<span id="L1618"><a href="#L1618">1618</a>        end</span>
+<span id="L1619"><a href="#L1619">1619</a></span>
+<span id="L1620"><a href="#L1620">1620</a>        -- 本地资源创建前，需要优先将对应gridIndex的服务器资源田任务清理掉。否则会发生一份gridIndex映射到2份数据的问题。</span>
+<span id="L1621"><a href="#L1621">1621</a>        local needProcessServerTask = false</span>
+<span id="L1622"><a href="#L1622">1622</a>        if significanceTask.bAdd then</span>
+<span id="L1623"><a href="#L1623">1623</a>            local entityData = mgr.mapCore.DataCtrl:GetDataByGridIndex(significanceTask.gridIndex)</span>
+<span id="L1624"><a href="#L1624">1624</a>            if entityData ~= nil and entityData.entityType == CfgNs.WorldEntityType.WET_Resource then</span>
+<span id="L1625"><a href="#L1625">1625</a>                local entityTask = self._entityTasksByEntityId[entityData.entityId]</span>
+<span id="L1626"><a href="#L1626">1626</a>                if entityTask then</span>
+<span id="L1627"><a href="#L1627">1627</a>                    </span>
+<span id="L1628"><a href="#L1628">1628</a>                    local curTask = entityTask:PopTask()</span>
+<span id="L1629"><a href="#L1629">1629</a>                    if curTask == nil then</span>
+<span id="L1630"><a href="#L1630">1630</a>                        self:PutEntityTask(entityTask)</span>
+<span id="L1631"><a href="#L1631">1631</a>                    else</span>
+<span id="L1632"><a href="#L1632">1632</a>                        needProcessServerTask = true</span>
+<span id="L1633"><a href="#L1633">1633</a>                        StartProcessTask()</span>
+<span id="L1634"><a href="#L1634">1634</a>                        FuncUtil.PCall(self.ProcessSignificanceTask, self, curTask)</span>
+<span id="L1635"><a href="#L1635">1635</a>                        self:OnEntityTaskRemoveSignificanceTask(curTask)</span>
+<span id="L1636"><a href="#L1636">1636</a>                        MapSignificanceTaskFactory:PutTask(curTask)</span>
+<span id="L1637"><a href="#L1637">1637</a>                        EndProcessTask()</span>
+<span id="L1638"><a href="#L1638">1638</a>                    end</span>
+<span id="L1639"><a href="#L1639">1639</a>                end</span>
+<span id="L1640"><a href="#L1640">1640</a>            end</span>
+<span id="L1641"><a href="#L1641">1641</a>        end</span>
+<span id="L1642"><a href="#L1642">1642</a></span>
+<span id="L1643"><a href="#L1643">1643</a>        if not needProcessServerTask then</span>
+<span id="L1644"><a href="#L1644">1644</a>            StartProcessTask()</span>
+<span id="L1645"><a href="#L1645">1645</a>            FuncUtil.PCall(self.ProcessSignificanceTask, self, significanceTask)</span>
+<span id="L1646"><a href="#L1646">1646</a>            self:RemoveLocalResTask(significanceTask)</span>
+<span id="L1647"><a href="#L1647">1647</a>            EndProcessTask()</span>
+<span id="L1648"><a href="#L1648">1648</a>        end</span>
+<span id="L1649"><a href="#L1649">1649</a>    end</span>
+<span id="L1650"><a href="#L1650">1650</a>end</span>
+<span id="L1651"><a href="#L1651">1651</a>local maxForceSubTime = nil</span>
+<span id="L1652"><a href="#L1652">1652</a>function cls:ConsumeTasks_ForceSubEntity()</span>
+<span id="L1653"><a href="#L1653">1653</a>    if self:IsPerfBlockSubEntityExecute() then</span>
+<span id="L1654"><a href="#L1654">1654</a>        return</span>
+<span id="L1655"><a href="#L1655">1655</a>    end</span>
+<span id="L1656"><a href="#L1656">1656</a></span>
+<span id="L1657"><a href="#L1657">1657</a>    -- 强制执行子实体任务，每帧调度开始时优先执行，最大时间受MapSignificanceMgrExecuteMaxTime[ForceSubEntity]限制</span>
+<span id="L1658"><a href="#L1658">1658</a>    if(maxForceSubTime == nil)then</span>
+<span id="L1659"><a href="#L1659">1659</a>        maxForceSubTime = MapSignificanceMgrExecuteMaxTime[TimeFrameType_MapSignificanceMgr.ForceSubEntity]</span>
+<span id="L1660"><a href="#L1660">1660</a>    end</span>
+<span id="L1661"><a href="#L1661">1661</a>    local maxTime = maxForceSubTime</span>
+<span id="L1662"><a href="#L1662">1662</a>    while totalTaskDuration &lt; maxTime do</span>
+<span id="L1663"><a href="#L1663">1663</a>        if not OutsideSubEntityMgr:HasTask() then</span>
+<span id="L1664"><a href="#L1664">1664</a>            break</span>
+<span id="L1665"><a href="#L1665">1665</a>        end</span>
+<span id="L1666"><a href="#L1666">1666</a></span>
+<span id="L1667"><a href="#L1667">1667</a>        StartProcessTask()</span>
+<span id="L1668"><a href="#L1668">1668</a>        OutsideSubEntityMgr:Execute()</span>
+<span id="L1669"><a href="#L1669">1669</a>        EndProcessTask()</span>
+<span id="L1670"><a href="#L1670">1670</a>    end</span>
+<span id="L1671"><a href="#L1671">1671</a>end</span>
+<span id="L1672"><a href="#L1672">1672</a></span>
+<span id="L1673"><a href="#L1673">1673</a>function cls:ConsumeTasks_SubEntity()</span>
+<span id="L1674"><a href="#L1674">1674</a>    if self:IsPerfBlockSubEntityExecute() then</span>
+<span id="L1675"><a href="#L1675">1675</a>        return</span>
+<span id="L1676"><a href="#L1676">1676</a>    end</span>
+<span id="L1677"><a href="#L1677">1677</a></span>
+<span id="L1678"><a href="#L1678">1678</a>    -- 名城子任务</span>
+<span id="L1679"><a href="#L1679">1679</a>    while self:CanProcessTask() do</span>
+<span id="L1680"><a href="#L1680">1680</a>        if not OutsideSubEntityMgr:HasTask() then</span>
+<span id="L1681"><a href="#L1681">1681</a>            break</span>
+<span id="L1682"><a href="#L1682">1682</a>        end</span>
+<span id="L1683"><a href="#L1683">1683</a></span>
+<span id="L1684"><a href="#L1684">1684</a>        StartProcessTask()</span>
+<span id="L1685"><a href="#L1685">1685</a>        OutsideSubEntityMgr:Execute()</span>
+<span id="L1686"><a href="#L1686">1686</a>        EndProcessTask()</span>
+<span id="L1687"><a href="#L1687">1687</a>    end</span>
+<span id="L1688"><a href="#L1688">1688</a>end</span>
+<span id="L1689"><a href="#L1689">1689</a></span>
+<span id="L1690"><a href="#L1690">1690</a>function cls:ConsumeTasks_Flag()</span>
+<span id="L1691"><a href="#L1691">1691</a>    -- 旗帜创建</span>
+<span id="L1692"><a href="#L1692">1692</a>    local flagCtrl = mgr.outsideMap.OutsideMapFlagCtrl</span>
+<span id="L1693"><a href="#L1693">1693</a>    while self:CanProcessTask() do</span>
+<span id="L1694"><a href="#L1694">1694</a>        if not flagCtrl:HasData() then</span>
+<span id="L1695"><a href="#L1695">1695</a>            break</span>
+<span id="L1696"><a href="#L1696">1696</a>        end</span>
+<span id="L1697"><a href="#L1697">1697</a></span>
+<span id="L1698"><a href="#L1698">1698</a>        StartProcessTask()</span>
+<span id="L1699"><a href="#L1699">1699</a>        flagCtrl:Execute()</span>
+<span id="L1700"><a href="#L1700">1700</a>        EndProcessTask()</span>
+<span id="L1701"><a href="#L1701">1701</a>    end</span>
+<span id="L1702"><a href="#L1702">1702</a>end</span>
+<span id="L1703"><a href="#L1703">1703</a></span>
+<span id="L1704"><a href="#L1704">1704</a>---@private</span>
+<span id="L1705"><a href="#L1705">1705</a>function cls:ProcessSignificanceTask(significanceTask, entity)</span>
+<span id="L1706"><a href="#L1706">1706</a>    --#if ENABLE_PROFILER</span>
+<span id="L1707"><a href="#L1707">1707</a>    local sampler = self:GetSampler_ProcessTask(significanceTask.taskType)</span>
+<span id="L1708"><a href="#L1708">1708</a>    ProfilerUtil.SamplerBegin(sampler)</span>
+<span id="L1709"><a href="#L1709">1709</a>    --#endif</span>
+<span id="L1710"><a href="#L1710">1710</a>    local processFunction = self._taskProcessFunction[significanceTask.taskType]</span>
+<span id="L1711"><a href="#L1711">1711</a>    if processFunction then</span>
+<span id="L1712"><a href="#L1712">1712</a>        local startTime = U3D.Time.realtimeSinceStartup</span>
+<span id="L1713"><a href="#L1713">1713</a></span>
+<span id="L1714"><a href="#L1714">1714</a>        processFunction(self, significanceTask, entity)</span>
+<span id="L1715"><a href="#L1715">1715</a></span>
+<span id="L1716"><a href="#L1716">1716</a>        local time = U3D.Time.realtimeSinceStartup - startTime</span>
+<span id="L1717"><a href="#L1717">1717</a>        --#if UNITY_EDITOR</span>
+<span id="L1718"><a href="#L1718">1718</a>        self.significanceTaskTimeDic[significanceTask.taskType] = (self.significanceTaskTimeDic[significanceTask.taskType] or 0) + time</span>
+<span id="L1719"><a href="#L1719">1719</a>        --#endif</span>
+<span id="L1720"><a href="#L1720">1720</a>    end</span>
+<span id="L1721"><a href="#L1721">1721</a>    --#if ENABLE_PROFILER</span>
+<span id="L1722"><a href="#L1722">1722</a>    ProfilerUtil.SamplerEnd(sampler)</span>
+<span id="L1723"><a href="#L1723">1723</a>    --#endif</span>
+<span id="L1724"><a href="#L1724">1724</a>end</span>
+<span id="L1725"><a href="#L1725">1725</a></span>
+<span id="L1726"><a href="#L1726">1726</a>function cls:InitSignificanceTaskProcessFunction()</span>
+<span id="L1727"><a href="#L1727">1727</a>    if not self._taskProcessFunction then</span>
+<span id="L1728"><a href="#L1728">1728</a>        self._taskProcessFunction = {}</span>
+<span id="L1729"><a href="#L1729">1729</a>    end</span>
+<span id="L1730"><a href="#L1730">1730</a></span>
+<span id="L1731"><a href="#L1731">1731</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapObjInit]          = self.ProcessSignificanceTask_MapObjInit</span>
+<span id="L1732"><a href="#L1732">1732</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapObjCleanUp]       = self.ProcessSignificanceTask_MapObjCleanUp</span>
+<span id="L1733"><a href="#L1733">1733</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapObjRefresh]       = self.ProcessSignificanceTask_MapObjRefresh</span>
+<span id="L1734"><a href="#L1734">1734</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapEntityAdd]        = self.ProcessSignificanceTask_MapEntityAdd</span>
+<span id="L1735"><a href="#L1735">1735</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapEntityRemove]     = self.ProcessSignificanceTask_MapEntityRemove</span>
+<span id="L1736"><a href="#L1736">1736</a>    self._taskProcessFunction[EMapSignificanceTaskType.ZoomEntityAdd]       = self.ProcessSignificanceTask_ZoomEntityAdd</span>
+<span id="L1737"><a href="#L1737">1737</a>    self._taskProcessFunction[EMapSignificanceTaskType.ZoomEntityRemove]    = self.ProcessSignificanceTask_ZoomEntityRemove</span>
+<span id="L1738"><a href="#L1738">1738</a>    self._taskProcessFunction[EMapSignificanceTaskType.FloatUIInit]         = self.ProcessSignificanceTask_FloatUIInit</span>
+<span id="L1739"><a href="#L1739">1739</a>    self._taskProcessFunction[EMapSignificanceTaskType.LocalResEntity]      = self.ProcessSignificanceTask_LocalResEntity</span>
+<span id="L1740"><a href="#L1740">1740</a>    self._taskProcessFunction[EMapSignificanceTaskType.ArmyHeadUI]          = self.ProcessSignificanceTask_ArmyHeadUI</span>
+<span id="L1741"><a href="#L1741">1741</a>    self._taskProcessFunction[EMapSignificanceTaskType.ZoomGuildMember]     = self.ProcessSignificanceTask_ZoomGuildMember</span>
+<span id="L1742"><a href="#L1742">1742</a>    self._taskProcessFunction[EMapSignificanceTaskType.MapEntityMerge]      = self.ProcessSignificanceTask_MapEntityMerge</span>
+<span id="L1743"><a href="#L1743">1743</a>end</span>
+<span id="L1744"><a href="#L1744">1744</a></span>
+<span id="L1745"><a href="#L1745">1745</a>function cls:ProcessSignificanceTask_MapObjInit(significanceTask, entity)</span>
+<span id="L1746"><a href="#L1746">1746</a>    --TODO：每个任务应该有自己的taskHandler方式，需要针对每个taskType具体定制这个方式。</span>
+<span id="L1747"><a href="#L1747">1747</a>    mapCore:ProcessEntityAttr(significanceTask.entityAttr, true, significanceTask.isLocal, significanceTask.viewLayer)</span>
+<span id="L1748"><a href="#L1748">1748</a>end</span>
+<span id="L1749"><a href="#L1749">1749</a></span>
+<span id="L1750"><a href="#L1750">1750</a>function cls:ProcessSignificanceTask_MapObjCleanUp(significanceTask)</span>
+<span id="L1751"><a href="#L1751">1751</a>--     self:_ProcessSignificanceTask_MapObjCleanUp(significanceTask)</span>
+<span id="L1752"><a href="#L1752">1752</a>-- end</span>
+<span id="L1753"><a href="#L1753">1753</a></span>
+<span id="L1754"><a href="#L1754">1754</a>-- function cls:_ProcessSignificanceTask_MapObjCleanUp(significanceTask)</span>
+<span id="L1755"><a href="#L1755">1755</a>    local entityId = significanceTask.entityId</span>
+<span id="L1756"><a href="#L1756">1756</a>    local mapEntity = mapCore.MapEntityCtrl:GetEntityById(entityId)</span>
+<span id="L1757"><a href="#L1757">1757</a>    if mapEntity then</span>
+<span id="L1758"><a href="#L1758">1758</a>        -- if not mapEntity:IsZombieState() then</span>
+<span id="L1759"><a href="#L1759">1759</a>        --     mgr.garyLog:Error(&quot;[asyncClean] ProcessSignificanceTask_MapObjCleanUp entity : %s, isZombieState false&quot;, entityId)</span>
+<span id="L1760"><a href="#L1760">1760</a>        -- end</span>
+<span id="L1761"><a href="#L1761">1761</a>        mapCore.MapEntityCtrl:RemoveEntity(entityId)</span>
+<span id="L1762"><a href="#L1762">1762</a>    else</span>
+<span id="L1763"><a href="#L1763">1763</a>        -- mgr.garyLog:Error(&quot;[asyncClean] ProcessSignificanceTask_MapObjCleanUp entity not found : %s&quot;, entityId)</span>
+<span id="L1764"><a href="#L1764">1764</a>    end</span>
+<span id="L1765"><a href="#L1765">1765</a></span>
+<span id="L1766"><a href="#L1766">1766</a>    local mapEntityData = mapCore.DataCtrl:GetDataByEntityId(entityId)</span>
+<span id="L1767"><a href="#L1767">1767</a>    if mapEntityData then</span>
+<span id="L1768"><a href="#L1768">1768</a>        -- if not mapEntityData:IsZombieState() then</span>
+<span id="L1769"><a href="#L1769">1769</a>        --     mgr.garyLog:Error(&quot;[asyncClean] ProcessSignificanceTask_MapObjCleanUp data : %s, isZombieState false&quot;, entityId)</span>
+<span id="L1770"><a href="#L1770">1770</a>        -- end</span>
+<span id="L1771"><a href="#L1771">1771</a>        mapCore.DataCtrl:RemoveDataByEntityId(entityId)</span>
+<span id="L1772"><a href="#L1772">1772</a>    else</span>
+<span id="L1773"><a href="#L1773">1773</a>        mgr.garyLog:Error(&quot;[asyncClean] ProcessSignificanceTask_MapObjCleanUp data not found : %s&quot;, entityId)</span>
+<span id="L1774"><a href="#L1774">1774</a>    end</span>
+<span id="L1775"><a href="#L1775">1775</a>end</span>
+<span id="L1776"><a href="#L1776">1776</a></span>
+<span id="L1777"><a href="#L1777">1777</a>function cls:ProcessSignificanceTask_MapObjRefresh(significanceTask, entity)</span>
+<span id="L1778"><a href="#L1778">1778</a>    if significanceTask.subTaskType then</span>
+<span id="L1779"><a href="#L1779">1779</a>        mapCore:ProcessEntityHighFreqRefresh(significanceTask.entityAttr, significanceTask.subTaskType)</span>
+<span id="L1780"><a href="#L1780">1780</a>    else</span>
+<span id="L1781"><a href="#L1781">1781</a>        mapCore:ProcessEntityAttr(significanceTask.entityAttr, false, significanceTask.isLocal, significanceTask.viewLayer)</span>
+<span id="L1782"><a href="#L1782">1782</a>    end</span>
+<span id="L1783"><a href="#L1783">1783</a>end</span>
+<span id="L1784"><a href="#L1784">1784</a></span>
+<span id="L1785"><a href="#L1785">1785</a>function cls:ProcessSignificanceTask_MapEntityAdd(significanceTask, entity)</span>
+<span id="L1786"><a href="#L1786">1786</a>--     self:_ProcessSignificanceTask_MapEntityAdd(significanceTask, entity)</span>
+<span id="L1787"><a href="#L1787">1787</a>-- end</span>
+<span id="L1788"><a href="#L1788">1788</a></span>
+<span id="L1789"><a href="#L1789">1789</a>-- function cls:_ProcessSignificanceTask_MapEntityAdd(significanceTask, entity)</span>
+<span id="L1790"><a href="#L1790">1790</a>    local entityData = mapCore.DataCtrl:GetDataByEntityId(significanceTask.entityId)</span>
+<span id="L1791"><a href="#L1791">1791</a>    if entityData ~= nil then</span>
+<span id="L1792"><a href="#L1792">1792</a>        local mapEntity = mapCore.MapEntityCtrl:GetEntityById(significanceTask.entityId)</span>
+<span id="L1793"><a href="#L1793">1793</a>        -- if mapEntity ~= nil then</span>
+<span id="L1794"><a href="#L1794">1794</a>        --     mgr.garyLog:Error(&quot;[asyncClean] ======== mapEntity already exist : %s, IsZombieState : %s&quot;, significanceTask.entityId, mapEntity:IsZombieState())</span>
+<span id="L1795"><a href="#L1795">1795</a>        -- end</span>
+<span id="L1796"><a href="#L1796">1796</a>        if mapEntity == nil then</span>
+<span id="L1797"><a href="#L1797">1797</a>            mapCore.MapEntityCtrl:CreateEntity(entityData)</span>
+<span id="L1798"><a href="#L1798">1798</a>            </span>
+<span id="L1799"><a href="#L1799">1799</a>            -- 【新增】检查是否由无极缩放触发创建（框架层统一处理）</span>
+<span id="L1800"><a href="#L1800">1800</a>            -- 如果有标记，说明在无极缩放时 mapEntity 为 nil，现在创建完成了，需要调用 OnInfiniteLayerLevelChange</span>
+<span id="L1801"><a href="#L1801">1801</a>            if entityData._needCallInfiniteZoomCallback then</span>
+<span id="L1802"><a href="#L1802">1802</a>                -- 清除标记（避免重复调用）</span>
+<span id="L1803"><a href="#L1803">1803</a>                entityData._needCallInfiniteZoomCallback = nil</span>
+<span id="L1804"><a href="#L1804">1804</a>                </span>
+<span id="L1805"><a href="#L1805">1805</a>                -- 重新获取创建后的 mapEntity</span>
+<span id="L1806"><a href="#L1806">1806</a>                mapEntity = mapCore.MapEntityCtrl:GetEntityById(significanceTask.entityId)</span>
+<span id="L1807"><a href="#L1807">1807</a>                -- 调用 OnInfiniteLayerLevelChange（如果子类实现了这个方法）</span>
+<span id="L1808"><a href="#L1808">1808</a>                if mapEntity and mapEntity.OnInfiniteLayerLevelChange then</span>
+<span id="L1809"><a href="#L1809">1809</a>                    mapEntity:OnInfiniteLayerLevelChange()</span>
+<span id="L1810"><a href="#L1810">1810</a>                end</span>
+<span id="L1811"><a href="#L1811">1811</a>            end</span>
+<span id="L1812"><a href="#L1812">1812</a>        else</span>
+<span id="L1813"><a href="#L1813">1813</a>            mapEntity:RefreshByEntityAttr(entityData)</span>
+<span id="L1814"><a href="#L1814">1814</a>        end</span>
+<span id="L1815"><a href="#L1815">1815</a>    end</span>
+<span id="L1816"><a href="#L1816">1816</a>end</span>
+<span id="L1817"><a href="#L1817">1817</a></span>
+<span id="L1818"><a href="#L1818">1818</a>function cls:ProcessSignificanceTask_MapEntityRemove(significanceTask, entity)</span>
+<span id="L1819"><a href="#L1819">1819</a>    local mapEntity = mapCore.MapEntityCtrl:GetEntityById(significanceTask.entityId)</span>
+<span id="L1820"><a href="#L1820">1820</a>    if mapEntity ~= nil then</span>
+<span id="L1821"><a href="#L1821">1821</a>        mapCore.MapEntityCtrl:RemoveEntity(significanceTask.entityId)</span>
+<span id="L1822"><a href="#L1822">1822</a>    end</span>
+<span id="L1823"><a href="#L1823">1823</a>end</span>
+<span id="L1824"><a href="#L1824">1824</a></span>
+<span id="L1825"><a href="#L1825">1825</a>function cls:ProcessSignificanceTask_ZoomEntityAdd(significanceTask)</span>
+<span id="L1826"><a href="#L1826">1826</a>    -- self:_ProcessSignificanceTask_ZoomEntityAdd(significanceTask)</span>
+<span id="L1827"><a href="#L1827">1827</a>-- end</span>
+<span id="L1828"><a href="#L1828">1828</a>-- function cls:_ProcessSignificanceTask_ZoomEntityAdd(significanceTask)</span>
+<span id="L1829"><a href="#L1829">1829</a>    local entityData = mapCore.DataCtrl:GetDataByEntityId(significanceTask.entityId)</span>
+<span id="L1830"><a href="#L1830">1830</a>    if entityData ~= nil then</span>
+<span id="L1831"><a href="#L1831">1831</a>        mgr.infiniteZoomMgr.MapEntityCtrl:CreateMapEntityIcon(entityData)</span>
+<span id="L1832"><a href="#L1832">1832</a>    end</span>
+<span id="L1833"><a href="#L1833">1833</a>end</span>
+<span id="L1834"><a href="#L1834">1834</a></span>
+<span id="L1835"><a href="#L1835">1835</a>function cls:ProcessSignificanceTask_ZoomEntityRemove(significanceTask)</span>
+<span id="L1836"><a href="#L1836">1836</a>--     self:_ProcessSignificanceTask_ZoomEntityRemove(significanceTask)</span>
+<span id="L1837"><a href="#L1837">1837</a>-- end</span>
+<span id="L1838"><a href="#L1838">1838</a>-- function cls:_ProcessSignificanceTask_ZoomEntityRemove(significanceTask)</span>
+<span id="L1839"><a href="#L1839">1839</a>    mgr.infiniteZoomMgr.MapEntityCtrl:RemoveMapEntityIcon(significanceTask.entityId)</span>
+<span id="L1840"><a href="#L1840">1840</a>end</span>
+<span id="L1841"><a href="#L1841">1841</a></span>
+<span id="L1842"><a href="#L1842">1842</a>function cls:ProcessSignificanceTask_FloatUIInit(significanceTask, entity)</span>
+<span id="L1843"><a href="#L1843">1843</a>    -- if significanceTask.uiName == UIName.Float_FieldEntityName then --目前只接入了FieldEntityName</span>
+<span id="L1844"><a href="#L1844">1844</a>    local mapEntity = entity or mapCore.MapEntityCtrl:GetEntityById(significanceTask.entityId)</span>
+<span id="L1845"><a href="#L1845">1845</a>    if mapEntity ~= nil then</span>
+<span id="L1846"><a href="#L1846">1846</a>        local ui = mgr.ui:FindUI(significanceTask.uiName)</span>
+<span id="L1847"><a href="#L1847">1847</a>        if ui ~= nil then</span>
+<span id="L1848"><a href="#L1848">1848</a>            ui:Register(mapEntity)</span>
+<span id="L1849"><a href="#L1849">1849</a>        else</span>
+<span id="L1850"><a href="#L1850">1850</a>            -- TODO: floatUIName关闭再打开时的重引用，以及UI关闭时的关联任务删除</span>
+<span id="L1851"><a href="#L1851">1851</a>            -- mgr.log:Error(&quot;invalid ui mapEntity : %s, uiName : %s&quot;, significanceTask.entityId, significanceTask.uiName)</span>
+<span id="L1852"><a href="#L1852">1852</a>        end</span>
+<span id="L1853"><a href="#L1853">1853</a>    else</span>
+<span id="L1854"><a href="#L1854">1854</a>        local delayedMapEntity = mapCore.MapEntityCtrl:GetDelayedDeleteEntity(significanceTask.entityId)</span>
+<span id="L1855"><a href="#L1855">1855</a>        if delayedMapEntity == nil then</span>
+<span id="L1856"><a href="#L1856">1856</a>            mgr.garyLog:Error(&quot;invalid mapEntity : %s, uiName : %s, taskUniqueId : %s&quot;, significanceTask.entityId, significanceTask.uiName, significanceTask.taskUniqueId)</span>
+<span id="L1857"><a href="#L1857">1857</a>        else</span>
+<span id="L1858"><a href="#L1858">1858</a>            -- mgr.garyLog:Warn(&quot;invalid exist in delayedEntity : %s, uiName : %s, taskUniqueId : %s&quot;, significanceTask.entityId, significanceTask.uiName, significanceTask.taskUniqueId)</span>
+<span id="L1859"><a href="#L1859">1859</a>        end</span>
+<span id="L1860"><a href="#L1860">1860</a>    end</span>
+<span id="L1861"><a href="#L1861">1861</a>    -- end</span>
+<span id="L1862"><a href="#L1862">1862</a>end</span>
+<span id="L1863"><a href="#L1863">1863</a></span>
+<span id="L1864"><a href="#L1864">1864</a>function cls:ProcessSignificanceTask_LocalResEntity(significanceTask, entity)</span>
+<span id="L1865"><a href="#L1865">1865</a>    local handler = mapCore.LocalEntityMgr.LocalResEntityHandler</span>
+<span id="L1866"><a href="#L1866">1866</a>    if handler == nil or handler.displaySM == nil then</span>
+<span id="L1867"><a href="#L1867">1867</a>        return</span>
+<span id="L1868"><a href="#L1868">1868</a>    end</span>
+<span id="L1869"><a href="#L1869">1869</a>    local sm = handler.displaySM</span>
+<span id="L1870"><a href="#L1870">1870</a>    -- 与原 AddLocalResEntity / RemoveLocalResourceLand 语义对齐，统一经状态机</span>
+<span id="L1871"><a href="#L1871">1871</a>    if significanceTask.bAdd then</span>
+<span id="L1872"><a href="#L1872">1872</a>        sm:ApplyResLandDisplay(significanceTask.gridIndex, sm.Intent.ClickPromote, {})</span>
+<span id="L1873"><a href="#L1873">1873</a>    else</span>
+<span id="L1874"><a href="#L1874">1874</a>        sm:ApplyResLandDisplay(significanceTask.gridIndex, sm.Intent.LeaveView)</span>
+<span id="L1875"><a href="#L1875">1875</a>    end</span>
+<span id="L1876"><a href="#L1876">1876</a>end</span>
+<span id="L1877"><a href="#L1877">1877</a></span>
+<span id="L1878"><a href="#L1878">1878</a></span>
+<span id="L1879"><a href="#L1879">1879</a></span>
+<span id="L1880"><a href="#L1880">1880</a>function cls:ProcessSignificanceTask_ArmyHeadUI(significanceTask, entity)</span>
+<span id="L1881"><a href="#L1881">1881</a>    local mapEntity = entity or mapCore.MapEntityCtrl:GetEntityById(significanceTask.entityId)</span>
+<span id="L1882"><a href="#L1882">1882</a>    if mapEntity ~= nil then</span>
+<span id="L1883"><a href="#L1883">1883</a>        mapEntity:ResetTaskUniqueId_ArmyHeadUI()</span>
+<span id="L1884"><a href="#L1884">1884</a>        if mapEntity.ui == nil and mapEntity.createFloatUI ~= nil then</span>
+<span id="L1885"><a href="#L1885">1885</a>            mapEntity:createFloatUI()</span>
+<span id="L1886"><a href="#L1886">1886</a>        end</span>
+<span id="L1887"><a href="#L1887">1887</a>    end</span>
+<span id="L1888"><a href="#L1888">1888</a>end</span>
+<span id="L1889"><a href="#L1889">1889</a></span>
+<span id="L1890"><a href="#L1890">1890</a>--#if ENABLE_PROFILER</span>
+<span id="L1891"><a href="#L1891">1891</a>function cls:GetSampler_ProcessTask(taskType)</span>
+<span id="L1892"><a href="#L1892">1892</a>    local sampler = self._samplersProcessTask[taskType]</span>
+<span id="L1893"><a href="#L1893">1893</a>    if sampler then</span>
+<span id="L1894"><a href="#L1894">1894</a>        return sampler</span>
+<span id="L1895"><a href="#L1895">1895</a>    end</span>
+<span id="L1896"><a href="#L1896">1896</a></span>
+<span id="L1897"><a href="#L1897">1897</a>    local taskTypeName = self._significanceTaskName[taskType]</span>
+<span id="L1898"><a href="#L1898">1898</a>    if not taskTypeName then</span>
+<span id="L1899"><a href="#L1899">1899</a>        mgr.log:Error(&quot;taskTypeName invalid : %s&quot;, taskType)</span>
+<span id="L1900"><a href="#L1900">1900</a>        return nil</span>
+<span id="L1901"><a href="#L1901">1901</a>    end</span>
+<span id="L1902"><a href="#L1902">1902</a></span>
+<span id="L1903"><a href="#L1903">1903</a>    sampler = U3D.Profiling.CustomSampler.Create(&quot;MapSignificanceMgr.ProcessTask_&quot;..taskTypeName)</span>
+<span id="L1904"><a href="#L1904">1904</a>    self._samplersProcessTask[taskType] = sampler</span>
+<span id="L1905"><a href="#L1905">1905</a></span>
+<span id="L1906"><a href="#L1906">1906</a>    return sampler</span>
+<span id="L1907"><a href="#L1907">1907</a>end</span>
+<span id="L1908"><a href="#L1908">1908</a>--#endif</span>
+<span id="L1909"><a href="#L1909">1909</a>--endregion</span>
+<span id="L1910"><a href="#L1910">1910</a></span>
+<span id="L1911"><a href="#L1911">1911</a>function cls:OnHotReload()</span>
+<span id="L1912"><a href="#L1912">1912</a>    if mgr.mapCore and mgr.mapCore.MapSignificanceMgr then</span>
+<span id="L1913"><a href="#L1913">1913</a>        MapSignificanceTaskFactory = mgr.mapCore.MapSignificanceMgr.MapSignificanceTaskFactory</span>
+<span id="L1914"><a href="#L1914">1914</a>        MapSignificanceTaskScheduler = mgr.mapCore.MapSignificanceMgr.MapSignificanceTaskScheduler</span>
+<span id="L1915"><a href="#L1915">1915</a>    end</span>
+<span id="L1916"><a href="#L1916">1916</a>end</span>
+<span id="L1917"><a href="#L1917">1917</a></span>
+<span id="L1918"><a href="#L1918">1918</a>function cls:GetArmyUITaskCount()</span>
+<span id="L1919"><a href="#L1919">1919</a>    return self._commonTaskLinkedList:Length()</span>
+<span id="L1920"><a href="#L1920">1920</a>end</span>
+<span id="L1921"><a href="#L1921">1921</a></span>
+<span id="L1922"><a href="#L1922">1922</a>function cls:GetResTaskCount()</span>
+<span id="L1923"><a href="#L1923">1923</a>    return self._localResTaskLinkedList:Length()</span>
+<span id="L1924"><a href="#L1924">1924</a>end</span>
+<span id="L1925"><a href="#L1925">1925</a></span>
+<span id="L1926"><a href="#L1926">1926</a>function cls:SetPriorityEntity(entityId)</span>
+<span id="L1927"><a href="#L1927">1927</a>    self._priorityEntityDic[entityId] = entityId</span>
+<span id="L1928"><a href="#L1928">1928</a>    self._priorityEntityHistoryDic[entityId] = entityId</span>
+<span id="L1929"><a href="#L1929">1929</a>end</span>
+<span id="L1930"><a href="#L1930">1930</a></span>
+<span id="L1931"><a href="#L1931">1931</a>function cls:IsPriorityEntity(entityId)</span>
+<span id="L1932"><a href="#L1932">1932</a>    return self._priorityEntityHistoryDic[entityId] ~= nil</span>
+<span id="L1933"><a href="#L1933">1933</a>end</span>
+<span id="L1934"><a href="#L1934">1934</a></span>
+<span id="L1935"><a href="#L1935">1935</a>function cls:GetMgrMaxUpdateTime(timeFrameType)</span>
+<span id="L1936"><a href="#L1936">1936</a>    return self.mgrMaxUpdateTime[timeFrameType] or MgrMaxUpdateTime[timeFrameType]</span>
+<span id="L1937"><a href="#L1937">1937</a>end</span>
+<span id="L1938"><a href="#L1938">1938</a></span>
+<span id="L1939"><a href="#L1939">1939</a>local AdjustInterval = 10</span>
+<span id="L1940"><a href="#L1940">1940</a>function cls:AdjustMgrMaxUpdateTime()</span>
+<span id="L1941"><a href="#L1941">1941</a>    local isTaskOut = self._entitySignificanceTaskLinkedList:Length() &gt; MapSignificanceDefine.MaxTaskOutCount</span>
+<span id="L1942"><a href="#L1942">1942</a>    if isTaskOut then</span>
+<span id="L1943"><a href="#L1943">1943</a>        local addTime = 0</span>
+<span id="L1944"><a href="#L1944">1944</a>        local canAdjust = (mgr.time.frame - self.lastNormalFrame) &lt; AdjustInterval</span>
+<span id="L1945"><a href="#L1945">1945</a>        for type, maxTime in pairs(MgrMaxUpdateTime) do</span>
+<span id="L1946"><a href="#L1946">1946</a>            if type ~= TimeFrameType.BattleHeadMgr or canAdjust then</span>
+<span id="L1947"><a href="#L1947">1947</a>                addTime = addTime + maxTime</span>
+<span id="L1948"><a href="#L1948">1948</a>                self.mgrMaxUpdateTime[type] = 0</span>
+<span id="L1949"><a href="#L1949">1949</a>            else</span>
+<span id="L1950"><a href="#L1950">1950</a>                self.lastNormalFrame = mgr.time.frame</span>
+<span id="L1951"><a href="#L1951">1951</a>                self.mgrMaxUpdateTime[type] = maxTime</span>
+<span id="L1952"><a href="#L1952">1952</a>            end</span>
+<span id="L1953"><a href="#L1953">1953</a>        end</span>
+<span id="L1954"><a href="#L1954">1954</a>        self.mgrMaxUpdateTime[TimeFrameType.MapSignificanceMgr] = addTime</span>
+<span id="L1955"><a href="#L1955">1955</a>    else</span>
+<span id="L1956"><a href="#L1956">1956</a>        self.lastNormalFrame = mgr.time.frame</span>
+<span id="L1957"><a href="#L1957">1957</a>        for type, maxTime in pairs(MgrMaxUpdateTime) do</span>
+<span id="L1958"><a href="#L1958">1958</a>            self.mgrMaxUpdateTime[type] = maxTime</span>
+<span id="L1959"><a href="#L1959">1959</a>        end</span>
+<span id="L1960"><a href="#L1960">1960</a>    end</span>
+<span id="L1961"><a href="#L1961">1961</a>end</span>
+<span id="L1962"><a href="#L1962">1962</a></span>
+<span id="L1963"><a href="#L1963">1963</a>function cls:ClearTargetEntityTask(entityId)</span>
+<span id="L1964"><a href="#L1964">1964</a>    local entityTask = self._entityTasksByEntityId[entityId]</span>
+<span id="L1965"><a href="#L1965">1965</a>    if entityTask then</span>
+<span id="L1966"><a href="#L1966">1966</a>        entityTask:ClearAllTask()</span>
+<span id="L1967"><a href="#L1967">1967</a>    end</span>
+<span id="L1968"><a href="#L1968">1968</a>end</span>
+<span id="L1969"><a href="#L1969">1969</a></span>
+<span id="L1970"><a href="#L1970">1970</a>return cls</span></pre></html>

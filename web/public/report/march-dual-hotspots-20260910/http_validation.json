@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "checkedAt": "2026-10-08T18:30:10.0170400+08:00",
+  "mode": "Built frontend served over HTTP",
+  "builtResourceHashesVerified": 614,
+  "catalogEntries": 3,
+  "casesSwitched": [
+    "new_static",
+    "new_pan",
+    "new_zoom"
+  ],
+  "rankRows": [
+    2827,
+    4107,
+    6097
+  ],
+  "markerSearch": "GetMainHeroID: 1 matched row in zoom",
+  "treeVerified": "scopes/proofs/new_zoom_map_F109.html#LUA:OutsideArmyDataBase.GetMainHeroID",
+  "sourceVerified": "source/OutsideArmyDataBase.lua.html",
+  "consoleErrorsObserved": 0,
+  "remoteDeploymentPerformed": false
+}

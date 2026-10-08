@@ -1,0 +1,343 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>MeshLineUtil.lua</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\.Lua\Outside\Utils\MeshLineUtil.lua<br>current local source; phone build commit unverified · SHA256 541b1747e00487b0f2f9222e8fcb7bf74431e8e157e64b249a0898bd6bd4657f</p><pre><span id="L1"><a href="#L1">1</a>MeshLineUtil = {}</span>
+<span id="L2"><a href="#L2">2</a>local cls = MeshLineUtil</span>
+<span id="L3"><a href="#L3">3</a>local OutsideLuaCall = CS.AOE.Outside.OutsideLuaCall</span>
+<span id="L4"><a href="#L4">4</a>-- 临时数组，循环使用减少 GC</span>
+<span id="L5"><a href="#L5">5</a>local s_tempPathPointsX = {}</span>
+<span id="L6"><a href="#L6">6</a>local s_tempPathPointsY = {}</span>
+<span id="L7"><a href="#L7">7</a>local s_tempPathTimeOffsets = {}</span>
+<span id="L8"><a href="#L8">8</a>local s_tempSpPointInfo = {}</span>
+<span id="L9"><a href="#L9">9</a>local s_tempPointTypeXInfo = {}</span>
+<span id="L10"><a href="#L10">10</a>local s_tempPointTypeYInfo = {}</span>
+<span id="L11"><a href="#L11">11</a>local s_tempPointTypeZInfo = {}</span>
+<span id="L12"><a href="#L12">12</a>local s_tempPointTypeWInfo = {}</span>
+<span id="L13"><a href="#L13">13</a></span>
+<span id="L14"><a href="#L14">14</a>MeshLineUtil.MeshLineColor = </span>
+<span id="L15"><a href="#L15">15</a>{</span>
+<span id="L16"><a href="#L16">16</a>    Green       = 1,</span>
+<span id="L17"><a href="#L17">17</a>    Red         = 2,</span>
+<span id="L18"><a href="#L18">18</a>    Blue        = 3,</span>
+<span id="L19"><a href="#L19">19</a>    White       = 4,</span>
+<span id="L20"><a href="#L20">20</a>    GreenBlue   = 5,</span>
+<span id="L21"><a href="#L21">21</a>    RedBlue     = 6,</span>
+<span id="L22"><a href="#L22">22</a>    Yellow      = 7,</span>
+<span id="L23"><a href="#L23">23</a>    TrueColor   = 8,</span>
+<span id="L24"><a href="#L24">24</a>    Black       = 9,</span>
+<span id="L25"><a href="#L25">25</a>    LightBlue   = 14,--友盟</span>
+<span id="L26"><a href="#L26">26</a>}</span>
+<span id="L27"><a href="#L27">27</a></span>
+<span id="L28"><a href="#L28">28</a>MeshLineUtil.ArmyLineIndexType = {</span>
+<span id="L29"><a href="#L29">29</a>    Preview = 0,</span>
+<span id="L30"><a href="#L30">30</a>    Move = 1,</span>
+<span id="L31"><a href="#L31">31</a>    Chaser = 2,</span>
+<span id="L32"><a href="#L32">32</a>    Predict = 3,</span>
+<span id="L33"><a href="#L33">33</a>    PreviewRealPath = 4,</span>
+<span id="L34"><a href="#L34">34</a></span>
+<span id="L35"><a href="#L35">35</a>    Max = 12,</span>
+<span id="L36"><a href="#L36">36</a>}</span>
+<span id="L37"><a href="#L37">37</a></span>
+<span id="L38"><a href="#L38">38</a>require(&quot;Outside.Map.Util.RelationShipUtil&quot;)</span>
+<span id="L39"><a href="#L39">39</a>MeshLineUtil.MeshLineColorByRelation = </span>
+<span id="L40"><a href="#L40">40</a>{</span>
+<span id="L41"><a href="#L41">41</a>    [RelationType.Self]    = MeshLineUtil.MeshLineColor.Green,</span>
+<span id="L42"><a href="#L42">42</a>    [RelationType.Friend]  = MeshLineUtil.MeshLineColor.Blue,</span>
+<span id="L43"><a href="#L43">43</a>    [RelationType.Enemy]   = MeshLineUtil.MeshLineColor.Red,</span>
+<span id="L44"><a href="#L44">44</a>}</span>
+<span id="L45"><a href="#L45">45</a></span>
+<span id="L46"><a href="#L46">46</a>function cls.GetMeshLineColor(entityId)</span>
+<span id="L47"><a href="#L47">47</a>    local entityData = mgr.mapCore.DataCtrl:GetDataByEntityId(entityId)</span>
+<span id="L48"><a href="#L48">48</a>    if not entityData then</span>
+<span id="L49"><a href="#L49">49</a>        if mgr.newbie?.NewbieMassiveArmyCtrl then</span>
+<span id="L50"><a href="#L50">50</a>            if mgr.newbie.NewbieMassiveArmyCtrl:IsMassiveArmyEntityId(entityId) then</span>
+<span id="L51"><a href="#L51">51</a>                return MeshLineUtil.MeshLineColor.Red</span>
+<span id="L52"><a href="#L52">52</a>            end</span>
+<span id="L53"><a href="#L53">53</a>        end</span>
+<span id="L54"><a href="#L54">54</a></span>
+<span id="L55"><a href="#L55">55</a>        if mgr.civil.britainCivilCtrl.conquerBattleCtrl then</span>
+<span id="L56"><a href="#L56">56</a>            local color = mgr.civil.britainCivilCtrl.conquerBattleCtrl:GetLineColor(entityId)</span>
+<span id="L57"><a href="#L57">57</a>            if  color then</span>
+<span id="L58"><a href="#L58">58</a>                return color</span>
+<span id="L59"><a href="#L59">59</a>            end</span>
+<span id="L60"><a href="#L60">60</a>        end</span>
+<span id="L61"><a href="#L61">61</a>        return MeshLineUtil.MeshLineColor.White</span>
+<span id="L62"><a href="#L62">62</a>    end</span>
+<span id="L63"><a href="#L63">63</a></span>
+<span id="L64"><a href="#L64">64</a>    return cls.GetMeshLineColorByEntityData(entityData)</span>
+<span id="L65"><a href="#L65">65</a>end</span>
+<span id="L66"><a href="#L66">66</a></span>
+<span id="L67"><a href="#L67">67</a>-- 三方通知可以传入本次协议的状态，避免被尚未刷新的实体状态覆盖。</span>
+<span id="L68"><a href="#L68">68</a>function cls.GetMeshLineColorByEntityData(entityData, armyState)</span>
+<span id="L69"><a href="#L69">69</a>    local relation = mgr.outsideUtil.RelationShip.GetRelationByEntityData(entityData)</span>
+<span id="L70"><a href="#L70">70</a>    local relationColor = MeshLineUtil.MeshLineColorByRelation[relation]</span>
+<span id="L71"><a href="#L71">71</a>    if relation == RelationType.Self then</span>
+<span id="L72"><a href="#L72">72</a>        return MeshLineUtil.MeshLineColorByRelation[relation]</span>
+<span id="L73"><a href="#L73">73</a>    end</span>
+<span id="L74"><a href="#L74">74</a></span>
+<span id="L75"><a href="#L75">75</a>    local getArmyState = entityData.GetArmyState</span>
+<span id="L76"><a href="#L76">76</a>    if armyState == nil and getArmyState ~= nil then</span>
+<span id="L77"><a href="#L77">77</a>        armyState = getArmyState(entityData)</span>
+<span id="L78"><a href="#L78">78</a>    end</span>
+<span id="L79"><a href="#L79">79</a>    if armyState == CfgNs.ArmyState.MS_Retreating then</span>
+<span id="L80"><a href="#L80">80</a>        return MeshLineUtil.MeshLineColor.White</span>
+<span id="L81"><a href="#L81">81</a>    end</span>
+<span id="L82"><a href="#L82">82</a></span>
+<span id="L83"><a href="#L83">83</a>    local isFriendAlliance = WorldUtil.IsAllianceInDiplomacyData_EntityData(entityData)</span>
+<span id="L84"><a href="#L84">84</a>    if isFriendAlliance then</span>
+<span id="L85"><a href="#L85">85</a>        relationColor = MeshLineUtil.MeshLineColor.LightBlue</span>
+<span id="L86"><a href="#L86">86</a>    end</span>
+<span id="L87"><a href="#L87">87</a></span>
+<span id="L88"><a href="#L88">88</a>    return relationColor or MeshLineUtil.MeshLineColor.Red</span>
+<span id="L89"><a href="#L89">89</a>end</span>
+<span id="L90"><a href="#L90">90</a></span>
+<span id="L91"><a href="#L91">91</a>function cls.GetEntityMoveLineColor(fullUpdateLine, myAllianceId)</span>
+<span id="L92"><a href="#L92">92</a>    local entityData = mgr.mapCore.DataCtrl:GetDataByEntityId(fullUpdateLine.entityId)</span>
+<span id="L93"><a href="#L93">93</a>    if entityData then</span>
+<span id="L94"><a href="#L94">94</a>        return cls.GetMeshLineColorByEntityData(entityData, fullUpdateLine.armyState)</span>
+<span id="L95"><a href="#L95">95</a>    end</span>
+<span id="L96"><a href="#L96">96</a></span>
+<span id="L97"><a href="#L97">97</a>    if fullUpdateLine.armyState == CfgNs.ArmyState.MS_Retreating then</span>
+<span id="L98"><a href="#L98">98</a>        return MeshLineUtil.MeshLineColor.White</span>
+<span id="L99"><a href="#L99">99</a>    end</span>
+<span id="L100"><a href="#L100">100</a></span>
+<span id="L101"><a href="#L101">101</a>    local relation = RelationType.Enemy</span>
+<span id="L102"><a href="#L102">102</a>    if (fullUpdateLine.allianceId or 0) ~= 0 and myAllianceId ~= 0 and fullUpdateLine.allianceId == myAllianceId then</span>
+<span id="L103"><a href="#L103">103</a>        relation = RelationType.Friend</span>
+<span id="L104"><a href="#L104">104</a>    end</span>
+<span id="L105"><a href="#L105">105</a></span>
+<span id="L106"><a href="#L106">106</a>    local colorType = MeshLineUtil.MeshLineColorByRelation[relation] or MeshLineUtil.MeshLineColor.White</span>
+<span id="L107"><a href="#L107">107</a>    if WorldUtil.IsAllianceInDiplomacyData(fullUpdateLine.allianceId) then</span>
+<span id="L108"><a href="#L108">108</a>        colorType = MeshLineUtil.MeshLineColor.LightBlue</span>
+<span id="L109"><a href="#L109">109</a>    end</span>
+<span id="L110"><a href="#L110">110</a></span>
+<span id="L111"><a href="#L111">111</a>    return colorType</span>
+<span id="L112"><a href="#L112">112</a>end</span>
+<span id="L113"><a href="#L113">113</a></span>
+<span id="L114"><a href="#L114">114</a>--region 三方行军线</span>
+<span id="L115"><a href="#L115">115</a>local LuaSharedArray = require(&quot;Util.LuaSharedArray&quot;)</span>
+<span id="L116"><a href="#L116">116</a>local s_moveLineSharedArray</span>
+<span id="L117"><a href="#L117">117</a>cls.EnableMoveLineSharedArray = true</span>
+<span id="L118"><a href="#L118">118</a></span>
+<span id="L119"><a href="#L119">119</a>-- 头部：来源、ID、起止时间、颜色、地形开关、路点数、时间偏移数、特殊路点数。</span>
+<span id="L120"><a href="#L120">120</a>-- 后面依次为交错的 x/y、时间偏移、交错的特殊路点 x/y/z/w。</span>
+<span id="L121"><a href="#L121">121</a>function cls.CreateEntityMoveLineShared(param, enqueue)</span>
+<span id="L122"><a href="#L122">122</a>    -- 关闭后直接走原 table 传参入口，不写入或读取共享缓冲。</span>
+<span id="L123"><a href="#L123">123</a>    if not cls.EnableMoveLineSharedArray then</span>
+<span id="L124"><a href="#L124">124</a>        if enqueue then OutsideLuaCall.StaticEnqueueCreateEntityMoveLine(param)</span>
+<span id="L125"><a href="#L125">125</a>        else OutsideLuaCall.StaticCreateEntityMoveLine(param) end</span>
+<span id="L126"><a href="#L126">126</a>        return</span>
+<span id="L127"><a href="#L127">127</a>    end</span>
+<span id="L128"><a href="#L128">128</a>    local x, y, offsets = param.xArray, param.yArray, param.tickOffsets</span>
+<span id="L129"><a href="#L129">129</a>    local tx, ty, tz, tw = param.pathTypeXArray, param.pathTypeYArray, param.pathTypeZArray, param.pathTypeWArray</span>
+<span id="L130"><a href="#L130">130</a>    local entityId = math.tointeger(param.entityId or 0)</span>
+<span id="L131"><a href="#L131">131</a>    local startTick, endTick = math.tointeger(param.startTick or 0), math.tointeger(param.endTick or 0)</span>
+<span id="L132"><a href="#L132">132</a>    local count = x and #x or 0</span>
+<span id="L133"><a href="#L133">133</a>    local tickCount = offsets and #offsets or 0</span>
+<span id="L134"><a href="#L134">134</a>    local typeCount = tx and #tx or 0</span>
+<span id="L135"><a href="#L135">135</a>    if not entityId or not startTick or not endTick or count &lt; 2 or not y or #y ~= count or</span>
+<span id="L136"><a href="#L136">136</a>        (tickCount &gt; 0 and tickCount ~= count) or</span>
+<span id="L137"><a href="#L137">137</a>        (typeCount &gt; 0 and (typeCount ~= count or not ty or #ty ~= count or not tz or #tz ~= count or not tw or #tw ~= count)) then</span>
+<span id="L138"><a href="#L138">138</a>        -- 异常参数沿用旧入口的校验及清理行为。</span>
+<span id="L139"><a href="#L139">139</a>        if enqueue then OutsideLuaCall.StaticEnqueueCreateEntityMoveLine(param)</span>
+<span id="L140"><a href="#L140">140</a>        else OutsideLuaCall.StaticCreateEntityMoveLine(param) end</span>
+<span id="L141"><a href="#L141">141</a>        return</span>
+<span id="L142"><a href="#L142">142</a>    end</span>
+<span id="L143"><a href="#L143">143</a></span>
+<span id="L144"><a href="#L144">144</a>    local length = 9 + count * 2 + tickCount + typeCount * 4</span>
+<span id="L145"><a href="#L145">145</a>    if not s_moveLineSharedArray or s_moveLineSharedArray.length &lt; length then</span>
+<span id="L146"><a href="#L146">146</a>        if s_moveLineSharedArray then s_moveLineSharedArray:CleanUp() end</span>
+<span id="L147"><a href="#L147">147</a>        s_moveLineSharedArray = LuaSharedArray.New(math.max(512, length), &quot;EntityMoveLine&quot;)</span>
+<span id="L148"><a href="#L148">148</a>    end</span>
+<span id="L149"><a href="#L149">149</a>    local array = s_moveLineSharedArray</span>
+<span id="L150"><a href="#L150">150</a>    array[1], array[2] = param.moveLineType or 0, entityId</span>
+<span id="L151"><a href="#L151">151</a>    array[3], array[4] = startTick, endTick</span>
+<span id="L152"><a href="#L152">152</a>    array[5], array[6] = param.color or 0, param.autoCalTerrainHeight == true</span>
+<span id="L153"><a href="#L153">153</a>    array[7], array[8], array[9] = count, tickCount, typeCount</span>
+<span id="L154"><a href="#L154">154</a>    local index = 10</span>
+<span id="L155"><a href="#L155">155</a>    for i = 1, count do</span>
+<span id="L156"><a href="#L156">156</a>        array[index], array[index + 1] = x[i] or 0, y[i] or 0</span>
+<span id="L157"><a href="#L157">157</a>        index = index + 2</span>
+<span id="L158"><a href="#L158">158</a>    end</span>
+<span id="L159"><a href="#L159">159</a>    for i = 1, tickCount do</span>
+<span id="L160"><a href="#L160">160</a>        array[index] = offsets[i] or 0</span>
+<span id="L161"><a href="#L161">161</a>        index = index + 1</span>
+<span id="L162"><a href="#L162">162</a>    end</span>
+<span id="L163"><a href="#L163">163</a>    for i = 1, typeCount do</span>
+<span id="L164"><a href="#L164">164</a>        array[index], array[index + 1], array[index + 2], array[index + 3] = tx[i] or 0, ty[i] or 0, tz[i] or 0, tw[i] or 0</span>
+<span id="L165"><a href="#L165">165</a>        index = index + 4</span>
+<span id="L166"><a href="#L166">166</a>    end</span>
+<span id="L167"><a href="#L167">167</a>    -- C# 此次调用内完成快照，返回后即可覆盖此表；entityId/时间保持 Lua int64。</span>
+<span id="L168"><a href="#L168">168</a>    OutsideLuaCall.StaticCreateEntityMoveLineSharedArray(array:GetCSharpArray(), length, enqueue)</span>
+<span id="L169"><a href="#L169">169</a>end</span>
+<span id="L170"><a href="#L170">170</a></span>
+<span id="L171"><a href="#L171">171</a>-- C# 调用返回前已保存路径快照，可以复用此参数表和插点缓冲。</span>
+<span id="L172"><a href="#L172">172</a>local s_tempCreateParam = { moveLineType = 0, autoCalTerrainHeight = true }</span>
+<span id="L173"><a href="#L173">173</a>cls.EnableMoveLinePathPrepareOpt = true</span>
+<span id="L174"><a href="#L174">174</a></span>
+<span id="L175"><a href="#L175">175</a>-- 输出前半段会被完整覆盖，只清理上一条更长路径留下的尾部。</span>
+<span id="L176"><a href="#L176">176</a>local function TrimMoveLineArray(array, count)</span>
+<span id="L177"><a href="#L177">177</a>    for i = #array, count + 1, -1 do array[i] = nil end</span>
+<span id="L178"><a href="#L178">178</a>end</span>
+<span id="L179"><a href="#L179">179</a></span>
+<span id="L180"><a href="#L180">180</a>---@param fullUpdateLine NetNs.proto_YzEntityMoveLineAttr</span>
+<span id="L181"><a href="#L181">181</a>local function BuildEntityMoveLineCreateParam(fullUpdateLine, myAllianceId)</span>
+<span id="L182"><a href="#L182">182</a>    if not fullUpdateLine or not fullUpdateLine.pathPoint then</span>
+<span id="L183"><a href="#L183">183</a>        return nil</span>
+<span id="L184"><a href="#L184">184</a>    end</span>
+<span id="L185"><a href="#L185">185</a></span>
+<span id="L186"><a href="#L186">186</a>    local pathPoint = fullUpdateLine.pathPoint</span>
+<span id="L187"><a href="#L187">187</a>    local coordPath = pathPoint.coordPath</span>
+<span id="L188"><a href="#L188">188</a>    if not coordPath then</span>
+<span id="L189"><a href="#L189">189</a>        return nil</span>
+<span id="L190"><a href="#L190">190</a>    end</span>
+<span id="L191"><a href="#L191">191</a></span>
+<span id="L192"><a href="#L192">192</a>    local param = s_tempCreateParam</span>
+<span id="L193"><a href="#L193">193</a>    param.entityId = fullUpdateLine.entityId</span>
+<span id="L194"><a href="#L194">194</a>    param.xArray = coordPath.xArray</span>
+<span id="L195"><a href="#L195">195</a>    param.yArray = coordPath.yArray</span>
+<span id="L196"><a href="#L196">196</a>    param.tickOffsets = pathPoint.moveTickOffset</span>
+<span id="L197"><a href="#L197">197</a>    param.startTick = fullUpdateLine.startTick</span>
+<span id="L198"><a href="#L198">198</a>    param.endTick = fullUpdateLine.endTick</span>
+<span id="L199"><a href="#L199">199</a>    param.color = cls.GetEntityMoveLineColor(fullUpdateLine, myAllianceId)</span>
+<span id="L200"><a href="#L200">200</a>    -- 普通路径不传空表，避免每条线转换四个空 C# 数组；也防止沿用上一条特殊路径。</span>
+<span id="L201"><a href="#L201">201</a>    param.pathTypeXArray = nil</span>
+<span id="L202"><a href="#L202">202</a>    param.pathTypeYArray = nil</span>
+<span id="L203"><a href="#L203">203</a>    param.pathTypeZArray = nil</span>
+<span id="L204"><a href="#L204">204</a>    param.pathTypeWArray = nil</span>
+<span id="L205"><a href="#L205">205</a></span>
+<span id="L206"><a href="#L206">206</a>    -- 普通路径直接返回，不遍历路点计数，也不清空八组特殊路径临时表。</span>
+<span id="L207"><a href="#L207">207</a>    local portalPathPoint = fullUpdateLine.portalPathPoint</span>
+<span id="L208"><a href="#L208">208</a>    if portalPathPoint and next(portalPathPoint) ~= nil then</span>
+<span id="L209"><a href="#L209">209</a>        local optimize = cls.EnableMoveLinePathPrepareOpt and pathPoint.xArray and pathPoint.yArray and</span>
+<span id="L210"><a href="#L210">210</a>            #pathPoint.xArray == #pathPoint.yArray</span>
+<span id="L211"><a href="#L211">211</a>        if not optimize then</span>
+<span id="L212"><a href="#L212">212</a>            TblUtil.Clear(s_tempPathPointsX)</span>
+<span id="L213"><a href="#L213">213</a>            TblUtil.Clear(s_tempPathPointsY)</span>
+<span id="L214"><a href="#L214">214</a>            TblUtil.Clear(s_tempPathTimeOffsets)</span>
+<span id="L215"><a href="#L215">215</a>            TblUtil.Clear(s_tempPointTypeXInfo)</span>
+<span id="L216"><a href="#L216">216</a>            TblUtil.Clear(s_tempPointTypeYInfo)</span>
+<span id="L217"><a href="#L217">217</a>            TblUtil.Clear(s_tempPointTypeZInfo)</span>
+<span id="L218"><a href="#L218">218</a>            TblUtil.Clear(s_tempPointTypeWInfo)</span>
+<span id="L219"><a href="#L219">219</a>        end</span>
+<span id="L220"><a href="#L220">220</a>        -- 特殊点记录含不同类型的字段，仍清空，避免复用旧记录的残留字段。</span>
+<span id="L221"><a href="#L221">221</a>        TblUtil.Clear(s_tempSpPointInfo)</span>
+<span id="L222"><a href="#L222">222</a></span>
+<span id="L223"><a href="#L223">223</a>        local pathLength, timeLength</span>
+<span id="L224"><a href="#L224">224</a>        if optimize then</span>
+<span id="L225"><a href="#L225">225</a>            pathLength = pathPoint.xArray and #pathPoint.xArray or 0</span>
+<span id="L226"><a href="#L226">226</a>            timeLength = pathPoint.moveTickOffset and #pathPoint.moveTickOffset or 0</span>
+<span id="L227"><a href="#L227">227</a>        else</span>
+<span id="L228"><a href="#L228">228</a>            pathLength = TblUtil.GetTableLength(pathPoint.xArray)</span>
+<span id="L229"><a href="#L229">229</a>            timeLength = TblUtil.GetTableLength(pathPoint.moveTickOffset)</span>
+<span id="L230"><a href="#L230">230</a>        end</span>
+<span id="L231"><a href="#L231">231</a>        local performancePointCount = OutsideUtils.ProcessElevatorPoints(fullUpdateLine, s_tempSpPointInfo)</span>
+<span id="L232"><a href="#L232">232</a>        performancePointCount = OutsideUtils.ProcessRopewayPoints(fullUpdateLine, s_tempSpPointInfo, performancePointCount)</span>
+<span id="L233"><a href="#L233">233</a>        local lineX, lineY, lineTicks = s_tempPathPointsX, s_tempPathPointsY, s_tempPathTimeOffsets</span>
+<span id="L234"><a href="#L234">234</a>        local success, pathLengthAfterInsert</span>
+<span id="L235"><a href="#L235">235</a>        if optimize and performancePointCount == 0 and pathPoint.xArray and pathPoint.moveTickOffset then</span>
+<span id="L236"><a href="#L236">236</a>            -- 与插点函数的原始输入一致；仅省去无插点时的逐项复制，类型标记仍正常生成。</span>
+<span id="L237"><a href="#L237">237</a>            lineX, lineY, lineTicks = pathPoint.xArray, pathPoint.yArray, pathPoint.moveTickOffset</span>
+<span id="L238"><a href="#L238">238</a>            success, pathLengthAfterInsert = true, pathLength</span>
+<span id="L239"><a href="#L239">239</a>        else</span>
+<span id="L240"><a href="#L240">240</a>            success, pathLengthAfterInsert = OutsideUtils.ExecutePathPointInsertion(</span>
+<span id="L241"><a href="#L241">241</a>                fullUpdateLine, s_tempSpPointInfo, performancePointCount,</span>
+<span id="L242"><a href="#L242">242</a>                lineX, lineY, lineTicks, false)</span>
+<span id="L243"><a href="#L243">243</a>            if optimize and success then</span>
+<span id="L244"><a href="#L244">244</a>                TrimMoveLineArray(lineX, pathLengthAfterInsert)</span>
+<span id="L245"><a href="#L245">245</a>                TrimMoveLineArray(lineY, pathLengthAfterInsert)</span>
+<span id="L246"><a href="#L246">246</a>                TrimMoveLineArray(lineTicks, pathLength == timeLength and pathLengthAfterInsert or 0)</span>
+<span id="L247"><a href="#L247">247</a>            end</span>
+<span id="L248"><a href="#L248">248</a>        end</span>
+<span id="L249"><a href="#L249">249</a></span>
+<span id="L250"><a href="#L250">250</a>        if success then</span>
+<span id="L251"><a href="#L251">251</a>            param.xArray = lineX</span>
+<span id="L252"><a href="#L252">252</a>            param.yArray = lineY</span>
+<span id="L253"><a href="#L253">253</a>            if pathLength == timeLength then</span>
+<span id="L254"><a href="#L254">254</a>                param.tickOffsets = lineTicks</span>
+<span id="L255"><a href="#L255">255</a>            end</span>
+<span id="L256"><a href="#L256">256</a>            OutsideUtils.ProcessPathTypes(</span>
+<span id="L257"><a href="#L257">257</a>                fullUpdateLine, s_tempSpPointInfo, performancePointCount,</span>
+<span id="L258"><a href="#L258">258</a>                lineX, lineY, nil, pathLengthAfterInsert, false,</span>
+<span id="L259"><a href="#L259">259</a>                s_tempPointTypeXInfo, s_tempPointTypeYInfo, s_tempPointTypeZInfo, s_tempPointTypeWInfo)</span>
+<span id="L260"><a href="#L260">260</a>            if optimize then</span>
+<span id="L261"><a href="#L261">261</a>                TrimMoveLineArray(s_tempPointTypeXInfo, pathLengthAfterInsert)</span>
+<span id="L262"><a href="#L262">262</a>                TrimMoveLineArray(s_tempPointTypeYInfo, pathLengthAfterInsert)</span>
+<span id="L263"><a href="#L263">263</a>                TrimMoveLineArray(s_tempPointTypeZInfo, pathLengthAfterInsert)</span>
+<span id="L264"><a href="#L264">264</a>                TrimMoveLineArray(s_tempPointTypeWInfo, pathLengthAfterInsert)</span>
+<span id="L265"><a href="#L265">265</a>            end</span>
+<span id="L266"><a href="#L266">266</a>            param.pathTypeXArray = s_tempPointTypeXInfo</span>
+<span id="L267"><a href="#L267">267</a>            param.pathTypeYArray = s_tempPointTypeYInfo</span>
+<span id="L268"><a href="#L268">268</a>            param.pathTypeZArray = s_tempPointTypeZInfo</span>
+<span id="L269"><a href="#L269">269</a>            param.pathTypeWArray = s_tempPointTypeWInfo</span>
+<span id="L270"><a href="#L270">270</a>        end</span>
+<span id="L271"><a href="#L271">271</a>    end</span>
+<span id="L272"><a href="#L272">272</a>    return param</span>
+<span id="L273"><a href="#L273">273</a>end</span>
+<span id="L274"><a href="#L274">274</a></span>
+<span id="L275"><a href="#L275">275</a>function cls.CreateArmyLine(fullUpdateLine, myOwnerUid, myAllianceId)</span>
+<span id="L276"><a href="#L276">276</a>    local param = BuildEntityMoveLineCreateParam(fullUpdateLine, myAllianceId)</span>
+<span id="L277"><a href="#L277">277</a>    if param then</span>
+<span id="L278"><a href="#L278">278</a>        cls.CreateEntityMoveLineShared(param, false)</span>
+<span id="L279"><a href="#L279">279</a>    end</span>
+<span id="L280"><a href="#L280">280</a>end</span>
+<span id="L281"><a href="#L281">281</a></span>
+<span id="L282"><a href="#L282">282</a>---@param entityId number</span>
+<span id="L283"><a href="#L283">283</a>function cls.DeleteArmyLine(entityId)</span>
+<span id="L284"><a href="#L284">284</a>    -- C# 同时取消尚未创建的请求，删除无需等待创建预算。</span>
+<span id="L285"><a href="#L285">285</a>    OutsideLuaCall.StaticDeleteEntityMoveLine(entityId, 0)</span>
+<span id="L286"><a href="#L286">286</a>end</span>
+<span id="L287"><a href="#L287">287</a></span>
+<span id="L288"><a href="#L288">288</a>-- 保留旧调用入口；删除现在立即生效。</span>
+<span id="L289"><a href="#L289">289</a>function cls.EnqueueDeleteArmyLine(entityId)</span>
+<span id="L290"><a href="#L290">290</a>    cls.DeleteArmyLine(entityId)</span>
+<span id="L291"><a href="#L291">291</a>end</span>
+<span id="L292"><a href="#L292">292</a></span>
+<span id="L293"><a href="#L293">293</a>---@param fullUpdateLine NetNs.proto_YzEntityMoveLineAttr</span>
+<span id="L294"><a href="#L294">294</a>function cls.EnqueueCreateArmyLine(fullUpdateLine, myOwnerUid, myAllianceId)</span>
+<span id="L295"><a href="#L295">295</a>    local param = BuildEntityMoveLineCreateParam(fullUpdateLine, myAllianceId)</span>
+<span id="L296"><a href="#L296">296</a>    if param then</span>
+<span id="L297"><a href="#L297">297</a>        cls.CreateEntityMoveLineShared(param, true)</span>
+<span id="L298"><a href="#L298">298</a>    end</span>
+<span id="L299"><a href="#L299">299</a>end</span>
+<span id="L300"><a href="#L300">300</a></span>
+<span id="L301"><a href="#L301">301</a>---清空所有三方行军线 (EntityMoveLineNtf 类型)。用于断线重连等场景，</span>
+<span id="L302"><a href="#L302">302</a>---清理后等服务器重新下发 YzEntityMoveLineNtf.fullUpdateLine 重建。</span>
+<span id="L303"><a href="#L303">303</a>function cls.DeleteAllPureMoveLines()</span>
+<span id="L304"><a href="#L304">304</a>    OutsideLuaCall.StaticDeleteAllPureMoveLines()</span>
+<span id="L305"><a href="#L305">305</a>end</span>
+<span id="L306"><a href="#L306">306</a></span>
+<span id="L307"><a href="#L307">307</a>function cls.RefreshLineColor(entityId, lineIndex, entityData)</span>
+<span id="L308"><a href="#L308">308</a>    local lineColor = entityData and cls.GetMeshLineColorByEntityData(entityData) or cls.GetMeshLineColor(entityId)</span>
+<span id="L309"><a href="#L309">309</a>    OutsideLuaCall.StaticRefreshLineColor(entityId, lineIndex, lineColor)</span>
+<span id="L310"><a href="#L310">310</a>end</span>
+<span id="L311"><a href="#L311">311</a></span>
+<span id="L312"><a href="#L312">312</a>function cls.CreateArmyLineTest()</span>
+<span id="L313"><a href="#L313">313</a>    -- local pointList = {</span>
+<span id="L314"><a href="#L314">314</a>    --     U3D.Vector3(37.2, 0.5, -211.2),</span>
+<span id="L315"><a href="#L315">315</a>    --     U3D.Vector3(25.2, 0.5, -205.2),</span>
+<span id="L316"><a href="#L316">316</a>    -- }</span>
+<span id="L317"><a href="#L317">317</a>    -- local uvLineType = 4</span>
+<span id="L318"><a href="#L318">318</a>    -- local colorType = 2</span>
+<span id="L319"><a href="#L319">319</a>    -- local uvMoveSpeed = 0.5</span>
+<span id="L320"><a href="#L320">320</a>    -- local startTick = 87352109894</span>
+<span id="L321"><a href="#L321">321</a>    -- local endTick = 87352110727</span>
+<span id="L322"><a href="#L322">322</a></span>
+<span id="L323"><a href="#L323">323</a>    if _G.TestSanfangLineId then</span>
+<span id="L324"><a href="#L324">324</a>        OutsideLuaCall.StaticDeleteLine(_G.TestSanfangLineId)</span>
+<span id="L325"><a href="#L325">325</a>    end</span>
+<span id="L326"><a href="#L326">326</a></span>
+<span id="L327"><a href="#L327">327</a>    local pointList = self._pointList</span>
+<span id="L328"><a href="#L328">328</a>    for i = 1, #pointList do</span>
+<span id="L329"><a href="#L329">329</a>        local point = pointList[i]</span>
+<span id="L330"><a href="#L330">330</a>        mgr.log:Error(&quot;point %s, %s&quot;, i, point)</span>
+<span id="L331"><a href="#L331">331</a>    end</span>
+<span id="L332"><a href="#L332">332</a>    </span>
+<span id="L333"><a href="#L333">333</a>    local uvLineType = self._uvLineType</span>
+<span id="L334"><a href="#L334">334</a>    local colorType = self._colorType</span>
+<span id="L335"><a href="#L335">335</a>    local uvMoveSpeed = self._uvMoveSpeed</span>
+<span id="L336"><a href="#L336">336</a>    local startTick = self._startTick</span>
+<span id="L337"><a href="#L337">337</a>    local endTick = self._endTick</span>
+<span id="L338"><a href="#L338">338</a>    mgr.log:Error(&quot;uvLineType: %s, colorType: %s, startTick: %s, endTick: %s&quot;, uvLineType, colorType, startTick, endTick)</span>
+<span id="L339"><a href="#L339">339</a>    </span>
+<span id="L340"><a href="#L340">340</a>    _G.TestSanfangLineId = OutsideLuaCall.StaticCreateLine(pointList, uvLineType, colorType, uvMoveSpeed, startTick, endTick)</span>
+<span id="L341"><a href="#L341">341</a>end</span>
+<span id="L342"><a href="#L342">342</a></span>
+<span id="L343"><a href="#L343">343</a>--endregion</span></pre></html>

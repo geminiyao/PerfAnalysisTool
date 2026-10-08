@@ -1,0 +1,1074 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>OutsideArmyMgr.lua</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\.Lua\Outside\Army\OutsideArmyMgr.lua<br>current local source; phone build commit unverified · SHA256 7d3d503026da05c1bf785fa34134d75ca4d9a4d6c6407029b6f959e70e62fd93</p><pre><span id="L1"><a href="#L1">1</a>---@class OutsideArmyMgr : Entity</span>
+<span id="L2"><a href="#L2">2</a>---@field ArmyDataCtrl OutsideArmyDataCtrl</span>
+<span id="L3"><a href="#L3">3</a>---@field ArmyEntityCtrl OutsideArmyEntityCtrl</span>
+<span id="L4"><a href="#L4">4</a>---@field ArmyDataFactory OutsideArmyDataFactory</span>
+<span id="L5"><a href="#L5">5</a>---@field ArmyNet OutsideArmyNet</span>
+<span id="L6"><a href="#L6">6</a>---@field ArmyEventNet OutsideArmyEventNet</span>
+<span id="L7"><a href="#L7">7</a>---@field ArmyNetDataFactory OutsideArmyNetDataFactory</span>
+<span id="L8"><a href="#L8">8</a>---@field ArmyAudioCtrl OutsideArmyAudioCtrl</span>
+<span id="L9"><a href="#L9">9</a>---@field ArmySelect UtilArmySelect</span>
+<span id="L10"><a href="#L10">10</a>---@field ArmyEffectMgr OutsideArmyEffectMgr</span>
+<span id="L11"><a href="#L11">11</a>---@field ArmyClipCtrl OutsideArmyClipCtrl</span>
+<span id="L12"><a href="#L12">12</a>---@field ArmyTeamCtrl OutsideArmyTeamCtrl</span>
+<span id="L13"><a href="#L13">13</a>---@field refreshPresetTeamDirty boolean</span>
+<span id="L14"><a href="#L14">14</a>local cls = Class(&quot;OutsideArmyMgr&quot;, Entity)</span>
+<span id="L15"><a href="#L15">15</a></span>
+<span id="L16"><a href="#L16">16</a>require(&quot;LockStepBattle.BattleDefine&quot;)</span>
+<span id="L17"><a href="#L17">17</a>require(&quot;LockStepBattle.BattleUtils&quot;)</span>
+<span id="L18"><a href="#L18">18</a>require(&quot;Outside.Army.Data.OutsideArmyDataDef&quot;)</span>
+<span id="L19"><a href="#L19">19</a>require(&quot;Outside.Army.UtilArmyProfile&quot;)</span>
+<span id="L20"><a href="#L20">20</a></span>
+<span id="L21"><a href="#L21">21</a>local ArmyDataCtrl = require(&quot;Outside.Army.Logic.OutsideArmyDataCtrl&quot;)</span>
+<span id="L22"><a href="#L22">22</a>local ArmyEntityCtrl = require(&quot;Outside.Army.Logic.OutsideArmyEntityCtrl&quot;)</span>
+<span id="L23"><a href="#L23">23</a>local ArmyDataFactory = require(&quot;Outside.Army.Logic.OutsideArmyDataFactory&quot;)</span>
+<span id="L24"><a href="#L24">24</a>local ArmyNet = require(&quot;Outside.Army.Net.OutsideArmyNet&quot;)</span>
+<span id="L25"><a href="#L25">25</a>local ArmyEventNet = require(&quot;Outside.Army.Net.OutsideArmyEventNet&quot;)</span>
+<span id="L26"><a href="#L26">26</a>local ArmyNetDataFactory = require(&quot;Outside.Army.Net.OutsideArmyNetDataFactory&quot;)</span>
+<span id="L27"><a href="#L27">27</a>local ArmyEntityUtil = require(&quot;Outside.Army.UtilArmyEntity&quot;)</span>
+<span id="L28"><a href="#L28">28</a>local ArmyPerfClipUtil = require(&quot;Outside.Army.UtilPerfClip&quot;)</span>
+<span id="L29"><a href="#L29">29</a>local ArmySelect = require(&quot;Outside.Army.UtilArmySelect&quot;)</span>
+<span id="L30"><a href="#L30">30</a>local ArmyAudioCtrl = require(&quot;Outside.Army.OutsideArmyAudioCtrl&quot;)</span>
+<span id="L31"><a href="#L31">31</a>-- local ArmyUIMgr = require(&quot;Outside.Army.Logic.OutsideArmyUIMgr&quot;)</span>
+<span id="L32"><a href="#L32">32</a>local ArmyEffectMgr = require(&quot;Outside.Army.Logic.OutsideArmyEffectMgr&quot;)</span>
+<span id="L33"><a href="#L33">33</a>local ArmyTeamCtrl = require(&quot;Outside.Army.OutsideArmyTeamCtrl&quot;)</span>
+<span id="L34"><a href="#L34">34</a>local MapEntityUIUtil = require(&quot;Outside.Map.Util.MapEntityUIUtil&quot;)</span>
+<span id="L35"><a href="#L35">35</a>local AccountTagUtil = require(&quot;Util.AccountTagUtil&quot;)</span>
+<span id="L36"><a href="#L36">36</a>local ArmyEntityLuaCall = CS.AOE.DOTS.ArmyEntityLuaCall</span>
+<span id="L37"><a href="#L37">37</a>local ArmyEntityConst = CS.AOE.DOTS.ArmyEntityConst</span>
+<span id="L38"><a href="#L38">38</a>local OutsideBattle = CS.AOE.Battle.OutsideBattle</span>
+<span id="L39"><a href="#L39">39</a>local EmptyTable = {}</span>
+<span id="L40"><a href="#L40">40</a></span>
+<span id="L41"><a href="#L41">41</a>function cls:OnInit()</span>
+<span id="L42"><a href="#L42">42</a>    cls.super.OnInit(self)</span>
+<span id="L43"><a href="#L43">43</a></span>
+<span id="L44"><a href="#L44">44</a>    require(&quot;Outside.Army.OutsideArmyMgr_MarchOut&quot;)</span>
+<span id="L45"><a href="#L45">45</a>    require(&quot;Outside.Army.OutsideArmyMgr_Mechanism&quot;)</span>
+<span id="L46"><a href="#L46">46</a>    require(&quot;Outside.Army.OutsideArmyMgr_PavingCar&quot;)</span>
+<span id="L47"><a href="#L47">47</a></span>
+<span id="L48"><a href="#L48">48</a>    self:InitBattleDefineParams()</span>
+<span id="L49"><a href="#L49">49</a>    self:AddDataComp()</span>
+<span id="L50"><a href="#L50">50</a></span>
+<span id="L51"><a href="#L51">51</a>    self.refreshPresetTeamDirty = false</span>
+<span id="L52"><a href="#L52">52</a>    self.allSelfArmyIds = {}</span>
+<span id="L53"><a href="#L53">53</a>    self.allSelfInViewArmyIds = {}</span>
+<span id="L54"><a href="#L54">54</a>    self.allScoutArmyIds = {}</span>
+<span id="L55"><a href="#L55">55</a>    self._preRestraintTypes = {}</span>
+<span id="L56"><a href="#L56">56</a>    self._restraintTargetId = 0</span>
+<span id="L57"><a href="#L57">57</a>    self.restraintInfo = {}</span>
+<span id="L58"><a href="#L58">58</a>    self._armyUIMap = {}</span>
+<span id="L59"><a href="#L59">59</a>    self._armyEntityUI = {}</span>
+<span id="L60"><a href="#L60">60</a></span>
+<span id="L61"><a href="#L61">61</a>    self.selectArmyId = 0</span>
+<span id="L62"><a href="#L62">62</a></span>
+<span id="L63"><a href="#L63">63</a>    self._cacheCameraDist = 0</span>
+<span id="L64"><a href="#L64">64</a></span>
+<span id="L65"><a href="#L65">65</a>    self:RegisterAttrCallbacks()</span>
+<span id="L66"><a href="#L66">66</a>    mgr.evt:Regist(CityEvt.RefreshSoldierNum, self, self.OnRefreshPresetTeam)</span>
+<span id="L67"><a href="#L67">67</a>    mgr.evt:Regist(UIEvt.RefreshBufferValue, self, self.OnRefreshPresetTeam)</span>
+<span id="L68"><a href="#L68">68</a>    mgr.evt:Regist(UIEvt.HeroInfoUpdate, self, self.OnRefreshPresetTeam)</span>
+<span id="L69"><a href="#L69">69</a>    mgr.evt:Regist(OutsideEvt.BattleComplexTypeChange, self, self.OnBattleComplexChange)</span>
+<span id="L70"><a href="#L70">70</a>    mgr.evt:Regist(OutsideEvt.BattleComplexTypeChangeManually, self, self.OnBattleComplexChangeManually)</span>
+<span id="L71"><a href="#L71">71</a>    mgr.evt:Regist(InfiniteZoomEvt.SwitchOutsideLayerLevel, self, self.OnInfiniteLayerLevelChange)</span>
+<span id="L72"><a href="#L72">72</a>    mgr.evt:Regist(OutsideEvt.CameraMoveScale, self, self.OnOutsideCameraScale)</span>
+<span id="L73"><a href="#L73">73</a>    mgr.evt:Regist(SysEvt.Focused, self, self.OnAppFocused)</span>
+<span id="L74"><a href="#L74">74</a>    mgr.evt:Regist(MiracleEvt.MiracleViewChange, self, self.OnMiracleViewChange)</span>
+<span id="L75"><a href="#L75">75</a>    mgr.evt:Regist(GuildEvt.JoinOrExitGuild, self, self.RefreshAllArmyFactionColor)</span>
+<span id="L76"><a href="#L76">76</a>    mgr.evt:Regist(GuildEvt.DiplomacyInfoUpdate, self, self.RefreshAllArmyFactionColor)</span>
+<span id="L77"><a href="#L77">77</a>    self.scheduleOnUpdateID = mgr.scheduler:ScheduleEntity(self, EntityFuncType.OnUpdate, true)</span>
+<span id="L78"><a href="#L78">78</a>    self.scheduleOnTickID = mgr.timeWheel:ScheduleTimeLoopImmediately(self.OnTick, self, 1)</span>
+<span id="L79"><a href="#L79">79</a>end</span>
+<span id="L80"><a href="#L80">80</a></span>
+<span id="L81"><a href="#L81">81</a>function cls:OnCleanUp()</span>
+<span id="L82"><a href="#L82">82</a>    mgr.scheduler:UnScheduleHandler(self.scheduleOnUpdateID)</span>
+<span id="L83"><a href="#L83">83</a>    mgr.timeWheel:UnScheduleById(self.scheduleOnTickID)</span>
+<span id="L84"><a href="#L84">84</a></span>
+<span id="L85"><a href="#L85">85</a>    mgr.evt:UnregistByObj(self)</span>
+<span id="L86"><a href="#L86">86</a>    self:RemoveAllChild()</span>
+<span id="L87"><a href="#L87">87</a>    self:UnregisterAttrCallbacks()</span>
+<span id="L88"><a href="#L88">88</a>    TblUtil.Clear(self._preRestraintTypes)</span>
+<span id="L89"><a href="#L89">89</a>    self._restraintTargetId = 0</span>
+<span id="L90"><a href="#L90">90</a>    self.refreshPresetTeamDirty = false</span>
+<span id="L91"><a href="#L91">91</a>    self.refreshRebornInfoDirty = false</span>
+<span id="L92"><a href="#L92">92</a>    self:RealseAllRestraint()</span>
+<span id="L93"><a href="#L93">93</a>    cls.super.OnCleanUp(self)</span>
+<span id="L94"><a href="#L94">94</a>end</span>
+<span id="L95"><a href="#L95">95</a></span>
+<span id="L96"><a href="#L96">96</a>function cls:OnUpdate()</span>
+<span id="L97"><a href="#L97">97</a>    -- UtilPerfClip.SyncNum_UIHead()</span>
+<span id="L98"><a href="#L98">98</a>    if self.refreshPresetTeamDirty then</span>
+<span id="L99"><a href="#L99">99</a>        self.refreshPresetTeamDirty = false</span>
+<span id="L100"><a href="#L100">100</a>        self:RefreshPresetTeam()</span>
+<span id="L101"><a href="#L101">101</a>    end</span>
+<span id="L102"><a href="#L102">102</a>end</span>
+<span id="L103"><a href="#L103">103</a></span>
+<span id="L104"><a href="#L104">104</a>function cls:OnTick()</span>
+<span id="L105"><a href="#L105">105</a>    if self.ArmyEntityCtrl then</span>
+<span id="L106"><a href="#L106">106</a>        self.ArmyEntityCtrl:OnTick()</span>
+<span id="L107"><a href="#L107">107</a>    end</span>
+<span id="L108"><a href="#L108">108</a>end</span>
+<span id="L109"><a href="#L109">109</a></span>
+<span id="L110"><a href="#L110">110</a>function cls:OnRestart()</span>
+<span id="L111"><a href="#L111">111</a>    MapEntityUIUtil.HideAllSelectUI()</span>
+<span id="L112"><a href="#L112">112</a>    -- 数据</span>
+<span id="L113"><a href="#L113">113</a>    self:RemoveAllArmyData()</span>
+<span id="L114"><a href="#L114">114</a>    self:RealseAllRestraint()</span>
+<span id="L115"><a href="#L115">115</a>    self.ArmySelect:SetHudSelectAll(false)</span>
+<span id="L116"><a href="#L116">116</a>end</span>
+<span id="L117"><a href="#L117">117</a></span>
+<span id="L118"><a href="#L118">118</a>function cls:RemoveAllChild()</span>
+<span id="L119"><a href="#L119">119</a>    self:RemoveAllChildren()</span>
+<span id="L120"><a href="#L120">120</a>    self.ArmyNetDataFactory = nil</span>
+<span id="L121"><a href="#L121">121</a>    self.ArmyNet = nil</span>
+<span id="L122"><a href="#L122">122</a>end</span>
+<span id="L123"><a href="#L123">123</a></span>
+<span id="L124"><a href="#L124">124</a>function cls:AddDataComp()</span>
+<span id="L125"><a href="#L125">125</a>    -- 数据</span>
+<span id="L126"><a href="#L126">126</a>    self:AddChild(ArmyDataCtrl.New(), {</span>
+<span id="L127"><a href="#L127">127</a>        name = &quot;ArmyDataCtrl&quot;</span>
+<span id="L128"><a href="#L128">128</a>    })</span>
+<span id="L129"><a href="#L129">129</a>    self:AddChild(ArmyDataFactory.New(), {</span>
+<span id="L130"><a href="#L130">130</a>        name = &quot;ArmyDataFactory&quot;</span>
+<span id="L131"><a href="#L131">131</a>    })</span>
+<span id="L132"><a href="#L132">132</a>    self:AddChild(ArmyEventNet.New(), {</span>
+<span id="L133"><a href="#L133">133</a>        name = &quot;ArmyEventNet&quot;</span>
+<span id="L134"><a href="#L134">134</a>    })</span>
+<span id="L135"><a href="#L135">135</a>    self:AddChild(ArmySelect.New(), {</span>
+<span id="L136"><a href="#L136">136</a>        name = &quot;ArmySelect&quot;</span>
+<span id="L137"><a href="#L137">137</a>    })</span>
+<span id="L138"><a href="#L138">138</a></span>
+<span id="L139"><a href="#L139">139</a>    self:AddChild(ArmyEffectMgr.New(), {</span>
+<span id="L140"><a href="#L140">140</a>        name = &quot;ArmyEffectMgr&quot;</span>
+<span id="L141"><a href="#L141">141</a>    })</span>
+<span id="L142"><a href="#L142">142</a>    self:AddChild(ArmyTeamCtrl.New(), {</span>
+<span id="L143"><a href="#L143">143</a>        name = &quot;ArmyTeamCtrl&quot;</span>
+<span id="L144"><a href="#L144">144</a>    })</span>
+<span id="L145"><a href="#L145">145</a>    --无需继承Entity的，直接使用require</span>
+<span id="L146"><a href="#L146">146</a>    self.ArmyNet = ArmyNet</span>
+<span id="L147"><a href="#L147">147</a>    self.ArmyNetDataFactory = ArmyNetDataFactory.New()</span>
+<span id="L148"><a href="#L148">148</a>end</span>
+<span id="L149"><a href="#L149">149</a></span>
+<span id="L150"><a href="#L150">150</a>function cls:OnEnteringMap(params)</span>
+<span id="L151"><a href="#L151">151</a>    if mgr.scene:IsMapScene(params.name) then</span>
+<span id="L152"><a href="#L152">152</a>        -- 对象</span>
+<span id="L153"><a href="#L153">153</a>        if self.ArmyEntityCtrl then</span>
+<span id="L154"><a href="#L154">154</a>            self:RemoveChild(self.ArmyEntityCtrl)</span>
+<span id="L155"><a href="#L155">155</a>        end</span>
+<span id="L156"><a href="#L156">156</a>        self:AddChild(ArmyEntityCtrl.New(), {</span>
+<span id="L157"><a href="#L157">157</a>            name = &quot;ArmyEntityCtrl&quot;</span>
+<span id="L158"><a href="#L158">158</a>        })</span>
+<span id="L159"><a href="#L159">159</a>    end</span>
+<span id="L160"><a href="#L160">160</a>end</span>
+<span id="L161"><a href="#L161">161</a></span>
+<span id="L162"><a href="#L162">162</a>-- 进入野外地图</span>
+<span id="L163"><a href="#L163">163</a>function cls:OnEnterOutside(params)</span>
+<span id="L164"><a href="#L164">164</a>    if mgr.scene:IsMapScene(params.name) then</span>
+<span id="L165"><a href="#L165">165</a>        self.ArmySelect:SetHudSelectAll(false)</span>
+<span id="L166"><a href="#L166">166</a>        self:SetArmyUILineParams(mgr.orientation:GetCurScreenOri())</span>
+<span id="L167"><a href="#L167">167</a>    end</span>
+<span id="L168"><a href="#L168">168</a></span>
+<span id="L169"><a href="#L169">169</a>    if params.name == SceneName.Outside then</span>
+<span id="L170"><a href="#L170">170</a>        self:AddChild(ArmyAudioCtrl.New(), {</span>
+<span id="L171"><a href="#L171">171</a>            name = &quot;ArmyAudioCtrl&quot;</span>
+<span id="L172"><a href="#L172">172</a>        })</span>
+<span id="L173"><a href="#L173">173</a></span>
+<span id="L174"><a href="#L174">174</a>        self:RefreshAllSelfArmyIds()</span>
+<span id="L175"><a href="#L175">175</a>    end</span>
+<span id="L176"><a href="#L176">176</a></span>
+<span id="L177"><a href="#L177">177</a>    UtilPerfClip.SetArmyModelFixNum(false)</span>
+<span id="L178"><a href="#L178">178</a>end</span>
+<span id="L179"><a href="#L179">179</a></span>
+<span id="L180"><a href="#L180">180</a>-- 离开野外地图</span>
+<span id="L181"><a href="#L181">181</a>function cls:OnExitOutside(params)</span>
+<span id="L182"><a href="#L182">182</a>    if mgr.scene:IsMapScene(params.name) then</span>
+<span id="L183"><a href="#L183">183</a>        MapEntityUIUtil.HideAllSelectUI()</span>
+<span id="L184"><a href="#L184">184</a>        -- 对象</span>
+<span id="L185"><a href="#L185">185</a>        self:RemoveChild(self.ArmyEntityCtrl)</span>
+<span id="L186"><a href="#L186">186</a>        -- 数据</span>
+<span id="L187"><a href="#L187">187</a>        self:RemoveAllArmyData()</span>
+<span id="L188"><a href="#L188">188</a>        self:RealseAllRestraint()</span>
+<span id="L189"><a href="#L189">189</a>        self.ArmySelect:SetHudSelectAll(false)</span>
+<span id="L190"><a href="#L190">190</a>    end</span>
+<span id="L191"><a href="#L191">191</a></span>
+<span id="L192"><a href="#L192">192</a>    if params.name == SceneName.Outside then</span>
+<span id="L193"><a href="#L193">193</a>        self:RemoveChild(self.ArmyAudioCtrl)</span>
+<span id="L194"><a href="#L194">194</a>        TblUtil.Clear(self.allSelfArmyIds)</span>
+<span id="L195"><a href="#L195">195</a>    end</span>
+<span id="L196"><a href="#L196">196</a></span>
+<span id="L197"><a href="#L197">197</a>    UtilPerfClip.SetArmyModelFixNum(false)</span>
+<span id="L198"><a href="#L198">198</a>end</span>
+<span id="L199"><a href="#L199">199</a></span>
+<span id="L200"><a href="#L200">200</a>function cls:InitBattleDefineParams()</span>
+<span id="L201"><a href="#L201">201</a>    BattleDefine.UIOffset                   = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_UIBattleOffsetConf).data)</span>
+<span id="L202"><a href="#L202">202</a>    BattleDefine.UIRotateThreshold          = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_UIBattleRotateThreshold).data)</span>
+<span id="L203"><a href="#L203">203</a>    BattleDefine.BattleResultSkillTime      = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_UIBattleResultSkillTime).data)</span>
+<span id="L204"><a href="#L204">204</a>    BattleDefine.SkillHurtBubbleRangeRatio  = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillHurtBubbleRangeRatio).data)</span>
+<span id="L205"><a href="#L205">205</a>    BattleDefine.SkillBuffBubbleRangeRatio  = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillBuffBubbleRangeRatio).data)</span>
+<span id="L206"><a href="#L206">206</a>    BattleDefine.SkillHurtBubbleAngleCeil   = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillHurtBubbleAngleCeil).data)</span>
+<span id="L207"><a href="#L207">207</a>    BattleDefine.SkillHurtBubbleAngleFloor  = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillHurtBubbleAngleFloor).data)</span>
+<span id="L208"><a href="#L208">208</a>    BattleDefine.SkillHurtBubbleSpeedCeil   = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillHurtBubbleSpeedCeil).data)</span>
+<span id="L209"><a href="#L209">209</a>    BattleDefine.SkillHurtBubbleSpeedFloor  = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_SkillHurtBubbleSpeedFloor).data)</span>
+<span id="L210"><a href="#L210">210</a>    BattleDefine.MultiSelectOtherUIAlpha    = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_MultiSelectOtherUIAlpha).data)</span>
+<span id="L211"><a href="#L211">211</a>    BattleDefine.FixedRotateAngle           = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_FixedRotateAngle).data)</span>
+<span id="L212"><a href="#L212">212</a>    BattleDefine.FixedRotateLength          = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_FixedRotateLength).data)</span>
+<span id="L213"><a href="#L213">213</a>    BattleDefine.FixedRotateMoveSpeed       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_FixedRotateMoveSpeed).data)</span>
+<span id="L214"><a href="#L214">214</a></span>
+<span id="L215"><a href="#L215">215</a>    BattleDefine.DefaultLayerScaleStartHeight = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerScaleStartHeight).data)</span>
+<span id="L216"><a href="#L216">216</a>    BattleDefine.DefaultLayerScaleEndHeight = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerScaleEndHeight).data)</span>
+<span id="L217"><a href="#L217">217</a>    BattleDefine.DefaultLayerMinScale       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerMinScale).data)</span>
+<span id="L218"><a href="#L218">218</a>    BattleDefine.DefaultLayerMaxScale       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerMaxScale).data)</span>
+<span id="L219"><a href="#L219">219</a>    BattleDefine.DefaultLayerMinAlpha       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerMinAlpha).data)</span>
+<span id="L220"><a href="#L220">220</a>    BattleDefine.DefaultLayerMaxAlpha       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_DefaultLayerMaxAlpha).data)</span>
+<span id="L221"><a href="#L221">221</a>    </span>
+<span id="L222"><a href="#L222">222</a>    BattleDefine.ArmyOptionBtn2Angle       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_ArmyOptionBtn2Angle).data)</span>
+<span id="L223"><a href="#L223">223</a>    BattleDefine.ArmyOptionBtn3Angle       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_ArmyOptionBtn3Angle).data)</span>
+<span id="L224"><a href="#L224">224</a>    BattleDefine.ArmyOptionBtn4Angle       = tonumber(mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_ArmyOptionBtn4Angle).data)</span>
+<span id="L225"><a href="#L225">225</a></span>
+<span id="L226"><a href="#L226">226</a>    BattleDefine.ArmyOccupyFormationAnimation = self:GetAndParseAnimEnum()</span>
+<span id="L227"><a href="#L227">227</a></span>
+<span id="L228"><a href="#L228">228</a>    local complexConf = mgr.systemCfgData:GetBattleComplexConf()</span>
+<span id="L229"><a href="#L229">229</a>    ArmyEntityConst.complexUpDelayTime = complexConf.complexUpDelayTime</span>
+<span id="L230"><a href="#L230">230</a>    ArmyEntityConst.complexDownDelayTime = complexConf.complexDownDelayTime</span>
+<span id="L231"><a href="#L231">231</a></span>
+<span id="L232"><a href="#L232">232</a>    local clientFeatures = mgr.userAttr.query.userAttr.featureUnlock.clientFeatures:Get() or GlobalEmptyTable</span>
+<span id="L233"><a href="#L233">233</a>    if clientFeatures[&quot;OpenHighFreqMsgPool&quot;]               then BattleDefine.OpenHighFreqMsgPool = true                         end</span>
+<span id="L234"><a href="#L234">234</a>    if clientFeatures[&quot;OpenSeaWarEffectAlpha&quot;] then</span>
+<span id="L235"><a href="#L235">235</a>        BattleDefine.OpenSeaWarEffectAlpha = true</span>
+<span id="L236"><a href="#L236">236</a>    else</span>
+<span id="L237"><a href="#L237">237</a>        BattleDefine.OpenSeaWarEffectAlpha = false</span>
+<span id="L238"><a href="#L238">238</a>    end</span>
+<span id="L239"><a href="#L239">239</a>end</span>
+<span id="L240"><a href="#L240">240</a></span>
+<span id="L241"><a href="#L241">241</a>function cls:GetAndParseAnimEnum()</span>
+<span id="L242"><a href="#L242">242</a>    local animNames = mgr.cfg:GetBattleDefineParamsConfById(CfgNs.BattleParamsConfType.BPC_ArmyOccupyFormationAnimation).data</span>
+<span id="L243"><a href="#L243">243</a>    local nameTbl = string.split(animNames, &quot;|&quot;) or {}</span>
+<span id="L244"><a href="#L244">244</a>    local result = {}</span>
+<span id="L245"><a href="#L245">245</a>    for i, v in pairs(nameTbl) do</span>
+<span id="L246"><a href="#L246">246</a>        local value = CS.XLua.LuaEnumUtil.ParseSoldierAnimType(v)</span>
+<span id="L247"><a href="#L247">247</a>        table.insert(result,value)</span>
+<span id="L248"><a href="#L248">248</a>    end</span>
+<span id="L249"><a href="#L249">249</a>    return result</span>
+<span id="L250"><a href="#L250">250</a>end</span>
+<span id="L251"><a href="#L251">251</a></span>
+<span id="L252"><a href="#L252">252</a>--战斗复杂度变化，刷新军团状态</span>
+<span id="L253"><a href="#L253">253</a>function cls:OnBattleComplexChange(complexType)</span>
+<span id="L254"><a href="#L254">254</a>    -- 接口预留，可动态调整士兵模型数量</span>
+<span id="L255"><a href="#L255">255</a>    -- UtilPerfClip.SetArmyModelFixNum(UtilPerfClip.IsCurrentSimplifyMode())</span>
+<span id="L256"><a href="#L256">256</a>    if self.ArmyEntityCtrl ~= nil then</span>
+<span id="L257"><a href="#L257">257</a>        self.ArmyEntityCtrl:FreshAllArmyByComplexChange()</span>
+<span id="L258"><a href="#L258">258</a>    end</span>
+<span id="L259"><a href="#L259">259</a>end</span>
+<span id="L260"><a href="#L260">260</a></span>
+<span id="L261"><a href="#L261">261</a>function cls:OnBattleComplexChangeManually()</span>
+<span id="L262"><a href="#L262">262</a>    -- 接口预留，可动态调整士兵模型数量</span>
+<span id="L263"><a href="#L263">263</a>    -- UtilPerfClip.SetArmyModelFixNum(UtilPerfClip.IsCurrentSimplifyMode())</span>
+<span id="L264"><a href="#L264">264</a></span>
+<span id="L265"><a href="#L265">265</a>    if self.ArmyEntityCtrl ~= nil then</span>
+<span id="L266"><a href="#L266">266</a>        self.ArmyEntityCtrl:FreshAllArmyByComplexChange()</span>
+<span id="L267"><a href="#L267">267</a>    end</span>
+<span id="L268"><a href="#L268">268</a>end</span>
+<span id="L269"><a href="#L269">269</a></span>
+<span id="L270"><a href="#L270">270</a>function cls:OnInfiniteLayerLevelChange()</span>
+<span id="L271"><a href="#L271">271</a>    self.ArmyEntityCtrl:FreshAllArmyByInfiniteLayerChange()</span>
+<span id="L272"><a href="#L272">272</a></span>
+<span id="L273"><a href="#L273">273</a>    local curLevel = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L274"><a href="#L274">274</a>    CS.AOE.Outside.MapManager.OutsideViewGridLine:MeshGridEnable(curLevel &lt;= InfiniteZoomCfg.OutsideDefaultLayderIdx)</span>
+<span id="L275"><a href="#L275">275</a>end</span>
+<span id="L276"><a href="#L276">276</a></span>
+<span id="L277"><a href="#L277">277</a>function cls:OnOutsideCameraScale()</span>
+<span id="L278"><a href="#L278">278</a>    self:OnCameraMove()</span>
+<span id="L279"><a href="#L279">279</a>end</span>
+<span id="L280"><a href="#L280">280</a></span>
+<span id="L281"><a href="#L281">281</a>-- 士兵数量变化，尝试重新补充编队士兵数量至上限</span>
+<span id="L282"><a href="#L282">282</a>function cls:OnRefreshPresetTeam()</span>
+<span id="L283"><a href="#L283">283</a>    self.refreshPresetTeamDirty = true</span>
+<span id="L284"><a href="#L284">284</a>end</span>
+<span id="L285"><a href="#L285">285</a></span>
+<span id="L286"><a href="#L286">286</a>function cls:RefreshPresetTeam()</span>
+<span id="L287"><a href="#L287">287</a>    local teamDict = OutsideUtils.GetPresetTeamDatas(CfgNs.RaidPresetTeamType.RPTT_None)</span>
+<span id="L288"><a href="#L288">288</a>    if not teamDict then</span>
+<span id="L289"><a href="#L289">289</a>        return</span>
+<span id="L290"><a href="#L290">290</a>    end</span>
+<span id="L291"><a href="#L291">291</a></span>
+<span id="L292"><a href="#L292">292</a>    -- 统计当前所有士兵数量</span>
+<span id="L293"><a href="#L293">293</a>    local leftSoldierNumDict = {}</span>
+<span id="L294"><a href="#L294">294</a>    local realSoldierNumDict = mgr.soldier:GetSoldiersDict() or EmptyTable</span>
+<span id="L295"><a href="#L295">295</a>    for k, v in pairs(realSoldierNumDict) do</span>
+<span id="L296"><a href="#L296">296</a>        leftSoldierNumDict[v.id] = v.inCityNumber</span>
+<span id="L297"><a href="#L297">297</a>    end</span>
+<span id="L298"><a href="#L298">298</a></span>
+<span id="L299"><a href="#L299">299</a>    -- 减去所有部队身上士兵数量</span>
+<span id="L300"><a href="#L300">300</a>    for k, v in pairs(teamDict) do</span>
+<span id="L301"><a href="#L301">301</a>        if (v.soldierId or 0) ~= 0 and (v.soldierNum or 0) ~= 0 and not OutsideUtils.GetArmyDataByTeamDataInCludeMiracle(v) then</span>
+<span id="L302"><a href="#L302">302</a>            local count = leftSoldierNumDict[v.soldierId]</span>
+<span id="L303"><a href="#L303">303</a>            if count then</span>
+<span id="L304"><a href="#L304">304</a>                leftSoldierNumDict[v.soldierId] = math.max(0, count - v.soldierNum)</span>
+<span id="L305"><a href="#L305">305</a>            end</span>
+<span id="L306"><a href="#L306">306</a>        end</span>
+<span id="L307"><a href="#L307">307</a>    end</span>
+<span id="L308"><a href="#L308">308</a></span>
+<span id="L309"><a href="#L309">309</a>    -- 统计需要自动补兵的队伍</span>
+<span id="L310"><a href="#L310">310</a>    local teamList = {}</span>
+<span id="L311"><a href="#L311">311</a>    for k, v in pairs(teamDict) do</span>
+<span id="L312"><a href="#L312">312</a>        if (v.soldierId or 0) ~= 0 and not OutsideUtils.GetArmyDataByTeamDataInCludeMiracle(v) then</span>
+<span id="L313"><a href="#L313">313</a>            local curNum = v.soldierNum or 0</span>
+<span id="L314"><a href="#L314">314</a>            local newNum = curNum</span>
+<span id="L315"><a href="#L315">315</a>            local marchLimit = OutsideUtils.GetTeamMarchLimitByHeroIDs(v.hero, v.loadedShipBerthId)</span>
+<span id="L316"><a href="#L316">316</a>            -- 处理自动补兵逻辑</span>
+<span id="L317"><a href="#L317">317</a>            if v.autoAddSoldierWhenReturn then</span>
+<span id="L318"><a href="#L318">318</a>                local leftNum = leftSoldierNumDict[v.soldierId] or 0</span>
+<span id="L319"><a href="#L319">319</a>                if leftNum &gt; 0 then</span>
+<span id="L320"><a href="#L320">320</a>                    if curNum &lt; marchLimit then</span>
+<span id="L321"><a href="#L321">321</a>                        local addNum = math.min(marchLimit - curNum, leftNum)</span>
+<span id="L322"><a href="#L322">322</a>                        newNum = curNum + addNum</span>
+<span id="L323"><a href="#L323">323</a>                        if curNum ~= newNum then</span>
+<span id="L324"><a href="#L324">324</a>                            leftSoldierNumDict[v.soldierId] = leftNum - addNum</span>
+<span id="L325"><a href="#L325">325</a>                        end</span>
+<span id="L326"><a href="#L326">326</a>                    end</span>
+<span id="L327"><a href="#L327">327</a>                end</span>
+<span id="L328"><a href="#L328">328</a>            end</span>
+<span id="L329"><a href="#L329">329</a></span>
+<span id="L330"><a href="#L330">330</a>            -- 处理出征上限降低的逻辑（如个人落匪后）</span>
+<span id="L331"><a href="#L331">331</a>            if curNum == newNum then</span>
+<span id="L332"><a href="#L332">332</a>                if curNum &gt; marchLimit then</span>
+<span id="L333"><a href="#L333">333</a>                    newNum = marchLimit</span>
+<span id="L334"><a href="#L334">334</a>                end</span>
+<span id="L335"><a href="#L335">335</a>            end</span>
+<span id="L336"><a href="#L336">336</a></span>
+<span id="L337"><a href="#L337">337</a>            if curNum ~= newNum then</span>
+<span id="L338"><a href="#L338">338</a>                local result = </span>
+<span id="L339"><a href="#L339">339</a>                {</span>
+<span id="L340"><a href="#L340">340</a>                    teamID = v.id,</span>
+<span id="L341"><a href="#L341">341</a>                    hero = v.hero,</span>
+<span id="L342"><a href="#L342">342</a>                    soldierId = v.soldierId,</span>
+<span id="L343"><a href="#L343">343</a>                    soldierNum = newNum,</span>
+<span id="L344"><a href="#L344">344</a>                    autoUseHeroSkill = v.autoUseHeroSkill,</span>
+<span id="L345"><a href="#L345">345</a>                    autoAddSoldierWhenReturn = v.autoAddSoldierWhenReturn,</span>
+<span id="L346"><a href="#L346">346</a>                    autoReturnHome = v.autoReturnHome,</span>
+<span id="L347"><a href="#L347">347</a>                }</span>
+<span id="L348"><a href="#L348">348</a>                table.insert(teamList, result)</span>
+<span id="L349"><a href="#L349">349</a>            end</span>
+<span id="L350"><a href="#L350">350</a>        end</span>
+<span id="L351"><a href="#L351">351</a>    end</span>
+<span id="L352"><a href="#L352">352</a>    if #teamList &gt; 0 then</span>
+<span id="L353"><a href="#L353">353</a>        ---奇兵营逻辑</span>
+<span id="L354"><a href="#L354">354</a>        ---没有绑定精锐营，第五编队士兵归零</span>
+<span id="L355"><a href="#L355">355</a>        mgr.soldier.Data:SetFifthBarrackSoldierCount(teamList,Menu_ArmyMarch_MenuType.Outside)</span>
+<span id="L356"><a href="#L356">356</a>        mgr.outsideMap.MapNet:RequestBatchSetPresetTeamAsync(teamList, function(rspHead, rspBody)</span>
+<span id="L357"><a href="#L357">357</a>            local success = rspHead and rspHead.errorCode == 0</span>
+<span id="L358"><a href="#L358">358</a>            if success then</span>
+<span id="L359"><a href="#L359">359</a>                mgr.evt:Post(UIEvt.MenuMarchFloat_OnRefreshPresetTeam)</span>
+<span id="L360"><a href="#L360">360</a>            end</span>
+<span id="L361"><a href="#L361">361</a>        end)</span>
+<span id="L362"><a href="#L362">362</a>    end</span>
+<span id="L363"><a href="#L363">363</a>end</span>
+<span id="L364"><a href="#L364">364</a></span>
+<span id="L365"><a href="#L365">365</a></span>
+<span id="L366"><a href="#L366">366</a>function cls:OnLoggedIn(active)</span>
+<span id="L367"><a href="#L367">367</a>    cls.super.OnLoggedIn(self, active)</span>
+<span id="L368"><a href="#L368">368</a>    local flag = mgr.uidPlayerPref:Get(PlayerPrefName.ArmyArrowOffsetFlag)</span>
+<span id="L369"><a href="#L369">369</a>    ArmyEntityLuaCall.SetArmyArrowOffsetEnable(flag)</span>
+<span id="L370"><a href="#L370">370</a>    </span>
+<span id="L371"><a href="#L371">371</a>    self:SetSkillCameraShakeEnable()</span>
+<span id="L372"><a href="#L372">372</a>    self:RefreshAllSelfArmyIds()</span>
+<span id="L373"><a href="#L373">373</a>end</span>
+<span id="L374"><a href="#L374">374</a></span>
+<span id="L375"><a href="#L375">375</a>function cls:OnLoggedOut(active)</span>
+<span id="L376"><a href="#L376">376</a>    cls.super.OnLoggedOut(self, active)</span>
+<span id="L377"><a href="#L377">377</a></span>
+<span id="L378"><a href="#L378">378</a>    -- self:RemoveAllArmyData()</span>
+<span id="L379"><a href="#L379">379</a>    -- self:RemoveAllArmyEntity()</span>
+<span id="L380"><a href="#L380">380</a>    self:RealseAllRestraint()</span>
+<span id="L381"><a href="#L381">381</a>end</span>
+<span id="L382"><a href="#L382">382</a></span>
+<span id="L383"><a href="#L383">383</a>function cls:SetSkillCameraShakeEnable()</span>
+<span id="L384"><a href="#L384">384</a>    local flag = mgr.uidPlayerPref:Get(PlayerPrefName.SkillCameraShake)</span>
+<span id="L385"><a href="#L385">385</a>    ArmyEntityLuaCall.SetSkillCameraShakeEnable(flag == nil or flag)</span>
+<span id="L386"><a href="#L386">386</a>end</span>
+<span id="L387"><a href="#L387">387</a></span>
+<span id="L388"><a href="#L388">388</a>function cls:IsTargetInArea(target,touchPos)</span>
+<span id="L389"><a href="#L389">389</a>    local scaleRatio = math.min(U3D.Screen.width, U3D.Screen.height) / 1080 -- 得到当前的屏幕缩放比</span>
+<span id="L390"><a href="#L390">390</a></span>
+<span id="L391"><a href="#L391">391</a>    local screenPos = mgr.ui:GetUICamera():WorldToScreenPoint(target.transform.position)</span>
+<span id="L392"><a href="#L392">392</a>    screenPos = U3D.Vector2(screenPos.x, screenPos.y)</span>
+<span id="L393"><a href="#L393">393</a>    local offset = touchPos - screenPos</span>
+<span id="L394"><a href="#L394">394</a>    -- local text  = &quot;touchx=%s,touchy=%s,=====targetx=%s,targety=%s,offsetx=%s,offsety=%s&quot;</span>
+<span id="L395"><a href="#L395">395</a>    -- local text2 = string.format(text,touchPos.x,touchPos.y,screenPos.x,screenPos.y,offset.x,offset.y)</span>
+<span id="L396"><a href="#L396">396</a>    -- mgr.jasonwLog:Error(text2)</span>
+<span id="L397"><a href="#L397">397</a>    </span>
+<span id="L398"><a href="#L398">398</a>    local offsetX = math.abs(offset.x)</span>
+<span id="L399"><a href="#L399">399</a>    local offsetY = math.abs(offset.y)</span>
+<span id="L400"><a href="#L400">400</a>    local sizeX = target.rectTransform.rect.width * scaleRatio</span>
+<span id="L401"><a href="#L401">401</a>    local sizeY = target.rectTransform.rect.height * scaleRatio</span>
+<span id="L402"><a href="#L402">402</a></span>
+<span id="L403"><a href="#L403">403</a>    if offsetX &lt;= sizeX * 0.6 and offsetY &lt;= sizeY * 0.6 then </span>
+<span id="L404"><a href="#L404">404</a>        return true</span>
+<span id="L405"><a href="#L405">405</a>    end </span>
+<span id="L406"><a href="#L406">406</a></span>
+<span id="L407"><a href="#L407">407</a>    return false</span>
+<span id="L408"><a href="#L408">408</a>end</span>
+<span id="L409"><a href="#L409">409</a></span>
+<span id="L410"><a href="#L410">410</a>function cls:RemoveAllArmyEntity()</span>
+<span id="L411"><a href="#L411">411</a>    if self.ArmyEntityCtrl then</span>
+<span id="L412"><a href="#L412">412</a>        self.ArmyEntityCtrl:ReleaseAllArmyEntity()</span>
+<span id="L413"><a href="#L413">413</a>    end</span>
+<span id="L414"><a href="#L414">414</a>end</span>
+<span id="L415"><a href="#L415">415</a></span>
+<span id="L416"><a href="#L416">416</a>function cls:RemoveAllArmyData()</span>
+<span id="L417"><a href="#L417">417</a>    self:RemoveChild(self.ArmyDataCtrl)</span>
+<span id="L418"><a href="#L418">418</a>    self:AddChild(ArmyDataCtrl.New(), {</span>
+<span id="L419"><a href="#L419">419</a>        name = &quot;ArmyDataCtrl&quot;</span>
+<span id="L420"><a href="#L420">420</a>    })</span>
+<span id="L421"><a href="#L421">421</a>end</span>
+<span id="L422"><a href="#L422">422</a></span>
+<span id="L423"><a href="#L423">423</a>--region C#接口</span>
+<span id="L424"><a href="#L424">424</a></span>
+<span id="L425"><a href="#L425">425</a>-- 更新指示箭头</span>
+<span id="L426"><a href="#L426">426</a>function cls:RefreshIndicatorArrow(worldPos, selfEntityId, targetEntityId, isShow)</span>
+<span id="L427"><a href="#L427">427</a>    -- 克制</span>
+<span id="L428"><a href="#L428">428</a>    -- UtilArmyProfile:Begin(&quot;RefreshRestraintIcon&quot;)</span>
+<span id="L429"><a href="#L429">429</a>    self:RefreshRestraintIcon(selfEntityId, targetEntityId, isShow)</span>
+<span id="L430"><a href="#L430">430</a>    -- UtilArmyProfile:End(&quot;RefreshRestraintIcon&quot;)</span>
+<span id="L431"><a href="#L431">431</a>end</span>
+<span id="L432"><a href="#L432">432</a></span>
+<span id="L433"><a href="#L433">433</a>-- 设置是否开启行军拖拽指针偏移</span>
+<span id="L434"><a href="#L434">434</a>function cls:SetArmyArrowOffsetEnable(enableFlag)</span>
+<span id="L435"><a href="#L435">435</a>    ArmyEntityLuaCall.SetArmyArrowOffsetEnable(enableFlag)</span>
+<span id="L436"><a href="#L436">436</a>end</span>
+<span id="L437"><a href="#L437">437</a></span>
+<span id="L438"><a href="#L438">438</a>function cls:GetClipRelationType(entityID)</span>
+<span id="L439"><a href="#L439">439</a>    return UtilPerfClip.GetRelationType(entityID, true)</span>
+<span id="L440"><a href="#L440">440</a>end</span>
+<span id="L441"><a href="#L441">441</a></span>
+<span id="L442"><a href="#L442">442</a>function cls:SwitchArmyMoveTransitState(entityID, isMoveTransit, viewType)</span>
+<span id="L443"><a href="#L443">443</a>    ---@type OutsideNormalArmyEntity</span>
+<span id="L444"><a href="#L444">444</a>    local entity = mgr.mapCore and mgr.mapCore.MapEntityCtrl:GetEntityById(entityID)</span>
+<span id="L445"><a href="#L445">445</a>    if entity and entity.SwitchMoveTransitState then</span>
+<span id="L446"><a href="#L446">446</a>        entity:SwitchMoveTransitState(isMoveTransit, viewType)</span>
+<span id="L447"><a href="#L447">447</a>    end</span>
+<span id="L448"><a href="#L448">448</a>end</span>
+<span id="L449"><a href="#L449">449</a></span>
+<span id="L450"><a href="#L450">450</a>function cls:CanShowArmyHorseEffect(entityID, heroID, curHorseEffectCount)</span>
+<span id="L451"><a href="#L451">451</a>    return false</span>
+<span id="L452"><a href="#L452">452</a>end</span>
+<span id="L453"><a href="#L453">453</a></span>
+<span id="L454"><a href="#L454">454</a>function cls:InvokeBattlePerformLuaBubble(cmdInstId, attackID, attackSlot, defendID, defendSlot)</span>
+<span id="L455"><a href="#L455">455</a>    mgr.evt:Post(BattleEvt.InvokeBattleSkillBubble, cmdInstId, attackID, attackSlot, defendID, defendSlot)</span>
+<span id="L456"><a href="#L456">456</a>end</span>
+<span id="L457"><a href="#L457">457</a></span>
+<span id="L458"><a href="#L458">458</a>---@param battleBluePrintParam AOE.Battle.BattleBluePrintParam</span>
+<span id="L459"><a href="#L459">459</a>function cls:InvokeLuaFuncByBPNode(funcType, bluePrintInstId, battleBluePrintParam)</span>
+<span id="L460"><a href="#L460">460</a>    local attackID = battleBluePrintParam.casterEntityId</span>
+<span id="L461"><a href="#L461">461</a>    local attackHeroID = battleBluePrintParam.casterHeroId</span>
+<span id="L462"><a href="#L462">462</a>    local defendID = battleBluePrintParam.targetEntityId</span>
+<span id="L463"><a href="#L463">463</a>    local defendHeroID = battleBluePrintParam.targetHeroId</span>
+<span id="L464"><a href="#L464">464</a>    if funcType == CfgNs.ClientBPNodeLuaCallFuncType.CBPNLCFT_BattlePerformBubble then</span>
+<span id="L465"><a href="#L465">465</a>        mgr.evt:Post(BattleEvt.InvokeBattleSkillBubble, bluePrintInstId, attackID, attackHeroID, defendID, defendHeroID)</span>
+<span id="L466"><a href="#L466">466</a>    end</span>
+<span id="L467"><a href="#L467">467</a>end</span>
+<span id="L468"><a href="#L468">468</a></span>
+<span id="L469"><a href="#L469">469</a>---通用：按时停/SkillPkg 子事件 index 触发单次 PlaySkillHit</span>
+<span id="L470"><a href="#L470">470</a>---@param skillPkgUid number</span>
+<span id="L471"><a href="#L471">471</a>---@param eventIndex number</span>
+<span id="L472"><a href="#L472">472</a>function cls:InvokeBattleSkillHitByEventIndex(skillPkgUid, eventIndex)</span>
+<span id="L473"><a href="#L473">473</a>    mgr.evt:Post(BattleEvt.InvokeBattleSkillHitByEventIndex, skillPkgUid, eventIndex)</span>
+<span id="L474"><a href="#L474">474</a>end</span>
+<span id="L475"><a href="#L475">475</a></span>
+<span id="L476"><a href="#L476">476</a>---通用：按时停/SkillPkg 子事件 index 触发单次 DeltaInfo（Merge + 血条）</span>
+<span id="L477"><a href="#L477">477</a>---@param skillPkgUid number</span>
+<span id="L478"><a href="#L478">478</a>---@param eventIndex number</span>
+<span id="L479"><a href="#L479">479</a>function cls:InvokeBattleDeltaInfoByEventIndex(skillPkgUid, eventIndex)</span>
+<span id="L480"><a href="#L480">480</a>    mgr.evt:Post(BattleEvt.InvokeBattleDeltaInfoByEventIndex, skillPkgUid, eventIndex)</span>
+<span id="L481"><a href="#L481">481</a>end</span>
+<span id="L482"><a href="#L482">482</a></span>
+<span id="L483"><a href="#L483">483</a>---通用：标记该 skillPkg 的 SkillHit 已由蓝图节点按时序驱动（抑制批量 bubble）</span>
+<span id="L484"><a href="#L484">484</a>---@param skillPkgUid number</span>
+<span id="L485"><a href="#L485">485</a>function cls:MarkSkillPkgHitConsumedByNode(skillPkgUid)</span>
+<span id="L486"><a href="#L486">486</a>    mgr.evt:Post(BattleEvt.MarkSkillPkgHitConsumedByNode, skillPkgUid)</span>
+<span id="L487"><a href="#L487">487</a>end</span>
+<span id="L488"><a href="#L488">488</a></span>
+<span id="L489"><a href="#L489">489</a>---通用：按时停/SkillPkg 子事件 index 触发单次 StartMove</span>
+<span id="L490"><a href="#L490">490</a>---@param skillPkgUid number</span>
+<span id="L491"><a href="#L491">491</a>---@param eventIndex number</span>
+<span id="L492"><a href="#L492">492</a>---@param dashDuration number|nil 突刺时长（秒）；dashSpeed&lt;=0 且本值&gt;0 时按时长+xy 反算，忽略 frameArray</span>
+<span id="L493"><a href="#L493">493</a>---@param dashSpeed number|nil 突刺移速（Unity米/秒）；&gt;0 时优先按速度+xy 反算时长，忽略 dashDuration 与 frameArray</span>
+<span id="L494"><a href="#L494">494</a>function cls:InvokeBattleStartMoveByEventIndex(skillPkgUid, eventIndex, dashDuration, dashSpeed)</span>
+<span id="L495"><a href="#L495">495</a>    mgr.evt:Post(BattleEvt.InvokeBattleStartMoveByEventIndex, skillPkgUid, eventIndex, dashDuration, dashSpeed)</span>
+<span id="L496"><a href="#L496">496</a>end</span>
+<span id="L497"><a href="#L497">497</a></span>
+<span id="L498"><a href="#L498">498</a>---战斗表现：在目标英雄身上播斩杀UI（PopupBox_BattleSlay）</span>
+<span id="L499"><a href="#L499">499</a>---@param targetEntityId number</span>
+<span id="L500"><a href="#L500">500</a>---@param heroId number</span>
+<span id="L501"><a href="#L501">501</a>---@param duration number|nil 未配或小于等于0则用入场动画时长</span>
+<span id="L502"><a href="#L502">502</a>---@param hasOffset boolean</span>
+<span id="L503"><a href="#L503">503</a>---@param offsetX number</span>
+<span id="L504"><a href="#L504">504</a>---@param offsetY number</span>
+<span id="L505"><a href="#L505">505</a>---@param offsetZ number</span>
+<span id="L506"><a href="#L506">506</a>---@param scale number|nil 未配或小于等于0则用1</span>
+<span id="L507"><a href="#L507">507</a>function cls:PlayBattleSlayUI(targetEntityId, heroId, duration, hasOffset, offsetX, offsetY, offsetZ, scale)</span>
+<span id="L508"><a href="#L508">508</a>    mgr.evt:Post(BattleEvt.PlayBattleSlayUI, targetEntityId, heroId, duration, hasOffset, offsetX, offsetY, offsetZ, scale)</span>
+<span id="L509"><a href="#L509">509</a>end</span>
+<span id="L510"><a href="#L510">510</a></span>
+<span id="L511"><a href="#L511">511</a>--endregion</span>
+<span id="L512"><a href="#L512">512</a></span>
+<span id="L513"><a href="#L513">513</a>--region Utils</span>
+<span id="L514"><a href="#L514">514</a>function cls:GetScoutMax()</span>
+<span id="L515"><a href="#L515">515</a>    return 0</span>
+<span id="L516"><a href="#L516">516</a>end</span>
+<span id="L517"><a href="#L517">517</a></span>
+<span id="L518"><a href="#L518">518</a>function cls:GetMarchMax()</span>
+<span id="L519"><a href="#L519">519</a>    return mgr.soldier:GetPresetTeamCnt()</span>
+<span id="L520"><a href="#L520">520</a>end</span>
+<span id="L521"><a href="#L521">521</a></span>
+<span id="L522"><a href="#L522">522</a>function cls:GetArmyCount()</span>
+<span id="L523"><a href="#L523">523</a>    local allSelfArmyDataList = UtilArmyEntity.GetAllSelfArmyData()</span>
+<span id="L524"><a href="#L524">524</a>    local count = TblUtil.GetTableLength(allSelfArmyDataList)</span>
+<span id="L525"><a href="#L525">525</a>    return count</span>
+<span id="L526"><a href="#L526">526</a>end</span>
+<span id="L527"><a href="#L527">527</a></span>
+<span id="L528"><a href="#L528">528</a>function cls:GetScoutCount()</span>
+<span id="L529"><a href="#L529">529</a>    if not mgr.scene:IsInScene(SceneName.Outside) then</span>
+<span id="L530"><a href="#L530">530</a>        return 0</span>
+<span id="L531"><a href="#L531">531</a>    end</span>
+<span id="L532"><a href="#L532">532</a></span>
+<span id="L533"><a href="#L533">533</a>    local sceneUserAttr = mgr.userAttr.query.sceneUserAttr:Get()</span>
+<span id="L534"><a href="#L534">534</a>    if sceneUserAttr == nil then</span>
+<span id="L535"><a href="#L535">535</a>        return 0</span>
+<span id="L536"><a href="#L536">536</a>    end</span>
+<span id="L537"><a href="#L537">537</a></span>
+<span id="L538"><a href="#L538">538</a>    local allScoutDataList = sceneUserAttr.scouts</span>
+<span id="L539"><a href="#L539">539</a>    if allScoutDataList ~= nil then</span>
+<span id="L540"><a href="#L540">540</a>        return TblUtil.GetTableLength(allScoutDataList)</span>
+<span id="L541"><a href="#L541">541</a>    end</span>
+<span id="L542"><a href="#L542">542</a></span>
+<span id="L543"><a href="#L543">543</a>    return 0</span>
+<span id="L544"><a href="#L544">544</a>end</span>
+<span id="L545"><a href="#L545">545</a></span>
+<span id="L546"><a href="#L546">546</a>function cls:OnUserAttrNtf(cmdId, pkgId)</span>
+<span id="L547"><a href="#L547">547</a>    if mgr.userAttr:IsDirty(&quot;sceneUserAttr.armies&quot;) then</span>
+<span id="L548"><a href="#L548">548</a>        self:RefreshAllSelfArmyIds()</span>
+<span id="L549"><a href="#L549">549</a>    end</span>
+<span id="L550"><a href="#L550">550</a>end</span>
+<span id="L551"><a href="#L551">551</a></span>
+<span id="L552"><a href="#L552">552</a>function cls:IsMyArmyGroup(entityId)</span>
+<span id="L553"><a href="#L553">553</a>    local allSelfArmyDataList = UtilArmyEntity.GetAllSelfArmyData()</span>
+<span id="L554"><a href="#L554">554</a>    for _, armyData in pairs_safe(allSelfArmyDataList) do</span>
+<span id="L555"><a href="#L555">555</a>        if armyData.armyGroupId == entityId then</span>
+<span id="L556"><a href="#L556">556</a>            return true</span>
+<span id="L557"><a href="#L557">557</a>        end</span>
+<span id="L558"><a href="#L558">558</a>    end</span>
+<span id="L559"><a href="#L559">559</a>end</span>
+<span id="L560"><a href="#L560">560</a></span>
+<span id="L561"><a href="#L561">561</a>---@return table&lt;number, NetNs.proto_ScoutAttr&gt;      key:entityId, value :NetNs.proto_ScoutAttr</span>
+<span id="L562"><a href="#L562">562</a>function cls:GetAllScoutData()</span>
+<span id="L563"><a href="#L563">563</a>    local sceneUserAttr = mgr.userAttr.query.sceneUserAttr:Get()</span>
+<span id="L564"><a href="#L564">564</a>    if sceneUserAttr == nil then</span>
+<span id="L565"><a href="#L565">565</a>        return nil</span>
+<span id="L566"><a href="#L566">566</a>    end</span>
+<span id="L567"><a href="#L567">567</a></span>
+<span id="L568"><a href="#L568">568</a>    local allSelfArmyDataList = sceneUserAttr.scouts</span>
+<span id="L569"><a href="#L569">569</a>    if allSelfArmyDataList == nil or TblUtil.GetTableLength(allSelfArmyDataList) == 0 then</span>
+<span id="L570"><a href="#L570">570</a>        return nil</span>
+<span id="L571"><a href="#L571">571</a>    end</span>
+<span id="L572"><a href="#L572">572</a>    return allSelfArmyDataList</span>
+<span id="L573"><a href="#L573">573</a>end</span>
+<span id="L574"><a href="#L574">574</a></span>
+<span id="L575"><a href="#L575">575</a>---@return NetNs.proto_SelfArmyAttr</span>
+<span id="L576"><a href="#L576">576</a>function cls:GetSelfArmyDataById(entityId)</span>
+<span id="L577"><a href="#L577">577</a>    local allSelfArmyDataList = UtilArmyEntity.GetAllSelfArmyData()</span>
+<span id="L578"><a href="#L578">578</a>    for armyId, selfMarchAttr in pairs_safe(allSelfArmyDataList) do</span>
+<span id="L579"><a href="#L579">579</a>        if armyId == entityId then</span>
+<span id="L580"><a href="#L580">580</a>            return selfMarchAttr</span>
+<span id="L581"><a href="#L581">581</a>        end</span>
+<span id="L582"><a href="#L582">582</a>    end</span>
+<span id="L583"><a href="#L583">583</a>    return nil</span>
+<span id="L584"><a href="#L584">584</a>end</span>
+<span id="L585"><a href="#L585">585</a></span>
+<span id="L586"><a href="#L586">586</a>function cls:OnMiracleViewChange()</span>
+<span id="L587"><a href="#L587">587</a>    self:RefreshAllSelfArmyIds()</span>
+<span id="L588"><a href="#L588">588</a>end</span>
+<span id="L589"><a href="#L589">589</a></span>
+<span id="L590"><a href="#L590">590</a>function cls:IsInDefeat(armyData)</span>
+<span id="L591"><a href="#L591">591</a>    if armyData and armyData.armyAttr and armyData.armyAttr.combatAttr and armyData.armyAttr.combatAttr.combatState ==</span>
+<span id="L592"><a href="#L592">592</a>        CfgNs.CombatState.CS_Defeated then</span>
+<span id="L593"><a href="#L593">593</a>        return true</span>
+<span id="L594"><a href="#L594">594</a>    end</span>
+<span id="L595"><a href="#L595">595</a>    return false</span>
+<span id="L596"><a href="#L596">596</a>end</span>
+<span id="L597"><a href="#L597">597</a></span>
+<span id="L598"><a href="#L598">598</a>function cls:RefreshAllSelfArmyIds()</span>
+<span id="L599"><a href="#L599">599</a>    -- TblUtil.Clear(self.allSelfArmyIds)</span>
+<span id="L600"><a href="#L600">600</a>    self.allSelfArmyIds = self.allSelfArmyIds or {}</span>
+<span id="L601"><a href="#L601">601</a>    local allArmys = UtilArmyEntity.GetAllSelfArmyData()</span>
+<span id="L602"><a href="#L602">602</a>    local isMiracleEnd = false --mgr.outsideMap.MiracleMgr:IsMiracleInEnd()</span>
+<span id="L603"><a href="#L603">603</a>    for entityId, armyData in pairs_safe(allArmys) do</span>
+<span id="L604"><a href="#L604">604</a>        if (not isMiracleEnd and armyData.miracleBuildingEntityId or 0) &gt; 0 or (armyData.armyGroupId or 0) &gt; 0 then</span>
+<span id="L605"><a href="#L605">605</a></span>
+<span id="L606"><a href="#L606">606</a>        else</span>
+<span id="L607"><a href="#L607">607</a>            if not self:IsInDefeat(armyData) then</span>
+<span id="L608"><a href="#L608">608</a>                table.insert(self.allSelfArmyIds, entityId)</span>
+<span id="L609"><a href="#L609">609</a>            end</span>
+<span id="L610"><a href="#L610">610</a>        end</span>
+<span id="L611"><a href="#L611">611</a>    end</span>
+<span id="L612"><a href="#L612">612</a>    --mgr.evt:Post(UIEvt.RefreshHudListItemCount)</span>
+<span id="L613"><a href="#L613">613</a>    -- mgr.evt:Post(UIEvt.OnArmyCountChange)</span>
+<span id="L614"><a href="#L614">614</a>end</span>
+<span id="L615"><a href="#L615">615</a></span>
+<span id="L616"><a href="#L616">616</a>function cls:GetAllSelfArmyIds()</span>
+<span id="L617"><a href="#L617">617</a>    return self.allSelfArmyIds</span>
+<span id="L618"><a href="#L618">618</a>end</span>
+<span id="L619"><a href="#L619">619</a></span>
+<span id="L620"><a href="#L620">620</a>function cls:GetAllSelfInViewArmyIds() </span>
+<span id="L621"><a href="#L621">621</a>    TblUtil.Clear(self.allSelfInViewArmyIds)</span>
+<span id="L622"><a href="#L622">622</a>    for _, entityId in ipairs_safe(self.allSelfArmyIds) do</span>
+<span id="L623"><a href="#L623">623</a>        local isArmyInView = ArmyEntityLuaCall.StaticCheckArmyInView(entityId)</span>
+<span id="L624"><a href="#L624">624</a>        if isArmyInView then</span>
+<span id="L625"><a href="#L625">625</a>            table.insert(self.allSelfInViewArmyIds, entityId)</span>
+<span id="L626"><a href="#L626">626</a>        end</span>
+<span id="L627"><a href="#L627">627</a>    end</span>
+<span id="L628"><a href="#L628">628</a>    return self.allSelfInViewArmyIds</span>
+<span id="L629"><a href="#L629">629</a>end</span>
+<span id="L630"><a href="#L630">630</a></span>
+<span id="L631"><a href="#L631">631</a>--endregion</span>
+<span id="L632"><a href="#L632">632</a></span>
+<span id="L633"><a href="#L633">633</a>--region Scout</span>
+<span id="L634"><a href="#L634">634</a>function cls:GetAllScoutArmyIds()</span>
+<span id="L635"><a href="#L635">635</a>    local sceneUserAttr = mgr.userAttr.query.sceneUserAttr:Get()</span>
+<span id="L636"><a href="#L636">636</a>    if sceneUserAttr and sceneUserAttr.scouts then</span>
+<span id="L637"><a href="#L637">637</a>        local allScouts = sceneUserAttr.scouts</span>
+<span id="L638"><a href="#L638">638</a>        TblUtil.Clear(self.allScoutArmyIds)</span>
+<span id="L639"><a href="#L639">639</a>        for _, scout in pairs_safe(allScouts) do</span>
+<span id="L640"><a href="#L640">640</a>            table.insert(self.allScoutArmyIds, scout.id)</span>
+<span id="L641"><a href="#L641">641</a>        end</span>
+<span id="L642"><a href="#L642">642</a>    end</span>
+<span id="L643"><a href="#L643">643</a>    return self.allScoutArmyIds</span>
+<span id="L644"><a href="#L644">644</a>end</span>
+<span id="L645"><a href="#L645">645</a></span>
+<span id="L646"><a href="#L646">646</a>-- 根据侦查id来获取侦查队伍信息</span>
+<span id="L647"><a href="#L647">647</a>function cls:GetScoutArmyInfoBySentryId(sentryId)</span>
+<span id="L648"><a href="#L648">648</a>    local sceneUserAttr = mgr.userAttr.query.sceneUserAttr:Get()</span>
+<span id="L649"><a href="#L649">649</a>    if sceneUserAttr and sceneUserAttr.scouts then</span>
+<span id="L650"><a href="#L650">650</a>        local allScouts = sceneUserAttr.scouts</span>
+<span id="L651"><a href="#L651">651</a>        for _, scout in pairs_safe(allScouts) do</span>
+<span id="L652"><a href="#L652">652</a>            if scout.sentry == sentryId then</span>
+<span id="L653"><a href="#L653">653</a>                return scout</span>
+<span id="L654"><a href="#L654">654</a>            end</span>
+<span id="L655"><a href="#L655">655</a>        end</span>
+<span id="L656"><a href="#L656">656</a>    end</span>
+<span id="L657"><a href="#L657">657</a>end</span>
+<span id="L658"><a href="#L658">658</a>--endregion</span>
+<span id="L659"><a href="#L659">659</a></span>
+<span id="L660"><a href="#L660">660</a>--region ChatDialog 行军聊天气泡</span>
+<span id="L661"><a href="#L661">661</a>function cls:SendChatMarchDialog(entityId, type, id, slotId)</span>
+<span id="L662"><a href="#L662">662</a>    local chatData = {</span>
+<span id="L663"><a href="#L663">663</a>        type = type,</span>
+<span id="L664"><a href="#L664">664</a>        dialogId = id,</span>
+<span id="L665"><a href="#L665">665</a>        marchId = entityId,</span>
+<span id="L666"><a href="#L666">666</a>        slotId = slotId</span>
+<span id="L667"><a href="#L667">667</a>    }</span>
+<span id="L668"><a href="#L668">668</a>    AsyncBinded(self, function()</span>
+<span id="L669"><a href="#L669">669</a>        --mgr.outsideArmy.ArmyNet:SendMarchDialog(chatData)</span>
+<span id="L670"><a href="#L670">670</a>    end)</span>
+<span id="L671"><a href="#L671">671</a>end</span>
+<span id="L672"><a href="#L672">672</a>--endregion</span>
+<span id="L673"><a href="#L673">673</a></span>
+<span id="L674"><a href="#L674">674</a>--region 横竖屏</span>
+<span id="L675"><a href="#L675">675</a>function cls:SetArmyUILineParams(ori)</span>
+<span id="L676"><a href="#L676">676</a>    local armyUILineConf = mgr.systemCfgData:GetArmyUILineConf()</span>
+<span id="L677"><a href="#L677">677</a>    if mgr.orientation:IsPortrait(ori) then</span>
+<span id="L678"><a href="#L678">678</a>        OutsideBattle.SetArmyUILineParams(armyUILineConf.shortAxisLength, armyUILineConf.longAxisLength,</span>
+<span id="L679"><a href="#L679">679</a>            armyUILineConf.rotateSpeed)</span>
+<span id="L680"><a href="#L680">680</a>    else</span>
+<span id="L681"><a href="#L681">681</a>        OutsideBattle.SetArmyUILineParams(armyUILineConf.longAxisLength, armyUILineConf.shortAxisLength,</span>
+<span id="L682"><a href="#L682">682</a>            armyUILineConf.rotateSpeed)</span>
+<span id="L683"><a href="#L683">683</a>    end</span>
+<span id="L684"><a href="#L684">684</a>end</span>
+<span id="L685"><a href="#L685">685</a>--endregion</span>
+<span id="L686"><a href="#L686">686</a></span>
+<span id="L687"><a href="#L687">687</a>--region 克制/被克制</span>
+<span id="L688"><a href="#L688">688</a>local UGuiUtil = CS.UnityEngine.UI.UGuiUtil</span>
+<span id="L689"><a href="#L689">689</a>RestraintRelationType = {</span>
+<span id="L690"><a href="#L690">690</a>	None = 0, -- 无克制关系</span>
+<span id="L691"><a href="#L691">691</a>    Proactive = 1, -- 克制</span>
+<span id="L692"><a href="#L692">692</a>    Passive = 2 -- 被克制</span>
+<span id="L693"><a href="#L693">693</a>}</span>
+<span id="L694"><a href="#L694">694</a></span>
+<span id="L695"><a href="#L695">695</a>local RestraintRelationTbl = {</span>
+<span id="L696"><a href="#L696">696</a>    [CfgNs.SoldierType.SNV_Swordsman] = {</span>
+<span id="L697"><a href="#L697">697</a>        [CfgNs.SoldierType.SNV_Swordsman] = RestraintRelationType.None,</span>
+<span id="L698"><a href="#L698">698</a>        [CfgNs.SoldierType.SNV_Spearman] = RestraintRelationType.Proactive,</span>
+<span id="L699"><a href="#L699">699</a>        [CfgNs.SoldierType.SNV_Cavalry] = RestraintRelationType.None,</span>
+<span id="L700"><a href="#L700">700</a>        [CfgNs.SoldierType.SNV_Bowman] = RestraintRelationType.Passive</span>
+<span id="L701"><a href="#L701">701</a>    },</span>
+<span id="L702"><a href="#L702">702</a>    [CfgNs.SoldierType.SNV_Spearman] = {</span>
+<span id="L703"><a href="#L703">703</a>        [CfgNs.SoldierType.SNV_Swordsman] = RestraintRelationType.Passive,</span>
+<span id="L704"><a href="#L704">704</a>        [CfgNs.SoldierType.SNV_Spearman] = RestraintRelationType.None,</span>
+<span id="L705"><a href="#L705">705</a>        [CfgNs.SoldierType.SNV_Cavalry] = RestraintRelationType.Proactive,</span>
+<span id="L706"><a href="#L706">706</a>        [CfgNs.SoldierType.SNV_Bowman] = RestraintRelationType.None</span>
+<span id="L707"><a href="#L707">707</a>    },</span>
+<span id="L708"><a href="#L708">708</a>    [CfgNs.SoldierType.SNV_Cavalry] = {</span>
+<span id="L709"><a href="#L709">709</a>        [CfgNs.SoldierType.SNV_Swordsman] = RestraintRelationType.None,</span>
+<span id="L710"><a href="#L710">710</a>        [CfgNs.SoldierType.SNV_Spearman] = RestraintRelationType.Passive,</span>
+<span id="L711"><a href="#L711">711</a>        [CfgNs.SoldierType.SNV_Cavalry] = RestraintRelationType.None,</span>
+<span id="L712"><a href="#L712">712</a>        [CfgNs.SoldierType.SNV_Bowman] = RestraintRelationType.Proactive</span>
+<span id="L713"><a href="#L713">713</a>    },</span>
+<span id="L714"><a href="#L714">714</a>    [CfgNs.SoldierType.SNV_Bowman] = {</span>
+<span id="L715"><a href="#L715">715</a>        [CfgNs.SoldierType.SNV_Swordsman] = RestraintRelationType.Proactive,</span>
+<span id="L716"><a href="#L716">716</a>        [CfgNs.SoldierType.SNV_Spearman] = RestraintRelationType.None,</span>
+<span id="L717"><a href="#L717">717</a>        [CfgNs.SoldierType.SNV_Cavalry] = RestraintRelationType.Passive,</span>
+<span id="L718"><a href="#L718">718</a>        [CfgNs.SoldierType.SNV_Bowman] = RestraintRelationType.None</span>
+<span id="L719"><a href="#L719">719</a>    }</span>
+<span id="L720"><a href="#L720">720</a>}</span>
+<span id="L721"><a href="#L721">721</a></span>
+<span id="L722"><a href="#L722">722</a>function cls:GetRestraintRelation(soldierTypeA, soldierTypeB)</span>
+<span id="L723"><a href="#L723">723</a>    local value1 = RestraintRelationTbl[soldierTypeA]</span>
+<span id="L724"><a href="#L724">724</a>    if not value1 then</span>
+<span id="L725"><a href="#L725">725</a>        return RestraintRelationType.None</span>
+<span id="L726"><a href="#L726">726</a>    end</span>
+<span id="L727"><a href="#L727">727</a></span>
+<span id="L728"><a href="#L728">728</a>    local value2 = value1[soldierTypeB]</span>
+<span id="L729"><a href="#L729">729</a>    return value2 or RestraintRelationType.None</span>
+<span id="L730"><a href="#L730">730</a>    -- return RestraintRelationTbl[soldierTypeA][soldierTypeB]</span>
+<span id="L731"><a href="#L731">731</a>end</span>
+<span id="L732"><a href="#L732">732</a></span>
+<span id="L733"><a href="#L733">733</a>local BMYCRestraintRelationTbl = {</span>
+<span id="L734"><a href="#L734">734</a>    [CfgNs.SoldierType.SNV_Swordsman] = RestraintRelationType.Proactive,</span>
+<span id="L735"><a href="#L735">735</a>    [CfgNs.SoldierType.SNV_Spearman] = RestraintRelationType.Passive,</span>
+<span id="L736"><a href="#L736">736</a>    [CfgNs.SoldierType.SNV_Cavalry] = RestraintRelationType.Passive,</span>
+<span id="L737"><a href="#L737">737</a>    [CfgNs.SoldierType.SNV_Bowman] = RestraintRelationType.Proactive</span>
+<span id="L738"><a href="#L738">738</a>}</span>
+<span id="L739"><a href="#L739">739</a></span>
+<span id="L740"><a href="#L740">740</a>function cls:GetRestraintRelationForBMYC(targetType,isBMYC)</span>
+<span id="L741"><a href="#L741">741</a>    if targetType == nil then</span>
+<span id="L742"><a href="#L742">742</a>        return RestraintRelationType.None</span>
+<span id="L743"><a href="#L743">743</a>    end</span>
+<span id="L744"><a href="#L744">744</a>    local restraint = BMYCRestraintRelationTbl[targetType]</span>
+<span id="L745"><a href="#L745">745</a>    if isBMYC == nil or isBMYC then</span>
+<span id="L746"><a href="#L746">746</a>        return restraint</span>
+<span id="L747"><a href="#L747">747</a>    elseif  restraint == RestraintRelationType.Proactive then</span>
+<span id="L748"><a href="#L748">748</a>        return RestraintRelationType.Passive</span>
+<span id="L749"><a href="#L749">749</a>    elseif  restraint == RestraintRelationType.Passive then</span>
+<span id="L750"><a href="#L750">750</a>        return RestraintRelationType.Proactive</span>
+<span id="L751"><a href="#L751">751</a>    end</span>
+<span id="L752"><a href="#L752">752</a>    return RestraintRelationType.None</span>
+<span id="L753"><a href="#L753">753</a>end</span>
+<span id="L754"><a href="#L754">754</a></span>
+<span id="L755"><a href="#L755">755</a>function cls:GetProactiveSoldierType(soldierType)</span>
+<span id="L756"><a href="#L756">756</a>    for i = CfgNs.SoldierType.SNV_Swordsman, CfgNs.SoldierType.SNV_Bowman do</span>
+<span id="L757"><a href="#L757">757</a>        local relation = self:GetRestraintRelation(soldierType, i)</span>
+<span id="L758"><a href="#L758">758</a>        if relation == RestraintRelationType.Proactive then</span>
+<span id="L759"><a href="#L759">759</a>            return i</span>
+<span id="L760"><a href="#L760">760</a>        end</span>
+<span id="L761"><a href="#L761">761</a>    end</span>
+<span id="L762"><a href="#L762">762</a>    return CfgNs.SoldierType.SNV_None</span>
+<span id="L763"><a href="#L763">763</a>end</span>
+<span id="L764"><a href="#L764">764</a></span>
+<span id="L765"><a href="#L765">765</a>function cls:GetPassiveSoldierType(soldierType)</span>
+<span id="L766"><a href="#L766">766</a>    for i = CfgNs.SoldierType.SNV_Swordsman, CfgNs.SoldierType.SNV_Bowman do</span>
+<span id="L767"><a href="#L767">767</a>        local relation = self:GetRestraintRelation(soldierType, i)</span>
+<span id="L768"><a href="#L768">768</a>        if relation == RestraintRelationType.Passive then</span>
+<span id="L769"><a href="#L769">769</a>            return i</span>
+<span id="L770"><a href="#L770">770</a>        end</span>
+<span id="L771"><a href="#L771">771</a>    end</span>
+<span id="L772"><a href="#L772">772</a>    return CfgNs.SoldierType.SNV_None</span>
+<span id="L773"><a href="#L773">773</a>end</span>
+<span id="L774"><a href="#L774">774</a></span>
+<span id="L775"><a href="#L775">775</a>local SoldierPicTypeIndex = {</span>
+<span id="L776"><a href="#L776">776</a>    [CfgNs.SoldierType.SNV_Swordsman] = 0,</span>
+<span id="L777"><a href="#L777">777</a>    [CfgNs.SoldierType.SNV_Bowman] = 1,</span>
+<span id="L778"><a href="#L778">778</a>    [CfgNs.SoldierType.SNV_Spearman] = 2,</span>
+<span id="L779"><a href="#L779">779</a>    [CfgNs.SoldierType.SNV_Cavalry] = 3,</span>
+<span id="L780"><a href="#L780">780</a>}</span>
+<span id="L781"><a href="#L781">781</a>function cls:GetSoldierPicTypeIndex(soldierType)</span>
+<span id="L782"><a href="#L782">782</a>    return SoldierPicTypeIndex[soldierType] or 0</span>
+<span id="L783"><a href="#L783">783</a>end</span>
+<span id="L784"><a href="#L784">784</a></span>
+<span id="L785"><a href="#L785">785</a>function cls:RefreshRestraintIcon(selfEntityId, targetEntityId, isShow)</span>
+<span id="L786"><a href="#L786">786</a>    local selfArmyData = mgr.mapCore.DataCtrl:GetDataByEntityId(selfEntityId)</span>
+<span id="L787"><a href="#L787">787</a>    if not selfArmyData or selfArmyData.entityType ~= CfgNs.WorldEntityType.WET_Army then</span>
+<span id="L788"><a href="#L788">788</a>        return</span>
+<span id="L789"><a href="#L789">789</a>    end</span>
+<span id="L790"><a href="#L790">790</a></span>
+<span id="L791"><a href="#L791">791</a>    ---@type Float_BattleLabelBubble</span>
+<span id="L792"><a href="#L792">792</a>    local uiBattleLabelBubble = mgr.ui:FindUI(UIName.Float_BattleLabelBubble)</span>
+<span id="L793"><a href="#L793">793</a>    if not uiBattleLabelBubble then return end</span>
+<span id="L794"><a href="#L794">794</a></span>
+<span id="L795"><a href="#L795">795</a>    if isShow and targetEntityId &gt; 0 then</span>
+<span id="L796"><a href="#L796">796</a>        if targetEntityId ~= self._restraintTargetId then</span>
+<span id="L797"><a href="#L797">797</a>            self._restraintTargetId = targetEntityId</span>
+<span id="L798"><a href="#L798">798</a>            TblUtil.Clear(self._preRestraintTypes)</span>
+<span id="L799"><a href="#L799">799</a>        end</span>
+<span id="L800"><a href="#L800">800</a></span>
+<span id="L801"><a href="#L801">801</a>        local targetArmyData = mgr.mapCore.DataCtrl:GetDataByEntityId(targetEntityId)</span>
+<span id="L802"><a href="#L802">802</a>        -- 客户端创建对象也会走这里，先保护一下，targetArmyData可能为空</span>
+<span id="L803"><a href="#L803">803</a>        if not targetArmyData or targetArmyData.entityType ~= CfgNs.WorldEntityType.WET_Army then</span>
+<span id="L804"><a href="#L804">804</a>            return</span>
+<span id="L805"><a href="#L805">805</a>        end</span>
+<span id="L806"><a href="#L806">806</a></span>
+<span id="L807"><a href="#L807">807</a>        local allSelectedArmyIdList = mgr.outsideArmy.ArmySelect:GetSelectedArmyIds()</span>
+<span id="L808"><a href="#L808">808</a>        local relation = mgr.outsideUtil.RelationShip.GetRelationByMapEntityData(targetArmyData)</span>
+<span id="L809"><a href="#L809">809</a>        local targetSoldierType, targetSoldierId = OutsideUtils.GetArmySoldierType(targetEntityId)</span>
+<span id="L810"><a href="#L810">810</a>        local mapCamera = mgr.mapVisual.CameraCtrl.camera</span>
+<span id="L811"><a href="#L811">811</a>        local targetSoldierBMYC = SoldierUtil.IsBMYC(targetSoldierId)</span>
+<span id="L812"><a href="#L812">812</a></span>
+<span id="L813"><a href="#L813">813</a>        for _, myEntityId in ipairs (allSelectedArmyIdList) do</span>
+<span id="L814"><a href="#L814">814</a>            if relation == RelationType.Enemy then</span>
+<span id="L815"><a href="#L815">815</a>                -- UtilArmyProfile:Begin(&quot;PlayRestraintEffect&quot;)</span>
+<span id="L816"><a href="#L816">816</a>                local selfSoldierType, selfSoldierId = OutsideUtils.GetArmySoldierType(myEntityId)</span>
+<span id="L817"><a href="#L817">817</a>                local selfSoldierBMYC = SoldierUtil.IsBMYC(selfSoldierId)</span>
+<span id="L818"><a href="#L818">818</a>                local restraintRelationType = RestraintRelationType.None</span>
+<span id="L819"><a href="#L819">819</a>                if selfSoldierBMYC and targetSoldierBMYC  then</span>
+<span id="L820"><a href="#L820">820</a>                    restraintRelationType = RestraintRelationType.None</span>
+<span id="L821"><a href="#L821">821</a>                elseif selfSoldierBMYC then</span>
+<span id="L822"><a href="#L822">822</a>                    restraintRelationType = mgr.outsideArmy:GetRestraintRelationForBMYC({ targetSoldierType })</span>
+<span id="L823"><a href="#L823">823</a>                elseif targetSoldierBMYC then</span>
+<span id="L824"><a href="#L824">824</a>                    --目标方是白马义从是将克制关系反向处理</span>
+<span id="L825"><a href="#L825">825</a>                    restraintRelationType = mgr.outsideArmy:GetRestraintRelationForBMYC({ selfSoldierType })</span>
+<span id="L826"><a href="#L826">826</a>                    if restraintRelationType == RestraintRelationType.Proactive then</span>
+<span id="L827"><a href="#L827">827</a>                        restraintRelationType = RestraintRelationType.Passive</span>
+<span id="L828"><a href="#L828">828</a>                    elseif restraintRelationType == RestraintRelationType.Passive then</span>
+<span id="L829"><a href="#L829">829</a>                        restraintRelationType = RestraintRelationType.Proactive</span>
+<span id="L830"><a href="#L830">830</a>                    end</span>
+<span id="L831"><a href="#L831">831</a>                else</span>
+<span id="L832"><a href="#L832">832</a>                    restraintRelationType = self:GetRestraintRelation(selfSoldierType, targetSoldierType)</span>
+<span id="L833"><a href="#L833">833</a>                end</span>
+<span id="L834"><a href="#L834">834</a>                local preRetraintRelationType = self._preRestraintTypes[myEntityId]</span>
+<span id="L835"><a href="#L835">835</a>                if restraintRelationType ~= RestraintRelationType.None then</span>
+<span id="L836"><a href="#L836">836</a>                    if not (preRetraintRelationType ~= nil and preRetraintRelationType == restraintRelationType) then</span>
+<span id="L837"><a href="#L837">837</a>                        self._preRestraintTypes[myEntityId] = restraintRelationType</span>
+<span id="L838"><a href="#L838">838</a>                        -- UtilArmyProfile:Begin(&quot;ReleaseRestraintUI&quot;)</span>
+<span id="L839"><a href="#L839">839</a>                        self:ReleaseRestraintUI(myEntityId)</span>
+<span id="L840"><a href="#L840">840</a>                        -- UtilArmyProfile:End(&quot;ReleaseRestraintUI&quot;)</span>
+<span id="L841"><a href="#L841">841</a>                        </span>
+<span id="L842"><a href="#L842">842</a>                        -- UtilArmyProfile:Begin(&quot;StaticGetRestraintPositionInfo&quot;)</span>
+<span id="L843"><a href="#L843">843</a>                        local selfScreenPos, targetScreenPos, uiPos = ArmyEntityLuaCall.StaticGetRestraintPositionInfo(myEntityId, targetEntityId, mapCamera)</span>
+<span id="L844"><a href="#L844">844</a>                        -- UtilArmyProfile:End(&quot;StaticGetRestraintPositionInfo&quot;)</span>
+<span id="L845"><a href="#L845">845</a>                        -- UtilArmyProfile:Begin(&quot;RegisterRestraint&quot;)</span>
+<span id="L846"><a href="#L846">846</a>                        local restraintId, restraintUI = uiBattleLabelBubble:RegisterRestraint(uiPos)</span>
+<span id="L847"><a href="#L847">847</a>                        -- UtilArmyProfile:End(&quot;RegisterRestraint&quot;)</span>
+<span id="L848"><a href="#L848">848</a></span>
+<span id="L849"><a href="#L849">849</a>                        if restraintId and restraintUI then</span>
+<span id="L850"><a href="#L850">850</a>                            self.restraintInfo[myEntityId] = restraintId</span>
+<span id="L851"><a href="#L851">851</a>                            local isLeft = selfScreenPos.x &lt; targetScreenPos.x</span>
+<span id="L852"><a href="#L852">852</a>                            -- UtilArmyProfile:Begin(&quot;PlayRestraintAnim&quot;)</span>
+<span id="L853"><a href="#L853">853</a>                            self:PlayRestraintAnim(restraintUI, restraintRelationType, selfSoldierType, targetSoldierType, isLeft, selfSoldierId, targetSoldierId)</span>
+<span id="L854"><a href="#L854">854</a>                            -- UtilArmyProfile:End(&quot;PlayRestraintAnim&quot;)</span>
+<span id="L855"><a href="#L855">855</a>                        end</span>
+<span id="L856"><a href="#L856">856</a>                    end</span>
+<span id="L857"><a href="#L857">857</a>                else</span>
+<span id="L858"><a href="#L858">858</a>                    self._preRestraintTypes[myEntityId] = nil</span>
+<span id="L859"><a href="#L859">859</a>                    self:ReleaseRestraintUI(myEntityId)</span>
+<span id="L860"><a href="#L860">860</a>                end</span>
+<span id="L861"><a href="#L861">861</a>                -- UtilArmyProfile:End(&quot;PlayRestraintEffect&quot;)</span>
+<span id="L862"><a href="#L862">862</a>            else</span>
+<span id="L863"><a href="#L863">863</a>                self._preRestraintTypes[myEntityId] = nil</span>
+<span id="L864"><a href="#L864">864</a>                self:ReleaseRestraintUI(myEntityId)</span>
+<span id="L865"><a href="#L865">865</a>            end</span>
+<span id="L866"><a href="#L866">866</a>        end</span>
+<span id="L867"><a href="#L867">867</a>    else</span>
+<span id="L868"><a href="#L868">868</a>        self._restraintTargetId = 0</span>
+<span id="L869"><a href="#L869">869</a>        self:RealseAllRestraint()</span>
+<span id="L870"><a href="#L870">870</a>        TblUtil.Clear(self._preRestraintTypes)</span>
+<span id="L871"><a href="#L871">871</a>    end</span>
+<span id="L872"><a href="#L872">872</a>end</span>
+<span id="L873"><a href="#L873">873</a></span>
+<span id="L874"><a href="#L874">874</a>function cls:ReleaseRestraintUI(entityId)</span>
+<span id="L875"><a href="#L875">875</a>    local uiBattleLabelBubble = mgr.ui:FindUI(UIName.Float_BattleLabelBubble)</span>
+<span id="L876"><a href="#L876">876</a>    if not uiBattleLabelBubble then return end</span>
+<span id="L877"><a href="#L877">877</a></span>
+<span id="L878"><a href="#L878">878</a>    if self.restraintInfo[entityId] then</span>
+<span id="L879"><a href="#L879">879</a>        uiBattleLabelBubble:ReleaseRestraint(self.restraintInfo[entityId])</span>
+<span id="L880"><a href="#L880">880</a>        self.restraintInfo[entityId] = nil</span>
+<span id="L881"><a href="#L881">881</a>    end</span>
+<span id="L882"><a href="#L882">882</a>end</span>
+<span id="L883"><a href="#L883">883</a></span>
+<span id="L884"><a href="#L884">884</a>local MaxMidPos = 4</span>
+<span id="L885"><a href="#L885">885</a>function cls:CalRestraintUIPos(selfArmyPos, targetArmyPos)</span>
+<span id="L886"><a href="#L886">886</a>    local midPos = (selfArmyPos + targetArmyPos) * 0.5</span>
+<span id="L887"><a href="#L887">887</a>    local distance = U3D.Vector3.Distance(selfArmyPos, targetArmyPos)</span>
+<span id="L888"><a href="#L888">888</a>    local uiWorldPos = midPos</span>
+<span id="L889"><a href="#L889">889</a>    if distance &gt; MaxMidPos * 2 then</span>
+<span id="L890"><a href="#L890">890</a>        local dir = selfArmyPos - targetArmyPos</span>
+<span id="L891"><a href="#L891">891</a>        dir:Normalize()</span>
+<span id="L892"><a href="#L892">892</a>        uiWorldPos = targetArmyPos + dir * MaxMidPos</span>
+<span id="L893"><a href="#L893">893</a>    end</span>
+<span id="L894"><a href="#L894">894</a></span>
+<span id="L895"><a href="#L895">895</a>    return uiWorldPos</span>
+<span id="L896"><a href="#L896">896</a>end</span>
+<span id="L897"><a href="#L897">897</a></span>
+<span id="L898"><a href="#L898">898</a>local Vector2One = U3D.Vector2.one</span>
+<span id="L899"><a href="#L899">899</a>local Vector2Zero = U3D.Vector2.zero</span>
+<span id="L900"><a href="#L900">900</a>function cls:PlayRestraintAnim(restraintUI, restraintRelationType, selfSoldierType, targetSoldierType, isLeft, selfSoldierId, targetSoldierId)</span>
+<span id="L901"><a href="#L901">901</a>    -- 使用Scale而不是Alpha，因为动画会控制alpha</span>
+<span id="L902"><a href="#L902">902</a>    -- UtilArmyProfile:Begin(&quot;SetScale&quot;)</span>
+<span id="L903"><a href="#L903">903</a>    restraintUI.m_PanProactive:SetScale(restraintRelationType == RestraintRelationType.Proactive and Vector2One or Vector2Zero)</span>
+<span id="L904"><a href="#L904">904</a>    restraintUI.m_PanPassive:SetScale(restraintRelationType == RestraintRelationType.Passive and Vector2One or Vector2Zero)</span>
+<span id="L905"><a href="#L905">905</a>    -- UtilArmyProfile:End(&quot;SetScale&quot;)</span>
+<span id="L906"><a href="#L906">906</a></span>
+<span id="L907"><a href="#L907">907</a>    -- local indexL = SoldierPicTypeIndex[selfSoldierType] or 0</span>
+<span id="L908"><a href="#L908">908</a>    -- local indexR = SoldierPicTypeIndex[targetSoldierType] or 0</span>
+<span id="L909"><a href="#L909">909</a>    -- local angles = isLeft and U3D.Vector3(0, 0, 0) or U3D.Vector3(0, 180, 0)</span>
+<span id="L910"><a href="#L910">910</a>    if restraintRelationType == RestraintRelationType.Proactive then</span>
+<span id="L911"><a href="#L911">911</a>        SoldierUIUtil.SetSoldierTypeIcon(restraintUI.m_PicProactiveL, selfSoldierId, false, CfgNs.SoldierResStyle.SR_Style_4)</span>
+<span id="L912"><a href="#L912">912</a>        SoldierUIUtil.SetSoldierTypeIcon(restraintUI.m_PicProactiveR, targetSoldierId, false, CfgNs.SoldierResStyle.SR_Style_4)</span>
+<span id="L913"><a href="#L913">913</a>        -- restraintUI.m_PicProactiveL:SetIndex(indexL)</span>
+<span id="L914"><a href="#L914">914</a>        -- restraintUI.m_PicProactiveR:SetIndex(indexR)</span>
+<span id="L915"><a href="#L915">915</a>        -- UtilArmyProfile:Begin(&quot;SetLocalEulerAngles&quot;)</span>
+<span id="L916"><a href="#L916">916</a>        -- self:SetLocalEulerAngles(restraintUI.m_PanProactive.rectTransform, angles)</span>
+<span id="L917"><a href="#L917">917</a>        -- self:SetLocalEulerAngles(restraintUI.m_Lab_KZ.rectTransform, angles)</span>
+<span id="L918"><a href="#L918">918</a>        -- UtilArmyProfile:End(&quot;SetLocalEulerAngles&quot;)</span>
+<span id="L919"><a href="#L919">919</a>        if restraintUI.m_AnimProactive ~= nil and not ObjUtil.IsNull(restraintUI.m_AnimProactive) then</span>
+<span id="L920"><a href="#L920">920</a>            restraintUI.m_AnimProactive:Rewind()</span>
+<span id="L921"><a href="#L921">921</a>            restraintUI.m_AnimProactive:Play()</span>
+<span id="L922"><a href="#L922">922</a>        end</span>
+<span id="L923"><a href="#L923">923</a>    else</span>
+<span id="L924"><a href="#L924">924</a>        SoldierUIUtil.SetSoldierTypeIcon(restraintUI.m_PicPassiveL, selfSoldierId, false, CfgNs.SoldierResStyle.SR_Style_4)</span>
+<span id="L925"><a href="#L925">925</a>        SoldierUIUtil.SetSoldierTypeIcon(restraintUI.m_PicPassiveR, targetSoldierId, false, CfgNs.SoldierResStyle.SR_Style_4)</span>
+<span id="L926"><a href="#L926">926</a>        -- restraintUI.m_PicPassiveL:SetIndex(indexL)</span>
+<span id="L927"><a href="#L927">927</a>        -- restraintUI.m_PicPassiveR:SetIndex(indexR)</span>
+<span id="L928"><a href="#L928">928</a>        -- UtilArmyProfile:Begin(&quot;SetLocalEulerAngles&quot;)</span>
+<span id="L929"><a href="#L929">929</a>        -- self:SetLocalEulerAngles(restraintUI.m_PanPassive.rectTransform, angles)</span>
+<span id="L930"><a href="#L930">930</a>        -- self:SetLocalEulerAngles(restraintUI.m_Lab_KZ2.rectTransform, angles)</span>
+<span id="L931"><a href="#L931">931</a>        -- UtilArmyProfile:End(&quot;SetLocalEulerAngles&quot;)</span>
+<span id="L932"><a href="#L932">932</a>        if restraintUI.m_AnimPassive ~= nil and not ObjUtil.IsNull(restraintUI.m_AnimPassive) then</span>
+<span id="L933"><a href="#L933">933</a>            restraintUI.m_AnimPassive:Rewind()</span>
+<span id="L934"><a href="#L934">934</a>            restraintUI.m_AnimPassive:Play()</span>
+<span id="L935"><a href="#L935">935</a>        end</span>
+<span id="L936"><a href="#L936">936</a>    end</span>
+<span id="L937"><a href="#L937">937</a>end</span>
+<span id="L938"><a href="#L938">938</a></span>
+<span id="L939"><a href="#L939">939</a>function cls:SetLocalEulerAngles(rectTransform, angles)</span>
+<span id="L940"><a href="#L940">940</a>    if not rectTransform or rectTransform.localEulerAngles == angles then</span>
+<span id="L941"><a href="#L941">941</a>        return </span>
+<span id="L942"><a href="#L942">942</a>    end</span>
+<span id="L943"><a href="#L943">943</a></span>
+<span id="L944"><a href="#L944">944</a>    rectTransform.localEulerAngles = angles</span>
+<span id="L945"><a href="#L945">945</a>end</span>
+<span id="L946"><a href="#L946">946</a></span>
+<span id="L947"><a href="#L947">947</a>function cls:RealseAllRestraint()</span>
+<span id="L948"><a href="#L948">948</a>    ---@type Float_BattleLabelBubble</span>
+<span id="L949"><a href="#L949">949</a>    local uiBattleLabelBubble = mgr.ui:FindUI(UIName.Float_BattleLabelBubble)</span>
+<span id="L950"><a href="#L950">950</a>    if not uiBattleLabelBubble then</span>
+<span id="L951"><a href="#L951">951</a>        return</span>
+<span id="L952"><a href="#L952">952</a>    end</span>
+<span id="L953"><a href="#L953">953</a></span>
+<span id="L954"><a href="#L954">954</a>    for _, restraintId in pairs(self.restraintInfo) do</span>
+<span id="L955"><a href="#L955">955</a>        uiBattleLabelBubble:ReleaseRestraint(restraintId)</span>
+<span id="L956"><a href="#L956">956</a>    end</span>
+<span id="L957"><a href="#L957">957</a>    TblUtil.Clear(self.restraintInfo)</span>
+<span id="L958"><a href="#L958">958</a>end</span>
+<span id="L959"><a href="#L959">959</a>--endregion</span>
+<span id="L960"><a href="#L960">960</a></span>
+<span id="L961"><a href="#L961">961</a>function cls:OnAppFocused()</span>
+<span id="L962"><a href="#L962">962</a>    if not SysUtil.IsEditor() then</span>
+<span id="L963"><a href="#L963">963</a>        ArmyEntityLuaCall.SetAllArmyJumpDirty()</span>
+<span id="L964"><a href="#L964">964</a>    end</span>
+<span id="L965"><a href="#L965">965</a>    if mgr.scene:IsInScene(SceneName.Outside) then</span>
+<span id="L966"><a href="#L966">966</a>        self:StaticOnTouchUp()</span>
+<span id="L967"><a href="#L967">967</a>    end</span>
+<span id="L968"><a href="#L968">968</a>end</span>
+<span id="L969"><a href="#L969">969</a></span>
+<span id="L970"><a href="#L970">970</a>function cls:StaticOnTouchUp()</span>
+<span id="L971"><a href="#L971">971</a>    ArmyEntityLuaCall.StaticOnTouchUp(Vector2Zero, true)</span>
+<span id="L972"><a href="#L972">972</a>end</span>
+<span id="L973"><a href="#L973">973</a></span>
+<span id="L974"><a href="#L974">974</a>function cls:BlockAllArmyLine(flag)</span>
+<span id="L975"><a href="#L975">975</a>    ArmyEntityConst.BlockAllMarchLine = flag</span>
+<span id="L976"><a href="#L976">976</a>end</span>
+<span id="L977"><a href="#L977">977</a></span>
+<span id="L978"><a href="#L978">978</a>local CameraDirtyLength = 16</span>
+<span id="L979"><a href="#L979">979</a>function cls:OnCameraMove()</span>
+<span id="L980"><a href="#L980">980</a>    if not mgr.unlockData:IsUnlock(CfgNs.FeatureUnlockEnum.NFUE_BattleHeadOptimization) then</span>
+<span id="L981"><a href="#L981">981</a>        return</span>
+<span id="L982"><a href="#L982">982</a>    end</span>
+<span id="L983"><a href="#L983">983</a></span>
+<span id="L984"><a href="#L984">984</a>    if mgr.raidMap.IsInRaid then return end</span>
+<span id="L985"><a href="#L985">985</a></span>
+<span id="L986"><a href="#L986">986</a>    local worldPos = mgr.mapVisual.CameraCtrl.cameraCtrl.CorePos</span>
+<span id="L987"><a href="#L987">987</a>    if self.lastCorePos then</span>
+<span id="L988"><a href="#L988">988</a>        local sqrMagnitude = (self.lastCorePos - worldPos).sqrMagnitude</span>
+<span id="L989"><a href="#L989">989</a>        if sqrMagnitude &lt; CameraDirtyLength then</span>
+<span id="L990"><a href="#L990">990</a>            return</span>
+<span id="L991"><a href="#L991">991</a>        end</span>
+<span id="L992"><a href="#L992">992</a>    end</span>
+<span id="L993"><a href="#L993">993</a></span>
+<span id="L994"><a href="#L994">994</a>    self.lastCorePos = worldPos</span>
+<span id="L995"><a href="#L995">995</a></span>
+<span id="L996"><a href="#L996">996</a>    local curTime = mgr.time.realT</span>
+<span id="L997"><a href="#L997">997</a>    if curTime - (self.lastTime or 0) &lt; 0.5 then</span>
+<span id="L998"><a href="#L998">998</a>        return</span>
+<span id="L999"><a href="#L999">999</a>    end</span>
+<span id="L1000"><a href="#L1000">1000</a>    </span>
+<span id="L1001"><a href="#L1001">1001</a>    self.lastTime = curTime</span>
+<span id="L1002"><a href="#L1002">1002</a></span>
+<span id="L1003"><a href="#L1003">1003</a>    ProfilerUtil.BeginSample(&quot;OnCameraMove&quot;)</span>
+<span id="L1004"><a href="#L1004">1004</a>    local entityDict = mgr.mapCore.MapEntityCtrl.entitysByEntityId</span>
+<span id="L1005"><a href="#L1005">1005</a>    local buckets = mgr.battleHead.waitShowEntityQueue.buckets</span>
+<span id="L1006"><a href="#L1006">1006</a>    for i = 2, #buckets do -- 最高优先级不受摄像机位置影响</span>
+<span id="L1007"><a href="#L1007">1007</a>        for entityId, _ in pairs(buckets[i]) do</span>
+<span id="L1008"><a href="#L1008">1008</a>            (entityDict[entityId])?:RefreshDistancePriority()</span>
+<span id="L1009"><a href="#L1009">1009</a>        end</span>
+<span id="L1010"><a href="#L1010">1010</a>    end</span>
+<span id="L1011"><a href="#L1011">1011</a></span>
+<span id="L1012"><a href="#L1012">1012</a>    buckets = mgr.battleHead.battleHeadQueue.buckets</span>
+<span id="L1013"><a href="#L1013">1013</a>    for i = 1, #buckets do </span>
+<span id="L1014"><a href="#L1014">1014</a>        for entityId, _ in pairs(buckets[i]) do</span>
+<span id="L1015"><a href="#L1015">1015</a>            (entityDict[entityId])?:RefreshDistancePriority()</span>
+<span id="L1016"><a href="#L1016">1016</a>        end</span>
+<span id="L1017"><a href="#L1017">1017</a>    end</span>
+<span id="L1018"><a href="#L1018">1018</a></span>
+<span id="L1019"><a href="#L1019">1019</a>    ProfilerUtil.EndSample()</span>
+<span id="L1020"><a href="#L1020">1020</a>end</span>
+<span id="L1021"><a href="#L1021">1021</a></span>
+<span id="L1022"><a href="#L1022">1022</a>--region 属性系统回调</span>
+<span id="L1023"><a href="#L1023">1023</a>function cls:RegisterAttrCallbacks()</span>
+<span id="L1024"><a href="#L1024">1024</a>    if EnableMergeDecode then</span>
+<span id="L1025"><a href="#L1025">1025</a>        mgr.attr.query.rootAttr.sceneUserAttr.armies:Register(self, self.OnRefresh_armies)</span>
+<span id="L1026"><a href="#L1026">1026</a>    else</span>
+<span id="L1027"><a href="#L1027">1027</a>        mgr.net.game:RegistNtfHandler(ProtoId.RootAttrNtf, self, self.OnUserAttrNtf)</span>
+<span id="L1028"><a href="#L1028">1028</a>    end</span>
+<span id="L1029"><a href="#L1029">1029</a>end</span>
+<span id="L1030"><a href="#L1030">1030</a></span>
+<span id="L1031"><a href="#L1031">1031</a>function cls:UnregisterAttrCallbacks()</span>
+<span id="L1032"><a href="#L1032">1032</a>    if EnableMergeDecode then</span>
+<span id="L1033"><a href="#L1033">1033</a>        mgr.attr:UnRegisterAll(self)</span>
+<span id="L1034"><a href="#L1034">1034</a>    else</span>
+<span id="L1035"><a href="#L1035">1035</a>        mgr.net.game:UnregistNtfHandler(ProtoId.RootAttrNtf, self, self.OnUserAttrNtf)</span>
+<span id="L1036"><a href="#L1036">1036</a>    end</span>
+<span id="L1037"><a href="#L1037">1037</a>end</span>
+<span id="L1038"><a href="#L1038">1038</a></span>
+<span id="L1039"><a href="#L1039">1039</a>function cls:RefreshAllArmyFactionColor()</span>
+<span id="L1040"><a href="#L1040">1040</a>    local isOutside = mgr.scene:IsInScene(SceneName.Outside)</span>
+<span id="L1041"><a href="#L1041">1041</a>    if not isOutside then</span>
+<span id="L1042"><a href="#L1042">1042</a>        return</span>
+<span id="L1043"><a href="#L1043">1043</a>    end</span>
+<span id="L1044"><a href="#L1044">1044</a>    if not mgr.outsideArmy or not mgr.outsideArmy.ArmyEntityCtrl then</span>
+<span id="L1045"><a href="#L1045">1045</a>        return</span>
+<span id="L1046"><a href="#L1046">1046</a>    end</span>
+<span id="L1047"><a href="#L1047">1047</a>    local allArmies = mgr.outsideArmy.ArmyEntityCtrl:GetAllArmyEntities()</span>
+<span id="L1048"><a href="#L1048">1048</a>    for entityId, armyEntity in pairs_safe(allArmies) do</span>
+<span id="L1049"><a href="#L1049">1049</a>        -- 友盟/联盟关系变化时，propertyOwner 属性不会 dirty，需主动刷新 3D 兵种染色</span>
+<span id="L1050"><a href="#L1050">1050</a>        if armyEntity and armyEntity.OnRefresh_uid_allianceId then</span>
+<span id="L1051"><a href="#L1051">1051</a>            armyEntity:OnRefresh_uid_allianceId()</span>
+<span id="L1052"><a href="#L1052">1052</a>            -- OnRefresh_uid_allianceId 已刷新 NameText/ArmyImg，这里只补 HeadImg</span>
+<span id="L1053"><a href="#L1053">1053</a>            mgr.evt:Post(OutsideEvt.BattleHeadItemRefresh, entityId, BattleHeadDefine.ItemType.HeadImg)</span>
+<span id="L1054"><a href="#L1054">1054</a>            goto continue</span>
+<span id="L1055"><a href="#L1055">1055</a>        end</span>
+<span id="L1056"><a href="#L1056">1056</a>        </span>
+<span id="L1057"><a href="#L1057">1057</a>        if armyEntity and armyEntity.UpdateRelationShip then</span>
+<span id="L1058"><a href="#L1058">1058</a>            armyEntity:UpdateRelationShip()</span>
+<span id="L1059"><a href="#L1059">1059</a>        end</span>
+<span id="L1060"><a href="#L1060">1060</a>        -- 最初逻辑：统一刷新 HeadImg/NameText（仅 entityId，不依赖 armyEntity 对象）</span>
+<span id="L1061"><a href="#L1061">1061</a>        mgr.evt:Post(OutsideEvt.BattleHeadItemRefresh, entityId, BattleHeadDefine.ItemType.HeadImg)</span>
+<span id="L1062"><a href="#L1062">1062</a>        mgr.evt:Post(OutsideEvt.BattleHeadItemRefresh, entityId, BattleHeadDefine.ItemType.NameText)</span>
+<span id="L1063"><a href="#L1063">1063</a></span>
+<span id="L1064"><a href="#L1064">1064</a>        ::continue::</span>
+<span id="L1065"><a href="#L1065">1065</a>    end</span>
+<span id="L1066"><a href="#L1066">1066</a>end</span>
+<span id="L1067"><a href="#L1067">1067</a></span>
+<span id="L1068"><a href="#L1068">1068</a></span>
+<span id="L1069"><a href="#L1069">1069</a>function cls:OnRefresh_armies()</span>
+<span id="L1070"><a href="#L1070">1070</a>    self:RefreshAllSelfArmyIds()</span>
+<span id="L1071"><a href="#L1071">1071</a>end</span>
+<span id="L1072"><a href="#L1072">1072</a>--endregion</span>
+<span id="L1073"><a href="#L1073">1073</a></span>
+<span id="L1074"><a href="#L1074">1074</a>return cls</span></pre></html>

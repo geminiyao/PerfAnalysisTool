@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 抢渡口压测性能采集报告 | `ferry-stress-20261006/` | `/cpu/report/ferry-stress-20261006/report.html` |
 | 帝国1 vs 帝国2：内城全盛·精致 GPU对比 | `city-gpu-compare-20261002/` | `/cpu/report/city-gpu-compare-20261002/report.html` |
+| 名城压测性能采集分析 · 2026-09-10 | `march-dual-hotspots-20260910/` | `/cpu/report/march-dual-hotspots-20260910/report.html` |
 
 每份报告的 `README.md` 说明资源结构，`manifest.json` 记录文件大小与哈希，`validation.json` 记录已完成的验证。原始采集文件、系统 trace、符号文件和离线报告备份保留在采集工作目录，不属于发布资源。
 

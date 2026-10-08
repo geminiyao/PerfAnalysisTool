@@ -1,0 +1,1988 @@
+<html lang="zh-CN"><meta charset="utf-8"><title>InfiniteZoomMapGoEffectCtrl.lua</title><style>body{background:#0c1522;color:#d9e6f4;font:13px/1.6 Consolas,monospace}p{font:14px sans-serif}span{display:block;white-space:pre-wrap;scroll-margin-top:20px}span:target{background:#27515a}a{color:#8fabc5;text-decoration:none;display:inline-block;width:55px;user-select:none}code{white-space:pre-wrap}</style><p>G:\AOEYZ_Trunk\AOE3D\Assets\Scripts\.Lua\Module\InfiniteZoom\Ctrl\InfiniteZoomMapGoEffectCtrl.lua<br>current local source; phone build commit unverified · SHA256 f2ec9656820333909feca694c4fe532f2eafa5eb06ab9e96f3612ec2156fe1ad</p><pre><span id="L1"><a href="#L1">1</a>--[[</span>
+<span id="L2"><a href="#L2">2</a>  处理无极缩放过程中特效对象(3D)</span>
+<span id="L3"><a href="#L3">3</a>  1.个人/联盟标记</span>
+<span id="L4"><a href="#L4">4</a>  2.空地弹出HUD与特效</span>
+<span id="L5"><a href="#L5">5</a>  3.镖车起点与终点</span>
+<span id="L6"><a href="#L6">6</a>]]</span>
+<span id="L7"><a href="#L7">7</a>--region InfiniteZoomGoEffMarkData</span>
+<span id="L8"><a href="#L8">8</a>---@class InfiniteZoomGoEffMarkData</span>
+<span id="L9"><a href="#L9">9</a>---@field type number                                           标记类型（个人、联盟）</span>
+<span id="L10"><a href="#L10">10</a>---@field markType number                                       标记具体类型（进攻、防御、宣战）</span>
+<span id="L11"><a href="#L11">11</a>---@field tips string                                           自定义标记的文字</span>
+<span id="L12"><a href="#L12">12</a>---@field visible boolean                                       标记是否可见</span>
+<span id="L13"><a href="#L13">13</a>---@field cityID number                                         城市ID</span>
+<span id="L14"><a href="#L14">14</a>---@field gridIndex number                                      标记位置</span>
+<span id="L15"><a href="#L15">15</a>---@field ui Float_InfiniteZoomMark                             缩放层下的UI控件</span>
+<span id="L16"><a href="#L16">16</a>---@field effectName string                                     普通层下的3D特效名字</span>
+<span id="L17"><a href="#L17">17</a>---@field effect AOE.TrailVisualWrapper                         普通层下的3D特效</span>
+<span id="L18"><a href="#L18">18</a>---@field worldPos UnityEngine.Vector3                          UI控件3D位置</span>
+<span id="L19"><a href="#L19">19</a>---@field worldPosWithOffset UnityEngine.Vector3                UI控件3D位置偏移</span>
+<span id="L20"><a href="#L20">20</a>---@field isOtherAlliance boolean                               是否为其他联盟宣战标签</span>
+<span id="L21"><a href="#L21">21</a>---@field isDeclared boolean                                    是宣战中</span>
+<span id="L22"><a href="#L22">22</a>---@field declaredAllianceNum number                            已宣战联盟数量</span>
+<span id="L23"><a href="#L23">23</a>--endregion</span>
+<span id="L24"><a href="#L24">24</a></span>
+<span id="L25"><a href="#L25">25</a>---@class CityLinkedPoint</span>
+<span id="L26"><a href="#L26">26</a>---@field points UnityEngine.Vector3[]</span>
+<span id="L27"><a href="#L27">27</a></span>
+<span id="L28"><a href="#L28">28</a>---@class InfiniteZoomMapGoEffectCtrl : Entity</span>
+<span id="L29"><a href="#L29">29</a>---@field markDict InfiniteZoomGoEffMarkData[]                                       标记数据</span>
+<span id="L30"><a href="#L30">30</a>---@field markList InfiniteZoomGoEffMarkData[]                                       标记数据</span>
+<span id="L31"><a href="#L31">31</a>---@field allianceMarkVisible boolean                                                联盟标记是否显示</span>
+<span id="L32"><a href="#L32">32</a>---@field personalMarkVisible boolean                                                个人标记是否显示</span>
+<span id="L33"><a href="#L33">33</a>---@field guildRegionsVisible boolean                                                联盟区域是否显示</span>
+<span id="L34"><a href="#L34">34</a>---@field guildMembersVisible boolean                                                是否显示盟友城池</span>
+<span id="L35"><a href="#L35">35</a>---@field guildAirshipVisible boolean                                                己方艇坞显示</span>
+<span id="L36"><a href="#L36">36</a>---@field enemyAirshipVisible boolean                                                敌方艇坞显示</span>
+<span id="L37"><a href="#L37">37</a>---@field guildSchemeVisible boolean                                                 己方计略府显示</span>
+<span id="L38"><a href="#L38">38</a>---@field enemySchemeVisible boolean                                                 敌方计略府显示</span>
+<span id="L39"><a href="#L39">39</a>---@field guildMemberDict InfiniteZoomPlayerCityData[]                               玩家城池</span>
+<span id="L40"><a href="#L40">40</a>---@field bigCityBuildingDict table&lt;number, InfiniteZoomBigCityData&gt;                 城市建筑数据</span>
+<span id="L41"><a href="#L41">41</a>---@field ownMemberData NetNs.proto_AllianceMember                                   己方城池数据</span>
+<span id="L42"><a href="#L42">42</a>---@field markTipsScale number                                                       标签缩放（国家层需要动态调整大小）</span>
+<span id="L43"><a href="#L43">43</a>---@field onTouchUp function                                                         当手离开屏幕时执行的函数</span>
+<span id="L44"><a href="#L44">44</a>---@field onTouchDown function                                                       当手操作屏幕时执行的函数</span>
+<span id="L45"><a href="#L45">45</a>---@field touching boolean                                                           当前是否在移动地图</span>
+<span id="L46"><a href="#L46">46</a>---@field refreshIndex number                                                        已经更新显示到的下标（标记）</span>
+<span id="L47"><a href="#L47">47</a>---@field markCnt number                                                             标记总个数</span>
+<span id="L48"><a href="#L48">48</a>---@field CsEffectPool CS.AOE.TrailVisualWrapper</span>
+<span id="L49"><a href="#L49">49</a>---@field canShowLinkedLines boolean                                                 是否显示城市间连线</span>
+<span id="L50"><a href="#L50">50</a>---@field linkedLines number[]                                                       城市间ID</span>
+<span id="L51"><a href="#L51">51</a>---@field linesObj UnityEngine.GameObject                                            连线mesh对象</span>
+<span id="L52"><a href="#L52">52</a>---@field declaredIconScale number                                                   宣战图标缩放</span>
+<span id="L53"><a href="#L53">53</a>---@field conscriptHeads Float_ConscriptionHead[] </span>
+<span id="L54"><a href="#L54">54</a>local cls = Class(&quot;InfiniteZoomMapGoEffectCtrl&quot;)</span>
+<span id="L55"><a href="#L55">55</a>local EmptyTable = {}</span>
+<span id="L56"><a href="#L56">56</a>local OutsideVisibilityGM = require(&quot;Outside.Map.Visual.OutsideVisibilityGM&quot;)</span>
+<span id="L57"><a href="#L57">57</a>local OutsideLuaCall = CS.AOE.Outside.OutsideLuaCall</span>
+<span id="L58"><a href="#L58">58</a>local ArmyEntityConst = CS.AOE.DOTS.ArmyEntityConst</span>
+<span id="L59"><a href="#L59">59</a>local MapEntityCtrl = nil</span>
+<span id="L60"><a href="#L60">60</a>local UICtrl = nil</span>
+<span id="L61"><a href="#L61">61</a>local RefreshMaxPerFrame = 3</span>
+<span id="L62"><a href="#L62">62</a>local OutsideMapPerfDiagnostic = CS.AOE.Outside.OutsideMapPerfDiagnostic</span>
+<span id="L63"><a href="#L63">63</a></span>
+<span id="L64"><a href="#L64">64</a>-- MapGo 名城图标性能优化 A/B。</span>
+<span id="L65"><a href="#L65">65</a>-- 默认 false，保持原有 RefreshBigCityIcon 全量同步刷新逻辑不变。</span>
+<span id="L66"><a href="#L66">66</a>local BigCityIconDiffRefreshEnabled = false</span>
+<span id="L67"><a href="#L67">67</a>local BigCityIconTaskBudgetPerFrame = 1</span>
+<span id="L68"><a href="#L68">68</a>local BigCityIconTaskType = {</span>
+<span id="L69"><a href="#L69">69</a>    Add = 1,</span>
+<span id="L70"><a href="#L70">70</a>    Remove = 2,</span>
+<span id="L71"><a href="#L71">71</a>    Refresh = 3,</span>
+<span id="L72"><a href="#L72">72</a>}</span>
+<span id="L73"><a href="#L73">73</a></span>
+<span id="L74"><a href="#L74">74</a>-- 相机缩放刷新优化 A/B。默认关闭，保持线上原逻辑不变。</span>
+<span id="L75"><a href="#L75">75</a>-- 优化模式下，连续缩放只记录一次脏状态，停止变化后再刷新可见性；</span>
+<span id="L76"><a href="#L76">76</a>-- 标签可见性按预算分帧处理，避免每个 CameraMove 都从头全量扫描。</span>
+<span id="L77"><a href="#L77">77</a>local CameraMoveRefreshOptimizationEnabled = false</span>
+<span id="L78"><a href="#L78">78</a>local CameraMoveRefreshSettleDelay = 0.12</span>
+<span id="L79"><a href="#L79">79</a>local CameraMoveMarkBudgetPerFrame = 10</span>
+<span id="L80"><a href="#L80">80</a>local CameraMoveScaleEpsilon = 0.005</span>
+<span id="L81"><a href="#L81">81</a></span>
+<span id="L82"><a href="#L82">82</a>--region 属性回调注册与处理</span>
+<span id="L83"><a href="#L83">83</a>function cls:RegisterAttrCallbacks()</span>
+<span id="L84"><a href="#L84">84</a>    if mgr.net.game ~= nil then</span>
+<span id="L85"><a href="#L85">85</a>        if EnableMergeDecode then</span>
+<span id="L86"><a href="#L86">86</a>            -- 新逻辑：按属性拆分注册</span>
+<span id="L87"><a href="#L87">87</a>            --mgr.attr.query.rootAttr.userAttr.worldInfo.favorites:Register(self, self.OnRefresh_worldInfo_favorites)</span>
+<span id="L88"><a href="#L88">88</a>            --mgr.attr.query.rootAttr.allianceAttr.favorite:Register(self, self.OnRefresh_allianceAttr_favorite)</span>
+<span id="L89"><a href="#L89">89</a>            mgr.attr.query.rootAttr.allianceAttr.allianceWorldMarker:Register(self, self.OnRefresh_worldInfo_favorites)</span>
+<span id="L90"><a href="#L90">90</a>            mgr.attr.query.rootAttr.sceneUserAttr.worldMarkerAttr:Register(self, self.OnRefresh_allianceAttr_favorite)</span>
+<span id="L91"><a href="#L91">91</a>            mgr.attr.query.rootAttr.worldSceneAttr.extraIfno.favorite:Register(self, self.OnRefresh_worldSceneAttr_extraIfno_favorite)</span>
+<span id="L92"><a href="#L92">92</a>            mgr.attr.query.rootAttr.userAttr.alliance.id:Register(self, self.OnRefresh_userAttr_alliance_id)</span>
+<span id="L93"><a href="#L93">93</a>            mgr.attr.query.rootAttr.userAttr.worldInfo.currentScenePos:Register(self, self.OnRefresh_userattr_castlePos)</span>
+<span id="L94"><a href="#L94">94</a>            --mgr.attr.query.rootAttr.sceneUserAttr.yzPresetTeam.presetTeamData:Register(self, self.RefreshConscriptHead) </span>
+<span id="L95"><a href="#L95">95</a>            mgr.attr.query.allianceAttr.memberInfo.members:Register(self, self.OnRefresh_allianceAttr_members)</span>
+<span id="L96"><a href="#L96">96</a>        else</span>
+<span id="L97"><a href="#L97">97</a>            -- 老逻辑：整体注册</span>
+<span id="L98"><a href="#L98">98</a>            mgr.net.game:RegistNtfHandler(ProtoId.RootAttrNtf, self, self.OnUserAttrNtf)</span>
+<span id="L99"><a href="#L99">99</a>        end</span>
+<span id="L100"><a href="#L100">100</a>    end</span>
+<span id="L101"><a href="#L101">101</a>end</span>
+<span id="L102"><a href="#L102">102</a></span>
+<span id="L103"><a href="#L103">103</a>function cls:UnregisterAttrCallbacks()</span>
+<span id="L104"><a href="#L104">104</a>    if mgr.net.game ~= nil then</span>
+<span id="L105"><a href="#L105">105</a>        if EnableMergeDecode then</span>
+<span id="L106"><a href="#L106">106</a>            -- 新逻辑：统一注销</span>
+<span id="L107"><a href="#L107">107</a>            mgr.attr:UnRegisterAll(self)</span>
+<span id="L108"><a href="#L108">108</a>        else</span>
+<span id="L109"><a href="#L109">109</a>            -- 老逻辑：整体注销</span>
+<span id="L110"><a href="#L110">110</a>            mgr.net.game:UnregistNtfHandler(ProtoId.RootAttrNtf, self, self.OnUserAttrNtf)</span>
+<span id="L111"><a href="#L111">111</a>        end</span>
+<span id="L112"><a href="#L112">112</a>    end</span>
+<span id="L113"><a href="#L113">113</a>end</span>
+<span id="L114"><a href="#L114">114</a></span>
+<span id="L115"><a href="#L115">115</a>function cls:OnRefresh_worldInfo_favorites()</span>
+<span id="L116"><a href="#L116">116</a>    self:RefreshMarkData()</span>
+<span id="L117"><a href="#L117">117</a>end</span>
+<span id="L118"><a href="#L118">118</a></span>
+<span id="L119"><a href="#L119">119</a>function cls:OnRefresh_allianceAttr_favorite()</span>
+<span id="L120"><a href="#L120">120</a>    self:RefreshMarkData()</span>
+<span id="L121"><a href="#L121">121</a>end</span>
+<span id="L122"><a href="#L122">122</a></span>
+<span id="L123"><a href="#L123">123</a>function cls:OnRefresh_worldSceneAttr_extraIfno_favorite()</span>
+<span id="L124"><a href="#L124">124</a>    self:RefreshMarkData()</span>
+<span id="L125"><a href="#L125">125</a>end</span>
+<span id="L126"><a href="#L126">126</a></span>
+<span id="L127"><a href="#L127">127</a>function cls:OnRefresh_userAttr_alliance_id()</span>
+<span id="L128"><a href="#L128">128</a>    self:RefreshOwnMemberData(true)</span>
+<span id="L129"><a href="#L129">129</a>    self:RefreshBigCityData()</span>
+<span id="L130"><a href="#L130">130</a>end</span>
+<span id="L131"><a href="#L131">131</a></span>
+<span id="L132"><a href="#L132">132</a>function cls:OnRefresh_allianceAttr_members()</span>
+<span id="L133"><a href="#L133">133</a>    self:RefreshGuildMemberData()</span>
+<span id="L134"><a href="#L134">134</a>end</span>
+<span id="L135"><a href="#L135">135</a></span>
+<span id="L136"><a href="#L136">136</a>function cls:OnRefresh_userattr_castlePos()</span>
+<span id="L137"><a href="#L137">137</a>    self:RefreshOwnMemberData(true)</span>
+<span id="L138"><a href="#L138">138</a>end</span>
+<span id="L139"><a href="#L139">139</a></span>
+<span id="L140"><a href="#L140">140</a>function cls:OnUserAttrNtf(cmdId, pkgId)</span>
+<span id="L141"><a href="#L141">141</a>    if mgr.userAttr:IsDirty(&quot;userAttr.worldInfo.favorites&quot;) or </span>
+<span id="L142"><a href="#L142">142</a>      mgr.userAttr:IsDirty(&quot;allianceAttr.favorite&quot;) or mgr.userAttr:IsDirty(&quot;worldSceneAttr.extraIfno.favorite&quot;) then</span>
+<span id="L143"><a href="#L143">143</a>        self:RefreshMarkData() </span>
+<span id="L144"><a href="#L144">144</a>    end</span>
+<span id="L145"><a href="#L145">145</a></span>
+<span id="L146"><a href="#L146">146</a>    if mgr.userAttr:IsDirty(&quot;userAttr.alliance.id&quot;) then</span>
+<span id="L147"><a href="#L147">147</a>        self:RefreshOwnMemberData(true)</span>
+<span id="L148"><a href="#L148">148</a>    end</span>
+<span id="L149"><a href="#L149">149</a>end</span>
+<span id="L150"><a href="#L150">150</a>--endregion</span>
+<span id="L151"><a href="#L151">151</a></span>
+<span id="L152"><a href="#L152">152</a>function cls:OnInit()</span>
+<span id="L153"><a href="#L153">153</a>    self.markDict = {}</span>
+<span id="L154"><a href="#L154">154</a>    self.strategyMapRallyDict = {}</span>
+<span id="L155"><a href="#L155">155</a>    self.ownMemberData = {}</span>
+<span id="L156"><a href="#L156">156</a>    self.guildMemberDict = {}</span>
+<span id="L157"><a href="#L157">157</a>    self.bigCityBuildingDict = {}</span>
+<span id="L158"><a href="#L158">158</a>    self.linkedLines = {}</span>
+<span id="L159"><a href="#L159">159</a>    self.linkedRopeLines = {}</span>
+<span id="L160"><a href="#L160">160</a>    self.cacheMainEntityRopeLine = {}</span>
+<span id="L161"><a href="#L161">161</a>    self.conscriptHeads = {}</span>
+<span id="L162"><a href="#L162">162</a>    self.personalMarkVisible = true</span>
+<span id="L163"><a href="#L163">163</a>    self.allianceMarkVisible = true</span>
+<span id="L164"><a href="#L164">164</a>    self.guildMembersVisible = true</span>
+<span id="L165"><a href="#L165">165</a>    self.guildRegionsVisible = true</span>
+<span id="L166"><a href="#L166">166</a>    self.guildAirshipVisible = true</span>
+<span id="L167"><a href="#L167">167</a>    self.enemyAirshipVisible = false</span>
+<span id="L168"><a href="#L168">168</a>    self.guildSchemeVisible  = true</span>
+<span id="L169"><a href="#L169">169</a>    self.enemySchemeVisible  = false</span>
+<span id="L170"><a href="#L170">170</a>    self.markTipsScale = 1</span>
+<span id="L171"><a href="#L171">171</a>    self.declaredIconScale = 1</span>
+<span id="L172"><a href="#L172">172</a>    self.touching = false</span>
+<span id="L173"><a href="#L173">173</a>    self.refreshIndex = 0</span>
+<span id="L174"><a href="#L174">174</a>    self.markCnt = 0</span>
+<span id="L175"><a href="#L175">175</a></span>
+<span id="L176"><a href="#L176">176</a>    self._bigCityIconRefreshTasks = nil</span>
+<span id="L177"><a href="#L177">177</a>    self._bigCityIconRefreshTaskIndex = 1</span>
+<span id="L178"><a href="#L178">178</a>    self._bigCityIconRefreshContextKey = nil</span>
+<span id="L179"><a href="#L179">179</a>    self._cameraMoveRefreshPending = false</span>
+<span id="L180"><a href="#L180">180</a>    self._cameraMoveRefreshDueTime = 0</span>
+<span id="L181"><a href="#L181">181</a></span>
+<span id="L182"><a href="#L182">182</a>    self.firstRefresh = true</span>
+<span id="L183"><a href="#L183">183</a>    self._OnNewlyVisible = function(arrNewlyVisible, count) self:OnNewlyVisible(arrNewlyVisible, count) end</span>
+<span id="L184"><a href="#L184">184</a>    self._OnDeletedPos = function(arrDeletedPos, count) self:OnDeletedPos(arrDeletedPos, count) end</span>
+<span id="L185"><a href="#L185">185</a></span>
+<span id="L186"><a href="#L186">186</a>    mgr.evt:Regist(InfiniteZoomEvt.BigCityRefreshDeclaredID, self, self.RefreshMarkData)</span>
+<span id="L187"><a href="#L187">187</a>    mgr.evt:Regist(InfiniteZoomEvt.CityRefreshSuppressOrRebuildingID, self, self.RefreshMarkData)</span>
+<span id="L188"><a href="#L188">188</a>    mgr.evt:Regist(UIEvt.Favorite_RefreshGuildMarkerData, self, self.RefreshMarkData)</span>
+<span id="L189"><a href="#L189">189</a></span>
+<span id="L190"><a href="#L190">190</a></span>
+<span id="L191"><a href="#L191">191</a>    --元素龙分身显示时需要刷新提示</span>
+<span id="L192"><a href="#L192">192</a>    mgr.evt:Regist(OutsideEvt.Dragon_CloneShow, self, self.RefreshMarkData)</span>
+<span id="L193"><a href="#L193">193</a></span>
+<span id="L194"><a href="#L194">194</a>    mgr.evt:Regist(SceneEvt.Entered,                        self, self.OnSceneEntered)</span>
+<span id="L195"><a href="#L195">195</a>    mgr.evt:Regist(SceneEvt.Exited,                         self, self.OnSceneExited)</span>
+<span id="L196"><a href="#L196">196</a></span>
+<span id="L197"><a href="#L197">197</a>    mgr.evt:Regist(InfiniteZoomEvt.BigCityRefreshOccupyID, self, self.RefreshBigCityData)--占领信息更新</span>
+<span id="L198"><a href="#L198">198</a></span>
+<span id="L199"><a href="#L199">199</a>    --mgr.evt:Regist(UIEvt.SelectEntityShowConscriptTime,self, self.SelectEntityShowConscriptTime) </span>
+<span id="L200"><a href="#L200">200</a>    --mgr.evt:Regist(UIEvt.SelectArmyEntityShowConscriptTime,self, self.SelectArmyEntityShowConscriptTime)</span>
+<span id="L201"><a href="#L201">201</a>    mgr.evt:Regist(UIEvt.ReactivePersonalMarker,self, self.ReactivePersonalMark)</span>
+<span id="L202"><a href="#L202">202</a>    mgr.evt:Regist(UIEvt.Favorite_RefreshPersonalMarkerData, self, self.RefreshMarkData)</span>
+<span id="L203"><a href="#L203">203</a>    mgr.evt:Regist(InfiniteZoomEvt.ShowRopeLine, self, self.ShowRopeLine)</span>
+<span id="L204"><a href="#L204">204</a>    mgr.evt:Regist(OutsideEvt.OnAnchorMainBuildDataCreat, self, self.OnAnchorMainBuildDataCreat)</span>
+<span id="L205"><a href="#L205">205</a></span>
+<span id="L206"><a href="#L206">206</a>    self.onTouchUp = function()</span>
+<span id="L207"><a href="#L207">207</a>        self.touching = false</span>
+<span id="L208"><a href="#L208">208</a>        if CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L209"><a href="#L209">209</a>            self:ScheduleCameraMoveRefresh(true)</span>
+<span id="L210"><a href="#L210">210</a>        else</span>
+<span id="L211"><a href="#L211">211</a>            self:RefreshMarkVisible()</span>
+<span id="L212"><a href="#L212">212</a>        end</span>
+<span id="L213"><a href="#L213">213</a>    end</span>
+<span id="L214"><a href="#L214">214</a>    </span>
+<span id="L215"><a href="#L215">215</a>    self.onTouchDown = function()</span>
+<span id="L216"><a href="#L216">216</a>        --mgr.mapVisual.MapEntityOp?:UnselectCurEmptyEntity()</span>
+<span id="L217"><a href="#L217">217</a>        self.touching = true</span>
+<span id="L218"><a href="#L218">218</a>    end</span>
+<span id="L219"><a href="#L219">219</a>    </span>
+<span id="L220"><a href="#L220">220</a>    EasyTouch.On_TouchUp(&quot;+&quot;, self.onTouchUp)</span>
+<span id="L221"><a href="#L221">221</a>    EasyTouch.On_TouchDown(&quot;+&quot;, self.onTouchDown)</span>
+<span id="L222"><a href="#L222">222</a></span>
+<span id="L223"><a href="#L223">223</a>    self:RegisterAttrCallbacks()</span>
+<span id="L224"><a href="#L224">224</a>    MapEntityCtrl = mgr.infiniteZoomMgr.MapEntityCtrl</span>
+<span id="L225"><a href="#L225">225</a>    UICtrl = mgr.infiniteZoomMgr.UICtrl</span>
+<span id="L226"><a href="#L226">226</a>end</span>
+<span id="L227"><a href="#L227">227</a></span>
+<span id="L228"><a href="#L228">228</a>function cls:OnCleanUp()</span>
+<span id="L229"><a href="#L229">229</a>    -- if self.mapViewCtrl then</span>
+<span id="L230"><a href="#L230">230</a>    --     self.mapViewCtrl:UnregisterViewUpdateCallback(self._OnNewlyVisible, self._OnDeletedPos)</span>
+<span id="L231"><a href="#L231">231</a>    -- end</span>
+<span id="L232"><a href="#L232">232</a></span>
+<span id="L233"><a href="#L233">233</a>    self:UnregisterAttrCallbacks()</span>
+<span id="L234"><a href="#L234">234</a></span>
+<span id="L235"><a href="#L235">235</a>    mgr.evt:UnregistByObj(self)</span>
+<span id="L236"><a href="#L236">236</a></span>
+<span id="L237"><a href="#L237">237</a>    EasyTouch.On_TouchUp(&quot;-&quot;, self.onTouchUp)</span>
+<span id="L238"><a href="#L238">238</a>    EasyTouch.On_TouchDown(&quot;-&quot;, self.onTouchDown)</span>
+<span id="L239"><a href="#L239">239</a></span>
+<span id="L240"><a href="#L240">240</a>    self:OnExitOutside()</span>
+<span id="L241"><a href="#L241">241</a>    MapEntityCtrl = nil</span>
+<span id="L242"><a href="#L242">242</a>    UICtrl = nil</span>
+<span id="L243"><a href="#L243">243</a>end</span>
+<span id="L244"><a href="#L244">244</a></span>
+<span id="L245"><a href="#L245">245</a>--#if ENABLE_PROFILER</span>
+<span id="L246"><a href="#L246">246</a>local sampler_RefreshMarkData = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.RefreshMarkData&quot;)</span>
+<span id="L247"><a href="#L247">247</a>local sampler_RefreshGuildMemberIcon = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.RefreshGuildMemberIcon&quot;)</span>
+<span id="L248"><a href="#L248">248</a>local sampler_SetRootScale = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.SetRootScale&quot;)</span>
+<span id="L249"><a href="#L249">249</a>local sampler_RefreshMarkVisble = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.RefreshMarkVisble&quot;)</span>
+<span id="L250"><a href="#L250">250</a>local sampler_ProcessBigCityIconTasks = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.ProcessBigCityIconTasks&quot;)</span>
+<span id="L251"><a href="#L251">251</a>local sampler_CameraMoveDeferredRefresh = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.CameraMoveDeferredRefresh&quot;)</span>
+<span id="L252"><a href="#L252">252</a>--#endif</span>
+<span id="L253"><a href="#L253">253</a>function cls:OnUpdate()</span>
+<span id="L254"><a href="#L254">254</a>    if not mgr.scene:IsInScene(SceneName.Outside) or not mgr.mapCore?.MapViewCtrl then</span>
+<span id="L255"><a href="#L255">255</a>        return</span>
+<span id="L256"><a href="#L256">256</a>    end</span>
+<span id="L257"><a href="#L257">257</a></span>
+<span id="L258"><a href="#L258">258</a>    --#if ENABLE_PROFILER</span>
+<span id="L259"><a href="#L259">259</a>    ProfilerUtil.SamplerBegin(sampler_CameraMoveDeferredRefresh)</span>
+<span id="L260"><a href="#L260">260</a>    --#endif</span>
+<span id="L261"><a href="#L261">261</a>    self:TryFlushCameraMoveRefresh()</span>
+<span id="L262"><a href="#L262">262</a>    --#if ENABLE_PROFILER</span>
+<span id="L263"><a href="#L263">263</a>    ProfilerUtil.SamplerEnd(sampler_CameraMoveDeferredRefresh)</span>
+<span id="L264"><a href="#L264">264</a>    --#endif</span>
+<span id="L265"><a href="#L265">265</a></span>
+<span id="L266"><a href="#L266">266</a>    local state = mgr.infiniteZoomMgr:GetCurState()</span>
+<span id="L267"><a href="#L267">267</a>    local checkTouching = (state == InfiniteZoomState.OutsideIcon or state == InfiniteZoomState.Outside) and not self.touching</span>
+<span id="L268"><a href="#L268">268</a>    -- 分帧更新标记显示</span>
+<span id="L269"><a href="#L269">269</a>    --if self.refreshIndex &lt; self.markCnt and checkTouching then --地表层移动地图不更新，等停止操作后再更新</span>
+<span id="L270"><a href="#L270">270</a>    if self.refreshIndex &lt; self.markCnt then --只要标记出现在视野内就立刻更新</span>
+<span id="L271"><a href="#L271">271</a>        --#if ENABLE_PROFILER</span>
+<span id="L272"><a href="#L272">272</a>        ProfilerUtil.SamplerBegin(sampler_RefreshMarkVisble)</span>
+<span id="L273"><a href="#L273">273</a>        --#endif</span>
+<span id="L274"><a href="#L274">274</a>        local isDefaultOrIcon = state ~= InfiniteZoomState.PlanViewMode</span>
+<span id="L275"><a href="#L275">275</a>        local refreshEndIndex = self.markCnt</span>
+<span id="L276"><a href="#L276">276</a>        if CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L277"><a href="#L277">277</a>            refreshEndIndex = math.min(self.markCnt, self.refreshIndex + CameraMoveMarkBudgetPerFrame)</span>
+<span id="L278"><a href="#L278">278</a>        end</span>
+<span id="L279"><a href="#L279">279</a>        for i = self.refreshIndex + 1, refreshEndIndex do</span>
+<span id="L280"><a href="#L280">280</a>            local v = self.markList[i]</span>
+<span id="L281"><a href="#L281">281</a>            if v then</span>
+<span id="L282"><a href="#L282">282</a>                local visible = (v.type == InfiniteZoomCfg.MarkType.Personal and self.personalMarkVisible) or (self.allianceMarkVisible) or (v.type == InfiniteZoomCfg.MarkType.DeclaredCity)</span>
+<span id="L283"><a href="#L283">283</a>                local isUnitInView = mgr.mapCore.MapViewCtrl:IsUnitInView(v.gridIndex)</span>
+<span id="L284"><a href="#L284">284</a>                if(SubMapUtil.IsOpenSubMap())then</span>
+<span id="L285"><a href="#L285">285</a>                    isUnitInView = isUnitInView or SubMapUtil.IsInSubMapRect(v.gridIndex)</span>
+<span id="L286"><a href="#L286">286</a>                end</span>
+<span id="L287"><a href="#L287">287</a>                visible = visible and isUnitInView and isDefaultOrIcon</span>
+<span id="L288"><a href="#L288">288</a>                self.refreshIndex = self.refreshIndex + 1</span>
+<span id="L289"><a href="#L289">289</a>                self:SetMarkDataVisible(v, visible) -- 每帧更新全部标记</span>
+<span id="L290"><a href="#L290">290</a>                --if self:SetMarkDataVisible(v, visible) then --涉及显示变化的标记一帧只更新一个</span>
+<span id="L291"><a href="#L291">291</a>                    -- mgr.mingdongLog:Error(changed)</span>
+<span id="L292"><a href="#L292">292</a>                --    break</span>
+<span id="L293"><a href="#L293">293</a>                --end</span>
+<span id="L294"><a href="#L294">294</a>            end</span>
+<span id="L295"><a href="#L295">295</a>        end</span>
+<span id="L296"><a href="#L296">296</a>        --#if ENABLE_PROFILER</span>
+<span id="L297"><a href="#L297">297</a>        ProfilerUtil.SamplerEnd(sampler_RefreshMarkVisble)</span>
+<span id="L298"><a href="#L298">298</a>        --#endif</span>
+<span id="L299"><a href="#L299">299</a>    end</span>
+<span id="L300"><a href="#L300">300</a></span>
+<span id="L301"><a href="#L301">301</a>    -- 优化模式下，名城图标的创建/删除/刷新在这里按预算分帧执行。</span>
+<span id="L302"><a href="#L302">302</a>    --#if ENABLE_PROFILER</span>
+<span id="L303"><a href="#L303">303</a>    ProfilerUtil.SamplerBegin(sampler_ProcessBigCityIconTasks)</span>
+<span id="L304"><a href="#L304">304</a>    --#endif</span>
+<span id="L305"><a href="#L305">305</a>    self:ProcessBigCityIconRefreshTasks()</span>
+<span id="L306"><a href="#L306">306</a>    --#if ENABLE_PROFILER</span>
+<span id="L307"><a href="#L307">307</a>    ProfilerUtil.SamplerEnd(sampler_ProcessBigCityIconTasks)</span>
+<span id="L308"><a href="#L308">308</a>    --#endif</span>
+<span id="L309"><a href="#L309">309</a>end</span>
+<span id="L310"><a href="#L310">310</a></span>
+<span id="L311"><a href="#L311">311</a>function cls:OnSceneEntered(params)</span>
+<span id="L312"><a href="#L312">312</a>    if params.name == SceneName.City then</span>
+<span id="L313"><a href="#L313">313</a>        return</span>
+<span id="L314"><a href="#L314">314</a>    end</span>
+<span id="L315"><a href="#L315">315</a>    self.canShowLinkedLines = false</span>
+<span id="L316"><a href="#L316">316</a>--    self:RegisterEntityCallBack()</span>
+<span id="L317"><a href="#L317">317</a>end</span>
+<span id="L318"><a href="#L318">318</a></span>
+<span id="L319"><a href="#L319">319</a>function cls:OnSceneExited(params)</span>
+<span id="L320"><a href="#L320">320</a>    if params.name == SceneName.City then</span>
+<span id="L321"><a href="#L321">321</a>        return</span>
+<span id="L322"><a href="#L322">322</a>    end</span>
+<span id="L323"><a href="#L323">323</a>    self.canShowLinkedLines = false</span>
+<span id="L324"><a href="#L324">324</a>--    self:UnRegisterEntityCallBack()</span>
+<span id="L325"><a href="#L325">325</a>    self:HideCityLinkedLines()</span>
+<span id="L326"><a href="#L326">326</a>    if not ObjUtil.IsNull(self.linesObj) then</span>
+<span id="L327"><a href="#L327">327</a>        self.linesObj.transform.position = U3D.Vector3(0,0,0)</span>
+<span id="L328"><a href="#L328">328</a>    end</span>
+<span id="L329"><a href="#L329">329</a>    self.linesObj = nil</span>
+<span id="L330"><a href="#L330">330</a>end</span>
+<span id="L331"><a href="#L331">331</a></span>
+<span id="L332"><a href="#L332">332</a>local sampler_RefreshStrategyMapRallyData = U3D.Profiling.CustomSampler.Create(&quot;InfiniteZoomMapGoEffectCtrl.RefreshStrategyMapRallyData&quot;)</span>
+<span id="L333"><a href="#L333">333</a>function cls:OnOutsideCameraMove()</span>
+<span id="L334"><a href="#L334">334</a>    --#if ENABLE_PROFILER</span>
+<span id="L335"><a href="#L335">335</a>    ProfilerUtil.SamplerBegin(sampler_RefreshMarkData)</span>
+<span id="L336"><a href="#L336">336</a>    --#endif</span>
+<span id="L337"><a href="#L337">337</a>    if CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L338"><a href="#L338">338</a>        self:ScheduleCameraMoveRefresh(false)</span>
+<span id="L339"><a href="#L339">339</a>    else</span>
+<span id="L340"><a href="#L340">340</a>        self:RefreshMarkVisible()</span>
+<span id="L341"><a href="#L341">341</a>    end</span>
+<span id="L342"><a href="#L342">342</a>    -- self:RefreshMarkData()</span>
+<span id="L343"><a href="#L343">343</a>    --#if ENABLE_PROFILER</span>
+<span id="L344"><a href="#L344">344</a>    ProfilerUtil.SamplerEnd(sampler_RefreshMarkData)</span>
+<span id="L345"><a href="#L345">345</a>    ProfilerUtil.SamplerBegin(sampler_RefreshGuildMemberIcon)</span>
+<span id="L346"><a href="#L346">346</a>    --#endif</span>
+<span id="L347"><a href="#L347">347</a>    if not CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L348"><a href="#L348">348</a>        self:RefreshGuildMemberIcon()</span>
+<span id="L349"><a href="#L349">349</a>    end</span>
+<span id="L350"><a href="#L350">350</a>    --#if ENABLE_PROFILER</span>
+<span id="L351"><a href="#L351">351</a>    ProfilerUtil.SamplerEnd(sampler_RefreshGuildMemberIcon)</span>
+<span id="L352"><a href="#L352">352</a>    --#endif</span>
+<span id="L353"><a href="#L353">353</a></span>
+<span id="L354"><a href="#L354">354</a>    if not CameraMoveRefreshOptimizationEnabled and mgr.infiniteZoomMgr:IsIconLayer() then</span>
+<span id="L355"><a href="#L355">355</a>        self:RefreshBigCityIcon()</span>
+<span id="L356"><a href="#L356">356</a>    end</span>
+<span id="L357"><a href="#L357">357</a></span>
+<span id="L358"><a href="#L358">358</a>    --#if ENABLE_PROFILER</span>
+<span id="L359"><a href="#L359">359</a>    ProfilerUtil.SamplerBegin(sampler_SetRootScale)</span>
+<span id="L360"><a href="#L360">360</a>    --#endif</span>
+<span id="L361"><a href="#L361">361</a></span>
+<span id="L362"><a href="#L362">362</a>    self:RefreshMarkScale()</span>
+<span id="L363"><a href="#L363">363</a>    </span>
+<span id="L364"><a href="#L364">364</a>    --#if ENABLE_PROFILER</span>
+<span id="L365"><a href="#L365">365</a>    ProfilerUtil.SamplerEnd(sampler_SetRootScale)</span>
+<span id="L366"><a href="#L366">366</a>    --self:RefreshConscriptHead(true)</span>
+<span id="L367"><a href="#L367">367</a>    --#endif</span>
+<span id="L368"><a href="#L368">368</a>end</span>
+<span id="L369"><a href="#L369">369</a></span>
+<span id="L370"><a href="#L370">370</a>function cls:OnStateChange(curState, lastState)</span>
+<span id="L371"><a href="#L371">371</a>    local state = mgr.infiniteZoomMgr:GetCurState()</span>
+<span id="L372"><a href="#L372">372</a>    if (state == InfiniteZoomState.Outside or state == InfiniteZoomState.OutsideIcon) then</span>
+<span id="L373"><a href="#L373">373</a>        -- if not self.mapViewCtrl then</span>
+<span id="L374"><a href="#L374">374</a>        --     self.mapViewCtrl = mgr.mapCore.MapViewCtrl</span>
+<span id="L375"><a href="#L375">375</a>        --     if self.mapViewCtrl then</span>
+<span id="L376"><a href="#L376">376</a>        --         self.mapViewCtrl:RegisterViewUpdateCallback(self._OnNewlyVisible, self._OnDeletedPos, self)</span>
+<span id="L377"><a href="#L377">377</a>        --     end</span>
+<span id="L378"><a href="#L378">378</a>        -- end</span>
+<span id="L379"><a href="#L379">379</a>        self:RefreshMarkData()</span>
+<span id="L380"><a href="#L380">380</a>        self:RefreshOwnMemberData()</span>
+<span id="L381"><a href="#L381">381</a>        self:RefreshGuildMemberData()</span>
+<span id="L382"><a href="#L382">382</a>        self:CheckShowRegionAtLayer()</span>
+<span id="L383"><a href="#L383">383</a></span>
+<span id="L384"><a href="#L384">384</a>        if state == InfiniteZoomState.OutsideIcon then</span>
+<span id="L385"><a href="#L385">385</a>            self:RefreshBigCityData()</span>
+<span id="L386"><a href="#L386">386</a></span>
+<span id="L387"><a href="#L387">387</a>            -- UtilArmyProfile:Begin(&quot;CreateMapEntityIcon&quot;)</span>
+<span id="L388"><a href="#L388">388</a>            local significanceMgr = mgr.mapCore.MapSignificanceMgr</span>
+<span id="L389"><a href="#L389">389</a>            for k, v in pairs(self.guildMemberDict) do</span>
+<span id="L390"><a href="#L390">390</a>                local mapIcon = MapEntityCtrl:GetMapEntityIconByEntityId(v.entityId)</span>
+<span id="L391"><a href="#L391">391</a>                if mapIcon then</span>
+<span id="L392"><a href="#L392">392</a>                    significanceMgr:RequestTask_ZoomGuildMember(v.entityId, EMapSignificanceOperation.Add) -- MapEntityCtrl:CreateMapEntityIcon(v)</span>
+<span id="L393"><a href="#L393">393</a>                end</span>
+<span id="L394"><a href="#L394">394</a>            end</span>
+<span id="L395"><a href="#L395">395</a>            -- UtilArmyProfile:End(&quot;CreateMapEntityIcon&quot;)</span>
+<span id="L396"><a href="#L396">396</a>        else</span>
+<span id="L397"><a href="#L397">397</a>            self:RefreshBigCityIcon()</span>
+<span id="L398"><a href="#L398">398</a>        end</span>
+<span id="L399"><a href="#L399">399</a>    else</span>
+<span id="L400"><a href="#L400">400</a>        self:OnExitOutside()</span>
+<span id="L401"><a href="#L401">401</a>    end</span>
+<span id="L402"><a href="#L402">402</a>end</span>
+<span id="L403"><a href="#L403">403</a></span>
+<span id="L404"><a href="#L404">404</a>function cls:OnLayerLevelChange()</span>
+<span id="L405"><a href="#L405">405</a>    local isOutside = mgr.infiniteZoomMgr:IsInOutSideState()</span>
+<span id="L406"><a href="#L406">406</a>    if isOutside then</span>
+<span id="L407"><a href="#L407">407</a>        if CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L408"><a href="#L408">408</a>            self:ScheduleCameraMoveRefresh(false)</span>
+<span id="L409"><a href="#L409">409</a>        else</span>
+<span id="L410"><a href="#L410">410</a>            -- 特效可能会在不同层级有不同的表现</span>
+<span id="L411"><a href="#L411">411</a>            -- UtilArmyProfile:Begin(&quot;SetMarkDataVisible&quot;)</span>
+<span id="L412"><a href="#L412">412</a>            ProfilerUtil.BeginSample(&quot;InfiniteZoomMapGoEffectCtrl.markDict&quot;)</span>
+<span id="L413"><a href="#L413">413</a>            for k, v in pairs(self.markDict) do</span>
+<span id="L414"><a href="#L414">414</a>                self:SetMarkDataVisible(v, v.visible)</span>
+<span id="L415"><a href="#L415">415</a>            end</span>
+<span id="L416"><a href="#L416">416</a>            ProfilerUtil.EndSample()</span>
+<span id="L417"><a href="#L417">417</a></span>
+<span id="L418"><a href="#L418">418</a>            -- RefreshBigCityIcon 内部仍保留 MapGoBigCityIconRefreshEnabled 保护。</span>
+<span id="L419"><a href="#L419">419</a>            if OutsideMapPerfDiagnostic.MapGoBigCityIconRefreshEnabled then</span>
+<span id="L420"><a href="#L420">420</a>                self:RefreshBigCityIcon()</span>
+<span id="L421"><a href="#L421">421</a>            end</span>
+<span id="L422"><a href="#L422">422</a>        end</span>
+<span id="L423"><a href="#L423">423</a>        -- UtilArmyProfile:End(&quot;SetMarkDataVisible&quot;)</span>
+<span id="L424"><a href="#L424">424</a></span>
+<span id="L425"><a href="#L425">425</a>        ProfilerUtil.BeginSample(&quot;InfiniteZoomMapGoEffectCtrl.RefreshCityLinkedLines&quot;)</span>
+<span id="L426"><a href="#L426">426</a>        self:RefreshCityLinkedLines()</span>
+<span id="L427"><a href="#L427">427</a>        ProfilerUtil.EndSample()</span>
+<span id="L428"><a href="#L428">428</a></span>
+<span id="L429"><a href="#L429">429</a>        ProfilerUtil.BeginSample(&quot;InfiniteZoomMapGoEffectCtrl.CheckShowRegionAtLayer&quot;)</span>
+<span id="L430"><a href="#L430">430</a>        self:CheckShowRegionAtLayer()</span>
+<span id="L431"><a href="#L431">431</a>        ProfilerUtil.EndSample()</span>
+<span id="L432"><a href="#L432">432</a></span>
+<span id="L433"><a href="#L433">433</a>        -- ProfilerUtil.BeginSample(&quot;InfiniteZoomMapGoEffectCtrl.RefreshConscriptHead&quot;)</span>
+<span id="L434"><a href="#L434">434</a>        -- self:RefreshConscriptHead()</span>
+<span id="L435"><a href="#L435">435</a>        -- ProfilerUtil.EndSample()</span>
+<span id="L436"><a href="#L436">436</a>    end</span>
+<span id="L437"><a href="#L437">437</a>end</span>
+<span id="L438"><a href="#L438">438</a></span>
+<span id="L439"><a href="#L439">439</a>function cls:OnNewlyVisible(arrNewlyVisible, count)</span>
+<span id="L440"><a href="#L440">440</a>    -- for idx = 1, count do</span>
+<span id="L441"><a href="#L441">441</a>    --     local gridIndex = arrNewlyVisible[idx]</span>
+<span id="L442"><a href="#L442">442</a>    --     local personalData = self:GetMarkData(MarkType.Personal, gridIndex)</span>
+<span id="L443"><a href="#L443">443</a>    --     if personalData then</span>
+<span id="L444"><a href="#L444">444</a>    --         self:SetMarkDataVisible(personalData, true)</span>
+<span id="L445"><a href="#L445">445</a>    --     end</span>
+<span id="L446"><a href="#L446">446</a>    --     local allianceData = self:GetMarkData(MarkType.Alliance, gridIndex)</span>
+<span id="L447"><a href="#L447">447</a>    --     if allianceData then</span>
+<span id="L448"><a href="#L448">448</a>    --         self:SetMarkDataVisible(allianceData, true)</span>
+<span id="L449"><a href="#L449">449</a>    --     end</span>
+<span id="L450"><a href="#L450">450</a>    --     -- local playerCityData = self.guildMemberDict[gridIndex]</span>
+<span id="L451"><a href="#L451">451</a>    --     -- if playerCityData then</span>
+<span id="L452"><a href="#L452">452</a>    --     --     MapEntityCtrl:CreateMapEntityIcon(playerCityData)</span>
+<span id="L453"><a href="#L453">453</a>    --     -- end</span>
+<span id="L454"><a href="#L454">454</a>    -- end</span>
+<span id="L455"><a href="#L455">455</a>end</span>
+<span id="L456"><a href="#L456">456</a></span>
+<span id="L457"><a href="#L457">457</a>function cls:OnDeletedPos(arrDeletedPos, count)</span>
+<span id="L458"><a href="#L458">458</a>    -- for idx = 1, count do</span>
+<span id="L459"><a href="#L459">459</a>    --     local gridIndex = arrDeletedPos[idx]</span>
+<span id="L460"><a href="#L460">460</a>    --     local personalData = self:GetMarkData(MarkType.Personal, gridIndex)</span>
+<span id="L461"><a href="#L461">461</a>    --     if personalData then</span>
+<span id="L462"><a href="#L462">462</a>    --         self:SetMarkDataVisible(personalData, false)</span>
+<span id="L463"><a href="#L463">463</a>    --     end</span>
+<span id="L464"><a href="#L464">464</a>    --     local allianceData = self:GetMarkData(MarkType.Alliance, gridIndex)</span>
+<span id="L465"><a href="#L465">465</a>    --     if allianceData then</span>
+<span id="L466"><a href="#L466">466</a>    --         self:SetMarkDataVisible(allianceData, false)</span>
+<span id="L467"><a href="#L467">467</a>    --     end</span>
+<span id="L468"><a href="#L468">468</a>    --     -- local memberData = self.guildMemberDict[gridIndex]</span>
+<span id="L469"><a href="#L469">469</a>    --     -- if memberData and memberData.ownerUid ~= mgr.login.uid then</span>
+<span id="L470"><a href="#L470">470</a>    --     --     MapEntityCtrl:RemoveMapEntityIcon(memberData.entityId)</span>
+<span id="L471"><a href="#L471">471</a>    --     -- end</span>
+<span id="L472"><a href="#L472">472</a>    -- end</span>
+<span id="L473"><a href="#L473">473</a>end</span>
+<span id="L474"><a href="#L474">474</a></span>
+<span id="L475"><a href="#L475">475</a>function cls:OnExitOutside()</span>
+<span id="L476"><a href="#L476">476</a>    self.mapViewCtrl = nil</span>
+<span id="L477"><a href="#L477">477</a>    self._bigCityIconRefreshContextKey = nil</span>
+<span id="L478"><a href="#L478">478</a>    self:ClearBigCityIconRefreshTasks()</span>
+<span id="L479"><a href="#L479">479</a>    self._cameraMoveRefreshPending = false</span>
+<span id="L480"><a href="#L480">480</a>    self._cameraMoveRefreshDueTime = 0</span>
+<span id="L481"><a href="#L481">481</a></span>
+<span id="L482"><a href="#L482">482</a>    for k, v in pairs(self.markDict) do</span>
+<span id="L483"><a href="#L483">483</a>        self:SetMarkDataVisible(v, false)</span>
+<span id="L484"><a href="#L484">484</a>        self.markDict[k] = nil</span>
+<span id="L485"><a href="#L485">485</a>    end</span>
+<span id="L486"><a href="#L486">486</a>    --[[</span>
+<span id="L487"><a href="#L487">487</a>    如果不清除，在内城移动镜头后，返回野外会先触发SetMarkDataVisible刷新老的UI</span>
+<span id="L488"><a href="#L488">488</a>    然后在RefreshMarkData中新建self.markDict和self.markList</span>
+<span id="L489"><a href="#L489">489</a>    后续在SetMarkDataVisible同样位置再刷新一个UI，而老的UI会因为RefreshMarkData的操作而不受控制</span>
+<span id="L490"><a href="#L490">490</a>    ]]--</span>
+<span id="L491"><a href="#L491">491</a>    self.markList = {}</span>
+<span id="L492"><a href="#L492">492</a></span>
+<span id="L493"><a href="#L493">493</a>    for k, v in pairs(self.guildMemberDict) do</span>
+<span id="L494"><a href="#L494">494</a>        MapEntityCtrl:RemoveMapEntityIcon(v.entityId)</span>
+<span id="L495"><a href="#L495">495</a>        v:CleanUp()</span>
+<span id="L496"><a href="#L496">496</a>        self.guildMemberDict[k] = nil</span>
+<span id="L497"><a href="#L497">497</a>    end</span>
+<span id="L498"><a href="#L498">498</a></span>
+<span id="L499"><a href="#L499">499</a>    for k, v in pairs(self.bigCityBuildingDict) do</span>
+<span id="L500"><a href="#L500">500</a>        MapEntityCtrl:RemoveMapEntityIcon(v.entityId)</span>
+<span id="L501"><a href="#L501">501</a>        v:CleanUp()</span>
+<span id="L502"><a href="#L502">502</a>        self.bigCityBuildingDict[k] = nil</span>
+<span id="L503"><a href="#L503">503</a>    end</span>
+<span id="L504"><a href="#L504">504</a></span>
+<span id="L505"><a href="#L505">505</a>    --self:RemoveConscriptHead()</span>
+<span id="L506"><a href="#L506">506</a>end</span>
+<span id="L507"><a href="#L507">507</a></span>
+<span id="L508"><a href="#L508">508</a>--region 标记</span>
+<span id="L509"><a href="#L509">509</a>function cls:RefreshMarkData()</span>
+<span id="L510"><a href="#L510">510</a>    local isOutside = mgr.infiniteZoomMgr:IsInOutSideState()</span>
+<span id="L511"><a href="#L511">511</a>    --if 1 or not isOutside then</span>
+<span id="L512"><a href="#L512">512</a>    --    return</span>
+<span id="L513"><a href="#L513">513</a>    --end</span>
+<span id="L514"><a href="#L514">514</a></span>
+<span id="L515"><a href="#L515">515</a>    -- 冒险不需要显示标记</span>
+<span id="L516"><a href="#L516">516</a>    local isDefaultOrIcon = mgr.infiniteZoomMgr:GetCurState() ~= InfiniteZoomState.PlanViewMode</span>
+<span id="L517"><a href="#L517">517</a>    local personalDict = mgr.userAttr.query.sceneUserAttr.worldMarkerAttr.worldMarker:Get() or EmptyTable</span>
+<span id="L518"><a href="#L518">518</a>    local allianceDict = mgr.userAttr.query.allianceAttr.allianceWorldMarker.worldMarker:Get() or EmptyTable</span>
+<span id="L519"><a href="#L519">519</a></span>
+<span id="L520"><a href="#L520">520</a>    -- local competitionFav = mgr.userAttr.query.worldSceneAttr.extraIfno.favorite:Get()</span>
+<span id="L521"><a href="#L521">521</a>    local competitionDict = {} --competitionFav?[mgr.cpt:GetJoinGroupId()]?.data or EmptyTable</span>
+<span id="L522"><a href="#L522">522</a></span>
+<span id="L523"><a href="#L523">523</a>    --1.处理收藏夹的标记</span>
+<span id="L524"><a href="#L524">524</a>    for k, type in pairs({InfiniteZoomCfg.MarkType.Personal, InfiniteZoomCfg.MarkType.Alliance, InfiniteZoomCfg.MarkType.Competition}) do</span>
+<span id="L525"><a href="#L525">525</a>        local dict = type == InfiniteZoomCfg.MarkType.Personal and personalDict or</span>
+<span id="L526"><a href="#L526">526</a>          (type == InfiniteZoomCfg.MarkType.Alliance and allianceDict or competitionDict)</span>
+<span id="L527"><a href="#L527">527</a>        if dict then</span>
+<span id="L528"><a href="#L528">528</a>            for k, v in pairs(dict) do</span>
+<span id="L529"><a href="#L529">529</a>                local data = self:GetMarkData(type, v.pointId)</span>
+<span id="L530"><a href="#L530">530</a>                if not data then</span>
+<span id="L531"><a href="#L531">531</a>                    data = {}</span>
+<span id="L532"><a href="#L532">532</a>                    self:SetMarkData(type, v.pointId, data)</span>
+<span id="L533"><a href="#L533">533</a>                end</span>
+<span id="L534"><a href="#L534">534</a>                data.type = type</span>
+<span id="L535"><a href="#L535">535</a>                data.markType = v.type</span>
+<span id="L536"><a href="#L536">536</a>                -- TEMP</span>
+<span id="L537"><a href="#L537">537</a>                if type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L538"><a href="#L538">538</a>                    data.timestamp = v.timestamp</span>
+<span id="L539"><a href="#L539">539</a>                    v.custom = true</span>
+<span id="L540"><a href="#L540">540</a>                end</span>
+<span id="L541"><a href="#L541">541</a>                data.tips = v.custom and mgr.text:GetText(v.name) or nil</span>
+<span id="L542"><a href="#L542">542</a>                data.gridIndex = v.pointId</span>
+<span id="L543"><a href="#L543">543</a>                data.worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(v.pointId)</span>
+<span id="L544"><a href="#L544">544</a>                data.worldPosWithOffset = U3D.Vector3(data.worldPos.x, data.worldPos.y + 4, data.worldPos.z)</span>
+<span id="L545"><a href="#L545">545</a>                data.isOtherAlliance = false</span>
+<span id="L546"><a href="#L546">546</a>            end</span>
+<span id="L547"><a href="#L547">547</a>        end</span>
+<span id="L548"><a href="#L548">548</a>    end</span>
+<span id="L549"><a href="#L549">549</a>    </span>
+<span id="L550"><a href="#L550">550</a>---region 无资源老逻辑注释</span>
+<span id="L551"><a href="#L551">551</a>    --2.处理其他联盟的宣战状态</span>
+<span id="L552"><a href="#L552">552</a>    local otherAllianceDict = mgr.infiniteZoomMgr.Data:GetOtherAllianceDeclaredCityDict()</span>
+<span id="L553"><a href="#L553">553</a>    for cityID, gridIndex in pairs(otherAllianceDict) do</span>
+<span id="L554"><a href="#L554">554</a>        local type = InfiniteZoomCfg.MarkType.DeclaredCity</span>
+<span id="L555"><a href="#L555">555</a>        local data = self:GetMarkData(type, gridIndex)</span>
+<span id="L556"><a href="#L556">556</a>        if not data then</span>
+<span id="L557"><a href="#L557">557</a>            data = {}</span>
+<span id="L558"><a href="#L558">558</a>            self:SetMarkData(type, gridIndex, data)</span>
+<span id="L559"><a href="#L559">559</a>        end</span>
+<span id="L560"><a href="#L560">560</a>        data.type = type</span>
+<span id="L561"><a href="#L561">561</a>        data.markType = CfgNs.AllianceFavType.ACT_DeclareCity</span>
+<span id="L562"><a href="#L562">562</a>        data.gridIndex = gridIndex</span>
+<span id="L563"><a href="#L563">563</a>        data.cityID = cityID</span>
+<span id="L564"><a href="#L564">564</a>        data.worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L565"><a href="#L565">565</a>        data.worldPosWithOffset = U3D.Vector3(data.worldPos.x, data.worldPos.y + 4, data.worldPos.z)</span>
+<span id="L566"><a href="#L566">566</a>        data.isOtherAlliance = true</span>
+<span id="L567"><a href="#L567">567</a>        -- 获取宣战此城市的联盟列表，更新宣战联盟数量</span>
+<span id="L568"><a href="#L568">568</a>        local allianceDict = mgr.infiniteZoomMgr.Data:GetDeclaredCityAllianceDict()[cityID]</span>
+<span id="L569"><a href="#L569">569</a>        data.declaredAllianceNum = allianceDict and #allianceDict or 0</span>
+<span id="L570"><a href="#L570">570</a>    end</span>
+<span id="L571"><a href="#L571">571</a>    --3.处理己方联盟的宣战状态(优先级最高，覆盖之前的标记)</span>
+<span id="L572"><a href="#L572">572</a>    local myAllianceDict = mgr.infiniteZoomMgr.Data:GetMyAllianceDeclaredCityDict()</span>
+<span id="L573"><a href="#L573">573</a>    for cityID, gridIndex in pairs(myAllianceDict) do</span>
+<span id="L574"><a href="#L574">574</a>        local type = InfiniteZoomCfg.MarkType.DeclaredCity</span>
+<span id="L575"><a href="#L575">575</a>        local data = self:GetMarkData(type, gridIndex)</span>
+<span id="L576"><a href="#L576">576</a>        if not data then</span>
+<span id="L577"><a href="#L577">577</a>            data = {}</span>
+<span id="L578"><a href="#L578">578</a>            self:SetMarkData(type, gridIndex, data)</span>
+<span id="L579"><a href="#L579">579</a>        end</span>
+<span id="L580"><a href="#L580">580</a>        data.type = type</span>
+<span id="L581"><a href="#L581">581</a>        data.markType = CfgNs.AllianceFavType.ACT_DeclareCity</span>
+<span id="L582"><a href="#L582">582</a>        data.gridIndex = gridIndex</span>
+<span id="L583"><a href="#L583">583</a>        data.cityID = cityID</span>
+<span id="L584"><a href="#L584">584</a>        data.worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L585"><a href="#L585">585</a>        data.worldPosWithOffset = U3D.Vector3(data.worldPos.x, data.worldPos.y + 4, data.worldPos.z)</span>
+<span id="L586"><a href="#L586">586</a>        data.isOtherAlliance = false</span>
+<span id="L587"><a href="#L587">587</a>        -- 获取宣战此城市的联盟列表，更新宣战联盟数量</span>
+<span id="L588"><a href="#L588">588</a>        local allianceDict = mgr.infiniteZoomMgr.Data:GetDeclaredCityAllianceDict()[cityID]</span>
+<span id="L589"><a href="#L589">589</a>        data.declaredAllianceNum = allianceDict and #allianceDict or 0</span>
+<span id="L590"><a href="#L590">590</a>    end</span>
+<span id="L591"><a href="#L591">591</a>    -- --4.处理重建中的状态</span>
+<span id="L592"><a href="#L592">592</a>    -- local rebuildingCity = mgr.infiniteZoomMgr.Data:GetRebuildingCity()</span>
+<span id="L593"><a href="#L593">593</a>    -- for allianceId, info in pairs(rebuildingCity) do</span>
+<span id="L594"><a href="#L594">594</a>    --     for cityID, gridIndex in pairs(info) do</span>
+<span id="L595"><a href="#L595">595</a>    --         local type = InfiniteZoomCfg.MarkType.Alliance</span>
+<span id="L596"><a href="#L596">596</a>    --         local data = self:GetMarkData(type, gridIndex)</span>
+<span id="L597"><a href="#L597">597</a>    --         if not data then</span>
+<span id="L598"><a href="#L598">598</a>    --             data = {}</span>
+<span id="L599"><a href="#L599">599</a>    --             self:SetMarkData(type, gridIndex, data)</span>
+<span id="L600"><a href="#L600">600</a>    --         end</span>
+<span id="L601"><a href="#L601">601</a>    --         data.type = type</span>
+<span id="L602"><a href="#L602">602</a>    --         data.markType = CfgNs.AllianceFavType.ACT_RebuildCity</span>
+<span id="L603"><a href="#L603">603</a>    --         data.tips = nil</span>
+<span id="L604"><a href="#L604">604</a>    --         data.gridIndex = gridIndex</span>
+<span id="L605"><a href="#L605">605</a>    --         data.cityID = cityID</span>
+<span id="L606"><a href="#L606">606</a>    --         data.worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L607"><a href="#L607">607</a>    --         data.worldPosWithOffset = U3D.Vector3(data.worldPos.x, data.worldPos.y + 4, data.worldPos.z)</span>
+<span id="L608"><a href="#L608">608</a>    --         data.isDeclared = (otherAllianceDict[cityID] or myAllianceDict[cityID]) and true or false</span>
+<span id="L609"><a href="#L609">609</a>    --     end</span>
+<span id="L610"><a href="#L610">610</a>    -- end</span>
+<span id="L611"><a href="#L611">611</a>    -- --5.处理压制中的状态</span>
+<span id="L612"><a href="#L612">612</a>    -- local suppressCity = mgr.infiniteZoomMgr.Data:GetSuppressCity()</span>
+<span id="L613"><a href="#L613">613</a>    -- for allianceId, info in pairs(suppressCity) do</span>
+<span id="L614"><a href="#L614">614</a>    --     for cityID, gridIndex in pairs(info) do</span>
+<span id="L615"><a href="#L615">615</a>    --         local type = InfiniteZoomCfg.MarkType.Alliance</span>
+<span id="L616"><a href="#L616">616</a>    --         local data = self:GetMarkData(type, gridIndex)</span>
+<span id="L617"><a href="#L617">617</a>    --         if not data then</span>
+<span id="L618"><a href="#L618">618</a>    --             data = {}</span>
+<span id="L619"><a href="#L619">619</a>    --             self:SetMarkData(type, gridIndex, data)</span>
+<span id="L620"><a href="#L620">620</a>    --         end</span>
+<span id="L621"><a href="#L621">621</a>    --         data.type = type</span>
+<span id="L622"><a href="#L622">622</a>    --         data.markType = CfgNs.AllianceFavType.ACT_SuppressCity</span>
+<span id="L623"><a href="#L623">623</a>    --         data.tips = nil</span>
+<span id="L624"><a href="#L624">624</a>    --         data.gridIndex = gridIndex</span>
+<span id="L625"><a href="#L625">625</a>    --         data.cityID = cityID</span>
+<span id="L626"><a href="#L626">626</a>    --         data.worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L627"><a href="#L627">627</a>    --         data.worldPosWithOffset = U3D.Vector3(data.worldPos.x, data.worldPos.y + 4, data.worldPos.z)</span>
+<span id="L628"><a href="#L628">628</a>    --         data.isDeclared = (otherAllianceDict[cityID] or myAllianceDict[cityID]) and true or false</span>
+<span id="L629"><a href="#L629">629</a>    --     end</span>
+<span id="L630"><a href="#L630">630</a>    -- end</span>
+<span id="L631"><a href="#L631">631</a>---endregion</span>
+<span id="L632"><a href="#L632">632</a></span>
+<span id="L633"><a href="#L633">633</a>    -- 同时存在个人与联盟标记 只显示联盟标记</span>
+<span id="L634"><a href="#L634">634</a>    for k, v in pairs(self.markDict) do</span>
+<span id="L635"><a href="#L635">635</a>        if v.type == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L636"><a href="#L636">636</a>            if not personalDict[v.gridIndex] or mgr.favoriteData:GetGuildMarkerDataByPointId(v.gridIndex) or competitionDict[v.gridIndex] then</span>
+<span id="L637"><a href="#L637">637</a>                self:SetMarkDataVisible(v, false)</span>
+<span id="L638"><a href="#L638">638</a>                self.markDict[k] = nil</span>
+<span id="L639"><a href="#L639">639</a>            end</span>
+<span id="L640"><a href="#L640">640</a>        end</span>
+<span id="L641"><a href="#L641">641</a></span>
+<span id="L642"><a href="#L642">642</a>        if v.type == InfiniteZoomCfg.MarkType.Alliance then ---无资源老逻辑注释</span>
+<span id="L643"><a href="#L643">643</a>            -- if v.markType == CfgNs.AllianceFavType.ACT_RebuildCity or v.markType == CfgNs.AllianceFavType.ACT_SuppressCity then</span>
+<span id="L644"><a href="#L644">644</a>            --     if not mgr.infiniteZoomMgr.Data:CheckCitySuppressorRebuilding(v.cityID) then</span>
+<span id="L645"><a href="#L645">645</a>            --         self:SetMarkDataVisible(v, false)</span>
+<span id="L646"><a href="#L646">646</a>            --         self.markDict[k] = nil</span>
+<span id="L647"><a href="#L647">647</a>            --     end</span>
+<span id="L648"><a href="#L648">648</a>            -- else</span>
+<span id="L649"><a href="#L649">649</a>            if not mgr.favoriteData:GetGuildMarkerDataByPointId(v.gridIndex) then --and not otherAllianceDict[v.cityID] and not myAllianceDict[v.cityID] then</span>
+<span id="L650"><a href="#L650">650</a>                self:SetMarkDataVisible(v, false)</span>
+<span id="L651"><a href="#L651">651</a>                self.markDict[k] = nil</span>
+<span id="L652"><a href="#L652">652</a>            end</span>
+<span id="L653"><a href="#L653">653</a>        end</span>
+<span id="L654"><a href="#L654">654</a></span>
+<span id="L655"><a href="#L655">655</a>        if v.type == InfiniteZoomCfg.MarkType.Competition then</span>
+<span id="L656"><a href="#L656">656</a>            local gGridIndex = v.gridIndex</span>
+<span id="L657"><a href="#L657">657</a>            local rGridIndex = WorldCoordFormatUtil.CvtGGridIndex2RGridIndex(gGridIndex)</span>
+<span id="L658"><a href="#L658">658</a>            if not competitionDict?[rGridIndex] then</span>
+<span id="L659"><a href="#L659">659</a>                self:SetMarkDataVisible(v, false)</span>
+<span id="L660"><a href="#L660">660</a>                self.markDict[k] = nil</span>
+<span id="L661"><a href="#L661">661</a>            end</span>
+<span id="L662"><a href="#L662">662</a>        end</span>
+<span id="L663"><a href="#L663">663</a></span>
+<span id="L664"><a href="#L664">664</a>        if v.type == InfiniteZoomCfg.MarkType.DeclaredCity then</span>
+<span id="L665"><a href="#L665">665</a>            if not mgr.infiniteZoomMgr.Data:IsMyAllianceDeclareCity(v.cityID) and not mgr.infiniteZoomMgr.Data:IsOtherAllianceDeclareCity(v.cityID) then</span>
+<span id="L666"><a href="#L666">666</a>                self:SetMarkDataVisible(v, false)</span>
+<span id="L667"><a href="#L667">667</a>                self.markDict[k] = nil</span>
+<span id="L668"><a href="#L668">668</a>            end</span>
+<span id="L669"><a href="#L669">669</a>        end</span>
+<span id="L670"><a href="#L670">670</a>    end</span>
+<span id="L671"><a href="#L671">671</a></span>
+<span id="L672"><a href="#L672">672</a>    -- 更新标记列表及统计个数</span>
+<span id="L673"><a href="#L673">673</a>    self.markList = {}</span>
+<span id="L674"><a href="#L674">674</a>    for i, mark in pairs(self.markDict) do</span>
+<span id="L675"><a href="#L675">675</a>        table.insert(self.markList, mark)</span>
+<span id="L676"><a href="#L676">676</a>    end</span>
+<span id="L677"><a href="#L677">677</a></span>
+<span id="L678"><a href="#L678">678</a>    self:SortMarkList()</span>
+<span id="L679"><a href="#L679">679</a>    self.markCnt = #self.markList</span>
+<span id="L680"><a href="#L680">680</a></span>
+<span id="L681"><a href="#L681">681</a>    -- 更新显示</span>
+<span id="L682"><a href="#L682">682</a>    self:RefreshMarkVisible()</span>
+<span id="L683"><a href="#L683">683</a>    -- BUGFIX: 修改盟标后立即刷新显示，不等到OnUpdate（OnUpdate仅在OutsideIcon状态下处理）</span>
+<span id="L684"><a href="#L684">684</a>    -- https://tapd.woa.com/prj/story/view/bug-158791950</span>
+<span id="L685"><a href="#L685">685</a>    self:MarkImmediateRefresh()</span>
+<span id="L686"><a href="#L686">686</a>end</span>
+<span id="L687"><a href="#L687">687</a></span>
+<span id="L688"><a href="#L688">688</a>---标记立即刷新显示（不在OnUpdate中延迟处理）</span>
+<span id="L689"><a href="#L689">689</a>function cls:MarkImmediateRefresh()</span>
+<span id="L690"><a href="#L690">690</a>    local state = mgr.infiniteZoomMgr:GetCurState()</span>
+<span id="L691"><a href="#L691">691</a>    local isDefaultOrIcon = state ~= InfiniteZoomState.PlanViewMode</span>
+<span id="L692"><a href="#L692">692</a>    for _, v in ipairs(self.markList) do</span>
+<span id="L693"><a href="#L693">693</a>        if v then</span>
+<span id="L694"><a href="#L694">694</a>            local visible = (v.type == InfiniteZoomCfg.MarkType.Personal and self.personalMarkVisible)</span>
+<span id="L695"><a href="#L695">695</a>                or (self.allianceMarkVisible)</span>
+<span id="L696"><a href="#L696">696</a>                or (v.type == InfiniteZoomCfg.MarkType.DeclaredCity)</span>
+<span id="L697"><a href="#L697">697</a>            if visible then</span>
+<span id="L698"><a href="#L698">698</a>                local isUnitInView = mgr.mapCore.MapViewCtrl?:IsUnitInView(v.gridIndex)</span>
+<span id="L699"><a href="#L699">699</a>                if SubMapUtil.IsOpenSubMap() then</span>
+<span id="L700"><a href="#L700">700</a>                    isUnitInView = isUnitInView or SubMapUtil.IsInSubMapRect(v.gridIndex)</span>
+<span id="L701"><a href="#L701">701</a>                end</span>
+<span id="L702"><a href="#L702">702</a>                visible = isUnitInView and isDefaultOrIcon</span>
+<span id="L703"><a href="#L703">703</a>            end</span>
+<span id="L704"><a href="#L704">704</a>            self:SetMarkDataVisible(v, visible)</span>
+<span id="L705"><a href="#L705">705</a>        end</span>
+<span id="L706"><a href="#L706">706</a>    end</span>
+<span id="L707"><a href="#L707">707</a>    self.refreshIndex = self.markCnt</span>
+<span id="L708"><a href="#L708">708</a>end</span>
+<span id="L709"><a href="#L709">709</a></span>
+<span id="L710"><a href="#L710">710</a>---刷新所有标签显示状态</span>
+<span id="L711"><a href="#L711">711</a>function cls:RefreshMarkVisible()</span>
+<span id="L712"><a href="#L712">712</a>    self.refreshIndex = 0</span>
+<span id="L713"><a href="#L713">713</a>end</span>
+<span id="L714"><a href="#L714">714</a></span>
+<span id="L715"><a href="#L715">715</a>---连续相机变化只更新截止时间；真正刷新在相机稳定或抬手后的 OnUpdate 中执行。</span>
+<span id="L716"><a href="#L716">716</a>---@param immediately boolean|nil</span>
+<span id="L717"><a href="#L717">717</a>function cls:ScheduleCameraMoveRefresh(immediately)</span>
+<span id="L718"><a href="#L718">718</a>    self._cameraMoveRefreshPending = true</span>
+<span id="L719"><a href="#L719">719</a>    if immediately then</span>
+<span id="L720"><a href="#L720">720</a>        self._cameraMoveRefreshDueTime = 0</span>
+<span id="L721"><a href="#L721">721</a>    else</span>
+<span id="L722"><a href="#L722">722</a>        self._cameraMoveRefreshDueTime = mgr.time.realT + CameraMoveRefreshSettleDelay</span>
+<span id="L723"><a href="#L723">723</a>    end</span>
+<span id="L724"><a href="#L724">724</a>end</span>
+<span id="L725"><a href="#L725">725</a></span>
+<span id="L726"><a href="#L726">726</a>function cls:TryFlushCameraMoveRefresh()</span>
+<span id="L727"><a href="#L727">727</a>    if not CameraMoveRefreshOptimizationEnabled or not self._cameraMoveRefreshPending then</span>
+<span id="L728"><a href="#L728">728</a>        return</span>
+<span id="L729"><a href="#L729">729</a>    end</span>
+<span id="L730"><a href="#L730">730</a>    if mgr.time.realT &lt; (self._cameraMoveRefreshDueTime or 0) then</span>
+<span id="L731"><a href="#L731">731</a>        return</span>
+<span id="L732"><a href="#L732">732</a>    end</span>
+<span id="L733"><a href="#L733">733</a></span>
+<span id="L734"><a href="#L734">734</a>    self._cameraMoveRefreshPending = false</span>
+<span id="L735"><a href="#L735">735</a>    self._cameraMoveRefreshDueTime = 0</span>
+<span id="L736"><a href="#L736">736</a>    self:RefreshMarkVisible()</span>
+<span id="L737"><a href="#L737">737</a>    self:RefreshGuildMemberIcon()</span>
+<span id="L738"><a href="#L738">738</a>    if OutsideMapPerfDiagnostic.MapGoBigCityIconRefreshEnabled then</span>
+<span id="L739"><a href="#L739">739</a>        self:RefreshBigCityIcon()</span>
+<span id="L740"><a href="#L740">740</a>    end</span>
+<span id="L741"><a href="#L741">741</a>end</span>
+<span id="L742"><a href="#L742">742</a></span>
+<span id="L743"><a href="#L743">743</a>---刷新标签动画</span>
+<span id="L744"><a href="#L744">744</a>function cls:ReactivePersonalMark(gridIndex)</span>
+<span id="L745"><a href="#L745">745</a>    for k, v in pairs(self.markDict) do</span>
+<span id="L746"><a href="#L746">746</a>        if v.type == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L747"><a href="#L747">747</a>            if v.gridIndex == gridIndex then</span>
+<span id="L748"><a href="#L748">748</a>                -- BUGFIX: 直接调用 SetMarkDataVisible 确保特效和 Float UI 都被创建，</span>
+<span id="L749"><a href="#L749">749</a>                -- 不依赖 IsUnitInView（MapViewCtrl 可能在 auto-move 后未及时更新）</span>
+<span id="L750"><a href="#L750">750</a>                -- https://tapd.woa.com/tapd_fe/70132065/bug/detail/1170132065159263426</span>
+<span id="L751"><a href="#L751">751</a>                self:SetMarkDataVisible(v, true)</span>
+<span id="L752"><a href="#L752">752</a>                if v.effect then</span>
+<span id="L753"><a href="#L753">753</a>                    v.effect.gameObject:SetActive(false)</span>
+<span id="L754"><a href="#L754">754</a>                    v.effect.gameObject:SetActive(true)</span>
+<span id="L755"><a href="#L755">755</a>                end</span>
+<span id="L756"><a href="#L756">756</a>                break</span>
+<span id="L757"><a href="#L757">757</a>            end</span>
+<span id="L758"><a href="#L758">758</a>        end</span>
+<span id="L759"><a href="#L759">759</a>    end</span>
+<span id="L760"><a href="#L760">760</a>end</span>
+<span id="L761"><a href="#L761">761</a></span>
+<span id="L762"><a href="#L762">762</a>function cls:SetMarkGridVisible(data, visible)</span>
+<span id="L763"><a href="#L763">763</a>    local iconLevel = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L764"><a href="#L764">764</a>    if not visible then</span>
+<span id="L765"><a href="#L765">765</a>        if data.gridEffect then</span>
+<span id="L766"><a href="#L766">766</a>            self.CsEffectPool:Recycle(data.gridEffect)</span>
+<span id="L767"><a href="#L767">767</a>            data.gridEffectPrefabId = nil</span>
+<span id="L768"><a href="#L768">768</a>            data.gridEffect = nil</span>
+<span id="L769"><a href="#L769">769</a>        end</span>
+<span id="L770"><a href="#L770">770</a>        return</span>
+<span id="L771"><a href="#L771">771</a>    end</span>
+<span id="L772"><a href="#L772">772</a></span>
+<span id="L773"><a href="#L773">773</a>    local showMarkLayers = mgr.cfg:GetViewMiscConfData()[1].showMarkLayer or { InfiniteZoomCfg.HideViewTreeLayerIdx, InfiniteZoomCfg.HideGuildLeaderCityLayerIdx }</span>
+<span id="L774"><a href="#L774">774</a>    local showGridEffect = iconLevel &lt; showMarkLayers[1]</span>
+<span id="L775"><a href="#L775">775</a>    if showGridEffect then</span>
+<span id="L776"><a href="#L776">776</a>        local prefabURL = nil</span>
+<span id="L777"><a href="#L777">777</a>        if data.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L778"><a href="#L778">778</a>            prefabURL = FavoriteUIUtil.GetSelectEffectPrefabByEntityType(data.markType)</span>
+<span id="L779"><a href="#L779">779</a>        end</span>
+<span id="L780"><a href="#L780">780</a></span>
+<span id="L781"><a href="#L781">781</a>        if prefabURL then</span>
+<span id="L782"><a href="#L782">782</a>            if ObjUtil.NotNull(data.gridEffect) then</span>
+<span id="L783"><a href="#L783">783</a>                self.CsEffectPool:Recycle(data.gridEffect)</span>
+<span id="L784"><a href="#L784">784</a>                data.gridEffectPrefabId = nil</span>
+<span id="L785"><a href="#L785">785</a>                data.gridEffect = nil</span>
+<span id="L786"><a href="#L786">786</a>            end</span>
+<span id="L787"><a href="#L787">787</a></span>
+<span id="L788"><a href="#L788">788</a>            local wrapper = self.CsEffectPool:Get(prefabURL, false, false, false)</span>
+<span id="L789"><a href="#L789">789</a>            if ObjUtil.NotNull(wrapper) then</span>
+<span id="L790"><a href="#L790">790</a>                local pos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(data.gridIndex)</span>
+<span id="L791"><a href="#L791">791</a>                wrapper.position = pos</span>
+<span id="L792"><a href="#L792">792</a>                wrapper.localScale = U3D.Vector3.one</span>
+<span id="L793"><a href="#L793">793</a></span>
+<span id="L794"><a href="#L794">794</a>                ObjUtil.SetWrapperLayer(wrapper, CS.RenderLayerMaskEnum.World)</span>
+<span id="L795"><a href="#L795">795</a>                data.gridEffectPrefabId = prefabURL</span>
+<span id="L796"><a href="#L796">796</a>                data.gridEffect = wrapper</span>
+<span id="L797"><a href="#L797">797</a></span>
+<span id="L798"><a href="#L798">798</a>                return true</span>
+<span id="L799"><a href="#L799">799</a>            end</span>
+<span id="L800"><a href="#L800">800</a>        else</span>
+<span id="L801"><a href="#L801">801</a>            if data.gridEffect then</span>
+<span id="L802"><a href="#L802">802</a>                self.CsEffectPool:Recycle(data.gridEffect)</span>
+<span id="L803"><a href="#L803">803</a>                data.gridEffectPrefabId = nil</span>
+<span id="L804"><a href="#L804">804</a>                data.gridEffect = nil</span>
+<span id="L805"><a href="#L805">805</a>            end</span>
+<span id="L806"><a href="#L806">806</a>        end</span>
+<span id="L807"><a href="#L807">807</a>    else</span>
+<span id="L808"><a href="#L808">808</a>        if data.gridEffect then</span>
+<span id="L809"><a href="#L809">809</a>            self.CsEffectPool:Recycle(data.gridEffect)</span>
+<span id="L810"><a href="#L810">810</a>            data.gridEffectPrefabId = nil</span>
+<span id="L811"><a href="#L811">811</a>            data.gridEffect = nil</span>
+<span id="L812"><a href="#L812">812</a>        end</span>
+<span id="L813"><a href="#L813">813</a>    end</span>
+<span id="L814"><a href="#L814">814</a>end</span>
+<span id="L815"><a href="#L815">815</a></span>
+<span id="L816"><a href="#L816">816</a>---应用联盟标记特效的子节点样式（旗帜样式等）</span>
+<span id="L817"><a href="#L817">817</a>---新建或复用特效时都需调用，确保样式与最新盟标数据同步</span>
+<span id="L818"><a href="#L818">818</a>---修复：不同flagIdx可能共享同一modelPath，effectName未变时AddEffectObj会跳过重建，</span>
+<span id="L819"><a href="#L819">819</a>---若样式逻辑只在重建时执行，会导致改盟标后特效样式不刷新</span>
+<span id="L820"><a href="#L820">820</a>---@param wrapper AOE.TrailVisualWrapper</span>
+<span id="L821"><a href="#L821">821</a>---@param gridIndex number</span>
+<span id="L822"><a href="#L822">822</a>function cls:ApplyAllianceMarkerEffectStyle(wrapper, gridIndex)</span>
+<span id="L823"><a href="#L823">823</a>    if ObjUtil.IsNull(wrapper) then</span>
+<span id="L824"><a href="#L824">824</a>        return</span>
+<span id="L825"><a href="#L825">825</a>    end</span>
+<span id="L826"><a href="#L826">826</a>    local markerData = mgr.favoriteData:GetGuildMarkerDataByPointId(gridIndex)</span>
+<span id="L827"><a href="#L827">827</a>    if not markerData then</span>
+<span id="L828"><a href="#L828">828</a>        return</span>
+<span id="L829"><a href="#L829">829</a>    end</span>
+<span id="L830"><a href="#L830">830</a>    local hideNodesConfig = FavoriteUIUtil.ModelHideNodesConfig[markerData.type]</span>
+<span id="L831"><a href="#L831">831</a>    if not hideNodesConfig then</span>
+<span id="L832"><a href="#L832">832</a>        return</span>
+<span id="L833"><a href="#L833">833</a>    end</span>
+<span id="L834"><a href="#L834">834</a>    local flagIdx = tonumber(markerData.customPair[1].pairValue)</span>
+<span id="L835"><a href="#L835">835</a>    for key, value in pairs_safe(hideNodesConfig) do</span>
+<span id="L836"><a href="#L836">836</a>        local node = wrapper.gameObject.transform:Find(key)</span>
+<span id="L837"><a href="#L837">837</a>        if node then</span>
+<span id="L838"><a href="#L838">838</a>            if flagIdx == 1 and key == &quot;Arrow_Pos&quot; then--无样式</span>
+<span id="L839"><a href="#L839">839</a>                node.gameObject:SetActive(false)</span>
+<span id="L840"><a href="#L840">840</a>            else</span>
+<span id="L841"><a href="#L841">841</a>                node.gameObject:SetActive(value)</span>
+<span id="L842"><a href="#L842">842</a>            end</span>
+<span id="L843"><a href="#L843">843</a>        end</span>
+<span id="L844"><a href="#L844">844</a>    end</span>
+<span id="L845"><a href="#L845">845</a>end</span>
+<span id="L846"><a href="#L846">846</a></span>
+<span id="L847"><a href="#L847">847</a>function cls:AddEffectObj(effectNode, effectName, existEffectName, type, gridIndex)</span>
+<span id="L848"><a href="#L848">848</a>    local wrapper = effectNode</span>
+<span id="L849"><a href="#L849">849</a></span>
+<span id="L850"><a href="#L850">850</a>    if effectNode and effectName ~= existEffectName then</span>
+<span id="L851"><a href="#L851">851</a>        self.CsEffectPool:Recycle(effectNode)</span>
+<span id="L852"><a href="#L852">852</a>        effectNode = nil</span>
+<span id="L853"><a href="#L853">853</a>    end</span>
+<span id="L854"><a href="#L854">854</a></span>
+<span id="L855"><a href="#L855">855</a>    if not effectNode then</span>
+<span id="L856"><a href="#L856">856</a>        if effectName then</span>
+<span id="L857"><a href="#L857">857</a>            local fullPathType, loadUrl, container = mgr.res:TryGetResFullPath(effectName)</span>
+<span id="L858"><a href="#L858">858</a>            if loadUrl then</span>
+<span id="L859"><a href="#L859">859</a>                wrapper = self.CsEffectPool:Get(effectName, false, false, false)</span>
+<span id="L860"><a href="#L860">860</a>                if ObjUtil.NotNull(wrapper) then</span>
+<span id="L861"><a href="#L861">861</a>                    local pos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L862"><a href="#L862">862</a>                    if type == InfiniteZoomCfg.MarkType.Dragon then</span>
+<span id="L863"><a href="#L863">863</a>                        wrapper.position = U3D.Vector3(pos.x, pos.y, pos.z)</span>
+<span id="L864"><a href="#L864">864</a>                        local infiniteSize = mgr.infiniteZoomMgr.CameraCtrl:GetCurSize(InfiniteZoomCamera.OutSide)</span>
+<span id="L865"><a href="#L865">865</a>                        local scaleParam = 1.5</span>
+<span id="L866"><a href="#L866">866</a>                        wrapper.localScale = U3D.Vector3.one * math.log(infiniteSize, 10) * scaleParam</span>
+<span id="L867"><a href="#L867">867</a>                    else</span>
+<span id="L868"><a href="#L868">868</a>                        wrapper.position = pos</span>
+<span id="L869"><a href="#L869">869</a>                        wrapper.localScale = U3D.Vector3.one</span>
+<span id="L870"><a href="#L870">870</a>                    end</span>
+<span id="L871"><a href="#L871">871</a>                    ObjUtil.SetWrapperLayer(wrapper, CS.RenderLayerMaskEnum.World)</span>
+<span id="L872"><a href="#L872">872</a></span>
+<span id="L873"><a href="#L873">873</a>                    local preview= wrapper.gameObject.transform:Find(&quot;Preview&quot;)</span>
+<span id="L874"><a href="#L874">874</a>                    if preview then</span>
+<span id="L875"><a href="#L875">875</a>                        preview.gameObject:SetActive(false)</span>
+<span id="L876"><a href="#L876">876</a>                    end</span>
+<span id="L877"><a href="#L877">877</a></span>
+<span id="L878"><a href="#L878">878</a>                    self:ApplyAllianceMarkerEffectStyle(wrapper, gridIndex)</span>
+<span id="L879"><a href="#L879">879</a>                end</span>
+<span id="L880"><a href="#L880">880</a>            end</span>
+<span id="L881"><a href="#L881">881</a>        end</span>
+<span id="L882"><a href="#L882">882</a>    end</span>
+<span id="L883"><a href="#L883">883</a></span>
+<span id="L884"><a href="#L884">884</a>    return wrapper</span>
+<span id="L885"><a href="#L885">885</a>end</span>
+<span id="L886"><a href="#L886">886</a></span>
+<span id="L887"><a href="#L887">887</a></span>
+<span id="L888"><a href="#L888">888</a>---@param data InfiniteZoomGoEffMarkData</span>
+<span id="L889"><a href="#L889">889</a>---@return boolean 是否发生了显示变化</span>
+<span id="L890"><a href="#L890">890</a>function cls:SetMarkDataVisible(data, visible)</span>
+<span id="L891"><a href="#L891">891</a>    if data.visible == visible and not visible then</span>
+<span id="L892"><a href="#L892">892</a>        return false</span>
+<span id="L893"><a href="#L893">893</a>    end</span>
+<span id="L894"><a href="#L894">894</a>    local iconLevel = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L895"><a href="#L895">895</a>    if not self.CsEffectPool then</span>
+<span id="L896"><a href="#L896">896</a>        self.CsEffectPool = CS.AOE.VisualWrapperCache.EffectPool</span>
+<span id="L897"><a href="#L897">897</a>    end</span>
+<span id="L898"><a href="#L898">898</a></span>
+<span id="L899"><a href="#L899">899</a>    local cfg = mgr.cfg:GetViewMiscConfData()?[1]</span>
+<span id="L900"><a href="#L900">900</a>    local showMarkLayers = {InfiniteZoomCfg.HideViewTreeLayerIdx,InfiniteZoomCfg.HideGuildLeaderCityLayerIdx}</span>
+<span id="L901"><a href="#L901">901</a>    if data.type == InfiniteZoomCfg.MarkType.DeclaredCity then</span>
+<span id="L902"><a href="#L902">902</a>        showMarkLayers = cfg?.showDeclaredLayer or {InfiniteZoomCfg.MinIconDeclaredLayer,InfiniteZoomCfg.MaxIconDeclaredLayer}</span>
+<span id="L903"><a href="#L903">903</a>    else</span>
+<span id="L904"><a href="#L904">904</a>        showMarkLayers = cfg?.showMarkLayer or {InfiniteZoomCfg.HideViewTreeLayerIdx,InfiniteZoomCfg.HideGuildLeaderCityLayerIdx}</span>
+<span id="L905"><a href="#L905">905</a>    end</span>
+<span id="L906"><a href="#L906">906</a></span>
+<span id="L907"><a href="#L907">907</a>    -- 当 iconLevel 在 showMarkLayers[1] 和 showMarkLayers[2] 之间时，联盟标记需要检查 showInMiniMap</span>
+<span id="L908"><a href="#L908">908</a>    if visible and iconLevel &gt;= showMarkLayers[1] and iconLevel &lt; showMarkLayers[2] and data.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L909"><a href="#L909">909</a>        local markerData = mgr.favoriteData:GetGuildMarkerDataByPointId(data.gridIndex)</span>
+<span id="L910"><a href="#L910">910</a>        if not markerData or not markerData.showInMiniMap then</span>
+<span id="L911"><a href="#L911">911</a>            visible = false</span>
+<span id="L912"><a href="#L912">912</a>        end</span>
+<span id="L913"><a href="#L913">913</a>    end</span>
+<span id="L914"><a href="#L914">914</a></span>
+<span id="L915"><a href="#L915">915</a>    data.visible = visible</span>
+<span id="L916"><a href="#L916">916</a>    if visible then</span>
+<span id="L917"><a href="#L917">917</a>        local show3DEffect = iconLevel &lt; showMarkLayers[1] and data.type ~= InfiniteZoomCfg.MarkType.Declared -- 宣战的3D特效在MapEntity身上创建</span>
+<span id="L918"><a href="#L918">918</a>        if show3DEffect then</span>
+<span id="L919"><a href="#L919">919</a>            local effectName = nil</span>
+<span id="L920"><a href="#L920">920</a>            local suffixEffectName = nil</span>
+<span id="L921"><a href="#L921">921</a>            if show3DEffect then</span>
+<span id="L922"><a href="#L922">922</a>                if data.type == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L923"><a href="#L923">923</a>                    effectName = ResourcePathCfg.p_fx_march_bigmap_star_green</span>
+<span id="L924"><a href="#L924">924</a>                elseif data.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L925"><a href="#L925">925</a>                    effectName, suffixEffectName = FavoriteUIUtil.GetAllianceMarkerEffectName(data.gridIndex)</span>
+<span id="L926"><a href="#L926">926</a>                    --if not effectName then</span>
+<span id="L927"><a href="#L927">927</a>                    --    effectName = ResourcePathCfg.p_fx_march_bigmap_star_blue</span>
+<span id="L928"><a href="#L928">928</a>                    --end</span>
+<span id="L929"><a href="#L929">929</a>                end</span>
+<span id="L930"><a href="#L930">930</a>            end</span>
+<span id="L931"><a href="#L931">931</a></span>
+<span id="L932"><a href="#L932">932</a>            data.effect = self:AddEffectObj(data.effect, effectName, data.effectName, data.type, data.gridIndex)</span>
+<span id="L933"><a href="#L933">933</a>            data.effectName = effectName</span>
+<span id="L934"><a href="#L934">934</a>            -- 方案B修复：联盟标记的特效在复用时（effectName未变）AddEffectObj不会重建，</span>
+<span id="L935"><a href="#L935">935</a>            -- 这里无论新建还是复用都再应用一次样式，避免改盟标后特效样式不刷新</span>
+<span id="L936"><a href="#L936">936</a>            if data.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L937"><a href="#L937">937</a>                self:ApplyAllianceMarkerEffectStyle(data.effect, data.gridIndex)</span>
+<span id="L938"><a href="#L938">938</a>            end</span>
+<span id="L939"><a href="#L939">939</a>            if suffixEffectName then</span>
+<span id="L940"><a href="#L940">940</a>                data.effectLightNode = self:AddEffectObj(data.effectLightNode, suffixEffectName, data.effectName, data.type, data.gridIndex)</span>
+<span id="L941"><a href="#L941">941</a>                data.effectLightName = suffixEffectName</span>
+<span id="L942"><a href="#L942">942</a>            end</span>
+<span id="L943"><a href="#L943">943</a></span>
+<span id="L944"><a href="#L944">944</a>            if data.effect and data.type == InfiniteZoomCfg.MarkType.Dragon then</span>
+<span id="L945"><a href="#L945">945</a>                local wrapper = data.effect</span>
+<span id="L946"><a href="#L946">946</a>                if ObjUtil.NotNull(wrapper) then</span>
+<span id="L947"><a href="#L947">947</a>                    local infiniteSize = mgr.infiniteZoomMgr.CameraCtrl:GetCurSize(InfiniteZoomCamera.OutSide)</span>
+<span id="L948"><a href="#L948">948</a>                    local scaleParam = 1.5</span>
+<span id="L949"><a href="#L949">949</a>                    wrapper.localScale = U3D.Vector3.one * math.log(infiniteSize, 10) * scaleParam</span>
+<span id="L950"><a href="#L950">950</a>                end</span>
+<span id="L951"><a href="#L951">951</a>            end</span>
+<span id="L952"><a href="#L952">952</a>        else</span>
+<span id="L953"><a href="#L953">953</a>            if data.effect then</span>
+<span id="L954"><a href="#L954">954</a>                for _, name in ipairs({&quot;Arrow_Pos&quot;, &quot;SM_Cube&quot;, &quot;EM_glow02&quot;, &quot;Preview&quot;}) do</span>
+<span id="L955"><a href="#L955">955</a>                    if data.effect.gameObject.transform:Find(name) then</span>
+<span id="L956"><a href="#L956">956</a>                        data.effect.gameObject.transform:Find(name).gameObject:SetActive(true)</span>
+<span id="L957"><a href="#L957">957</a>                    end</span>
+<span id="L958"><a href="#L958">958</a>                end</span>
+<span id="L959"><a href="#L959">959</a>                self.CsEffectPool:Recycle(data.effect)</span>
+<span id="L960"><a href="#L960">960</a>                data.effectName = nil</span>
+<span id="L961"><a href="#L961">961</a>                data.effect = nil</span>
+<span id="L962"><a href="#L962">962</a>            end</span>
+<span id="L963"><a href="#L963">963</a></span>
+<span id="L964"><a href="#L964">964</a>            if data.effectLightNode then</span>
+<span id="L965"><a href="#L965">965</a>                self.CsEffectPool:Recycle(data.effectLightNode)</span>
+<span id="L966"><a href="#L966">966</a>                data.effectLightName = nil</span>
+<span id="L967"><a href="#L967">967</a>                data.effectLightNode = nil</span>
+<span id="L968"><a href="#L968">968</a>            end</span>
+<span id="L969"><a href="#L969">969</a>        end</span>
+<span id="L970"><a href="#L970">970</a></span>
+<span id="L971"><a href="#L971">971</a>        local showUI = (show3DEffect == false or data.tips ~= nil) and iconLevel &lt; showMarkLayers[2]</span>
+<span id="L972"><a href="#L972">972</a>        if showUI then</span>
+<span id="L973"><a href="#L973">973</a>            local showUIName</span>
+<span id="L974"><a href="#L974">974</a>            if iconLevel &lt; showMarkLayers[1] then</span>
+<span id="L975"><a href="#L975">975</a>                showUIName = UIName.Float_InfiniteZoom_GuildMarkTxt</span>
+<span id="L976"><a href="#L976">976</a>            else</span>
+<span id="L977"><a href="#L977">977</a>                showUIName = UIName.Float_InfiniteZoomMark</span>
+<span id="L978"><a href="#L978">978</a>            end</span>
+<span id="L979"><a href="#L979">979</a>            -- 先删除已有的</span>
+<span id="L980"><a href="#L980">980</a>            if data.ui and showUIName ~= data.uiname then</span>
+<span id="L981"><a href="#L981">981</a>                UICtrl:PutFloatUI(data.ui)</span>
+<span id="L982"><a href="#L982">982</a>                UICtrl:UnbindGridUI(data.ui)</span>
+<span id="L983"><a href="#L983">983</a>                data.ui = nil</span>
+<span id="L984"><a href="#L984">984</a>            end</span>
+<span id="L985"><a href="#L985">985</a>            if not data.ui then</span>
+<span id="L986"><a href="#L986">986</a>                if iconLevel &lt; showMarkLayers[1] then</span>
+<span id="L987"><a href="#L987">987</a>                    data.ui = UICtrl:GetFloatUI(showUIName, InfiniteZommFloatLayer.Mark)</span>
+<span id="L988"><a href="#L988">988</a>                    data.uiname = UIName.Float_InfiniteZoom_GuildMarkTxt</span>
+<span id="L989"><a href="#L989">989</a>                else</span>
+<span id="L990"><a href="#L990">990</a>                    data.ui = UICtrl:GetFloatUI(showUIName, InfiniteZommFloatLayer.Mark)</span>
+<span id="L991"><a href="#L991">991</a>                    data.uiname = UIName.Float_InfiniteZoomMark</span>
+<span id="L992"><a href="#L992">992</a>                end</span>
+<span id="L993"><a href="#L993">993</a>            end</span>
+<span id="L994"><a href="#L994">994</a></span>
+<span id="L995"><a href="#L995">995</a>            if data.ui then</span>
+<span id="L996"><a href="#L996">996</a>                if data.type == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L997"><a href="#L997">997</a>                    data.ui:RefreshPersonalMark(data)</span>
+<span id="L998"><a href="#L998">998</a>                elseif data.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L999"><a href="#L999">999</a>                    data.ui:RefreshGuildMark(data,iconLevel)</span>
+<span id="L1000"><a href="#L1000">1000</a>                elseif data.type == InfiniteZoomCfg.MarkType.DeclaredCity then</span>
+<span id="L1001"><a href="#L1001">1001</a>                    data.ui:RefreshDeclaredCityMark(data)</span>
+<span id="L1002"><a href="#L1002">1002</a>                    data.ui:SetRootScale(self.declaredIconScale)</span>
+<span id="L1003"><a href="#L1003">1003</a>                end</span>
+<span id="L1004"><a href="#L1004">1004</a></span>
+<span id="L1005"><a href="#L1005">1005</a>                local yOffset = 0</span>
+<span id="L1006"><a href="#L1006">1006</a>                if data.effect then</span>
+<span id="L1007"><a href="#L1007">1007</a>                    if data.effect.gameObject.transform:Find(&quot;Mark&quot;) then</span>
+<span id="L1008"><a href="#L1008">1008</a>                        yOffset = data.effect.gameObject.transform:Find(&quot;Mark&quot;).gameObject.transform.position.y - data.worldPos.y</span>
+<span id="L1009"><a href="#L1009">1009</a>					end</span>
+<span id="L1010"><a href="#L1010">1010</a>                end</span>
+<span id="L1011"><a href="#L1011">1011</a>                UICtrl:BindGridUI(data.ui, show3DEffect and data.worldPosWithOffset or data.worldPos, yOffset)</span>
+<span id="L1012"><a href="#L1012">1012</a>            end</span>
+<span id="L1013"><a href="#L1013">1013</a>        else</span>
+<span id="L1014"><a href="#L1014">1014</a>            if data.ui then</span>
+<span id="L1015"><a href="#L1015">1015</a>                UICtrl:PutFloatUI(data.ui)</span>
+<span id="L1016"><a href="#L1016">1016</a>                UICtrl:UnbindGridUI(data.ui)</span>
+<span id="L1017"><a href="#L1017">1017</a>                data.ui = nil</span>
+<span id="L1018"><a href="#L1018">1018</a>            end</span>
+<span id="L1019"><a href="#L1019">1019</a>        end</span>
+<span id="L1020"><a href="#L1020">1020</a>    else</span>
+<span id="L1021"><a href="#L1021">1021</a>        if data.effect then</span>
+<span id="L1022"><a href="#L1022">1022</a>            for _, name in ipairs({&quot;Arrow_Pos&quot;, &quot;SM_Cube&quot;, &quot;EM_glow02&quot;, &quot;Preview&quot;}) do</span>
+<span id="L1023"><a href="#L1023">1023</a>                if data.effect.gameObject.transform:Find(name) then</span>
+<span id="L1024"><a href="#L1024">1024</a>                    data.effect.gameObject.transform:Find(name).gameObject:SetActive(true)</span>
+<span id="L1025"><a href="#L1025">1025</a>                end</span>
+<span id="L1026"><a href="#L1026">1026</a>            end</span>
+<span id="L1027"><a href="#L1027">1027</a>            self.CsEffectPool:Recycle(data.effect)</span>
+<span id="L1028"><a href="#L1028">1028</a>            data.effectName = nil</span>
+<span id="L1029"><a href="#L1029">1029</a>            data.effect = nil</span>
+<span id="L1030"><a href="#L1030">1030</a>        end</span>
+<span id="L1031"><a href="#L1031">1031</a></span>
+<span id="L1032"><a href="#L1032">1032</a>        if data.ui then</span>
+<span id="L1033"><a href="#L1033">1033</a>            UICtrl:PutFloatUI(data.ui)</span>
+<span id="L1034"><a href="#L1034">1034</a>            UICtrl:UnbindGridUI(data.ui)</span>
+<span id="L1035"><a href="#L1035">1035</a>            data.ui = nil</span>
+<span id="L1036"><a href="#L1036">1036</a>        end</span>
+<span id="L1037"><a href="#L1037">1037</a></span>
+<span id="L1038"><a href="#L1038">1038</a>        if data.effectLightNode then</span>
+<span id="L1039"><a href="#L1039">1039</a>            self.CsEffectPool:Recycle(data.effectLightNode)</span>
+<span id="L1040"><a href="#L1040">1040</a>            data.effectLightName = nil</span>
+<span id="L1041"><a href="#L1041">1041</a>            data.effectLightNode = nil</span>
+<span id="L1042"><a href="#L1042">1042</a>        end</span>
+<span id="L1043"><a href="#L1043">1043</a>    end</span>
+<span id="L1044"><a href="#L1044">1044</a></span>
+<span id="L1045"><a href="#L1045">1045</a>    local markGrid = self:SetMarkGridVisible(data, visible)</span>
+<span id="L1046"><a href="#L1046">1046</a>    -- if markGrid then</span>
+<span id="L1047"><a href="#L1047">1047</a>    --     local wrapper = data.effect</span>
+<span id="L1048"><a href="#L1048">1048</a>    --     if wrapper then</span>
+<span id="L1049"><a href="#L1049">1049</a>    --         local SM_Cube= wrapper.gameObject.transform:Find(&quot;SM_Cube&quot;)</span>
+<span id="L1050"><a href="#L1050">1050</a>    --         if SM_Cube then</span>
+<span id="L1051"><a href="#L1051">1051</a>    --             SM_Cube.gameObject:SetActive(false)</span>
+<span id="L1052"><a href="#L1052">1052</a>    --         end</span>
+<span id="L1053"><a href="#L1053">1053</a>    --     end</span>
+<span id="L1054"><a href="#L1054">1054</a>    -- end</span>
+<span id="L1055"><a href="#L1055">1055</a></span>
+<span id="L1056"><a href="#L1056">1056</a>    return true</span>
+<span id="L1057"><a href="#L1057">1057</a>end</span>
+<span id="L1058"><a href="#L1058">1058</a></span>
+<span id="L1059"><a href="#L1059">1059</a></span>
+<span id="L1060"><a href="#L1060">1060</a>---@return InfiniteZoomGoEffMarkData</span>
+<span id="L1061"><a href="#L1061">1061</a>function cls:GetMarkData(markType, gridIndex)</span>
+<span id="L1062"><a href="#L1062">1062</a>    local code = self:GetMarkCode(markType, gridIndex)</span>
+<span id="L1063"><a href="#L1063">1063</a>    return self.markDict[code]</span>
+<span id="L1064"><a href="#L1064">1064</a>end</span>
+<span id="L1065"><a href="#L1065">1065</a></span>
+<span id="L1066"><a href="#L1066">1066</a>function cls:SetMarkData(markType, gridIndex, data)</span>
+<span id="L1067"><a href="#L1067">1067</a>    local code = self:GetMarkCode(markType, gridIndex)</span>
+<span id="L1068"><a href="#L1068">1068</a>    self.markDict[code] = data</span>
+<span id="L1069"><a href="#L1069">1069</a>end</span>
+<span id="L1070"><a href="#L1070">1070</a></span>
+<span id="L1071"><a href="#L1071">1071</a>function cls:GetMarkCode(markType, gridIndex)</span>
+<span id="L1072"><a href="#L1072">1072</a>    if markType == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L1073"><a href="#L1073">1073</a>        return 1000000000 + gridIndex</span>
+<span id="L1074"><a href="#L1074">1074</a>    elseif markType == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L1075"><a href="#L1075">1075</a>        return 5000000000 + gridIndex</span>
+<span id="L1076"><a href="#L1076">1076</a>    elseif markType == InfiniteZoomCfg.MarkType.Competition then</span>
+<span id="L1077"><a href="#L1077">1077</a>        return 6000000000 + gridIndex</span>
+<span id="L1078"><a href="#L1078">1078</a>    else</span>
+<span id="L1079"><a href="#L1079">1079</a>        return 10000000000 + gridIndex</span>
+<span id="L1080"><a href="#L1080">1080</a>    end</span>
+<span id="L1081"><a href="#L1081">1081</a>end</span>
+<span id="L1082"><a href="#L1082">1082</a></span>
+<span id="L1083"><a href="#L1083">1083</a>function cls:GetAllianceMarkVisible()</span>
+<span id="L1084"><a href="#L1084">1084</a>    return self.allianceMarkVisible</span>
+<span id="L1085"><a href="#L1085">1085</a>end</span>
+<span id="L1086"><a href="#L1086">1086</a></span>
+<span id="L1087"><a href="#L1087">1087</a>function cls:GetPersonalMarkVisible()</span>
+<span id="L1088"><a href="#L1088">1088</a>    return self.personalMarkVisible</span>
+<span id="L1089"><a href="#L1089">1089</a>end</span>
+<span id="L1090"><a href="#L1090">1090</a></span>
+<span id="L1091"><a href="#L1091">1091</a>function cls:SetAllianceMarkVisible(allianceMarkVisible)</span>
+<span id="L1092"><a href="#L1092">1092</a>    if self.allianceMarkVisible ~= allianceMarkVisible then</span>
+<span id="L1093"><a href="#L1093">1093</a>        self.allianceMarkVisible = allianceMarkVisible</span>
+<span id="L1094"><a href="#L1094">1094</a>        for k, v in pairs(self.markDict) do</span>
+<span id="L1095"><a href="#L1095">1095</a>            if v.type == InfiniteZoomCfg.MarkType.Alliance then</span>
+<span id="L1096"><a href="#L1096">1096</a>                self:SetMarkDataVisible(v, allianceMarkVisible)</span>
+<span id="L1097"><a href="#L1097">1097</a>            end</span>
+<span id="L1098"><a href="#L1098">1098</a>        end</span>
+<span id="L1099"><a href="#L1099">1099</a>    end</span>
+<span id="L1100"><a href="#L1100">1100</a>end</span>
+<span id="L1101"><a href="#L1101">1101</a></span>
+<span id="L1102"><a href="#L1102">1102</a>function cls:SetPersonalMarkVisible(personalMarkVisible)</span>
+<span id="L1103"><a href="#L1103">1103</a>    if self.personalMarkVisible ~= personalMarkVisible then</span>
+<span id="L1104"><a href="#L1104">1104</a>        self.personalMarkVisible = personalMarkVisible</span>
+<span id="L1105"><a href="#L1105">1105</a>        for k, v in pairs(self.markDict) do</span>
+<span id="L1106"><a href="#L1106">1106</a>            if v.type == InfiniteZoomCfg.MarkType.Personal then</span>
+<span id="L1107"><a href="#L1107">1107</a>                self:SetMarkDataVisible(v, personalMarkVisible)</span>
+<span id="L1108"><a href="#L1108">1108</a>            end</span>
+<span id="L1109"><a href="#L1109">1109</a>        end</span>
+<span id="L1110"><a href="#L1110">1110</a>    end</span>
+<span id="L1111"><a href="#L1111">1111</a>end</span>
+<span id="L1112"><a href="#L1112">1112</a></span>
+<span id="L1113"><a href="#L1113">1113</a>function cls:RefreshMarkScale(scale)</span>
+<span id="L1114"><a href="#L1114">1114</a>    if CameraMoveRefreshOptimizationEnabled then</span>
+<span id="L1115"><a href="#L1115">1115</a>        local newMarkTipsScale = 1</span>
+<span id="L1116"><a href="#L1116">1116</a>        local normalScaleChanged = math.abs((self.markTipsScale or newMarkTipsScale) - newMarkTipsScale) &gt;= CameraMoveScaleEpsilon</span>
+<span id="L1117"><a href="#L1117">1117</a>        local declaredScaleChanged = scale ~= nil and</span>
+<span id="L1118"><a href="#L1118">1118</a>            math.abs((self.declaredIconScale or scale) - scale) &gt;= CameraMoveScaleEpsilon</span>
+<span id="L1119"><a href="#L1119">1119</a>        if not normalScaleChanged and not declaredScaleChanged then</span>
+<span id="L1120"><a href="#L1120">1120</a>            return</span>
+<span id="L1121"><a href="#L1121">1121</a>        end</span>
+<span id="L1122"><a href="#L1122">1122</a></span>
+<span id="L1123"><a href="#L1123">1123</a>        self.markTipsScale = newMarkTipsScale</span>
+<span id="L1124"><a href="#L1124">1124</a>        if declaredScaleChanged then</span>
+<span id="L1125"><a href="#L1125">1125</a>            self.declaredIconScale = scale</span>
+<span id="L1126"><a href="#L1126">1126</a>        end</span>
+<span id="L1127"><a href="#L1127">1127</a>        for _, v in pairs(self.markDict) do</span>
+<span id="L1128"><a href="#L1128">1128</a>            if v.ui then</span>
+<span id="L1129"><a href="#L1129">1129</a>                if v.type == InfiniteZoomCfg.MarkType.DeclaredCity then</span>
+<span id="L1130"><a href="#L1130">1130</a>                    if declaredScaleChanged then</span>
+<span id="L1131"><a href="#L1131">1131</a>                        v.ui:SetRootScale(scale)</span>
+<span id="L1132"><a href="#L1132">1132</a>                    end</span>
+<span id="L1133"><a href="#L1133">1133</a>                elseif normalScaleChanged then</span>
+<span id="L1134"><a href="#L1134">1134</a>                    v.ui:SetRootScale(newMarkTipsScale)</span>
+<span id="L1135"><a href="#L1135">1135</a>                end</span>
+<span id="L1136"><a href="#L1136">1136</a>            end</span>
+<span id="L1137"><a href="#L1137">1137</a>        end</span>
+<span id="L1138"><a href="#L1138">1138</a>        return</span>
+<span id="L1139"><a href="#L1139">1139</a>    end</span>
+<span id="L1140"><a href="#L1140">1140</a></span>
+<span id="L1141"><a href="#L1141">1141</a>    local lastScale = self.markTipsScale</span>
+<span id="L1142"><a href="#L1142">1142</a>    self.markTipsScale = 1</span>
+<span id="L1143"><a href="#L1143">1143</a>    if self.markTipsScale == lastScale then  end --没有变化，不更新</span>
+<span id="L1144"><a href="#L1144">1144</a></span>
+<span id="L1145"><a href="#L1145">1145</a>    for k, v in pairs(self.markDict) do</span>
+<span id="L1146"><a href="#L1146">1146</a>        if v.ui then</span>
+<span id="L1147"><a href="#L1147">1147</a>            if v.type == InfiniteZoomCfg.MarkType.DeclaredCity then</span>
+<span id="L1148"><a href="#L1148">1148</a>                if scale then</span>
+<span id="L1149"><a href="#L1149">1149</a>                    v.ui:SetRootScale(scale)</span>
+<span id="L1150"><a href="#L1150">1150</a>                    self.declaredIconScale = scale</span>
+<span id="L1151"><a href="#L1151">1151</a>                end</span>
+<span id="L1152"><a href="#L1152">1152</a>            else</span>
+<span id="L1153"><a href="#L1153">1153</a>                v.ui:SetRootScale(self.markTipsScale)</span>
+<span id="L1154"><a href="#L1154">1154</a>            end</span>
+<span id="L1155"><a href="#L1155">1155</a>        end</span>
+<span id="L1156"><a href="#L1156">1156</a>    end</span>
+<span id="L1157"><a href="#L1157">1157</a>end</span>
+<span id="L1158"><a href="#L1158">1158</a>--将宣战图标排到列表前面</span>
+<span id="L1159"><a href="#L1159">1159</a>function cls:SortMarkList()</span>
+<span id="L1160"><a href="#L1160">1160</a>    table.sort(self.markList, function(a, b)</span>
+<span id="L1161"><a href="#L1161">1161</a>        local aIsDeclaredCity = a.type == InfiniteZoomCfg.MarkType.DeclaredCity</span>
+<span id="L1162"><a href="#L1162">1162</a>        local bIsDeclaredCity = b.type == InfiniteZoomCfg.MarkType.DeclaredCity</span>
+<span id="L1163"><a href="#L1163">1163</a>        </span>
+<span id="L1164"><a href="#L1164">1164</a>        if aIsDeclaredCity and not bIsDeclaredCity then</span>
+<span id="L1165"><a href="#L1165">1165</a>            return true</span>
+<span id="L1166"><a href="#L1166">1166</a>        elseif not aIsDeclaredCity and bIsDeclaredCity then</span>
+<span id="L1167"><a href="#L1167">1167</a>            return false</span>
+<span id="L1168"><a href="#L1168">1168</a>        else</span>
+<span id="L1169"><a href="#L1169">1169</a>            return false</span>
+<span id="L1170"><a href="#L1170">1170</a>        end</span>
+<span id="L1171"><a href="#L1171">1171</a>    end)</span>
+<span id="L1172"><a href="#L1172">1172</a>end</span>
+<span id="L1173"><a href="#L1173">1173</a>function cls:GetMarkScale()</span>
+<span id="L1174"><a href="#L1174">1174</a>    return self.markTipsScale</span>
+<span id="L1175"><a href="#L1175">1175</a>end</span>
+<span id="L1176"><a href="#L1176">1176</a></span>
+<span id="L1177"><a href="#L1177">1177</a>function cls:SetCameraMoveRefreshOptimizationEnabled(enabled)</span>
+<span id="L1178"><a href="#L1178">1178</a>    local newEnabled = enabled and true or false</span>
+<span id="L1179"><a href="#L1179">1179</a>    if CameraMoveRefreshOptimizationEnabled == newEnabled then</span>
+<span id="L1180"><a href="#L1180">1180</a>        return</span>
+<span id="L1181"><a href="#L1181">1181</a>    end</span>
+<span id="L1182"><a href="#L1182">1182</a></span>
+<span id="L1183"><a href="#L1183">1183</a>    CameraMoveRefreshOptimizationEnabled = newEnabled</span>
+<span id="L1184"><a href="#L1184">1184</a>    self._cameraMoveRefreshPending = false</span>
+<span id="L1185"><a href="#L1185">1185</a>    self._cameraMoveRefreshDueTime = 0</span>
+<span id="L1186"><a href="#L1186">1186</a>    if newEnabled then</span>
+<span id="L1187"><a href="#L1187">1187</a>        self:ScheduleCameraMoveRefresh(true)</span>
+<span id="L1188"><a href="#L1188">1188</a>    elseif mgr.scene:IsInScene(SceneName.Outside) and mgr.mapCore?.MapViewCtrl then</span>
+<span id="L1189"><a href="#L1189">1189</a>        -- 关闭优化时补一次原逻辑刷新，保证 A/B 往返不会遗留延迟任务状态。</span>
+<span id="L1190"><a href="#L1190">1190</a>        self:RefreshMarkVisible()</span>
+<span id="L1191"><a href="#L1191">1191</a>        self:RefreshGuildMemberIcon()</span>
+<span id="L1192"><a href="#L1192">1192</a>        if OutsideMapPerfDiagnostic.MapGoBigCityIconRefreshEnabled then</span>
+<span id="L1193"><a href="#L1193">1193</a>            self:RefreshBigCityIcon()</span>
+<span id="L1194"><a href="#L1194">1194</a>        end</span>
+<span id="L1195"><a href="#L1195">1195</a>    end</span>
+<span id="L1196"><a href="#L1196">1196</a>end</span>
+<span id="L1197"><a href="#L1197">1197</a></span>
+<span id="L1198"><a href="#L1198">1198</a>function cls:GetCameraMoveRefreshOptimizationEnabled()</span>
+<span id="L1199"><a href="#L1199">1199</a>    return CameraMoveRefreshOptimizationEnabled</span>
+<span id="L1200"><a href="#L1200">1200</a>end</span>
+<span id="L1201"><a href="#L1201">1201</a></span>
+<span id="L1202"><a href="#L1202">1202</a>function cls:SetCameraMoveMarkBudgetPerFrame(budget)</span>
+<span id="L1203"><a href="#L1203">1203</a>    CameraMoveMarkBudgetPerFrame = math.max(1, math.floor(tonumber(budget) or 1))</span>
+<span id="L1204"><a href="#L1204">1204</a>end</span>
+<span id="L1205"><a href="#L1205">1205</a></span>
+<span id="L1206"><a href="#L1206">1206</a>function cls:GetCameraMoveMarkBudgetPerFrame()</span>
+<span id="L1207"><a href="#L1207">1207</a>    return CameraMoveMarkBudgetPerFrame</span>
+<span id="L1208"><a href="#L1208">1208</a>end</span>
+<span id="L1209"><a href="#L1209">1209</a></span>
+<span id="L1210"><a href="#L1210">1210</a>function cls:SetCameraMoveRefreshSettleDelayMs(delayMs)</span>
+<span id="L1211"><a href="#L1211">1211</a>    CameraMoveRefreshSettleDelay = math.max(0, tonumber(delayMs) or 0) / 1000</span>
+<span id="L1212"><a href="#L1212">1212</a>end</span>
+<span id="L1213"><a href="#L1213">1213</a></span>
+<span id="L1214"><a href="#L1214">1214</a>function cls:GetCameraMoveRefreshSettleDelayMs()</span>
+<span id="L1215"><a href="#L1215">1215</a>    return math.floor(CameraMoveRefreshSettleDelay * 1000 + 0.5)</span>
+<span id="L1216"><a href="#L1216">1216</a>end</span>
+<span id="L1217"><a href="#L1217">1217</a>--endregion</span>
+<span id="L1218"><a href="#L1218">1218</a></span>
+<span id="L1219"><a href="#L1219">1219</a>--region 名城</span>
+<span id="L1220"><a href="#L1220">1220</a>function cls:RefreshBigCityData(tempCitysList)</span>
+<span id="L1221"><a href="#L1221">1221</a>    --do return end</span>
+<span id="L1222"><a href="#L1222">1222</a>    local isOutside = mgr.infiniteZoomMgr:IsInOutSideState()</span>
+<span id="L1223"><a href="#L1223">1223</a>    if not isOutside then</span>
+<span id="L1224"><a href="#L1224">1224</a>        return</span>
+<span id="L1225"><a href="#L1225">1225</a>    end</span>
+<span id="L1226"><a href="#L1226">1226</a>    local cityDict = mgr.infiniteZoomMgr.Data:GetRealCitysDict()</span>
+<span id="L1227"><a href="#L1227">1227</a>    local guildID = mgr.playerBaseInfo:GetAllianceID()</span>
+<span id="L1228"><a href="#L1228">1228</a>    local allCityData = mgr.bigCityMgr:GetMainCityOfflineDataMap() or EmptyTable</span>
+<span id="L1229"><a href="#L1229">1229</a>    local function RefreshRelation(cityID)</span>
+<span id="L1230"><a href="#L1230">1230</a>        local relation = RelationType.Neutral</span>
+<span id="L1231"><a href="#L1231">1231</a>        if cityDict[cityID] then</span>
+<span id="L1232"><a href="#L1232">1232</a>            if guildID~=0 then</span>
+<span id="L1233"><a href="#L1233">1233</a>                if cityDict[cityID] == guildID then</span>
+<span id="L1234"><a href="#L1234">1234</a>                    relation = RelationType.Friend</span>
+<span id="L1235"><a href="#L1235">1235</a>                else</span>
+<span id="L1236"><a href="#L1236">1236</a>                    relation = RelationType.Enemy</span>
+<span id="L1237"><a href="#L1237">1237</a>                end</span>
+<span id="L1238"><a href="#L1238">1238</a>            else</span>
+<span id="L1239"><a href="#L1239">1239</a>                relation = RelationType.Enemy</span>
+<span id="L1240"><a href="#L1240">1240</a>            end</span>
+<span id="L1241"><a href="#L1241">1241</a>        end</span>
+<span id="L1242"><a href="#L1242">1242</a>        return relation</span>
+<span id="L1243"><a href="#L1243">1243</a>    end</span>
+<span id="L1244"><a href="#L1244">1244</a>    --增量刷新</span>
+<span id="L1245"><a href="#L1245">1245</a>    if tempCitysList and not self.firstRefresh then</span>
+<span id="L1246"><a href="#L1246">1246</a>        for i,v in ipairs_safe(tempCitysList) do</span>
+<span id="L1247"><a href="#L1247">1247</a>            local relation = RefreshRelation(v)</span>
+<span id="L1248"><a href="#L1248">1248</a>            local data = self.bigCityBuildingDict[v]</span>
+<span id="L1249"><a href="#L1249">1249</a>            if data then</span>
+<span id="L1250"><a href="#L1250">1250</a>                data:RefreshRelation(relation)</span>
+<span id="L1251"><a href="#L1251">1251</a>            end</span>
+<span id="L1252"><a href="#L1252">1252</a>        end</span>
+<span id="L1253"><a href="#L1253">1253</a>    else</span>
+<span id="L1254"><a href="#L1254">1254</a>        --全量刷新</span>
+<span id="L1255"><a href="#L1255">1255</a>        for k, v in pairs_safe(allCityData) do</span>
+<span id="L1256"><a href="#L1256">1256</a>            if InfiniteZoomUtil.IsLocalIconBigCityEntityType(v.worldEntityType) then</span>
+<span id="L1257"><a href="#L1257">1257</a>                local bigCityData = mgr.cfg:GetBigWorldCityTemplateConfDataById(v.templateId)</span>
+<span id="L1258"><a href="#L1258">1258</a>                if bigCityData then</span>
+<span id="L1259"><a href="#L1259">1259</a>                    local gridX = v.gridx or -1</span>
+<span id="L1260"><a href="#L1260">1260</a>                    local gridY = v.gridy or -1</span>
+<span id="L1261"><a href="#L1261">1261</a>                    if gridX ~= -1 and gridY ~= -1 then</span>
+<span id="L1262"><a href="#L1262">1262</a>                        local relation = RefreshRelation(v.id)</span>
+<span id="L1263"><a href="#L1263">1263</a>                        ---@type InfiniteZoomBigCityData</span>
+<span id="L1264"><a href="#L1264">1264</a>                        local data = self.bigCityBuildingDict[v.id]</span>
+<span id="L1265"><a href="#L1265">1265</a>                        if not data then</span>
+<span id="L1266"><a href="#L1266">1266</a>                            data = mgr.infiniteZoomMgr.PoolCtrl:GetLuaInstance(PoolCfg.InfiniteZoomBigCityData)</span>
+<span id="L1267"><a href="#L1267">1267</a>                            data:Init(v, bigCityData, relation)</span>
+<span id="L1268"><a href="#L1268">1268</a>                            self.bigCityBuildingDict[v.id] = data</span>
+<span id="L1269"><a href="#L1269">1269</a>                        else</span>
+<span id="L1270"><a href="#L1270">1270</a>                            data:RefreshRelation(relation)</span>
+<span id="L1271"><a href="#L1271">1271</a>                        end</span>
+<span id="L1272"><a href="#L1272">1272</a>                    end</span>
+<span id="L1273"><a href="#L1273">1273</a>                end</span>
+<span id="L1274"><a href="#L1274">1274</a>            end</span>
+<span id="L1275"><a href="#L1275">1275</a>        end</span>
+<span id="L1276"><a href="#L1276">1276</a>    end</span>
+<span id="L1277"><a href="#L1277">1277</a></span>
+<span id="L1278"><a href="#L1278">1278</a>    if self.firstRefresh then</span>
+<span id="L1279"><a href="#L1279">1279</a>        self.firstRefresh = false</span>
+<span id="L1280"><a href="#L1280">1280</a>    end</span>
+<span id="L1281"><a href="#L1281">1281</a></span>
+<span id="L1282"><a href="#L1282">1282</a>    self:RefreshBigCityIcon()</span>
+<span id="L1283"><a href="#L1283">1283</a>end</span>
+<span id="L1284"><a href="#L1284">1284</a></span>
+<span id="L1285"><a href="#L1285">1285</a>---大城 icon 是否与盟友城池一致，受 MapViewCtrl 视口约束。</span>
+<span id="L1286"><a href="#L1286">1286</a>---@param gridIndex number</span>
+<span id="L1287"><a href="#L1287">1287</a>function cls:IsBigCityIconGridInView(gridIndex)</span>
+<span id="L1288"><a href="#L1288">1288</a>    if not gridIndex then</span>
+<span id="L1289"><a href="#L1289">1289</a>        return false</span>
+<span id="L1290"><a href="#L1290">1290</a>    end</span>
+<span id="L1291"><a href="#L1291">1291</a>    local mapViewCtrl = mgr.mapCore and mgr.mapCore.MapViewCtrl</span>
+<span id="L1292"><a href="#L1292">1292</a>    if not mapViewCtrl then</span>
+<span id="L1293"><a href="#L1293">1293</a>        return true</span>
+<span id="L1294"><a href="#L1294">1294</a>    end</span>
+<span id="L1295"><a href="#L1295">1295</a>    local inView = mapViewCtrl:IsUnitInView(gridIndex)</span>
+<span id="L1296"><a href="#L1296">1296</a>    if not inView and SubMapUtil.IsOpenSubMap() then</span>
+<span id="L1297"><a href="#L1297">1297</a>        inView = SubMapUtil.IsInSubMapRect(gridIndex)</span>
+<span id="L1298"><a href="#L1298">1298</a>    end</span>
+<span id="L1299"><a href="#L1299">1299</a>    return inView</span>
+<span id="L1300"><a href="#L1300">1300</a>end</span>
+<span id="L1301"><a href="#L1301">1301</a></span>
+<span id="L1302"><a href="#L1302">1302</a>function cls:RefreshBigCityIcon()</span>
+<span id="L1303"><a href="#L1303">1303</a>    if not OutsideMapPerfDiagnostic.MapGoBigCityIconRefreshEnabled then</span>
+<span id="L1304"><a href="#L1304">1304</a>        return</span>
+<span id="L1305"><a href="#L1305">1305</a>    end</span>
+<span id="L1306"><a href="#L1306">1306</a></span>
+<span id="L1307"><a href="#L1307">1307</a>    local iconStats = mgr.mapCore.MapSignificanceMgr._iconTaskStats</span>
+<span id="L1308"><a href="#L1308">1308</a>    iconStats.bigCityRefresh = iconStats.bigCityRefresh + 1</span>
+<span id="L1309"><a href="#L1309">1309</a></span>
+<span id="L1310"><a href="#L1310">1310</a>    if BigCityIconDiffRefreshEnabled then</span>
+<span id="L1311"><a href="#L1311">1311</a>        self:ScheduleBigCityIconRefreshTasks()</span>
+<span id="L1312"><a href="#L1312">1312</a>        return</span>
+<span id="L1313"><a href="#L1313">1313</a>    end</span>
+<span id="L1314"><a href="#L1314">1314</a></span>
+<span id="L1315"><a href="#L1315">1315</a>    self:RefreshBigCityIconLegacy()</span>
+<span id="L1316"><a href="#L1316">1316</a>end</span>
+<span id="L1317"><a href="#L1317">1317</a></span>
+<span id="L1318"><a href="#L1318">1318</a>-- 改造前逻辑：保留原实现，供 GM 做 A/B 对照。</span>
+<span id="L1319"><a href="#L1319">1319</a>function cls:RefreshBigCityIconLegacy()</span>
+<span id="L1320"><a href="#L1320">1320</a>    self:ClearBigCityIconRefreshTasks()</span>
+<span id="L1321"><a href="#L1321">1321</a></span>
+<span id="L1322"><a href="#L1322">1322</a>    local iconStats = mgr.mapCore.MapSignificanceMgr._iconTaskStats</span>
+<span id="L1323"><a href="#L1323">1323</a>    local isIconLayer = mgr.infiniteZoomMgr:IsIconLayer()</span>
+<span id="L1324"><a href="#L1324">1324</a>    local selectCapitalFilter = self._selectCapitalCityFilterEnable</span>
+<span id="L1325"><a href="#L1325">1325</a>    for k, v in pairs(self.bigCityBuildingDict) do</span>
+<span id="L1326"><a href="#L1326">1326</a>        local visible = isIconLayer and MapEntityCtrl:CanShowMapEntityIcon(v)</span>
+<span id="L1327"><a href="#L1327">1327</a>        -- 选国都县城显隐过滤：仅显示郡府城与当前选中郡的县城，隐藏其它郡的县城</span>
+<span id="L1328"><a href="#L1328">1328</a>        if visible and selectCapitalFilter then</span>
+<span id="L1329"><a href="#L1329">1329</a>            visible = mgr.guildMgr.countryMgr.data:ShouldShowBigCityInSelectCapital(v.cityId)</span>
+<span id="L1330"><a href="#L1330">1330</a>        end</span>
+<span id="L1331"><a href="#L1331">1331</a>        if visible then</span>
+<span id="L1332"><a href="#L1332">1332</a>            visible = self:IsBigCityIconGridInView(v.gridIndex)</span>
+<span id="L1333"><a href="#L1333">1333</a>        end</span>
+<span id="L1334"><a href="#L1334">1334</a>        if visible then</span>
+<span id="L1335"><a href="#L1335">1335</a>            ---@type InfiniteZoomIconBase</span>
+<span id="L1336"><a href="#L1336">1336</a>            local mapIcon = MapEntityCtrl:GetMapEntityIconByEntityId(v.entityId)</span>
+<span id="L1337"><a href="#L1337">1337</a>            if not mapIcon then</span>
+<span id="L1338"><a href="#L1338">1338</a>                MapEntityCtrl:CreateMapEntityIcon(v)</span>
+<span id="L1339"><a href="#L1339">1339</a>            else</span>
+<span id="L1340"><a href="#L1340">1340</a>                mapIcon:RefreshMapEntityData(v)</span>
+<span id="L1341"><a href="#L1341">1341</a>                local viewData = MapEntityCtrl:GetViewDataByMapEntityData(v)</span>
+<span id="L1342"><a href="#L1342">1342</a>                if viewData and viewData.layoutCfgData and viewData.resoureCfgData then</span>
+<span id="L1343"><a href="#L1343">1343</a>                    mapIcon:RefreshViewData(viewData.layoutCfgData, viewData.resoureCfgData)</span>
+<span id="L1344"><a href="#L1344">1344</a>                end</span>
+<span id="L1345"><a href="#L1345">1345</a>                if v.dirty then</span>
+<span id="L1346"><a href="#L1346">1346</a>                    v.dirty = false</span>
+<span id="L1347"><a href="#L1347">1347</a>                    iconStats.bigCityUI = iconStats.bigCityUI + 1</span>
+<span id="L1348"><a href="#L1348">1348</a>                    mapIcon:RefreshUI()--根据配置表显示图标的核心方法</span>
+<span id="L1349"><a href="#L1349">1349</a>                end</span>
+<span id="L1350"><a href="#L1350">1350</a>            end</span>
+<span id="L1351"><a href="#L1351">1351</a>        else</span>
+<span id="L1352"><a href="#L1352">1352</a>            MapEntityCtrl:RemoveMapEntityIcon(v.entityId)</span>
+<span id="L1353"><a href="#L1353">1353</a>        end</span>
+<span id="L1354"><a href="#L1354">1354</a>    end</span>
+<span id="L1355"><a href="#L1355">1355</a>end</span>
+<span id="L1356"><a href="#L1356">1356</a></span>
+<span id="L1357"><a href="#L1357">1357</a>function cls:IsBigCityIconVisible(data)</span>
+<span id="L1358"><a href="#L1358">1358</a>    local visible = mgr.infiniteZoomMgr:IsIconLayer() and MapEntityCtrl:CanShowMapEntityIcon(data)</span>
+<span id="L1359"><a href="#L1359">1359</a>    if visible and self._selectCapitalCityFilterEnable then</span>
+<span id="L1360"><a href="#L1360">1360</a>        visible = mgr.guildMgr.countryMgr.data:ShouldShowBigCityInSelectCapital(data.cityId)</span>
+<span id="L1361"><a href="#L1361">1361</a>    end</span>
+<span id="L1362"><a href="#L1362">1362</a>    if visible then</span>
+<span id="L1363"><a href="#L1363">1363</a>        visible = self:IsBigCityIconGridInView(data.gridIndex)</span>
+<span id="L1364"><a href="#L1364">1364</a>    end</span>
+<span id="L1365"><a href="#L1365">1365</a>    return visible</span>
+<span id="L1366"><a href="#L1366">1366</a>end</span>
+<span id="L1367"><a href="#L1367">1367</a></span>
+<span id="L1368"><a href="#L1368">1368</a>function cls:RefreshExistingBigCityIcon(mapIcon, data)</span>
+<span id="L1369"><a href="#L1369">1369</a>    mapIcon:RefreshMapEntityData(data)</span>
+<span id="L1370"><a href="#L1370">1370</a>    local viewData = MapEntityCtrl:GetViewDataByMapEntityData(data)</span>
+<span id="L1371"><a href="#L1371">1371</a>    if viewData and viewData.layoutCfgData and viewData.resoureCfgData then</span>
+<span id="L1372"><a href="#L1372">1372</a>        mapIcon:RefreshViewData(viewData.layoutCfgData, viewData.resoureCfgData)</span>
+<span id="L1373"><a href="#L1373">1373</a>    end</span>
+<span id="L1374"><a href="#L1374">1374</a>    if data.dirty then</span>
+<span id="L1375"><a href="#L1375">1375</a>        data.dirty = false</span>
+<span id="L1376"><a href="#L1376">1376</a>        local iconStats = mgr.mapCore.MapSignificanceMgr._iconTaskStats</span>
+<span id="L1377"><a href="#L1377">1377</a>        iconStats.bigCityUI = iconStats.bigCityUI + 1</span>
+<span id="L1378"><a href="#L1378">1378</a>        mapIcon:RefreshUI()</span>
+<span id="L1379"><a href="#L1379">1379</a>    end</span>
+<span id="L1380"><a href="#L1380">1380</a>end</span>
+<span id="L1381"><a href="#L1381">1381</a></span>
+<span id="L1382"><a href="#L1382">1382</a>-- 优化逻辑：全量扫描只负责计算差分，不在切层当帧创建或刷新图标。</span>
+<span id="L1383"><a href="#L1383">1383</a>function cls:ScheduleBigCityIconRefreshTasks()</span>
+<span id="L1384"><a href="#L1384">1384</a>    local tasks = {}</span>
+<span id="L1385"><a href="#L1385">1385</a>    local layerLevel = mgr.infiniteZoomMgr.curLayerLevel or 0</span>
+<span id="L1386"><a href="#L1386">1386</a>    local contextKey = tostring(layerLevel) .. &quot;:&quot; .. tostring(self._selectCapitalCityFilterEnable == true)</span>
+<span id="L1387"><a href="#L1387">1387</a>    local refreshExisting = self._bigCityIconRefreshContextKey ~= contextKey</span>
+<span id="L1388"><a href="#L1388">1388</a>    self._bigCityIconRefreshContextKey = contextKey</span>
+<span id="L1389"><a href="#L1389">1389</a></span>
+<span id="L1390"><a href="#L1390">1390</a>    for _, data in pairs(self.bigCityBuildingDict) do</span>
+<span id="L1391"><a href="#L1391">1391</a>        local visible = self:IsBigCityIconVisible(data)</span>
+<span id="L1392"><a href="#L1392">1392</a>        local mapIcon = MapEntityCtrl:GetMapEntityIconByEntityId(data.entityId)</span>
+<span id="L1393"><a href="#L1393">1393</a>        if visible then</span>
+<span id="L1394"><a href="#L1394">1394</a>            if not mapIcon then</span>
+<span id="L1395"><a href="#L1395">1395</a>                tasks[#tasks + 1] = { taskType = BigCityIconTaskType.Add, data = data }</span>
+<span id="L1396"><a href="#L1396">1396</a>            elseif refreshExisting or data.dirty then</span>
+<span id="L1397"><a href="#L1397">1397</a>                tasks[#tasks + 1] = { taskType = BigCityIconTaskType.Refresh, data = data }</span>
+<span id="L1398"><a href="#L1398">1398</a>            end</span>
+<span id="L1399"><a href="#L1399">1399</a>        elseif mapIcon then</span>
+<span id="L1400"><a href="#L1400">1400</a>            tasks[#tasks + 1] = { taskType = BigCityIconTaskType.Remove, data = data }</span>
+<span id="L1401"><a href="#L1401">1401</a>        end</span>
+<span id="L1402"><a href="#L1402">1402</a>    end</span>
+<span id="L1403"><a href="#L1403">1403</a></span>
+<span id="L1404"><a href="#L1404">1404</a>    self._bigCityIconRefreshTasks = tasks</span>
+<span id="L1405"><a href="#L1405">1405</a>    self._bigCityIconRefreshTaskIndex = 1</span>
+<span id="L1406"><a href="#L1406">1406</a>end</span>
+<span id="L1407"><a href="#L1407">1407</a></span>
+<span id="L1408"><a href="#L1408">1408</a></span>
+<span id="L1409"><a href="#L1409">1409</a>function cls:ProcessBigCityIconRefreshTasks()</span>
+<span id="L1410"><a href="#L1410">1410</a>    if not BigCityIconDiffRefreshEnabled or</span>
+<span id="L1411"><a href="#L1411">1411</a>        not OutsideMapPerfDiagnostic.MapGoBigCityIconRefreshEnabled then</span>
+<span id="L1412"><a href="#L1412">1412</a>        return</span>
+<span id="L1413"><a href="#L1413">1413</a>    end</span>
+<span id="L1414"><a href="#L1414">1414</a></span>
+<span id="L1415"><a href="#L1415">1415</a>    local tasks = self._bigCityIconRefreshTasks</span>
+<span id="L1416"><a href="#L1416">1416</a>    local taskIndex = self._bigCityIconRefreshTaskIndex or 1</span>
+<span id="L1417"><a href="#L1417">1417</a>    if not tasks or taskIndex &gt; #tasks then</span>
+<span id="L1418"><a href="#L1418">1418</a>        return</span>
+<span id="L1419"><a href="#L1419">1419</a>    end</span>
+<span id="L1420"><a href="#L1420">1420</a></span>
+<span id="L1421"><a href="#L1421">1421</a>    local processedCount = 0</span>
+<span id="L1422"><a href="#L1422">1422</a>    while taskIndex &lt;= #tasks and processedCount &lt; BigCityIconTaskBudgetPerFrame do</span>
+<span id="L1423"><a href="#L1423">1423</a>        local task = tasks[taskIndex]</span>
+<span id="L1424"><a href="#L1424">1424</a>        taskIndex = taskIndex + 1</span>
+<span id="L1425"><a href="#L1425">1425</a>        processedCount = processedCount + 1</span>
+<span id="L1426"><a href="#L1426">1426</a></span>
+<span id="L1427"><a href="#L1427">1427</a>        local data = task.data</span>
+<span id="L1428"><a href="#L1428">1428</a>        local visible = data and self:IsBigCityIconVisible(data)</span>
+<span id="L1429"><a href="#L1429">1429</a>        local mapIcon = data and MapEntityCtrl:GetMapEntityIconByEntityId(data.entityId) or nil</span>
+<span id="L1430"><a href="#L1430">1430</a>        if task.taskType == BigCityIconTaskType.Add then</span>
+<span id="L1431"><a href="#L1431">1431</a>            if visible and not mapIcon then</span>
+<span id="L1432"><a href="#L1432">1432</a>                MapEntityCtrl:CreateMapEntityIcon(data)</span>
+<span id="L1433"><a href="#L1433">1433</a>            end</span>
+<span id="L1434"><a href="#L1434">1434</a>        elseif task.taskType == BigCityIconTaskType.Remove then</span>
+<span id="L1435"><a href="#L1435">1435</a>            if not visible and mapIcon then</span>
+<span id="L1436"><a href="#L1436">1436</a>                MapEntityCtrl:RemoveMapEntityIcon(data.entityId)</span>
+<span id="L1437"><a href="#L1437">1437</a>            end</span>
+<span id="L1438"><a href="#L1438">1438</a>        elseif task.taskType == BigCityIconTaskType.Refresh then</span>
+<span id="L1439"><a href="#L1439">1439</a>            if visible then</span>
+<span id="L1440"><a href="#L1440">1440</a>                if mapIcon then</span>
+<span id="L1441"><a href="#L1441">1441</a>                    self:RefreshExistingBigCityIcon(mapIcon, data)</span>
+<span id="L1442"><a href="#L1442">1442</a>                else</span>
+<span id="L1443"><a href="#L1443">1443</a>                    MapEntityCtrl:CreateMapEntityIcon(data)</span>
+<span id="L1444"><a href="#L1444">1444</a>                end</span>
+<span id="L1445"><a href="#L1445">1445</a>            elseif mapIcon then</span>
+<span id="L1446"><a href="#L1446">1446</a>                MapEntityCtrl:RemoveMapEntityIcon(data.entityId)</span>
+<span id="L1447"><a href="#L1447">1447</a>            end</span>
+<span id="L1448"><a href="#L1448">1448</a>        end</span>
+<span id="L1449"><a href="#L1449">1449</a>    end</span>
+<span id="L1450"><a href="#L1450">1450</a></span>
+<span id="L1451"><a href="#L1451">1451</a>    self._bigCityIconRefreshTaskIndex = taskIndex</span>
+<span id="L1452"><a href="#L1452">1452</a>    if taskIndex &gt; #tasks then</span>
+<span id="L1453"><a href="#L1453">1453</a>        self:ClearBigCityIconRefreshTasks()</span>
+<span id="L1454"><a href="#L1454">1454</a>    end</span>
+<span id="L1455"><a href="#L1455">1455</a>end</span>
+<span id="L1456"><a href="#L1456">1456</a></span>
+<span id="L1457"><a href="#L1457">1457</a>function cls:ClearBigCityIconRefreshTasks()</span>
+<span id="L1458"><a href="#L1458">1458</a>    self._bigCityIconRefreshTasks = nil</span>
+<span id="L1459"><a href="#L1459">1459</a>    self._bigCityIconRefreshTaskIndex = 1</span>
+<span id="L1460"><a href="#L1460">1460</a>end</span>
+<span id="L1461"><a href="#L1461">1461</a></span>
+<span id="L1462"><a href="#L1462">1462</a>function cls:SetBigCityIconDiffRefreshEnabled(enabled)</span>
+<span id="L1463"><a href="#L1463">1463</a>    local newEnabled = enabled and true or false</span>
+<span id="L1464"><a href="#L1464">1464</a>    if BigCityIconDiffRefreshEnabled == newEnabled then</span>
+<span id="L1465"><a href="#L1465">1465</a>        return</span>
+<span id="L1466"><a href="#L1466">1466</a>    end</span>
+<span id="L1467"><a href="#L1467">1467</a>    BigCityIconDiffRefreshEnabled = newEnabled</span>
+<span id="L1468"><a href="#L1468">1468</a>    self._bigCityIconRefreshContextKey = nil</span>
+<span id="L1469"><a href="#L1469">1469</a>    self:ClearBigCityIconRefreshTasks()</span>
+<span id="L1470"><a href="#L1470">1470</a>end</span>
+<span id="L1471"><a href="#L1471">1471</a></span>
+<span id="L1472"><a href="#L1472">1472</a>function cls:GetBigCityIconDiffRefreshEnabled()</span>
+<span id="L1473"><a href="#L1473">1473</a>    return BigCityIconDiffRefreshEnabled</span>
+<span id="L1474"><a href="#L1474">1474</a>end</span>
+<span id="L1475"><a href="#L1475">1475</a></span>
+<span id="L1476"><a href="#L1476">1476</a>function cls:SetBigCityIconTaskBudgetPerFrame(budget)</span>
+<span id="L1477"><a href="#L1477">1477</a>    BigCityIconTaskBudgetPerFrame = math.max(1, math.floor(tonumber(budget) or 1))</span>
+<span id="L1478"><a href="#L1478">1478</a>end</span>
+<span id="L1479"><a href="#L1479">1479</a></span>
+<span id="L1480"><a href="#L1480">1480</a>function cls:GetBigCityIconTaskBudgetPerFrame()</span>
+<span id="L1481"><a href="#L1481">1481</a>    return BigCityIconTaskBudgetPerFrame</span>
+<span id="L1482"><a href="#L1482">1482</a>end</span>
+<span id="L1483"><a href="#L1483">1483</a></span>
+<span id="L1484"><a href="#L1484">1484</a>---开关&quot;选国都县城显隐过滤&quot;（无极缩放高层）</span>
+<span id="L1485"><a href="#L1485">1485</a>---开启后，RefreshBigCityIcon 只显示郡府城与当前选中郡的县城；关闭后恢复默认显隐</span>
+<span id="L1486"><a href="#L1486">1486</a>---注意：仅切换开关不会立即刷新，需外部再调用 RefreshBigCityIcon</span>
+<span id="L1487"><a href="#L1487">1487</a>---@param enable boolean</span>
+<span id="L1488"><a href="#L1488">1488</a>function cls:SetSelectCapitalCityFilterEnable(enable)</span>
+<span id="L1489"><a href="#L1489">1489</a>    self._selectCapitalCityFilterEnable = enable and true or false</span>
+<span id="L1490"><a href="#L1490">1490</a>end</span>
+<span id="L1491"><a href="#L1491">1491</a></span>
+<span id="L1492"><a href="#L1492">1492</a>---@type MapEntityDataGrid</span>
+<span id="L1493"><a href="#L1493">1493</a>function cls:RefreshBigCityServerEntityID(mapEntityData)</span>
+<span id="L1494"><a href="#L1494">1494</a>    ---@type InfiniteZoomBigCityData</span>
+<span id="L1495"><a href="#L1495">1495</a>    local data = self.bigCityBuildingDict[mapEntityData.cityId]</span>
+<span id="L1496"><a href="#L1496">1496</a>    if data then</span>
+<span id="L1497"><a href="#L1497">1497</a>        data:RefreshServerEntityId(mapEntityData.entityId)</span>
+<span id="L1498"><a href="#L1498">1498</a>        mgr.infiniteZoomMgr.MapEntityCtrl:RefreshMapEntityIconByNewID(mapEntityData.cityId, mapEntityData.entityId)</span>
+<span id="L1499"><a href="#L1499">1499</a>    end</span>
+<span id="L1500"><a href="#L1500">1500</a>end</span>
+<span id="L1501"><a href="#L1501">1501</a>--endregion</span>
+<span id="L1502"><a href="#L1502">1502</a></span>
+<span id="L1503"><a href="#L1503">1503</a>--region 联盟成员</span>
+<span id="L1504"><a href="#L1504">1504</a>function cls:GetMemberDataByEntityId(entityId)</span>
+<span id="L1505"><a href="#L1505">1505</a>    for _, v in pairs(self.guildMemberDict) do</span>
+<span id="L1506"><a href="#L1506">1506</a>        if v.entityId == entityId then</span>
+<span id="L1507"><a href="#L1507">1507</a>            return v</span>
+<span id="L1508"><a href="#L1508">1508</a>        end</span>
+<span id="L1509"><a href="#L1509">1509</a>    end</span>
+<span id="L1510"><a href="#L1510">1510</a>end</span>
+<span id="L1511"><a href="#L1511">1511</a></span>
+<span id="L1512"><a href="#L1512">1512</a>function cls:RefreshOwnMemberData(refreshIcon)</span>
+<span id="L1513"><a href="#L1513">1513</a>    local id = mgr.playerBaseInfo:GetSelfCastleEntityId()</span>
+<span id="L1514"><a href="#L1514">1514</a>    ---@type MapEntityDataPlayerCity</span>
+<span id="L1515"><a href="#L1515">1515</a>    local mapData = mgr.mapCore?.DataCtrl?:GetDataByEntityId(id)</span>
+<span id="L1516"><a href="#L1516">1516</a>    if not mapData then</span>
+<span id="L1517"><a href="#L1517">1517</a>        return</span>
+<span id="L1518"><a href="#L1518">1518</a>    end</span>
+<span id="L1519"><a href="#L1519">1519</a></span>
+<span id="L1520"><a href="#L1520">1520</a>    self.ownMemberData.id = mapData.uid</span>
+<span id="L1521"><a href="#L1521">1521</a>    self.ownMemberData.castleLevel = mapData.level or 0</span>
+<span id="L1522"><a href="#L1522">1522</a>    self.ownMemberData.idName = self.ownMemberData.idName or mgr.text:GetText(&quot;Text_MyCastle&quot;)</span>
+<span id="L1523"><a href="#L1523">1523</a>    self.ownMemberData.pointId = self.ownMemberData.pointId or {}</span>
+<span id="L1524"><a href="#L1524">1524</a>    local x,y = MapCoordUtil.ConvertGridToCell2(mapData.gridX, mapData.gridY)</span>
+<span id="L1525"><a href="#L1525">1525</a>    self.ownMemberData.pointId.x = x--MapCoordUtil.ConvertGridToCell(mapData.gridX)</span>
+<span id="L1526"><a href="#L1526">1526</a>    self.ownMemberData.pointId.y = y--MapCoordUtil.ConvertGridToCell(mapData.gridY)</span>
+<span id="L1527"><a href="#L1527">1527</a>    local memberData = self.guildMemberDict[mapData.uid]  </span>
+<span id="L1528"><a href="#L1528">1528</a>    if not memberData then</span>
+<span id="L1529"><a href="#L1529">1529</a>        memberData = mgr.infiniteZoomMgr.PoolCtrl:GetLuaInstance(PoolCfg.InfiniteZoomPlayerCityData)</span>
+<span id="L1530"><a href="#L1530">1530</a>        self.guildMemberDict[mapData.uid] = memberData</span>
+<span id="L1531"><a href="#L1531">1531</a>        -- if self.mapViewCtrl then</span>
+<span id="L1532"><a href="#L1532">1532</a>        --     self.mapViewCtrl.luaMapViewCtrl:AddGridIndexOfInterest(gridIndex)</span>
+<span id="L1533"><a href="#L1533">1533</a>        -- end</span>
+<span id="L1534"><a href="#L1534">1534</a>    end</span>
+<span id="L1535"><a href="#L1535">1535</a>    memberData:Init(self.ownMemberData, RelationType.Self)</span>
+<span id="L1536"><a href="#L1536">1536</a></span>
+<span id="L1537"><a href="#L1537">1537</a>    if refreshIcon and mgr.infiniteZoomMgr:IsIconLayer() then</span>
+<span id="L1538"><a href="#L1538">1538</a>        ---@type InfiniteZoomIconBase</span>
+<span id="L1539"><a href="#L1539">1539</a>        local mapIcon = MapEntityCtrl:GetMapEntityIconByEntityId(memberData.entityId)</span>
+<span id="L1540"><a href="#L1540">1540</a>        if not mapIcon then</span>
+<span id="L1541"><a href="#L1541">1541</a>            mgr.mapCore.MapSignificanceMgr:RequestTask_ZoomGuildMember(memberData.entityId, EMapSignificanceOperation.Add) -- MapEntityCtrl:CreateMapEntityIcon(v)</span>
+<span id="L1542"><a href="#L1542">1542</a>        else</span>
+<span id="L1543"><a href="#L1543">1543</a>            if memberData.allianceIdDirty then</span>
+<span id="L1544"><a href="#L1544">1544</a>                memberData.gridDirty = false        -- RefreshUI 后不需要在RefreshWoldPosition</span>
+<span id="L1545"><a href="#L1545">1545</a>                mapIcon:RefreshUI()</span>
+<span id="L1546"><a href="#L1546">1546</a>            end</span>
+<span id="L1547"><a href="#L1547">1547</a>            if memberData.gridDirty then</span>
+<span id="L1548"><a href="#L1548">1548</a>                memberData.gridDirty = false</span>
+<span id="L1549"><a href="#L1549">1549</a>                mapIcon:RefreshWorldPosition()</span>
+<span id="L1550"><a href="#L1550">1550</a>            end</span>
+<span id="L1551"><a href="#L1551">1551</a>        end</span>
+<span id="L1552"><a href="#L1552">1552</a>    end</span>
+<span id="L1553"><a href="#L1553">1553</a>    </span>
+<span id="L1554"><a href="#L1554">1554</a>    if memberData.allianceIdDirty then</span>
+<span id="L1555"><a href="#L1555">1555</a>        memberData.allianceIdDirty = false</span>
+<span id="L1556"><a href="#L1556">1556</a>        self:RefreshGuildMemberData()</span>
+<span id="L1557"><a href="#L1557">1557</a>    end</span>
+<span id="L1558"><a href="#L1558">1558</a>end</span>
+<span id="L1559"><a href="#L1559">1559</a></span>
+<span id="L1560"><a href="#L1560">1560</a>function cls:RefreshGuildMemberData()</span>
+<span id="L1561"><a href="#L1561">1561</a>    -- do return end</span>
+<span id="L1562"><a href="#L1562">1562</a>    local isOutside = mgr.infiniteZoomMgr:IsInOutSideState()</span>
+<span id="L1563"><a href="#L1563">1563</a>    if not isOutside then</span>
+<span id="L1564"><a href="#L1564">1564</a>        return</span>
+<span id="L1565"><a href="#L1565">1565</a>    end</span>
+<span id="L1566"><a href="#L1566">1566</a></span>
+<span id="L1567"><a href="#L1567">1567</a>    local allMembers = mgr.guildMgr.Data:GetGuildMemberList() or EmptyTable</span>
+<span id="L1568"><a href="#L1568">1568</a>    for k, v in pairs(allMembers) do</span>
+<span id="L1569"><a href="#L1569">1569</a>        local gridX = (v.pointId or EmptyTable).x or -1</span>
+<span id="L1570"><a href="#L1570">1570</a>        local gridY = (v.pointId or EmptyTable).y or -1</span>
+<span id="L1571"><a href="#L1571">1571</a>        if gridX ~= -1 and gridY ~= -1 then</span>
+<span id="L1572"><a href="#L1572">1572</a>            local data = self.guildMemberDict[v.id]</span>
+<span id="L1573"><a href="#L1573">1573</a>            local isSelf = v.id == self.ownMemberData.id</span>
+<span id="L1574"><a href="#L1574">1574</a>            if not data then</span>
+<span id="L1575"><a href="#L1575">1575</a>                ---@type InfiniteZoomPlayerCityData</span>
+<span id="L1576"><a href="#L1576">1576</a>                data = mgr.infiniteZoomMgr.PoolCtrl:GetLuaInstance(PoolCfg.InfiniteZoomPlayerCityData)</span>
+<span id="L1577"><a href="#L1577">1577</a>                self.guildMemberDict[v.id] = data</span>
+<span id="L1578"><a href="#L1578">1578</a>                -- if self.mapViewCtrl then</span>
+<span id="L1579"><a href="#L1579">1579</a>                --     self.mapViewCtrl.luaMapViewCtrl:AddGridIndexOfInterest(gridIndex)</span>
+<span id="L1580"><a href="#L1580">1580</a>                -- end</span>
+<span id="L1581"><a href="#L1581">1581</a>            end</span>
+<span id="L1582"><a href="#L1582">1582</a>            data:Init(isSelf and self.ownMemberData or v, isSelf and RelationType.Self or RelationType.Friend)</span>
+<span id="L1583"><a href="#L1583">1583</a>        end</span>
+<span id="L1584"><a href="#L1584">1584</a>    end</span>
+<span id="L1585"><a href="#L1585">1585</a></span>
+<span id="L1586"><a href="#L1586">1586</a>    self:RefreshGuildMemberIcon()</span>
+<span id="L1587"><a href="#L1587">1587</a>end</span>
+<span id="L1588"><a href="#L1588">1588</a></span>
+<span id="L1589"><a href="#L1589">1589</a>function cls:RefreshGuildMemberIcon()</span>
+<span id="L1590"><a href="#L1590">1590</a>    local isIconLayer = mgr.infiniteZoomMgr:IsIconLayer()</span>
+<span id="L1591"><a href="#L1591">1591</a>    local allMembers = mgr.guildMgr.Data:GetGuildMemberList() or EmptyTable</span>
+<span id="L1592"><a href="#L1592">1592</a>    local significanceMgr = mgr.mapCore.MapSignificanceMgr</span>
+<span id="L1593"><a href="#L1593">1593</a>    for k, v in pairs(self.guildMemberDict) do</span>
+<span id="L1594"><a href="#L1594">1594</a>        if v.ownerUid == mgr.login.uid then</span>
+<span id="L1595"><a href="#L1595">1595</a>            if isIconLayer and not MapEntityCtrl:GetMapEntityIconByEntityId(v.entityId) then</span>
+<span id="L1596"><a href="#L1596">1596</a>                significanceMgr:RequestTask_ZoomGuildMember(v.entityId, EMapSignificanceOperation.Add) -- MapEntityCtrl:CreateMapEntityIcon(v)</span>
+<span id="L1597"><a href="#L1597">1597</a>            end</span>
+<span id="L1598"><a href="#L1598">1598</a>        else</span>
+<span id="L1599"><a href="#L1599">1599</a>            if not allMembers[v.ownerUid] then</span>
+<span id="L1600"><a href="#L1600">1600</a>                -- if self.mapViewCtrl then</span>
+<span id="L1601"><a href="#L1601">1601</a>                --     self.mapViewCtrl.luaMapViewCtrl:DelGridIndexOfInterest(v.gridIndex)</span>
+<span id="L1602"><a href="#L1602">1602</a>                -- end</span>
+<span id="L1603"><a href="#L1603">1603</a>                significanceMgr:RequestTask_ZoomGuildMember(v.entityId, EMapSignificanceOperation.Remove) -- MapEntityCtrl:RemoveMapEntityIcon(v.entityId)</span>
+<span id="L1604"><a href="#L1604">1604</a>                v:CleanUp()</span>
+<span id="L1605"><a href="#L1605">1605</a>                self.guildMemberDict[k] = nil</span>
+<span id="L1606"><a href="#L1606">1606</a>            else</span>
+<span id="L1607"><a href="#L1607">1607</a>                local visible = isIconLayer and self.guildMembersVisible and mgr.mapCore.MapViewCtrl:IsUnitInView(v.gridIndex)</span>
+<span id="L1608"><a href="#L1608">1608</a>                if visible then</span>
+<span id="L1609"><a href="#L1609">1609</a>                    -- 需要删除原来不是盟友的非ZoomEntity的mapEntityIcon</span>
+<span id="L1610"><a href="#L1610">1610</a>                    MapEntityCtrl:RemoveUnZoomMapEntityIconByGridIndex(v.gridIndex)</span>
+<span id="L1611"><a href="#L1611">1611</a>                    ---@type InfiniteZoomIconBase</span>
+<span id="L1612"><a href="#L1612">1612</a>                    local mapIcon = MapEntityCtrl:GetMapEntityIconByEntityId(v.entityId)</span>
+<span id="L1613"><a href="#L1613">1613</a>                    if not mapIcon then</span>
+<span id="L1614"><a href="#L1614">1614</a>                        significanceMgr:RequestTask_ZoomGuildMember(v.entityId, EMapSignificanceOperation.Add) -- MapEntityCtrl:CreateMapEntityIcon(v)</span>
+<span id="L1615"><a href="#L1615">1615</a>                    else</span>
+<span id="L1616"><a href="#L1616">1616</a>                        if v.allianceIdDirty then</span>
+<span id="L1617"><a href="#L1617">1617</a>                            v.allianceIdDirty = false   </span>
+<span id="L1618"><a href="#L1618">1618</a>                            v.gridDirty = false         -- RefreshUI 后不需要在RefreshWoldPosition</span>
+<span id="L1619"><a href="#L1619">1619</a>                            mapIcon:RefreshUI()</span>
+<span id="L1620"><a href="#L1620">1620</a>                        end</span>
+<span id="L1621"><a href="#L1621">1621</a>                        </span>
+<span id="L1622"><a href="#L1622">1622</a>                        if v.gridDirty then</span>
+<span id="L1623"><a href="#L1623">1623</a>                            v.gridDirty = false</span>
+<span id="L1624"><a href="#L1624">1624</a>                            mapIcon:RefreshWorldPosition()</span>
+<span id="L1625"><a href="#L1625">1625</a>                        end</span>
+<span id="L1626"><a href="#L1626">1626</a>                    end</span>
+<span id="L1627"><a href="#L1627">1627</a>                else</span>
+<span id="L1628"><a href="#L1628">1628</a>                    significanceMgr:RequestTask_ZoomGuildMember(v.entityId, EMapSignificanceOperation.Remove) -- MapEntityCtrl:RemoveMapEntityIcon(v.entityId)</span>
+<span id="L1629"><a href="#L1629">1629</a>                end</span>
+<span id="L1630"><a href="#L1630">1630</a>            end</span>
+<span id="L1631"><a href="#L1631">1631</a>        end</span>
+<span id="L1632"><a href="#L1632">1632</a>    end</span>
+<span id="L1633"><a href="#L1633">1633</a>end</span>
+<span id="L1634"><a href="#L1634">1634</a></span>
+<span id="L1635"><a href="#L1635">1635</a>function cls:GetGuildMemberIconVisible()</span>
+<span id="L1636"><a href="#L1636">1636</a>    return self.guildMembersVisible</span>
+<span id="L1637"><a href="#L1637">1637</a>end</span>
+<span id="L1638"><a href="#L1638">1638</a></span>
+<span id="L1639"><a href="#L1639">1639</a>function cls:SetGuildMemberIconVisible(visible)</span>
+<span id="L1640"><a href="#L1640">1640</a>    if self.guildMembersVisible ~= visible then</span>
+<span id="L1641"><a href="#L1641">1641</a>        self.guildMembersVisible = visible</span>
+<span id="L1642"><a href="#L1642">1642</a>        self:RefreshGuildMemberIcon()</span>
+<span id="L1643"><a href="#L1643">1643</a>    end</span>
+<span id="L1644"><a href="#L1644">1644</a>end</span>
+<span id="L1645"><a href="#L1645">1645</a>--endregion</span>
+<span id="L1646"><a href="#L1646">1646</a></span>
+<span id="L1647"><a href="#L1647">1647</a>--region 联盟边界线</span>
+<span id="L1648"><a href="#L1648">1648</a>function cls:GetGuildRegionVisible()</span>
+<span id="L1649"><a href="#L1649">1649</a>    return self.guildRegionsVisible</span>
+<span id="L1650"><a href="#L1650">1650</a>end</span>
+<span id="L1651"><a href="#L1651">1651</a></span>
+<span id="L1652"><a href="#L1652">1652</a>function cls:SetRegionLineVisible(guildRegionsVisible)</span>
+<span id="L1653"><a href="#L1653">1653</a>    if self.guildRegionsVisible ~= guildRegionsVisible then</span>
+<span id="L1654"><a href="#L1654">1654</a>        self.guildRegionsVisible = guildRegionsVisible</span>
+<span id="L1655"><a href="#L1655">1655</a>        self:CheckShowRegionAtLayer()</span>
+<span id="L1656"><a href="#L1656">1656</a>    end</span>
+<span id="L1657"><a href="#L1657">1657</a>end</span>
+<span id="L1658"><a href="#L1658">1658</a></span>
+<span id="L1659"><a href="#L1659">1659</a>function cls:CheckShowRegionAtLayer()</span>
+<span id="L1660"><a href="#L1660">1660</a>    if(self:IsCurLayerShowRegion())then</span>
+<span id="L1661"><a href="#L1661">1661</a>        -- GM 显隐控制：联盟边界线被 GM 关闭时保持隐藏</span>
+<span id="L1662"><a href="#L1662">1662</a>        OutsidePub.ToggleManorLineDisplay(self.guildRegionsVisible and OutsideVisibilityGM.IsVisible(&quot;manorLine&quot;))</span>
+<span id="L1663"><a href="#L1663">1663</a>    else</span>
+<span id="L1664"><a href="#L1664">1664</a>        OutsidePub.ToggleManorLineDisplay(false)</span>
+<span id="L1665"><a href="#L1665">1665</a>    end</span>
+<span id="L1666"><a href="#L1666">1666</a>end</span>
+<span id="L1667"><a href="#L1667">1667</a></span>
+<span id="L1668"><a href="#L1668">1668</a>function cls:IsCurLayerShowRegion()</span>
+<span id="L1669"><a href="#L1669">1669</a>    local curLevel = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L1670"><a href="#L1670">1670</a>    if(curLevel &gt;= InfiniteZoomCfg.Hide3DMapLayerIdx)then</span>
+<span id="L1671"><a href="#L1671">1671</a>        return true</span>
+<span id="L1672"><a href="#L1672">1672</a>    else</span>
+<span id="L1673"><a href="#L1673">1673</a>        return false</span>
+<span id="L1674"><a href="#L1674">1674</a>    end</span>
+<span id="L1675"><a href="#L1675">1675</a>end</span>
+<span id="L1676"><a href="#L1676">1676</a>--endregion</span>
+<span id="L1677"><a href="#L1677">1677</a></span>
+<span id="L1678"><a href="#L1678">1678</a>--region 飞艇标记</span>
+<span id="L1679"><a href="#L1679">1679</a>function cls:GetGuildAirshipIconVisible()</span>
+<span id="L1680"><a href="#L1680">1680</a>    return self.guildAirshipVisible</span>
+<span id="L1681"><a href="#L1681">1681</a>end</span>
+<span id="L1682"><a href="#L1682">1682</a></span>
+<span id="L1683"><a href="#L1683">1683</a>function cls:SetGuildAirshipIconVisible(visible)</span>
+<span id="L1684"><a href="#L1684">1684</a>    if self.guildAirshipVisible == visible then</span>
+<span id="L1685"><a href="#L1685">1685</a>        return</span>
+<span id="L1686"><a href="#L1686">1686</a>    end</span>
+<span id="L1687"><a href="#L1687">1687</a></span>
+<span id="L1688"><a href="#L1688">1688</a>    self.guildAirshipVisible = visible</span>
+<span id="L1689"><a href="#L1689">1689</a>    mgr.infiniteZoomMgr.MapEntityCtrl:RefreshMapIconByEntityType(CfgNs.WorldEntityType.WET_MingChengOtherBuilding)</span>
+<span id="L1690"><a href="#L1690">1690</a>end</span>
+<span id="L1691"><a href="#L1691">1691</a></span>
+<span id="L1692"><a href="#L1692">1692</a>function cls:GetEnemyAirshipIconVisible()</span>
+<span id="L1693"><a href="#L1693">1693</a>    return self.enemyAirshipVisible</span>
+<span id="L1694"><a href="#L1694">1694</a>end</span>
+<span id="L1695"><a href="#L1695">1695</a></span>
+<span id="L1696"><a href="#L1696">1696</a>function cls:SetEnemyAirshipIconVisible(visible)</span>
+<span id="L1697"><a href="#L1697">1697</a>    if self.enemyAirshipVisible == visible then</span>
+<span id="L1698"><a href="#L1698">1698</a>        return</span>
+<span id="L1699"><a href="#L1699">1699</a>    end</span>
+<span id="L1700"><a href="#L1700">1700</a></span>
+<span id="L1701"><a href="#L1701">1701</a>    self.enemyAirshipVisible = visible</span>
+<span id="L1702"><a href="#L1702">1702</a>    mgr.infiniteZoomMgr.MapEntityCtrl:RefreshMapIconByEntityType(CfgNs.WorldEntityType.WET_MingChengOtherBuilding)</span>
+<span id="L1703"><a href="#L1703">1703</a>end</span>
+<span id="L1704"><a href="#L1704">1704</a>--endregion</span>
+<span id="L1705"><a href="#L1705">1705</a></span>
+<span id="L1706"><a href="#L1706">1706</a>--region 城市连线</span>
+<span id="L1707"><a href="#L1707">1707</a>local OutsideLuaCall = CS.AOE.Outside.OutsideLuaCall</span>
+<span id="L1708"><a href="#L1708">1708</a>function cls:AddCityLinkedLines(cityid)</span>
+<span id="L1709"><a href="#L1709">1709</a>    local beginCityCfg = mgr.bigCityMgr:GetMainBuildingOfflineDataByCityId(cityid,true)</span>
+<span id="L1710"><a href="#L1710">1710</a>    --local newLines = {}</span>
+<span id="L1711"><a href="#L1711">1711</a>    if beginCityCfg and beginCityCfg.linkedCityId then</span>
+<span id="L1712"><a href="#L1712">1712</a>        local gridIndex = MapCoordUtil.ConvertGridToGridIndex(beginCityCfg.gridx or 0, beginCityCfg.gridy or 0)</span>
+<span id="L1713"><a href="#L1713">1713</a>        local beginWorldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L1714"><a href="#L1714">1714</a>        for _,endCityId in ipairs(beginCityCfg.linkedCityId) do</span>
+<span id="L1715"><a href="#L1715">1715</a>            local endCityCfg = mgr.bigCityMgr:GetMainBuildingOfflineDataByCityId(endCityId,true)</span>
+<span id="L1716"><a href="#L1716">1716</a>            local groupStr = self:GetLineCityGroupStr(cityid,endCityId)</span>
+<span id="L1717"><a href="#L1717">1717</a>            local backGroupStr = self:GetLineCityGroupStr(endCityId, cityid)</span>
+<span id="L1718"><a href="#L1718">1718</a>            if endCityCfg and not (self.linkedLines[groupStr] or self.linkedLines[backGroupStr]) then</span>
+<span id="L1719"><a href="#L1719">1719</a>                local gridIndex = MapCoordUtil.ConvertGridToGridIndex(endCityCfg.gridx or 0, endCityCfg.gridy or 0)</span>
+<span id="L1720"><a href="#L1720">1720</a>                local endWorldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(gridIndex)</span>
+<span id="L1721"><a href="#L1721">1721</a>                local point = {beginWorldPos, endWorldPos}</span>
+<span id="L1722"><a href="#L1722">1722</a>                if self:CityLinkLineCanShow() then</span>
+<span id="L1723"><a href="#L1723">1723</a>                    local lineID = OutsideLuaCall.StaticCreateSelfBuildLine(point, 0, 13, 0, 0, 0, false, 8, 0.3, nil)</span>
+<span id="L1724"><a href="#L1724">1724</a>                    self.linkedLines[groupStr] = lineID</span>
+<span id="L1725"><a href="#L1725">1725</a>                end</span>
+<span id="L1726"><a href="#L1726">1726</a>            end</span>
+<span id="L1727"><a href="#L1727">1727</a>        end</span>
+<span id="L1728"><a href="#L1728">1728</a>    end</span>
+<span id="L1729"><a href="#L1729">1729</a>end</span>
+<span id="L1730"><a href="#L1730">1730</a></span>
+<span id="L1731"><a href="#L1731">1731</a>function cls:DelCityLinkedLines(data)</span>
+<span id="L1732"><a href="#L1732">1732</a>    local cityId = data.cityId</span>
+<span id="L1733"><a href="#L1733">1733</a>    for group,lineid in pairs(self.linkedLines) do</span>
+<span id="L1734"><a href="#L1734">1734</a>        if string.find(group, tostring(cityId)) then</span>
+<span id="L1735"><a href="#L1735">1735</a>            OutsideLuaCall.StaticDeleteLine(lineid)</span>
+<span id="L1736"><a href="#L1736">1736</a>            self.linkedLines[group] = nil</span>
+<span id="L1737"><a href="#L1737">1737</a>        end</span>
+<span id="L1738"><a href="#L1738">1738</a>    end</span>
+<span id="L1739"><a href="#L1739">1739</a>end</span>
+<span id="L1740"><a href="#L1740">1740</a></span>
+<span id="L1741"><a href="#L1741">1741</a>function cls:ShowCityLinkedLines()</span>
+<span id="L1742"><a href="#L1742">1742</a>    OutsideLuaCall.SetExpendCofValue(30)</span>
+<span id="L1743"><a href="#L1743">1743</a>    local datas = mgr.bigCityMgr:GetMainCityOfflineDataMap()</span>
+<span id="L1744"><a href="#L1744">1744</a>    for _, data in pairs(datas) do</span>
+<span id="L1745"><a href="#L1745">1745</a>        self:AddCityLinkedLines(data.id)</span>
+<span id="L1746"><a href="#L1746">1746</a>    end</span>
+<span id="L1747"><a href="#L1747">1747</a>end</span>
+<span id="L1748"><a href="#L1748">1748</a></span>
+<span id="L1749"><a href="#L1749">1749</a>function cls:HideCityLinkedLines()</span>
+<span id="L1750"><a href="#L1750">1750</a>    OutsideLuaCall.SetExpendCofValue(-1)</span>
+<span id="L1751"><a href="#L1751">1751</a>    for _,lineid in pairs(self.linkedLines) do</span>
+<span id="L1752"><a href="#L1752">1752</a>        OutsideLuaCall.StaticDeleteLine(lineid)</span>
+<span id="L1753"><a href="#L1753">1753</a>    end</span>
+<span id="L1754"><a href="#L1754">1754</a>    self.linkedLines = {}</span>
+<span id="L1755"><a href="#L1755">1755</a>end</span>
+<span id="L1756"><a href="#L1756">1756</a></span>
+<span id="L1757"><a href="#L1757">1757</a>function cls:SetCityLinkLineVisible(flag)</span>
+<span id="L1758"><a href="#L1758">1758</a>    self.linesVisibleApply = flag</span>
+<span id="L1759"><a href="#L1759">1759</a>    if self:CityLinkLineCanShow() then</span>
+<span id="L1760"><a href="#L1760">1760</a>        self:ShowCityLinkedLines()</span>
+<span id="L1761"><a href="#L1761">1761</a>    else</span>
+<span id="L1762"><a href="#L1762">1762</a>        self:HideCityLinkedLines()</span>
+<span id="L1763"><a href="#L1763">1763</a>    end</span>
+<span id="L1764"><a href="#L1764">1764</a>end</span>
+<span id="L1765"><a href="#L1765">1765</a></span>
+<span id="L1766"><a href="#L1766">1766</a>function cls:CityLinkLineCanShow()</span>
+<span id="L1767"><a href="#L1767">1767</a>    return self.linesVisibleApply and self.canShowLinkedLines</span>
+<span id="L1768"><a href="#L1768">1768</a>end</span>
+<span id="L1769"><a href="#L1769">1769</a></span>
+<span id="L1770"><a href="#L1770">1770</a>function cls:RefreshCityLinkedLines()</span>
+<span id="L1771"><a href="#L1771">1771</a>    if ObjUtil.IsNull(self.linesObj) then</span>
+<span id="L1772"><a href="#L1772">1772</a>        self.linesObj = U3D.GameObject.Find(&quot;selfBuildMeshLine&quot;)</span>
+<span id="L1773"><a href="#L1773">1773</a>    end</span>
+<span id="L1774"><a href="#L1774">1774</a>    local Layer = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L1775"><a href="#L1775">1775</a>    local showCityLinkedLayers = mgr.cfg:GetViewMiscConfData()[1].showCityLinkedLayer</span>
+<span id="L1776"><a href="#L1776">1776</a>    if Layer &gt;= showCityLinkedLayers[1] and Layer &lt;= showCityLinkedLayers[2] then</span>
+<span id="L1777"><a href="#L1777">1777</a>        if not self.canShowLinkedLines then</span>
+<span id="L1778"><a href="#L1778">1778</a>            self.canShowLinkedLines = true</span>
+<span id="L1779"><a href="#L1779">1779</a>            --if not ObjUtil.IsNull(self.linesObj) then</span>
+<span id="L1780"><a href="#L1780">1780</a>            --    self.linesObj.transform.position = U3D.Vector3(0,1,0)</span>
+<span id="L1781"><a href="#L1781">1781</a>            --end</span>
+<span id="L1782"><a href="#L1782">1782</a>            self:ShowCityLinkedLines()</span>
+<span id="L1783"><a href="#L1783">1783</a>        end</span>
+<span id="L1784"><a href="#L1784">1784</a>    else</span>
+<span id="L1785"><a href="#L1785">1785</a>        if self.canShowLinkedLines then</span>
+<span id="L1786"><a href="#L1786">1786</a>            --if not ObjUtil.IsNull(self.linesObj) then</span>
+<span id="L1787"><a href="#L1787">1787</a>            --    self.linesObj.transform.position = U3D.Vector3(0,0,0)</span>
+<span id="L1788"><a href="#L1788">1788</a>            --end</span>
+<span id="L1789"><a href="#L1789">1789</a>            self:HideCityLinkedLines()</span>
+<span id="L1790"><a href="#L1790">1790</a>            self.canShowLinkedLines = false</span>
+<span id="L1791"><a href="#L1791">1791</a>        end</span>
+<span id="L1792"><a href="#L1792">1792</a>    end</span>
+<span id="L1793"><a href="#L1793">1793</a>     -- 抬高Lines来避免Map遮挡；为了保持战术线始终可见，在Maps出现时就抬高，与ShowCityLinkedLines采用不同条件范围</span>
+<span id="L1794"><a href="#L1794">1794</a>    if not ObjUtil.IsNull(self.linesObj) then</span>
+<span id="L1795"><a href="#L1795">1795</a>        if Layer &gt;= 8 and Layer &lt;= showCityLinkedLayers[2] then</span>
+<span id="L1796"><a href="#L1796">1796</a>            self.linesObj.transform.position = U3D.Vector3(0,1,0)</span>
+<span id="L1797"><a href="#L1797">1797</a>        else</span>
+<span id="L1798"><a href="#L1798">1798</a>            self.linesObj.transform.position = U3D.Vector3(0,0,0)</span>
+<span id="L1799"><a href="#L1799">1799</a>        end</span>
+<span id="L1800"><a href="#L1800">1800</a>    end</span>
+<span id="L1801"><a href="#L1801">1801</a>end</span>
+<span id="L1802"><a href="#L1802">1802</a></span>
+<span id="L1803"><a href="#L1803">1803</a>function cls:GetLineCityGroupStr(beginNum,endNum)</span>
+<span id="L1804"><a href="#L1804">1804</a>    local numStr = string.format(&quot;%d,%d&quot;,beginNum,endNum)</span>
+<span id="L1805"><a href="#L1805">1805</a>    return numStr</span>
+<span id="L1806"><a href="#L1806">1806</a>end</span>
+<span id="L1807"><a href="#L1807">1807</a>--endregion</span>
+<span id="L1808"><a href="#L1808">1808</a></span>
+<span id="L1809"><a href="#L1809">1809</a>--region 索道连接线</span>
+<span id="L1810"><a href="#L1810">1810</a></span>
+<span id="L1811"><a href="#L1811">1811</a>---@param mapEntityData MapEntityDataAnchor</span>
+<span id="L1812"><a href="#L1812">1812</a>---@param flag boolean</span>
+<span id="L1813"><a href="#L1813">1813</a>function cls:ShowRopeLine(mapEntityData,flag)</span>
+<span id="L1814"><a href="#L1814">1814</a>    local point = mapEntityData.gridX &lt;&lt; 16 | mapEntityData.gridY</span>
+<span id="L1815"><a href="#L1815">1815</a>    local relation = mapEntityData:GetZoomRelation()</span>
+<span id="L1816"><a href="#L1816">1816</a>    local anotherPointData = mgr.bigCityMgr:GetRopewayPointDataByPoint(point)</span>
+<span id="L1817"><a href="#L1817">1817</a>    local mainEntityData = mapEntityData:GetMainEntityData()</span>
+<span id="L1818"><a href="#L1818">1818</a>    if anotherPointData then</span>
+<span id="L1819"><a href="#L1819">1819</a>        self:ShowRopewayPointLine(point,anotherPointData.anotherPoint,relation,flag)</span>
+<span id="L1820"><a href="#L1820">1820</a>    elseif mainEntityData then</span>
+<span id="L1821"><a href="#L1821">1821</a>        local anchorGridMap = mainEntityData.ropeWayAttr?.anchorGridMap</span>
+<span id="L1822"><a href="#L1822">1822</a>        for pointXY, _ in pairs(anchorGridMap or {}) do</span>
+<span id="L1823"><a href="#L1823">1823</a>            local gridX = pointXY &gt;&gt; 16</span>
+<span id="L1824"><a href="#L1824">1824</a>            local gridY = pointXY &amp; 0xFFFF</span>
+<span id="L1825"><a href="#L1825">1825</a>            if gridX ~= mapEntityData.gridX or gridY ~= mapEntityData.gridY then</span>
+<span id="L1826"><a href="#L1826">1826</a>                anotherPointData = pointXY</span>
+<span id="L1827"><a href="#L1827">1827</a>            end</span>
+<span id="L1828"><a href="#L1828">1828</a>        end</span>
+<span id="L1829"><a href="#L1829">1829</a>        if anotherPointData then</span>
+<span id="L1830"><a href="#L1830">1830</a>            self:ShowRopewayPointLine(point,anotherPointData,relation,flag)</span>
+<span id="L1831"><a href="#L1831">1831</a>        end</span>
+<span id="L1832"><a href="#L1832">1832</a>    elseif not flag then</span>
+<span id="L1833"><a href="#L1833">1833</a>        for point1, v1 in pairs(self.linkedRopeLines) do</span>
+<span id="L1834"><a href="#L1834">1834</a>            for point2, _ in pairs(v1) do</span>
+<span id="L1835"><a href="#L1835">1835</a>                if point1 == point or point2 == point then</span>
+<span id="L1836"><a href="#L1836">1836</a>                    self:ShowRopewayPointLine(point1,point2,relation,flag)</span>
+<span id="L1837"><a href="#L1837">1837</a>                    return</span>
+<span id="L1838"><a href="#L1838">1838</a>                end</span>
+<span id="L1839"><a href="#L1839">1839</a>            end</span>
+<span id="L1840"><a href="#L1840">1840</a>        end</span>
+<span id="L1841"><a href="#L1841">1841</a>    elseif not mainEntityData  then</span>
+<span id="L1842"><a href="#L1842">1842</a>        self.cacheMainEntityRopeLine[mapEntityData:GetMainEntityId()] = {mapEntityData = mapEntityData,flag = flag}</span>
+<span id="L1843"><a href="#L1843">1843</a>    end</span>
+<span id="L1844"><a href="#L1844">1844</a>end</span>
+<span id="L1845"><a href="#L1845">1845</a></span>
+<span id="L1846"><a href="#L1846">1846</a>function cls:OnAnchorMainBuildDataCreat(entityId)</span>
+<span id="L1847"><a href="#L1847">1847</a>    if self.cacheMainEntityRopeLine[entityId] then</span>
+<span id="L1848"><a href="#L1848">1848</a>        self:ShowRopeLine(self.cacheMainEntityRopeLine[entityId].mapEntityData,self.cacheMainEntityRopeLine[entityId].flag)</span>
+<span id="L1849"><a href="#L1849">1849</a>        self.cacheMainEntityRopeLine[entityId] = nil</span>
+<span id="L1850"><a href="#L1850">1850</a>    end</span>
+<span id="L1851"><a href="#L1851">1851</a>end</span>
+<span id="L1852"><a href="#L1852">1852</a></span>
+<span id="L1853"><a href="#L1853">1853</a>local MapEffectGoRelationToLineColorType = {</span>
+<span id="L1854"><a href="#L1854">1854</a>    [RelationType.None]    = 4,</span>
+<span id="L1855"><a href="#L1855">1855</a>    [RelationType.Neutral] = 4,</span>
+<span id="L1856"><a href="#L1856">1856</a>    [RelationType.Self]    = 1,</span>
+<span id="L1857"><a href="#L1857">1857</a>    [RelationType.Enemy]   = 2,</span>
+<span id="L1858"><a href="#L1858">1858</a>    [RelationType.Friend]  = 3,</span>
+<span id="L1859"><a href="#L1859">1859</a>}</span>
+<span id="L1860"><a href="#L1860">1860</a>---@param point number</span>
+<span id="L1861"><a href="#L1861">1861</a>---@param anotherPoint number</span>
+<span id="L1862"><a href="#L1862">1862</a>---@param flag boolean</span>
+<span id="L1863"><a href="#L1863">1863</a>function cls:ShowRopewayPointLine(point,anotherPoint,relation,flag)</span>
+<span id="L1864"><a href="#L1864">1864</a>    if flag then</span>
+<span id="L1865"><a href="#L1865">1865</a>        if self:CheckHaveRopewayLine(point, anotherPoint) then</span>
+<span id="L1866"><a href="#L1866">1866</a>            return</span>
+<span id="L1867"><a href="#L1867">1867</a>        end</span>
+<span id="L1868"><a href="#L1868">1868</a>        local getWorldPos = function(pointXY)</span>
+<span id="L1869"><a href="#L1869">1869</a>            local gridX = pointXY &gt;&gt; 16</span>
+<span id="L1870"><a href="#L1870">1870</a>            local gridY = pointXY &amp; 0xFFFF</span>
+<span id="L1871"><a href="#L1871">1871</a>            local worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(MapCoordUtil.ConvertGridToGridIndex(gridX or 0, gridY or 0))</span>
+<span id="L1872"><a href="#L1872">1872</a>            return worldPos</span>
+<span id="L1873"><a href="#L1873">1873</a>        end</span>
+<span id="L1874"><a href="#L1874">1874</a>        local startPos = getWorldPos(point)</span>
+<span id="L1875"><a href="#L1875">1875</a>        local endPos = getWorldPos(anotherPoint)</span>
+<span id="L1876"><a href="#L1876">1876</a>        local pointLine = {startPos, endPos}</span>
+<span id="L1877"><a href="#L1877">1877</a>        local colorType = MapEffectGoRelationToLineColorType[relation]</span>
+<span id="L1878"><a href="#L1878">1878</a>        local lineID = OutsideLuaCall.StaticCreateLine(pointLine, 0, colorType, 0, 0, 0, false, 8, 0.3, nil)</span>
+<span id="L1879"><a href="#L1879">1879</a>        if not self.linkedRopeLines[point] then</span>
+<span id="L1880"><a href="#L1880">1880</a>            self.linkedRopeLines[point] = {}</span>
+<span id="L1881"><a href="#L1881">1881</a>        end</span>
+<span id="L1882"><a href="#L1882">1882</a>        self.linkedRopeLines[point][anotherPoint] = lineID</span>
+<span id="L1883"><a href="#L1883">1883</a>    else</span>
+<span id="L1884"><a href="#L1884">1884</a>        local removeLineFun = function(point,anotherPoint)</span>
+<span id="L1885"><a href="#L1885">1885</a>            if self.linkedRopeLines[point] and self.linkedRopeLines[point][anotherPoint] then</span>
+<span id="L1886"><a href="#L1886">1886</a>                local lineID = self.linkedRopeLines[point][anotherPoint]</span>
+<span id="L1887"><a href="#L1887">1887</a>                OutsideLuaCall.StaticDeleteLine(lineID)</span>
+<span id="L1888"><a href="#L1888">1888</a>                self.linkedRopeLines[point][anotherPoint] = nil</span>
+<span id="L1889"><a href="#L1889">1889</a>                self.linkedRopeLines[point] = nil</span>
+<span id="L1890"><a href="#L1890">1890</a>                return true</span>
+<span id="L1891"><a href="#L1891">1891</a>            end</span>
+<span id="L1892"><a href="#L1892">1892</a>            return false</span>
+<span id="L1893"><a href="#L1893">1893</a>        end</span>
+<span id="L1894"><a href="#L1894">1894</a>        if not removeLineFun(point,anotherPoint) then</span>
+<span id="L1895"><a href="#L1895">1895</a>            removeLineFun(anotherPoint,point)</span>
+<span id="L1896"><a href="#L1896">1896</a>        end</span>
+<span id="L1897"><a href="#L1897">1897</a>    end</span>
+<span id="L1898"><a href="#L1898">1898</a>end</span>
+<span id="L1899"><a href="#L1899">1899</a></span>
+<span id="L1900"><a href="#L1900">1900</a>function cls:CheckHaveRopewayLine(point,anotherPoint)</span>
+<span id="L1901"><a href="#L1901">1901</a>    return (self.linkedRopeLines[point] and self.linkedRopeLines[point][anotherPoint]) or (self.linkedRopeLines[anotherPoint] and self.linkedRopeLines[anotherPoint][point])</span>
+<span id="L1902"><a href="#L1902">1902</a>end</span>
+<span id="L1903"><a href="#L1903">1903</a></span>
+<span id="L1904"><a href="#L1904">1904</a>--endregion</span>
+<span id="L1905"><a href="#L1905">1905</a></span>
+<span id="L1906"><a href="#L1906">1906</a>--region 野外征兵头像</span>
+<span id="L1907"><a href="#L1907">1907</a>-- function cls:RefreshConscriptHead(notAttr)</span>
+<span id="L1908"><a href="#L1908">1908</a>--     local isOutside = mgr.infiniteZoomMgr:IsInOutSideState()</span>
+<span id="L1909"><a href="#L1909">1909</a>--     if not isOutside then</span>
+<span id="L1910"><a href="#L1910">1910</a>--         return</span>
+<span id="L1911"><a href="#L1911">1911</a>--     end</span>
+<span id="L1912"><a href="#L1912">1912</a>--     if not mgr.mapCore.DataCtrl then</span>
+<span id="L1913"><a href="#L1913">1913</a>--         return</span>
+<span id="L1914"><a href="#L1914">1914</a>--     end</span>
+<span id="L1915"><a href="#L1915">1915</a>--     local iconLevel = mgr.infiniteZoomMgr:GetIconLayerLevel()</span>
+<span id="L1916"><a href="#L1916">1916</a>--     if iconLevel &gt; InfiniteZoomCfg.HideFieldConscriptLayerIdx then</span>
+<span id="L1917"><a href="#L1917">1917</a>--         self:RemoveConscriptHead()</span>
+<span id="L1918"><a href="#L1918">1918</a>--         return</span>
+<span id="L1919"><a href="#L1919">1919</a>--     end</span>
+<span id="L1920"><a href="#L1920">1920</a></span>
+<span id="L1921"><a href="#L1921">1921</a>--     if notAttr then</span>
+<span id="L1922"><a href="#L1922">1922</a>--         return</span>
+<span id="L1923"><a href="#L1923">1923</a>--     end</span>
+<span id="L1924"><a href="#L1924">1924</a></span>
+<span id="L1925"><a href="#L1925">1925</a>--     local head = {}</span>
+<span id="L1926"><a href="#L1926">1926</a>--     local armies = PresetTeamYzUtil.GetTeamDict() or GlobalEmptyTable</span>
+<span id="L1927"><a href="#L1927">1927</a>--     for _, armyData in pairs(armies) do</span>
+<span id="L1928"><a href="#L1928">1928</a>--         local troop = armyData.troop</span>
+<span id="L1929"><a href="#L1929">1929</a>--         if OutsideUtils.HaveFoodConscript(armyData.troop) then</span>
+<span id="L1930"><a href="#L1930">1930</a>--             if not head[troop.armyGroupId] then</span>
+<span id="L1931"><a href="#L1931">1931</a>--                 head[troop.armyGroupId] = {}</span>
+<span id="L1932"><a href="#L1932">1932</a>--             end</span>
+<span id="L1933"><a href="#L1933">1933</a>--             table.insert(head[troop.armyGroupId], armyData)</span>
+<span id="L1934"><a href="#L1934">1934</a>--         end</span>
+<span id="L1935"><a href="#L1935">1935</a>--     end</span>
+<span id="L1936"><a href="#L1936">1936</a>--     for entityid, ui in pairs(self.conscriptHeads) do</span>
+<span id="L1937"><a href="#L1937">1937</a>--         if not head[entityid] then</span>
+<span id="L1938"><a href="#L1938">1938</a>--             UICtrl:PutFloatUI(ui)</span>
+<span id="L1939"><a href="#L1939">1939</a>--             UICtrl:UnbindGridUI(ui)</span>
+<span id="L1940"><a href="#L1940">1940</a>--             self.conscriptHeads[entityid] = nil</span>
+<span id="L1941"><a href="#L1941">1941</a>--         else</span>
+<span id="L1942"><a href="#L1942">1942</a>--             table.sort(head[entityid], function(a, b) return a.id &lt; b.id end)</span>
+<span id="L1943"><a href="#L1943">1943</a>--             self.conscriptHeads[entityid]:ReFreshUI(head[entityid][1])</span>
+<span id="L1944"><a href="#L1944">1944</a>--         end</span>
+<span id="L1945"><a href="#L1945">1945</a>--     end</span>
+<span id="L1946"><a href="#L1946">1946</a>--     for entityid, armyDatas in pairs(head) do</span>
+<span id="L1947"><a href="#L1947">1947</a>--         table.sort(armyDatas, function(a, b) return a.id &lt; b.id end)</span>
+<span id="L1948"><a href="#L1948">1948</a>--         if not self.conscriptHeads[entityid] then</span>
+<span id="L1949"><a href="#L1949">1949</a>--             local armyData = armyDatas[1]</span>
+<span id="L1950"><a href="#L1950">1950</a>--             local mapData = mgr.mapCore.DataCtrl:GetDataByEntityId(entityid) or nil</span>
+<span id="L1951"><a href="#L1951">1951</a>--             if mapData then</span>
+<span id="L1952"><a href="#L1952">1952</a>--                 ---@type Float_ConscriptionHead</span>
+<span id="L1953"><a href="#L1953">1953</a>--                 self.conscriptHeads[entityid] = UICtrl:GetFloatUI(UIName.Float_ConscriptionHead, InfiniteZommFloatLayer.ArmyHead)</span>
+<span id="L1954"><a href="#L1954">1954</a>--                 self.conscriptHeads[entityid]:ReFreshUI(armyData)</span>
+<span id="L1955"><a href="#L1955">1955</a>--                 local worldPos = InfiniteZoomUtil.ConvertGridIndexToWorldPos(mapData.gridIndex)</span>
+<span id="L1956"><a href="#L1956">1956</a>--                 UICtrl:BindGridUI(self.conscriptHeads[entityid], worldPos)  </span>
+<span id="L1957"><a href="#L1957">1957</a>--             end</span>
+<span id="L1958"><a href="#L1958">1958</a>--         end</span>
+<span id="L1959"><a href="#L1959">1959</a>--     end</span>
+<span id="L1960"><a href="#L1960">1960</a>-- end</span>
+<span id="L1961"><a href="#L1961">1961</a></span>
+<span id="L1962"><a href="#L1962">1962</a>-- function cls:RemoveConscriptHead()</span>
+<span id="L1963"><a href="#L1963">1963</a>--     for _, ui in pairs(self.conscriptHeads) do</span>
+<span id="L1964"><a href="#L1964">1964</a>--         UICtrl:PutFloatUI(ui)</span>
+<span id="L1965"><a href="#L1965">1965</a>--         UICtrl:UnbindGridUI(ui)</span>
+<span id="L1966"><a href="#L1966">1966</a>--     end</span>
+<span id="L1967"><a href="#L1967">1967</a>--     self.conscriptHeads = {}</span>
+<span id="L1968"><a href="#L1968">1968</a>-- end</span>
+<span id="L1969"><a href="#L1969">1969</a></span>
+<span id="L1970"><a href="#L1970">1970</a>-- function cls:SelectEntityShowConscriptTime(entityId, flag)</span>
+<span id="L1971"><a href="#L1971">1971</a>--     if self.conscriptHeads[entityId] then</span>
+<span id="L1972"><a href="#L1972">1972</a>--         self.conscriptHeads[entityId]:SelectEntity(flag)</span>
+<span id="L1973"><a href="#L1973">1973</a>--     end</span>
+<span id="L1974"><a href="#L1974">1974</a>-- end</span>
+<span id="L1975"><a href="#L1975">1975</a></span>
+<span id="L1976"><a href="#L1976">1976</a>-- function cls:SelectArmyEntityShowConscriptTime(entityId, flag)</span>
+<span id="L1977"><a href="#L1977">1977</a>--     for _, ui in pairs(self.conscriptHeads) do</span>
+<span id="L1978"><a href="#L1978">1978</a>--         ui:SelectArmyEntity(entityId,flag)</span>
+<span id="L1979"><a href="#L1979">1979</a>--     end</span>
+<span id="L1980"><a href="#L1980">1980</a>-- end</span>
+<span id="L1981"><a href="#L1981">1981</a>--endregion</span>
+<span id="L1982"><a href="#L1982">1982</a></span>
+<span id="L1983"><a href="#L1983">1983</a>function cls.OnHotReload()</span>
+<span id="L1984"><a href="#L1984">1984</a>    MapEntityCtrl = (mgr.infiniteZoomMgr or _G.GlobalEmptyTable).MapEntityCtrl</span>
+<span id="L1985"><a href="#L1985">1985</a>    UICtrl = (mgr.infiniteZoomMgr or _G.GlobalEmptyTable).UICtrl</span>
+<span id="L1986"><a href="#L1986">1986</a>end</span>
+<span id="L1987"><a href="#L1987">1987</a></span>
+<span id="L1988"><a href="#L1988">1988</a>return cls</span></pre></html>
