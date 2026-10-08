@@ -8,6 +8,8 @@
 
 访问入口：`/cpu/report/ferry-stress-20261006/report.html`。
 
+方案详情采用默认可见的卡片：成本指标、改法、验收和收益边界分区展示，详细判断与源码折叠保留，调用树返回第2章统一查看。GridPreviewMgr及奇观的历史重负载单列为“待造例复测”，包含4份后续测试设计与覆盖门槛；清单见 [followup-cases.md](followup-cases.md)。这些测试尚未执行，历史峰值不计入本次成本或优化收益。
+
 ## 发布资源
 
 入口HTML约13KB，默认用例及其全部图片的初始资源合计约343KB。全部用例和证据约46MB，具体大小与哈希见 `manifest.json`。这不是浏览器滚动耗时的实测结果。
@@ -38,6 +40,6 @@ node --max-old-space-size=8192 scripts/reports/build_ferry_report.cjs
 node --max-old-space-size=8192 scripts/reports/verify_ferry_report.cjs
 ```
 
-生成器使用原报告的呈现函数，不重新计算或改变性能结论。复建时需已安装pako，或通过 `FERRY_PAKO_ROOT` 指向它的包目录。核验脚本需要Node.js 20及以上。无需连接手机。
+生成器保留V9用例与测量数据，方案卡片由 `ferry_plan_cards.cjs` 呈现，造例设计来自 `ferry_followup_cases.json`。复建时需已安装pako，或通过 `FERRY_PAKO_ROOT` 指向它的包目录。核验脚本需要Node.js 20及以上。无需连接手机。
 
 部署操作提示词见 [DEPLOYMENT_PROMPT.md](DEPLOYMENT_PROMPT.md)。

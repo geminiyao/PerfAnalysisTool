@@ -10,6 +10,13 @@ const els=new Map();class El{constructor(id){this.id=id;this.value='';this.inner
 const document={getElementById(id){if(!els.has(id))els.set(id,new El(id));return els.get(id)},createElement(){return new El('download')}};
 document.getElementById('reportData').textContent=raw;
 const ctx=vm.createContext({document,Blob:class{},URL:{createObjectURL(){return'blob:build'},revokeObjectURL(){}}});new vm.Script(code).runInContext(ctx);const run=s=>vm.runInContext(s,ctx);
+const planCards=require('./ferry_plan_cards.cjs');
+const planHelpers={
+ distinctRefs:p=>{ctx.cardPlan=p;return run('distinctAggregateRefs(cardPlan)')},
+ candidate:(cid,marker)=>run(`ensureCase(${JSON.stringify(cid)}).candidates.find(m=>m.name===${JSON.stringify(marker)})`),
+ mode:id=>run(`planCostModes[${JSON.stringify(id)}]||'待复核'`),
+ legacy:p=>(p.legacyTrees||[]).map(k=>run(`'<details><summary>历史单次峰值树 · '+esc(D.callTrees[${JSON.stringify(k)}].marker)+'</summary><div class="tree">'+tree(D.callTrees[${JSON.stringify(k)}].tree)+'</div></details>'`)).join('')
+};
 for(const dir of ['cases','evidence','candidates','charts','chapters','images'])fs.mkdirSync(path.join(target,dir),{recursive:true});
 const oldManifest=path.join(target,'manifest.json');if(fs.existsSync(oldManifest)){const names=JSON.parse(fs.readFileSync(oldManifest,'utf8')).files.map(x=>path.resolve(target,x.file));for(const file of names)if(!file.startsWith(target+path.sep))throw Error('Generated file outside target');for(const file of names)if(fs.existsSync(file))fs.unlinkSync(file)}
 const hashes=new Map(),sha=s=>crypto.createHash('sha256').update(s).digest('hex');
@@ -43,16 +50,18 @@ for(const c of D.cases){document.getElementById('case').value=c.id;run('detail()
 }
 const chapterContent={
  1:els.get('headline').innerHTML,
- 3:els.get('issueOverview').innerHTML+'<h3>方案详情</h3>'+els.get('plans').innerHTML,
- 4:els.get('historyCoverage').innerHTML,
+ 3:els.get('issueOverview').innerHTML+'<h3>方案详情 · 成本、改法与验收卡片</h3>'+planCards.renderPlans(D,planHelpers),
+ 4:planCards.coverageLinks(els.get('historyCoverage').innerHTML),
  6:els.get('lowSummary').innerHTML+'<details><summary>调用次数与单位成本</summary>'+els.get('counts').innerHTML+'</details><details><summary>高频查询父来源</summary>'+els.get('origins').innerHTML+'</details>',
  7:els.get('experiments').innerHTML+els.get('systemConclusion').innerHTML+['native','perfetto','overhead','bigcity'].map(k=>`<details class="card"><summary>${({native:'Simpleperf调用栈',perfetto:'Perfetto调度与频率',overhead:'采集开销对照',bigcity:'名城刷新对照'})[k]}</summary>${els.get(k).innerHTML}</details>`).join(''),
  8:'<div class="toolbar"><input id="filter" placeholder="搜索场景、条件或编号"><select id="cohort"><option value="">全部条件</option>'+[...new Set(cases.map(c=>c.cohort))].map(x=>`<option>${run('esc('+JSON.stringify(x)+')')}</option>`).join('')+'</select><button id="export">导出场景CSV</button></div><div id="macro"></div><details class="card"><summary>统计方法与覆盖边界</summary>'+els.get('method').innerHTML+'</details><details class="card"><summary>版本、恢复与采样备注</summary>'+els.get('notes').innerHTML+'</details><details class="card"><summary>原始文件与采样参数索引</summary>'+els.get('files').innerHTML+'</details>'
 };
 for(const [i,body] of Object.entries(chapterContent))write(`chapters/${i}.html`,defer(body,'chapter-'+i));
 const title='抢渡口压测性能采集报告',environment={model:'24072PX77C',version:'0.0.999.1020',quality:'精致',qualityIndex:3,scope:'本次正式复采；历史及对照条件见各用例',sources:['output/android_map_diagnosis_20261006/experiment.json','output/map_recheck_20261006_213000/initial-state.json']};
-write('index.json',JSON.stringify({revision:10,title,environment,defaultCase:'recheck_A_static_r1',cases,sourceRevision:D.revision,sourceSha256:sha(raw),analysisUnchanged:true}));
+write('index.json',JSON.stringify({revision:11,title,environment,defaultCase:'recheck_A_static_r1',cases,sourceRevision:D.revision,sourceSha256:sha(raw),measurementsUnchanged:true,followupStatus:'planned'}));
 write('styles.css',template.match(/<style>([\s\S]*?)<\/style>/)[1]+'\n.loading{padding:16px;color:#b7d1df}.report-environment{display:flex;gap:24px;flex-wrap:wrap;background:#233c4b;padding:14px 18px;border-radius:8px}.report-environment b{color:#7ae0cd}.deferred-slot{min-height:0}.deferred-slot:empty{display:none}.error{color:#ffad99}.retry{margin:8px}.candidate-controls{display:flex;gap:8px;flex-wrap:wrap}');
+write('styles.css',fs.readFileSync(path.join(target,'styles.css'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'ferry_plan_cards.css'),'utf8'));
+write('followup-cases.md',planCards.followupMarkdown());
 const chapterTitles=['场景总览','按用例分析 · 现场表现、成本与热点','跨场景问题与优化优先级','历史iWiki / TAPD覆盖','帧预算 · 30FPS验收与60FPS参考','严重低帧 · 已知变化与未确定起因','实验与系统采样结论','全部采样与方法附录'];
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 write('report.html','<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title><link rel="stylesheet" href="styles.css"><script defer src="vendor/pako_inflate.min.js"></script><script defer src="report.js"></script></head><body><main><h1>'+title+'</h1><div class="report-environment"><span>测试机型：<b>'+environment.model+'</b></span><span>游戏版本号：<b>'+environment.version+'</b></span><span>画质：<b>'+environment.quality+'</b></span></div><p class="muted">'+environment.scope+'。选择用例查看；证据在展开时加载，测量与优化判断沿用核验后的V9。</p><nav class="chapter-nav">'+chapterTitles.map((x,i)=>`<a href="#chapter-${i+1}">${i+1}. ${x.split(' · ')[0]}</a>`).join('')+'</nav>'+chapterTitles.map((x,i)=>`<section class="main-chapter" id="chapter-${i+1}"><h2>${i+1}. ${x}</h2>${i===1?'<label>用例 <select id="case">'+cases.map(c=>`<option value="${c.id}">${escape(c.label)}</option>`).join('')+'</select></label><div id="caseDetail" class="loading">正在加载用例…</div>':i===4?'<p class="scope-note">预算对应当前选中的用例。</p><div id="budget"></div>':`<div id="chapter-body-${i+1}" data-chapter="${i+1}" class="loading">滚动到此处加载…</div>`}</section>`).join('')+'<footer>静态部署版 · 115份用例保留；原始raw/pdata、系统trace与符号文件保留在采集机，不属于网页资源。</footer></main></body></html>');
@@ -60,5 +69,5 @@ write('report.js',fs.readFileSync(path.join(__dirname,'ferry_report_client.js'))
 for(const name of ['preview-server.cjs','start-preview.ps1','start-preview.cmd'])write(name,fs.readFileSync(path.join(__dirname,name)));
 const pakoRoot=process.env.FERRY_PAKO_ROOT||path.dirname(require.resolve('pako/package.json'));fs.mkdirSync(path.join(target,'vendor'),{recursive:true});write('vendor/pako_inflate.min.js',fs.readFileSync(path.join(pakoRoot,'dist/pako_inflate.min.js')));write('vendor/pako.LICENSE',fs.readFileSync(path.join(pakoRoot,'LICENSE')));
 const files=[...hashes.entries()].map(([file,v])=>({file,...v})),totalBytes=files.reduce((a,x)=>a+x.bytes,0);
-write('manifest.json',JSON.stringify({revision:10,title,environment,cases:cases.length,verifiedCandidates,verifiedScopes,rootPaths,sourceRevision:D.revision,sourceSha256:sha(raw),totalBytes,files},null,2));
+write('manifest.json',JSON.stringify({revision:11,title,environment,cases:cases.length,verifiedCandidates,verifiedScopes,rootPaths,sourceRevision:D.revision,sourceSha256:sha(raw),measurementsUnchanged:true,followupStatus:'planned',totalBytes,files},null,2));
 console.log(JSON.stringify({target,cases:cases.length,verifiedCandidates,verifiedScopes,totalBytes,htmlBytes:hashes.get('report.html').bytes,largestFile:files.sort((a,b)=>b.bytes-a.bytes)[0]},null,2));

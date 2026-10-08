@@ -1,0 +1,77 @@
+# 抢渡口压测 · 待复现热点造例与复测清单
+
+待构造、待执行；本轮只补方案与造例设计，未操作手机或服务器。
+
+2026-10-08工作区源码，只读核查；与手机运行包对应关系未确认。
+
+## 共同步骤
+
+1. 确认内网压测服、手机包/源码版本、精致画质及目标帧率；保存业务和显示状态。
+2. 用项目既有GM或压测造数流程建立可保存的fixture；记录业务对象与规模，不能只循环调用marker函数。
+3. 先试跑并确认实际重建/创建子链和计数器更新，再冻结数据集、触发序列、轨迹与速度。
+4. 每档至少3轮，区分首次进入与预热后稳态；Unity与遥测作为基线，必要时分别伴随Perfetto或Simpleperf。
+5. 先依据基线确认机制，再实施候选改法；同fixture复测必要工作量、CPU、长尾与就绪延迟，最后恢复状态。
+
+## 描边：联盟/外交变化与占领格增量
+
+- **建立负载**：注册包含己方、友方、敌方占领格的GridManager，覆盖资源田与视野外地块。小/中/大三档记录管理器数、总关系格数、可见格与边界格；历史缺少规模快照时，不宣称等压复现。
+
+- **触发动作**：通过真实业务数据更新触发加入/退出联盟、外交关系变化和占领格增量；覆盖同帧多次变脏、稳定无变化、平移和隐藏层往返。
+
+- **覆盖门槛**：确认描边可显示的层级和关系数据已注册，且LateUpdate实际进入CollectRelation与BuildMesh；只有置脏调用不算重负载覆盖。
+
+- **采集指标**：记录业务变更数、dirty调用数、实际重建次数、扫描格数、变化格数、边界格数、网格/GC分配、总CPU及重建帧P95/max。当前包若缺这些分项，先确认已有计数接口；缺测明示。
+
+- **通过条件**：同fixture最终友/敌/己方轮廓与友方剔除一致，静止无变化不重复全量重建；削峰同时核对完成延迟。
+
+- **工作区源码核查**：Outside/Map/Visual/GridPreviewMgr.lua:53/77/85/643/673/700；当前工作区MarkOutLineMeshDirty只置脏，实际重建在LateUpdate。
+
+- **待核验marker**：LUA:GridPreviewMgr.MarkOutLineMeshDirty → LUA:GridPreviewMgr.OnLateUpdate → GridPreviewMgr:RefreshOutLineMeshAll → GridPreviewMgr:RefreshOutLineMeshAll.CollectRelation → GridPreviewMgr:RefreshOutLineMeshAll.BuildMesh
+
+## 补给区域：源集合变化与动态显隐
+
+- **建立负载**：建立实际参与补给集合的建筑/补给源和友方占领格，记录有效源数、覆盖格数、重叠格与剔除格。确认supplyZoneEnabled、可显示层级及动态可见状态。
+
+- **触发动作**：通过真实源增删/归属变更触发dirty，覆盖重叠区域合并、友方格变化、拖动开始/停止、选择/取消城市及切层恢复。
+
+- **覆盖门槛**：进入RefreshSupplyZoneMesh的集合收集/网格构建，不能把禁用、隐藏或非dirty早退出算作复现；与描边链可能包含/触发的部分分别归属。
+
+- **采集指标**：记录有效源/覆盖格/剔除格、dirty与重建次数、扫描与网格CPU、同帧累计、分配及显隐延迟；细分子项以实际包marker为准。
+
+- **通过条件**：新旧区域合并与剔除集合一致，友方优先级、拖动显隐和切层恢复正确；同档规模下总CPU和长尾分别比较。
+
+- **工作区源码核查**：Outside/Map/Visual/GridPreviewMgr.lua:1758；禁用、不可显示层、动态隐藏与非dirty均有早退出。
+
+- **待核验marker**：LUA:GridPreviewMgr.OnLateUpdate → LUA:GridPreviewMgr.RefreshSupplyZoneMesh → GridPreviewMgr:RefreshOutLineMeshAll
+
+## 奇观：影响目标增量与技能到期
+
+- **建立负载**：准备有效奇观、影响范围内的城/军队等已注册特效目标及技能数据；按有效目标数分档并保存fixture。
+
+- **触发动作**：真实目标进出范围、关系/技能变化和技能到期；分别覆盖增量与全量刷新，确认无残留重复计时器。
+
+- **覆盖门槛**：RefreshAllTargetEffects进入已注册目标的ReconcileInfluenceEntity，activeEffectEntitiesByType为空时不算覆盖。
+
+- **采集指标**：记录有效目标、变化目标、刷新/计时器次数、特效创建/复用和总CPU及事件帧P95/max。
+
+- **通过条件**：技能/关系表现、到期和离开范围的清理一致，CPU与就绪延迟同时验证。
+
+- **工作区源码核查**：Mgr/AllianceWonderMgr.lua:934/957；当前工作区已有dirty合并与到期版本控制，手机对应关系需核验。
+
+- **待核验marker**：LUA:AllianceWonderMgr.RefreshAllTargetEffects → LUA:AllianceWonderMgr.ReconcileInfluenceEntity → LUA:AllianceWonderMgr.ScheduleEffectExpireRefresh
+
+## 奇观：补给车队四方向创建与清理
+
+- **建立负载**：建立会实际启动补给表现的奇观实体和对应资源；按同时活动的表现实体数分档，分别保留冷资源与预热状态。
+
+- **触发动作**：通过真实补给状态启动、停止、再启动和销毁；覆盖一轮四方向创建以及多个实体同帧触发。
+
+- **覆盖门槛**：进入SpawnSupplyArmies及CreateSupplyArmy；记录四方向实际创建/启动与销毁数，函数未出现时仍标未覆盖。
+
+- **采集指标**：记录活动实体、方向/车队创建数、资源实例化、总CPU、同帧累计、就绪与清理延迟。
+
+- **通过条件**：方向、移动、生命周期和清理无重复/残留；表现错峰不得改变业务结算。
+
+- **工作区源码核查**：Module/AllianceWonder/AllianceWonderGeneral.lua:179/221；一轮遍历SUPPLY_DIRECTIONS创建四方向车队。
+
+- **待核验marker**：LUA:AllianceWonderGeneral.SpawnSupplyArmies → LUA:AllianceWonderGeneral.CreateSupplyArmy → LUA:AllianceWonderGeneral.DestroySupplyArmies

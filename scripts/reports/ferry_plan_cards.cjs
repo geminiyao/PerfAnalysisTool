@@ -1,0 +1,39 @@
+// Presentation and follow-up design only. Measurements come from the V9 source.
+const cards=require('./ferry_plan_cards.json');
+const followup=require('./ferry_followup_cases.json');
+const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=(n,d=3)=>Number.isFinite(n)?n.toFixed(d):'未提供';
+const list=items=>'<ul>'+items.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+function renderPlans(D,helpers){
+ const caseById=new Map(D.cases.map(c=>[c.id,c])),label=id=>caseById.get(id)?.displayLabel||id;
+ const evidence=r=>`<button data-evidence-case="${esc(r.case)}" data-evidence-marker="${esc(r.marker)}">成本构成与调用树 · 第2章</button>`;
+ const tiles=(m, historical=false)=>`<div class="plan-metrics"><div>${historical?'历史全程均':'全程均'}<strong>${num(m.wholeMeanMs)} ms</strong></div><div>出现帧均<strong>${num(m.appearingMeanMs)}${Number.isFinite(m.appearingMeanMs)?' ms':''}</strong></div><div>出现帧 / 有效帧<strong>${m.appearingFrames??'未提供'}${m.totalFrames!=null?' / '+m.totalFrames:''}</strong></div><div class="peak">${historical?(Number.isFinite(m.frameMaxMs)?'历史最大帧累计':'历史单次max'):'最大帧累计'}<strong>${num(historical&&!Number.isFinite(m.frameMaxMs)?m.singleMaxMs:m.frameMaxMs)} ms</strong></div></div>`;
+ function observed(r){const m=r.metric;return `<div class="plan-observation"><h4>${esc(label(r.case))}</h4><code class="plan-marker">${esc(r.marker)}</code><div class="plan-location"><span class="plan-frame">单次max ${num(m.singleMaxMs)}ms · F${m.peakFrame}</span>${evidence(r)}<span>全程${m.calls??'未提供'}次调用</span></div>${tiles(m)}</div>`}
+ function history(p){const topics=p.id==='outline'?['GridPreviewMgr.MarkOutLineMeshDirty','GridPreviewMgr.RefreshSupplyZoneMesh']:['AllianceWonderMgr.RefreshAllTargetEffects','AllianceWonderGeneral.SpawnSupplyArmies'];
+  return topics.map(topic=>{
+   const row=D.businessCoverage.find(x=>x.topic===topic);if(!row)throw Error('Missing history '+topic);
+   const h=row.historical,c=row.current;
+   // Use the original historical capture for the missing appearance/frame
+   // statistics only when its marker and whole mean match the coverage row.
+   const original=caseById.has(h.case)?helpers.candidate(h.case,h.name):null;
+   const metrics=original&&Math.abs(original.wholeMeanMs-h.perFrameMs)<.00002?original:{wholeMeanMs:h.perFrameMs,singleMaxMs:h.maxCallMs};
+   return `<div class="plan-observation"><h4>${esc(topic)}</h4><div class="plan-location"><span class="plan-frame">历史单次max ${num(h.maxCallMs)}ms · F${h.frame}</span><span>${esc(h.case)} · ${h.calls}次调用</span><a href="${esc(row.url)}" target="_blank" rel="noopener">历史iWiki</a>${original?evidence({case:h.case,marker:h.name}):''}</div>${tiles(metrics,true)}<p class="plan-current-light">${c?`本次仅轻量调用：全程均${num(c.wholeMeanMs,6)}ms，出现帧均${num(c.appearingMeanMs)}ms，${c.appearingFrames}/${c.totalFrames}帧，单次max ${num(c.singleMaxMs)}ms/F${c.peakFrame}。${evidence(c)}`:'本次未采到对应路径；缺测不填0。'}<br>历史重负载未复现，不能判为修复；历史与本次规模未对齐，不能据此计算收益。</p><details><summary>原始采样路径</summary><code>${esc(h.file)}</code>${c?'<br><code>'+esc(c.file)+'</code>':''}</details></div>`;
+  }).join('');
+ }
+ function fixtures(spec){return (spec.fixtures||[]).map(id=>{const f=followup.cases.find(x=>x.id===id);if(!f)throw Error('Missing fixture '+id);return `<div class="plan-fixture-step" id="fixture-${esc(id)}"><b>${esc(f.name)}</b><p><b>覆盖门槛：</b>${esc(f.gate)}</p><details><summary>造例步骤、采集指标与通过条件</summary>${[['建立负载',f.setup],['触发动作',f.trigger],['采集指标',f.measure],['通过条件',f.pass],['工作区源码核查',f.source]].map(([k,v])=>`<p><b>${k}：</b>${esc(v)}</p>`).join('')}<p><b>待核验marker：</b>${f.markers.map(esc).join(' → ')}；最终以手机包实际采样为准。</p></details></div>`}).join('')}
+ function card(p){const spec=cards[p.id];if(!spec)throw Error('Missing presentation '+p.id);let refs=helpers.distinctRefs(p);
+  if(p.id==='lua-gc-lock'){const current=D.businessCoverage.find(x=>x.topic==='LuaMtGc.WaitGCThread')?.current;if(current){const m=helpers.candidate(current.case,current.marker);if(!m)throw Error('Missing current LuaGC marker');refs=[{case:current.case,marker:current.marker,metric:m}]}}
+  let cost='配套调度',costLabel='本次没有独立收益实测';
+  if(spec.pending){cost='待造例复测';costLabel='历史成本与当前轻量调用分开列示'}
+  else if(spec.group&&refs.length){const q=D.accounting.cases[refs[0].case],value=q.groupCosts[spec.group];cost=num(value)+' ms/帧';costLabel=`${label(refs[0].case)} · 本组互斥占用，占PlayerLoop ${num(value/q.playerLoop.meanMs*100,1)}%`}
+  else if(refs.length===1){cost=num(refs[0].metric.wholeMeanMs)+' ms/帧';costLabel='下列实测路径全程均 · 含子项'}
+  else if(refs.length>1){cost='分别核算';costLabel='不同业务或场景的路径不相加'}
+  const childRefs=(p.refs||[]).filter(r=>!refs.includes(r));
+  return `<article class="plan-card${spec.pending?' pending':''}" id="plan-${esc(p.id)}" data-plan-id="${esc(p.id)}"><header class="plan-heading"><div><div class="plan-module">${esc(spec.module)}</div><h3>${esc(p.title)}</h3><div class="plan-state"><span class="plan-priority">${esc(p.priority)}</span><span>${spec.pending?'历史重负载待复现；优化候选待验证':esc(helpers.mode(p.id))}</span></div></div><div class="plan-budget"><strong>${esc(cost)}</strong><small>${esc(costLabel)}</small></div></header><div class="plan-body">${spec.pending?history(p):refs.map(observed).join('')}${!refs.length&&!spec.pending?'<div class="plan-common">调度策略依赖前述业务减量与原子拆分，尚无独立可省成本。</div>':''}<div class="plan-actions"><div class="plan-action-box"><h4>${spec.pending?'先造例，再确认改法':'改什么'}</h4>${list(spec.change)}</div><div class="plan-action-box"><h4>怎么验收</h4>${list(spec.accept)}</div></div>${spec.pending?`<div class="plan-followup"><h4>下一步：构造真实业务测试用例</h4>${fixtures(spec)}</div>`:''}<div class="plan-benefit"><b>收益边界：</b>${esc(p.benefit)}</div><div class="plan-proof"><details><summary>完整判断、源码版本与风险${childRefs.length?' · 包含子路径指标':''}</summary><p>${esc(p.evidence)}</p>${childRefs.map(r=>`<p><code>${esc(r.marker)}</code>：全程均${num(r.metric.wholeMeanMs)}ms，出现帧均${num(r.metric.appearingMeanMs)}ms。已包含在同一父路径中，不另列为独立成本。${evidence(r)}</p>`).join('')}<p class="source"><b>原方案源码与版本：</b>${esc(p.source)}</p><p><b>风险：</b>${esc(p.risk)}</p><details><summary>原方案完整改法与验收</summary><p>${esc(p.change)}</p><p>${esc(p.accept)}</p></details>${helpers.legacy(p)}</details></div></div></article>`;
+ }
+ const measured=D.businessPlans.filter(p=>!cards[p.id]?.pending),pending=D.businessPlans.filter(p=>cards[p.id]?.pending);
+ return `<div class="plan-common">卡片按原方案优先级排列；历史待复现问题单列。默认给出全程均、出现帧均、发生帧数和最大帧累计；详细成本构成及调用树点击返回第2章。指标来自代表用例，方案与用例为多对多关系；所有优化收益仍需实施后验证。</div><nav class="plan-list-nav">${D.businessPlans.map(p=>`<a href="#plan-${esc(p.id)}">${esc(cards[p.id].module)}</a>`).join('')}</nav>${measured.map(card).join('')}<h3>待复现问题 · 先构造业务测试用例</h3><div class="plan-common">${esc(followup.status)}。${esc(followup.sourceReview)}。历史重负载仍保留方案建议；候选改法先经造例与基线确认，收益不计入30/60帧预算。<details><summary>共同造例与复测步骤 · 可下载执行清单</summary><ol>${followup.commonSteps.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><a href="followup-cases.md" download>下载后续造例与复测清单</a></details></div>${pending.map(card).join('')}`;
+}
+function coverageLinks(html){return html.replace(/<tr\b[^>]*>[\s\S]*?<\/tr>/g,row=>{let id=/GridPreviewMgr\.(?:MarkOutLineMeshDirty|RefreshSupplyZoneMesh)/.test(row)?'outline':/AllianceWonder(?:Mgr\.RefreshAllTargetEffects|General\.SpawnSupplyArmies)/.test(row)?'wonder':null;return id?row.replace(/<\/td>(\s*)<\/tr>$/,`<br><a href="#plan-${id}">造例与优化候选 · 第3章</a></td>$1</tr>`):row})}
+function followupMarkdown(){return '# 抢渡口压测 · 待复现热点造例与复测清单\n\n'+followup.status+'。\n\n'+followup.sourceReview+'。\n\n## 共同步骤\n\n'+followup.commonSteps.map((x,i)=>`${i+1}. ${x}`).join('\n')+'\n\n'+followup.cases.map(f=>'## '+f.name+'\n\n'+[['建立负载',f.setup],['触发动作',f.trigger],['覆盖门槛',f.gate],['采集指标',f.measure],['通过条件',f.pass],['工作区源码核查',f.source],['待核验marker',f.markers.join(' → ')]].map(([k,v])=>`- **${k}**：${v}`).join('\n\n')).join('\n\n')+'\n'}
+module.exports={renderPlans,coverageLinks,followupMarkdown};

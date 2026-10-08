@@ -1,5 +1,5 @@
 {
-  "revision": 10,
+  "revision": 11,
   "title": "抢渡口压测性能采集报告",
   "environment": {
     "model": "24072PX77C",
@@ -18,7 +18,9 @@
   "rootPaths": 7887,
   "sourceRevision": 9,
   "sourceSha256": "0f907cc1c5180d7495f16fc1a099f2a0ee278c0ebec97ee2778d0790504e8796",
-  "totalBytes": 46379546,
+  "measurementsUnchanged": true,
+  "followupStatus": "planned",
+  "totalBytes": 46397163,
   "files": [
     {
       "file": "evidence/noise_zoom_0_r3.json.gz",
@@ -3604,15 +3606,15 @@
     },
     {
       "file": "evidence/chapter-3.json.gz",
-      "bytes": 12395,
-      "uncompressedBytes": 52987,
-      "sha256": "dc322a0625121dbcb6b9f7d3e17ca9d18c621738af10921f32478fb5e57ad826"
+      "bytes": 11057,
+      "uncompressedBytes": 45145,
+      "sha256": "8b9832c0b93e3449b1590590bc6a4dba77241c7893e7ccc5ab0c23bb7089e800"
     },
     {
       "file": "chapters/3.html.gz",
-      "bytes": 2916,
-      "uncompressedBytes": 9377,
-      "sha256": "71157796724b9e5163d348d444ad654a1d2ae1c6c791d73022bf9198e38198d0"
+      "bytes": 12226,
+      "uncompressedBytes": 50301,
+      "sha256": "1be47c801814065fcdb7f5c51fdfb665fedccf92a60de652e56f67ffad2e0267"
     },
     {
       "file": "evidence/chapter-4.json.gz",
@@ -3622,9 +3624,9 @@
     },
     {
       "file": "chapters/4.html.gz",
-      "bytes": 1962,
-      "uncompressedBytes": 7040,
-      "sha256": "6de1b37c97591c1914ef8231566c82492fb1ab4fdd46dd928982fe645ea30ae3"
+      "bytes": 2006,
+      "uncompressedBytes": 7294,
+      "sha256": "9b191310fe710aa165f681ca20cf2f490788377183a952c1793dd18ceaa02231"
     },
     {
       "file": "evidence/chapter-6.json.gz",
@@ -3682,15 +3684,21 @@
     },
     {
       "file": "index.json.gz",
-      "bytes": 8838,
-      "uncompressedBytes": 51132,
-      "sha256": "dc602740ce1c9dbb58dfc561a8644db4af414c93bc952c6777bef296ee052850"
+      "bytes": 8868,
+      "uncompressedBytes": 51163,
+      "sha256": "b600821d8fd3f86ac39952dbd638dca840e7cf9c2b4d8bbd592afbf4a3c8e7ce"
     },
     {
       "file": "styles.css",
-      "bytes": 6698,
-      "uncompressedBytes": 6698,
-      "sha256": "65a89b9d3171f1afa526e95ec272d54e854b56f767a8149514749ff3bcc945c7"
+      "bytes": 10395,
+      "uncompressedBytes": 10395,
+      "sha256": "25f08dfd44d3a0bb409286d979d5ddb3470eb2db8a14141c5a4184fcbe613bef"
+    },
+    {
+      "file": "followup-cases.md",
+      "bytes": 5848,
+      "uncompressedBytes": 5848,
+      "sha256": "f05babcc20633181227a8624f144b12d3ebdc9a467b730daa9e96e63d5c6933f"
     },
     {
       "file": "report.html",
@@ -3700,21 +3708,9 @@
     },
     {
       "file": "report.js",
-      "bytes": 12841,
-      "uncompressedBytes": 12841,
-      "sha256": "e9e5002e6cd9d507d8a8f8715638dd8061098c4d56fd247a6752f4f85e6ec6b0"
-    },
-    {
-      "file": "vendor/pako_inflate.min.js",
-      "bytes": 22682,
-      "uncompressedBytes": 22682,
-      "sha256": "2ca27e9a8dae569cdeac42752ed1aed1afeff7f19282d3cc12c0aaa54a08bc04"
-    },
-    {
-      "file": "vendor/pako.LICENSE",
-      "bytes": 1104,
-      "uncompressedBytes": 1104,
-      "sha256": "a04665b3b2de56c66730c1f720f528175739e4104f79073614aa611da1e85539"
+      "bytes": 12867,
+      "uncompressedBytes": 12867,
+      "sha256": "5cad9fe624789bb1d347337b1ee44fc35aa9ca359939bb6d4bf63d425b77ae63"
     },
     {
       "file": "preview-server.cjs",
@@ -3733,6 +3729,18 @@
       "bytes": 113,
       "uncompressedBytes": 113,
       "sha256": "8597da58849423d12b13e7d1b4e4b677772617201f14954ea50b6db17216efd4"
+    },
+    {
+      "file": "vendor/pako_inflate.min.js",
+      "bytes": 22682,
+      "uncompressedBytes": 22682,
+      "sha256": "2ca27e9a8dae569cdeac42752ed1aed1afeff7f19282d3cc12c0aaa54a08bc04"
+    },
+    {
+      "file": "vendor/pako.LICENSE",
+      "bytes": 1104,
+      "uncompressedBytes": 1104,
+      "sha256": "a04665b3b2de56c66730c1f720f528175739e4104f79073614aa611da1e85539"
     }
   ]
 }
