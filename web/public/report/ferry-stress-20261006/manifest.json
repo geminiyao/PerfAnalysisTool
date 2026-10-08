@@ -18,7 +18,7 @@
   "rootPaths": 7887,
   "sourceRevision": 9,
   "sourceSha256": "0f907cc1c5180d7495f16fc1a099f2a0ee278c0ebec97ee2778d0790504e8796",
-  "totalBytes": 46376070,
+  "totalBytes": 46379546,
   "files": [
     {
       "file": "evidence/noise_zoom_0_r3.json.gz",
@@ -3700,9 +3700,9 @@
     },
     {
       "file": "report.js",
-      "bytes": 12252,
-      "uncompressedBytes": 12252,
-      "sha256": "a0bd74b69ec49ecd6591ff70513298606ca0832fee22160a2f5af17f23e8001c"
+      "bytes": 12841,
+      "uncompressedBytes": 12841,
+      "sha256": "e9e5002e6cd9d507d8a8f8715638dd8061098c4d56fd247a6752f4f85e6ec6b0"
     },
     {
       "file": "vendor/pako_inflate.min.js",
@@ -3715,6 +3715,24 @@
       "bytes": 1104,
       "uncompressedBytes": 1104,
       "sha256": "a04665b3b2de56c66730c1f720f528175739e4104f79073614aa611da1e85539"
+    },
+    {
+      "file": "preview-server.cjs",
+      "bytes": 1683,
+      "uncompressedBytes": 1683,
+      "sha256": "c3ab4b12eebec1ab19276e55a810ba1c7a9e07f77cd76a53e4ec86e6b536ddb2"
+    },
+    {
+      "file": "start-preview.ps1",
+      "bytes": 1091,
+      "uncompressedBytes": 1091,
+      "sha256": "5f05bdca863e423c0e2b15bce0bfa0733aee863f89a0819dbd1ab1fa0637d62a"
+    },
+    {
+      "file": "start-preview.cmd",
+      "bytes": 113,
+      "uncompressedBytes": 113,
+      "sha256": "8597da58849423d12b13e7d1b4e4b677772617201f14954ea50b6db17216efd4"
     }
   ]
 }
