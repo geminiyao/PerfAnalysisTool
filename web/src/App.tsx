@@ -18,6 +18,7 @@ import ReportPreview from './pages/ReportPreview';
 import ReportViewer from './pages/ReportViewer';
 import PrismReportView from './pages/PrismReportView';
 import Settings from './pages/Settings';
+import PerformanceReports from './pages/PerformanceReports';
 
 const { Content } = Layout;
 
@@ -49,6 +50,7 @@ const App: React.FC = () => {
             <Route path="/trends" element={<Trends />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/performance-reports" element={<PerformanceReports />} />
 
             {/* 旧路由 → 新 IA */}
             <Route path="/history" element={<LegacyRedirect to="/runs" />} />

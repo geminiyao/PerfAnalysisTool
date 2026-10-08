@@ -7,3 +7,5 @@
 | 抢渡口压测性能采集报告 | `ferry-stress-20261006/` | `/cpu/report/ferry-stress-20261006/report.html` |
 
 每份报告的 `README.md` 说明资源结构，`manifest.json` 记录文件大小与哈希，`validation.json` 记录已完成的验证。原始采集文件、系统 trace、符号文件和离线报告备份保留在采集工作目录，不属于发布资源。
+
+网站左侧“性能报告”入口为 `/cpu/performance-reports`，从本目录的 `catalog.json` 读取报告卡片。新增报告时，将资源放入独立目录并更新目录清单即可；清单中使用 `/cpu/report/...` 静态地址，不需要数据库或新增后端接口。

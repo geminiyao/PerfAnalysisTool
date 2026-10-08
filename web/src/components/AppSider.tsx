@@ -28,6 +28,7 @@ const menuItems = [
   { key: '/simpleperf-diff', icon: <DiffOutlined />, label: 'Simpleperf 差分' },
   { key: '/unity-compare', icon: <DiffOutlined />, label: 'Unity 差分' },
   { key: '/report-view', icon: <FileTextOutlined />, label: '报告视图' },
+  { key: '/performance-reports', icon: <FileTextOutlined />, label: '性能报告' },
   { key: '/trends', icon: <LineChartOutlined />, label: '趋势' },
   { key: '/assets', icon: <DatabaseOutlined />, label: 'Assets' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
