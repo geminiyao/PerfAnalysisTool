@@ -1,0 +1,71 @@
+{
+  "id": "zoom-slide-cpu-20261119",
+  "entry": "report.html",
+  "basePath": "/cpu/report/zoom-slide-cpu-20261119/",
+  "preparedAt": "2026-11-19",
+  "sourceReportSha256": "f909b04510f7bce464f652fe21d5fb508b7eec32dd36729ea915fa7264060825",
+  "fileCount": 12,
+  "totalBytes": 42749968,
+  "files": [
+    {
+      "file": "report.html",
+      "bytes": 4288208,
+      "sha256": "f909b04510f7bce464f652fe21d5fb508b7eec32dd36729ea915fa7264060825"
+    },
+    {
+      "file": "热点调用树.md",
+      "bytes": 297482,
+      "sha256": "835186a48d18bd27f1d6b8324ad862f12a701fbf672969e6948b52c12d811b5b"
+    },
+    {
+      "file": "资源加载调用树.md",
+      "bytes": 124846,
+      "sha256": "640a130e3a253edbe6d0769a01f8cb066f23470bd0e8d09dc5119db31c74ae44"
+    },
+    {
+      "file": "资源加载逐帧.csv",
+      "bytes": 69440,
+      "sha256": "22cb58a89d8e4871fcacb73f61fdece222f30db93a1de5c4116dd48bcbce486d"
+    },
+    {
+      "file": "加载资源明细.csv",
+      "bytes": 3713660,
+      "sha256": "a081228773f085ba02542ede176dc75a5bf3a5af0a44cf1232291258708af9a1"
+    },
+    {
+      "file": "逐帧.csv",
+      "bytes": 443767,
+      "sha256": "08b1fabe083758077445da5ef34047eae85f700fd0557c074ae2b987feda7e3f"
+    },
+    {
+      "file": "热点逐帧.csv",
+      "bytes": 1821332,
+      "sha256": "2c34ec019b925a0104ef8eebe03adce5eaee50310348ea7b5403a9db22ee6d3d"
+    },
+    {
+      "file": "全部marker.csv",
+      "bytes": 3141645,
+      "sha256": "a81c2a261d4b2f5b6e0a6c9b272eff70766ef1d73f0658bc97eda0ba691b46ab"
+    },
+    {
+      "file": "完整调用树.zip",
+      "bytes": 26348959,
+      "sha256": "fe2a411f8592d806d80d5dde6ba0c05a85448cb1fea92d079f37938b71af5a68"
+    },
+    {
+      "file": "采样索引.json",
+      "bytes": 917,
+      "sha256": "c7f8dfa13ec7e94c6f610f2a6b4a310a59ee5a1c26dec991cf4bbfc6cad9c814"
+    },
+    {
+      "file": "重要度任务与实体类型.html",
+      "bytes": 1496196,
+      "sha256": "b4ddb468707fc4004cc973c970badf630098faf87497072c0c552e936980547c"
+    },
+    {
+      "file": "重要度任务逐帧.csv",
+      "bytes": 1003516,
+      "sha256": "1afef96a25b36947d675e0a99b0d831a5763163c427cbd2a93d22306dc5f483a"
+    }
+  ]
+}

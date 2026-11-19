@@ -1,0 +1,16 @@
+{
+  "source": "H:\\AOE专区\\远征2.0\\性能优化\\CPU\\261119无极缩放卡顿\\缩放层滑动掉帧-mixfold4-关闭VT和名城-2.data",
+  "sha256": "a5626e2ba50b5ad86f5cf556ece88b85a0681d7b0633b1e73bf45ddc536e0302",
+  "pdata": "off-2.pdata",
+  "exported": 554,
+  "valid": 553,
+  "excluded": [
+    [
+      1,
+      0.11900000274181366,
+      0
+    ]
+  ],
+  "vt4": {},
+  "frameIndexOffset": 0
+}

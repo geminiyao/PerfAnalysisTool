@@ -4,6 +4,8 @@
 
 | 报告 | 目录 | 部署后的相对地址 |
 | --- | --- | --- |
+| 无极缩放层滑动 CPU 热点 · 关闭 VT 和名城 | `zoom-slide-vt-city-off-20261119/` | `/cpu/report/zoom-slide-vt-city-off-20261119/report.html` |
+| 无极缩放层滑动 CPU 热点 · 初次采样 | `zoom-slide-cpu-20261119/` | `/cpu/report/zoom-slide-cpu-20261119/report.html` |
 | 抢渡口压测性能采集报告 | `ferry-stress-20261006/` | `/cpu/report/ferry-stress-20261006/report.html` |
 | 帝国1 vs 帝国2：内城全盛·精致 GPU对比 | `city-gpu-compare-20261002/` | `/cpu/report/city-gpu-compare-20261002/report.html` |
 | 名城压测性能采集分析 · 2026-09-10 | `march-dual-hotspots-20260910/` | `/cpu/report/march-dual-hotspots-20260910/report.html` |

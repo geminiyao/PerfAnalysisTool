@@ -1,0 +1,10 @@
+{
+  "verifiedOn": "2026-11-19",
+  "httpFilesWithMatchingSHA256": 12,
+  "evidenceDownloadLinks": 9,
+  "reportCatalogSearch": true,
+  "charts": true,
+  "profilerScreenshot": true,
+  "callTree": true,
+  "entitySubreport": true
+}

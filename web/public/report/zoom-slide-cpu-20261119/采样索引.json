@@ -1,0 +1,22 @@
+[
+  {
+    "label": "A",
+    "source": "H:\\AOE专区\\远征2.0\\性能优化\\CPU\\261119无极缩放卡顿\\缩放层滑动掉帧-mixfold4.data",
+    "size": 223901244,
+    "sha256": "23722c1a3a155c0480406df7d735b7228561054ca6bf4a706a50d57145d01efb",
+    "pdata": "缩放层滑动掉帧-mixfold4.pdata",
+    "pdata_sha256": "a14b22e85593bd89fd6b4aeaab54b2ca4e8249fc02d86c0263e4d537c7e63302",
+    "validFrames": 577,
+    "exportFrames": 578
+  },
+  {
+    "label": "B",
+    "source": "H:\\AOE专区\\远征2.0\\性能优化\\CPU\\261119无极缩放卡顿\\缩放层滑动掉帧-mixfold4-1.data",
+    "size": 138136248,
+    "sha256": "f1562b8178baa37b64740d6e6d812b53578719070ae328f56add0398c9b85141",
+    "pdata": "缩放层滑动掉帧-mixfold4-1.pdata",
+    "pdata_sha256": "edd12ae99f8e39be2900610fe7c2702358b090614cd446962ec985317ecaa4e9",
+    "validFrames": 501,
+    "exportFrames": 502
+  }
+]

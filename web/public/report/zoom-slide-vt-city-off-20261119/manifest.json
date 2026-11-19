@@ -1,0 +1,71 @@
+{
+  "id": "zoom-slide-vt-city-off-20261119",
+  "entry": "report.html",
+  "basePath": "/cpu/report/zoom-slide-vt-city-off-20261119/",
+  "preparedAt": "2026-11-19",
+  "sourceReportSha256": "e707902af5356fc501e9cc8fa51fdd7c8f73f382b944508b5f610fc2a0d5dbce",
+  "fileCount": 12,
+  "totalBytes": 21182250,
+  "files": [
+    {
+      "file": "report.html",
+      "bytes": 9123314,
+      "sha256": "02e9f7a985b2fc6ef269dc9867f0d4454d17ef7614b4188cdae011299f4d688a"
+    },
+    {
+      "file": "逐帧完整调用树.zip",
+      "bytes": 6150007,
+      "sha256": "1a3f7ef10a12327d65b5f9ca35de11fc512f3dd55dd026db449885bf461e713d"
+    },
+    {
+      "file": "热点逐帧.csv",
+      "bytes": 1229893,
+      "sha256": "06a5fc4b81188e19039407c9d68e7fba5a64ae7a4d0ea1b82340133356851172"
+    },
+    {
+      "file": "切层高频调用.csv",
+      "bytes": 159039,
+      "sha256": "35166adbdb0c6486a5ab6c03d1960aab86362de2bd6b48c8bc2b3a08a6c917e6"
+    },
+    {
+      "file": "Marker索引.csv",
+      "bytes": 1824417,
+      "sha256": "4d9892aa6a1eb7fe618b94c19645950070f7696fcc2be86bd8111810374299d1"
+    },
+    {
+      "file": "切层慢帧核对.csv",
+      "bytes": 5019,
+      "sha256": "870be7542a0ca9ad5da6edc8de6b7210227ace1596976306ba3680aa1318db05"
+    },
+    {
+      "file": "frames-1.csv",
+      "bytes": 92027,
+      "sha256": "7245e0ee67e9861e33c788d5f757ea7c04594ae4af642592792455ede003b81a"
+    },
+    {
+      "file": "frames-2.csv",
+      "bytes": 98057,
+      "sha256": "754144356fef94203c3f63e7e19d3c7fa0f64bfc213202320cf9d59a74a4cb07"
+    },
+    {
+      "file": "off-1-info.json",
+      "bytes": 350,
+      "sha256": "4fca6ecd49fb1fa5728a35182a5f2e73e26cd5167cfd139500e06ec68c91e715"
+    },
+    {
+      "file": "off-2-info.json",
+      "bytes": 415,
+      "sha256": "f1905f9e25c784edc17803d2b74056515c51bb853beb65769ca4e5c7afe6cc7e"
+    },
+    {
+      "file": "重要度任务与实体类型.html",
+      "bytes": 1496196,
+      "sha256": "b4ddb468707fc4004cc973c970badf630098faf87497072c0c552e936980547c"
+    },
+    {
+      "file": "重要度任务逐帧.csv",
+      "bytes": 1003516,
+      "sha256": "1afef96a25b36947d675e0a99b0d831a5763163c427cbd2a93d22306dc5f483a"
+    }
+  ]
+}

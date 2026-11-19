@@ -1,0 +1,60 @@
+.report-directory {
+  max-width: 1520px;
+  margin: auto;
+}
+.report-directory .page-heading,
+.report-directory .section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-directory .page-heading { margin-bottom: 18px; }
+.report-directory .page-heading h1 { margin: 0; font-size: clamp(24px, 2.3vw, 34px); color: var(--text-primary); }
+.report-directory .section-title { margin: 25px 0 12px; }
+.report-directory .section-title h2 { margin: 0; padding-left: 11px; border-left: 3px solid #477896; font-size: 18px; color: var(--text-primary); }
+.report-directory .muted,
+.report-directory time { font-size: 13px; color: var(--text-secondary); }
+.report-directory .report-month {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.report-month::after { content: ''; flex: 1; border-top: 1px solid var(--border-secondary); }
+.report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(310px, 100%), 1fr)); gap: 16px; }
+.report-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(14px, 2vw, 20px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-top: 4px solid #446d8c;
+  border-radius: 16px;
+}
+.report-tile:nth-child(3n+2) { border-top-color: #688575; }
+.report-tile:nth-child(3n) { border-top-color: #ad855b; }
+.report-directory .report-tile h3 { margin: 0; font-size: 16px; color: var(--text-primary); }
+.report-tile p { margin: 0; color: var(--text-secondary); line-height: 1.7; }
+.report-tile time { font-variant-numeric: tabular-nums; }
+.report-tile footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-primary); }
+.report-tile .open-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 17px;
+  border-radius: 8px;
+  background: #175cdd;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.report-tile .open-report:hover { background: #114bb9; color: #fff; }
+.report-tile .open-report:focus-visible { outline: 3px solid #70adff; outline-offset: 3px; }
