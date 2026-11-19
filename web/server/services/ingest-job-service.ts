@@ -166,7 +166,7 @@ export function runSimpleperfIngestJob(
     try {
       emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在解析 perf.data…', progress: 15 });
       const run = await buildAndIngestSimpleperf(perfPath, meta, progressLogger(jobId));
-      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在运行 simpleperf skill…', progress: 65 });
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在整理热点报告…', progress: 65 });
       const analysis = await runPostIngestAnalysis(run.id, {
         binaryCachePath: meta.binaryCachePath,
         onLog: progressLogger(jobId),
@@ -190,7 +190,7 @@ export function runPerfettoIngestJob(
     try {
       emit(jobId, { type: 'stage', stage: 'extracting_perf', message: '正在解析 trace…', progress: 15 });
       const run = await buildAndIngestPerfetto(tracePath, meta, options, progressLogger(jobId));
-      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在运行 perfetto skill…', progress: 65 });
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在整理热点报告…', progress: 65 });
       const analysis = await runPostIngestAnalysis(run.id, {
         perfetto: options,
         onLog: progressLogger(jobId),
@@ -209,7 +209,7 @@ export function runMergeIngestJob(jobId: string, runIds: string[], meta: IngestM
     try {
       emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在合并 Run…', progress: 30 });
       const run = await mergeRunsByIds(runIds, meta);
-      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在生成交叉报告…', progress: 70 });
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在整理热点报告…', progress: 70 });
       const analysis = await runPostIngestAnalysis(run.id, { onLog: progressLogger(jobId) });
       finishJob(job, run, { analysisSkill: analysis.skill, reportPath: analysis.markdownPath });
     } catch (e: any) {
@@ -262,7 +262,7 @@ export function runUnifiedIngestJob(jobId: string, params: UnifiedIngestJobParam
         return;
       }
 
-      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在运行 skill 分析…', progress: 65 });
+      emit(jobId, { type: 'stage', stage: 'generating_structured_report', message: '正在整理热点报告…', progress: 65 });
       const targetFps = params.targetFps ?? params.meta.targetFps ?? DEFAULT_TARGET_FPS;
       const analysis = await runPostIngestAnalysis(run.id, {
         cliProvider: params.cliProvider,

@@ -2,15 +2,17 @@ import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Layout } from 'antd';
 import AppSider from './components/AppSider';
+import WorkspaceNav from './components/WorkspaceNav';
 import LegacyRedirect from './components/LegacyRedirect';
-import Dashboard from './pages/Dashboard';
+import TrendOverview from './pages/TrendOverview';
 import Upload from './pages/Upload';
 import Collect from './pages/Collect';
 import Trends from './pages/Trends';
 import Assets from './pages/Assets';
 import Runs from './pages/Runs';
+import HotspotDetail from './pages/HotspotDetail';
 import RunDetail from './pages/RunDetail';
-import RunComparePage from './pages/RunComparePage';
+import SourceCompare from './pages/SourceCompare';
 import PerfettoTriad from './pages/PerfettoTriad';
 import SimpleperfDiff from './pages/SimpleperfDiff';
 import UnityProfilerCompare from './pages/UnityProfilerCompare';
@@ -18,7 +20,9 @@ import ReportPreview from './pages/ReportPreview';
 import ReportViewer from './pages/ReportViewer';
 import PrismReportView from './pages/PrismReportView';
 import Settings from './pages/Settings';
+import SavedHotspotReport from './pages/SavedHotspotReport';
 import PerformanceReports from './pages/PerformanceReports';
+import SavedHotspotList from './pages/SavedHotspotList';
 
 const { Content } = Layout;
 
@@ -32,14 +36,16 @@ const App: React.FC = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <AppSider />
       <Layout>
-        <Content style={{ padding: '16px 20px', overflow: 'auto' }}>
+        <Content className="work-content">
+          <WorkspaceNav />
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<TrendOverview />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/collect" element={<Collect />} />
             <Route path="/runs" element={<Runs />} />
-            <Route path="/runs/:id" element={<RunDetail />} />
-            <Route path="/compare" element={<RunComparePage />} />
+            <Route path="/runs/:id" element={<HotspotDetail />} />
+            <Route path="/runs/:id/original" element={<RunDetail />} />
+            <Route path="/compare" element={<SourceCompare />} />
             <Route path="/perfetto-triad" element={<PerfettoTriad />} />
             <Route path="/simpleperf-diff" element={<SimpleperfDiff />} />
             <Route path="/unity-compare" element={<UnityProfilerCompare />} />
@@ -50,7 +56,8 @@ const App: React.FC = () => {
             <Route path="/trends" element={<Trends />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/performance-reports" element={<PerformanceReports />} />
+            <Route path="/performance-reports/:id" element={<SavedHotspotReport />} />
+            <Route path="/performance-reports" element={<PerformanceReports savedReports={SavedHotspotList} />} />
 
             {/* 旧路由 → 新 IA */}
             <Route path="/history" element={<LegacyRedirect to="/runs" />} />

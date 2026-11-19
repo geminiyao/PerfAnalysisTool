@@ -1,32 +1,32 @@
 /* ============================================================
-   Design Tokens — Industrial Dark Monitoring Theme
-   对标 Grafana / 阿里云性能监控看板
+   Design Tokens — Performance Workspace
+
    ============================================================ */
 
 :root {
   /* Background layers */
-  --bg-root: #0b0e11;
-  --bg-layout: #0f1214;
-  --bg-sider: #0d1015;
-  --bg-card: #141619;
-  --bg-card-inner: #1a1d21;
-  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-root: #f0f3f5;
+  --bg-layout: #eef2f4;
+  --bg-sider: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-inner: #f6f8fa;
+  --bg-hover: #f1f6f9;
   --bg-active: rgba(22, 119, 255, 0.08);
 
   /* Border */
-  --border-primary: #1f2328;
-  --border-secondary: #2a2e33;
-  --border-active: #1677ff;
+  --border-primary: #dfe6ea;
+  --border-secondary: #d6e0e6;
+  --border-active: #326487;
 
   /* Text */
-  --text-primary: #e6eaf0;
-  --text-secondary: #8b949e;
-  --text-tertiary: #5a6068;
-  --text-link: #3b8ff6;
+  --text-primary: #213846;
+  --text-secondary: #526775;
+  --text-tertiary: #617480;
+  --text-link: #366c94;
 
   /* Accent — tech blue */
-  --color-primary: #1677ff;
-  --color-primary-hover: #3b8ff6;
+  --color-primary: #326487;
+  --color-primary-hover: #366c94;
   --color-primary-bg: rgba(22, 119, 255, 0.1);
 
   /* Status */
@@ -38,8 +38,8 @@
   --color-warning-bg: rgba(210, 153, 34, 0.12);
 
   /* Radius / Shadow */
-  --radius: 6px;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --radius: 14px;
+  --shadow-card: 0 3px 14px rgba(37,61,82,.035);
 
   /* Typography */
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Monaco, 'Courier New', monospace;
@@ -149,6 +149,117 @@ body {
 .ant-menu-dark .ant-menu-item-selected {
   background: var(--color-primary-bg) !important;
   border-right: 2px solid var(--color-primary) !important;
+}
+
+.workspace-sider-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.workspace-brand {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.workspace-brand-accent {
+  color: var(--color-primary);
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+
+.workspace-sider-caption {
+  padding: 22px 24px 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.workspace-primary-menu,
+.workspace-settings-menu {
+  background: transparent !important;
+  border-right: 0 !important;
+  font-size: 13px;
+}
+
+.workspace-sider-spacer { flex: 1; }
+
+.workspace-settings-menu {
+  border-top: 1px solid var(--border-primary) !important;
+  padding: 8px 0;
+}
+
+.workspace-nav {
+  margin-bottom: 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.workspace-nav-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+
+.workspace-nav-title {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.workspace-nav-description {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.workspace-nav-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 0 10px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.workspace-nav-tab {
+  flex: none;
+  padding: 10px 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.workspace-nav-tab:hover {
+  color: var(--text-primary);
+}
+
+.workspace-nav-tab.is-active {
+  color: var(--color-primary-hover);
+  border-bottom-color: var(--color-primary);
+}
+
+.workspace-nav + .report-viewer-page {
+  height: calc(100vh - 146px);
+  min-height: 420px;
+}
+
+@media (max-width: 991px) {
+  .workspace-brand span:last-child,
+  .workspace-sider-caption { display: none; }
+  .workspace-nav-heading { display: block; }
+  .workspace-nav-description { display: block; margin-top: 5px; }
 }
 
 .ant-tabs-tab {
@@ -309,3 +420,5 @@ body {
 .text-tertiary {
   color: var(--text-tertiary);
 }
+
+@import './workspace.less';

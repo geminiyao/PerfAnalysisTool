@@ -4,14 +4,7 @@ import type {
 } from '../../shared/types';
 import type { ReportBundle } from '../../shared/report-bundle';
 
-function apiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location.port === '5173') {
-    return 'http://localhost:3000/cpu/api';
-  }
-  return '/cpu/api';
-}
-
-const BASE_URL = apiBaseUrl();
+const BASE_URL = '/cpu/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {
@@ -468,16 +461,18 @@ export function mergeRuns(
 // ============================================================
 
 export interface TriadVersionPoint {
+  sourceRunIds?: Record<string, string[]>;
   version: string;
   runCount: number;
+  unityRunCount: number;
   runIds: string[];
   createdAt: number;
 }
 
 export interface TriadTrendsData {
   versions: TriadVersionPoint[];
-  filters: { projectName: string | null; device: string | null; scene: string | null };
-  unity: { fps: (number | null)[]; p95Ms: (number | null)[] };
+  filters: { projectName: string | null; device: string | null; scene: string | null; label: string | null };
+  unity: { fps: (number | null)[]; avgMs: (number | null)[]; p50Ms?: (number | null)[]; p95Ms: (number | null)[]; p99Ms?: (number | null)[] };
   simpleperf: { soNames: string[]; soPct: Record<string, (number | null)[]> };
   perfetto: {
     threadLabels: string[];
@@ -487,15 +482,31 @@ export interface TriadTrendsData {
   };
 }
 
+export interface RunCohort {
+  projectName: string;
+  device: string;
+  scene: string;
+  label: string;
+  runCount: number;
+  versionCount: number;
+  latestAt: number;
+}
+
+export async function listRunCohorts(): Promise<{ items: RunCohort[] }> {
+  return request('/runs/cohorts');
+}
+
 export async function fetchTriadTrends(params?: {
   projectName?: string;
   device?: string;
   scene?: string;
+  label?: string;
 }): Promise<TriadTrendsData> {
   const qs = new URLSearchParams();
   if (params?.projectName) qs.set('projectName', params.projectName);
   if (params?.device) qs.set('device', params.device);
   if (params?.scene) qs.set('scene', params.scene);
+  if (params?.label) qs.set('label', params.label);
   const query = qs.toString();
   return request<TriadTrendsData>(`/runs/triad-trends${query ? `?${query}` : ''}`);
 }
@@ -520,9 +531,18 @@ export interface VersionRunItem extends RunListItem {
   analyses: AnalysisSummary[];
 }
 
-export async function fetchRunsByVersion(version: string): Promise<{ version: string; items: VersionRunItem[] }> {
+export async function fetchRunsByVersion(
+  version: string,
+  filters?: { projectName?: string; device?: string; scene?: string; label?: string },
+): Promise<{ version: string; items: VersionRunItem[] }> {
   const encoded = encodeURIComponent(version);
-  return request(`/runs/by-version/${encoded}`);
+  const qs = new URLSearchParams();
+  if (filters?.projectName) qs.set('projectName', filters.projectName);
+  if (filters?.device) qs.set('device', filters.device);
+  if (filters?.scene) qs.set('scene', filters.scene);
+  if (filters?.label) qs.set('label', filters.label);
+  const query = qs.toString();
+  return request(`/runs/by-version/${encoded}${query ? `?${query}` : ''}`);
 }
 
 /** 触发分析 (可选指定源子集: 单源/双源/三源) */
@@ -846,4 +866,20 @@ export async function listCollectHistory(): Promise<{ history: CollectHistoryIte
 /** 按目录入库预处理 */
 export async function ingestCollectDir(dir: string): Promise<{ jobId: string; ingestStarted: boolean }> {
   return request('/collect/ingest-dir', { method: 'POST', body: JSON.stringify({ dir }) });
+}
+
+export function getSavedHotspotReport(id: string) {
+  return request<{runId:string;source:string;report:Report}>('/hotspot-reports/'+encodeURIComponent(id));
+}
+export function listHotspotReports() {
+  return request<import('../../shared/hotspot-report').ReportEntry[]>('/hotspot-reports');
+}
+export function listHotspotImages(id: string) {
+  return request<import('../../shared/hotspot-report').CaptureImage[]>('/runs/'+encodeURIComponent(id)+'/hotspot-images');
+}
+export async function uploadHotspotImage(id: string,source: string,key: string,caption: string,file: File) {
+  const form = new FormData();
+  form.append('file',file);
+  const query = new URLSearchParams({source,key,caption});
+  return request<{id:string}>('/runs/'+encodeURIComponent(id)+'/hotspot-images?'+query,{method:'POST',headers:{},body:form});
 }

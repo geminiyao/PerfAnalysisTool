@@ -6,7 +6,7 @@
 //
 // 依据: docs/p0-domain-model-migration.md §1/§3, docs/report-spec-and-data-contract.md §7。
 
-import { eq, desc } from 'drizzle-orm';
+import { eq, ne, and, desc } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import { getDb } from '../db/index.js';
 import { runs, runMetrics } from '../db/schema.js';
@@ -74,12 +74,18 @@ export function getRunMetrics(runId: string) {
   return db.select().from(runMetrics).where(eq(runMetrics.runId, runId)).all();
 }
 
+function effectiveRunStatus(row: typeof runs.$inferSelect): Run['status'] {
+  // Older Collector rows were marked ready after raw capture, before ingest.
+  if (row.createdBy === 'collector' && !row.coreFrameJson && !row.coreThreadsJson) return 'pending';
+  return row.status as Run['status'];
+}
+
 function rowToRun(row: typeof runs.$inferSelect, metrics: typeof runMetrics.$inferSelect[]): Run {
   return {
     id: row.id,
     label: row.label ?? undefined,
     sources: JSON.parse(row.sources ?? '[]') as Run['sources'],
-    status: row.status as Run['status'],
+    status: effectiveRunStatus(row),
     meta: {
       device: row.device || undefined,
       scene: row.scene || undefined,
@@ -148,7 +154,7 @@ export function listRuns(limit = 50, offset = 0): { items: RunListItem[]; total:
       id: row.id,
       label: row.label ?? undefined,
       sources: JSON.parse(row.sources ?? '[]') as Run['sources'],
-      status: row.status as Run['status'],
+      status: effectiveRunStatus(row),
       device: row.device,
       scene: row.scene,
       projectName: row.projectName,
@@ -160,6 +166,34 @@ export function listRuns(limit = 50, offset = 0): { items: RunListItem[]; total:
   });
 
   return { items, total };
+}
+
+/** Return every run in one exact comparison cohort for a version. */
+export function listRunsByVersion(
+  version: string,
+  filters: { projectName?: string; device?: string; scene?: string; label?: string } = {},
+): RunListItem[] {
+  const db = getDb();
+  const conditions = [eq(runs.version, version), eq(runs.status, 'ready'), ne(runs.createdBy, 'collector')];
+  if (filters.projectName) conditions.push(eq(runs.projectName, filters.projectName));
+  if (filters.device) conditions.push(eq(runs.device, filters.device));
+  if (filters.scene) conditions.push(eq(runs.scene, filters.scene));
+  if (filters.label) conditions.push(eq(runs.label, filters.label));
+  const rows = db.select().from(runs).where(and(...conditions)).orderBy(desc(runs.createdAt)).all();
+  return rows.map(row => ({
+    id: row.id,
+    label: row.label ?? undefined,
+    sources: JSON.parse(row.sources ?? '[]') as Run['sources'],
+    status: effectiveRunStatus(row),
+    device: row.device,
+    scene: row.scene,
+    projectName: row.projectName,
+    version: row.version,
+    frameCount: row.frameCount ?? undefined,
+    metricCount: db.select({ id: runMetrics.id }).from(runMetrics)
+      .where(eq(runMetrics.runId, row.id)).all().length,
+    createdAt: row.createdAt,
+  }));
 }
 
 /** 读取完整 Run (runs + run_metrics + detail)。 */

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert, Button, Card, Form, Input, InputNumber, Upload as AntUpload, message, Spin, Space, Typography, Progress, Select,
+  Alert, Button, Card, Form, Input, InputNumber, Upload as AntUpload, message, Spin, Space, Typography, Progress, Collapse,
 } from 'antd';
 import { InboxOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ingestUnifiedRun } from '../services/api';
-import { CLI_PROVIDERS, type CliProvider, type IngestJobEvent } from '../../shared/types';
+import { type IngestJobEvent } from '../../shared/types';
 
 const { Dragger } = AntUpload;
 const { Text } = Typography;
@@ -28,25 +28,8 @@ const UploadPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [cliHint, setCliHint] = useState('');
   const dirInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch('/cpu/api/settings')
-      .then(r => r.ok ? r.json() : null)
-      .then(json => {
-        if (!json) return;
-        const def = (json.defaultCliProvider as CliProvider) || 'codebuddy';
-        form.setFieldsValue({ cliProvider: def });
-        if (!json.cliAvailability?.codebuddy && def === 'mock') {
-          setCliHint('未检测到 CodeBuddy CLI，已默认 Mock（仅匹配帧数一致的旧报告）。完整 AI 报告请在「设置」填写 codebuddy 路径后选 CodeBuddy。');
-        } else if (json.cliPaths?.codebuddy) {
-          setCliHint(`CodeBuddy: ${json.cliPaths.codebuddy}`);
-        }
-      })
-      .catch(() => {});
-  }, [form]);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,10 +83,8 @@ const UploadPage: React.FC = () => {
     setStage('上传并识别数据源…');
     try {
       const meta = metaValues();
-      const cliProvider = (form.getFieldValue('cliProvider') as CliProvider) || 'codebuddy';
-      const res = await ingestUnifiedRun(pendingFiles, { ...meta, cliProvider }, onIngestEvent);
-      const multi = (res.sources?.length ?? 0) >= 2;
-      message.success(multi ? `多源 Run 入库 + 交叉分析完成: ${res.label || res.runId}` : `入库 + Unity skill 分析完成: ${res.label || res.runId}`);
+      const res = await ingestUnifiedRun(pendingFiles, meta, onIngestEvent);
+      message.success('采集数据已入库，热点报告已就绪');
       navigate(`/runs/${res.runId}`, { state: { openReportTab: true } });
     } catch (e: any) {
       message.error(e.message || '失败');
@@ -124,9 +105,6 @@ const UploadPage: React.FC = () => {
           <Form.Item label="场景" name="scene"><Input style={{ width: 120 }} /></Form.Item>
           <Form.Item label="目标 FPS" name="targetFps" initialValue={60} tooltip="AOE 压测默认 60；与 preprocess / mustReport 阈值 / AI 报告口径一致">
             <InputNumber min={15} max={120} style={{ width: 90 }} />
-          </Form.Item>
-          <Form.Item label="CLI 分析" name="cliProvider" tooltip="Unity 单源走 unity-profiler-analysis skill；多源走 cross builder">
-            <Select style={{ width: 140 }} options={CLI_PROVIDERS.map(p => ({ value: p.value, label: p.label }))} />
           </Form.Item>
           <Form.Item label="binary_cache" name="binaryCacheLocalPath" initialValue={DEFAULT_BINARY_CACHE}>
             <Input style={{ width: 360 }} placeholder="simpleperf 符号路径" />
@@ -170,7 +148,7 @@ const UploadPage: React.FC = () => {
         <Progress percent={progress} size="small" status="active" />
         {logs.length > 0 ? (
           <div style={{
-            maxHeight: 260, overflow: 'auto', background: 'var(--color-bg-elevated, #1a1a1a)',
+            maxHeight: 260, overflow: 'auto', background: 'var(--bg-card-inner)',
             borderRadius: 6, padding: '8px 10px', fontFamily: 'var(--font-mono, monospace)', fontSize: 11, lineHeight: 1.5,
           }}>
             {logs.map((line, i) => (
@@ -192,16 +170,12 @@ const UploadPage: React.FC = () => {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="统一入口：拖入采集文件 → 自动识别 → 入库 → skill 分析"
-        description="单 .pdata → Unity skill 报告（与 CLI 同流程）；拖齐三源 → 多源 Run + 交叉报告。对比分析请用侧栏「对比分析」。"
+        message="导入采集文件"
+        description="可导入一个或多个数据源。各源独立整理热点报告。"
       />
 
-      {cliHint && (
-        <Alert type="info" showIcon style={{ marginBottom: 12 }} message="CLI 分析" description={cliHint} />
-      )}
-
       {metaForm}
-      {perfettoOptionsForm}
+      {detectedSources.includes('perfetto') && <Collapse style={{marginBottom:12}} items={[{key:'trace',label:'Perfetto 解析设置',children:perfettoOptionsForm}]} />}
 
       <Card size="small">
         <Dragger

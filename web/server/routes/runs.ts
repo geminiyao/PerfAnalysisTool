@@ -8,7 +8,7 @@ import crypto from 'crypto';
 
 import { FastifyInstance } from 'fastify';
 
-import { getRun, listRuns } from '../services/run-store.js';
+import { getRun, listRuns, listRunsByVersion } from '../services/run-store.js';
 
 import { getAnalysisReportByRunId, listAnalysesByRunId, getAnalysisReport } from '../services/analysis-store.js';
 
@@ -19,14 +19,43 @@ import { runPostIngestAnalysis, runAnalysisForSources } from '../services/run-an
 import { ensureCompareFlamegraph, getCachedFlamegraphPath } from '../services/run-compare-flame.js';
 
 import { getDb } from '../db/index.js';
-import { sessions } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { sessions, runs } from '../db/schema.js';
+import { eq, ne, and } from 'drizzle-orm';
 import { analysisQueue } from '../services/analysis-queue.js';
 import type { PrismPipelineOptions } from '../services/prism-runner.js';
-
-
-
 export async function runsRoutes(app: FastifyInstance) {
+
+  /** Available exact project/device/scene/workload cohorts, newest first. */
+  app.get('/runs/cohorts', async () => {
+    const rows = getDb().select({
+      projectName: runs.projectName,
+      device: runs.device,
+      scene: runs.scene,
+      label: runs.label,
+      version: runs.version,
+      createdAt: runs.createdAt,
+    }).from(runs).where(and(eq(runs.status, 'ready'), ne(runs.createdBy, 'collector'))).all();
+    const groups = new Map<string, {
+      projectName: string; device: string; scene: string; label: string;
+      runCount: number; versionCount: number; latestAt: number; versions: Set<string>;
+    }>();
+    for (const row of rows) {
+      if (!row.projectName || !row.device || !row.scene || !row.label || !row.version) continue;
+      const key = JSON.stringify([row.projectName, row.device, row.scene, row.label]);
+      let group = groups.get(key);
+      if (!group) {
+        group = { projectName: row.projectName, device: row.device, scene: row.scene, label: row.label,
+          runCount: 0, versionCount: 0, latestAt: 0, versions: new Set() };
+        groups.set(key, group);
+      }
+      group.runCount += 1;
+      group.versions.add(row.version);
+      group.latestAt = Math.max(group.latestAt, row.createdAt);
+    }
+    return { items: [...groups.values()].map(({ versions, ...group }) => ({
+      ...group, versionCount: versions.size,
+    })).sort((a, b) => b.latestAt - a.latestAt) };
+  });
 
   /** GET /runs — 列出新模型 runs */
 
@@ -49,10 +78,8 @@ export async function runsRoutes(app: FastifyInstance) {
   app.get('/runs/by-version/:version', async (request, reply) => {
 
     const { version } = request.params as { version: string };
-
-    const { items } = listRuns(200, 0);
-
-    const matched = items.filter(r => (r.version || '(未标注版本)') === decodeURIComponent(version));
+    const filters = request.query as { projectName?: string; device?: string; scene?: string; label?: string };
+    const matched = listRunsByVersion(version, filters);
 
     const result = matched.map(run => ({
       ...run,
@@ -127,7 +154,7 @@ export async function runsRoutes(app: FastifyInstance) {
 
 
 
-  /** POST /runs/:id/generate-analysis — 三源 skill / 多源 cross */
+  /** POST /runs/:id/generate-analysis — 按来源生成热点报告 */
 
   app.post('/runs/:id/generate-analysis', async (request, reply) => {
 
@@ -141,9 +168,7 @@ export async function runsRoutes(app: FastifyInstance) {
         ? await runAnalysisForSources(id, body.sources, { cliProvider: body.cliProvider, targetFps: body.targetFps })
         : await runPostIngestAnalysis(id, { cliProvider: body.cliProvider, targetFps: body.targetFps });
 
-      const analysis = getAnalysisReportByRunId(id);
-
-      return { ...result, ...(analysis ?? {}) };
+      return result;
 
     } catch (e: any) {
 

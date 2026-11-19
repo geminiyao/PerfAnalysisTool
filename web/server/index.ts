@@ -13,6 +13,7 @@ import { compareRoutes } from './routes/compare.js';
 import { trendsRoutes } from './routes/trends.js';
 import { optimizeRoutes } from './routes/optimize.js';
 import { settingsRoutes } from './routes/settings.js';
+import { hotspotRoutes } from './routes/hotspot-reports.js';
 import { assetRoutes } from './routes/assets.js';
 import { aiChatRoutes } from './routes/ai-chat.js';
 import { simpleperfRoutes } from './routes/simpleperf.js';
@@ -60,6 +61,7 @@ async function start() {
     optimizeRoutes,
     settingsRoutes,
     assetRoutes,
+    hotspotRoutes,
     aiChatRoutes,
     simpleperfRoutes,
     mapleRoutes,
@@ -113,7 +115,7 @@ async function start() {
 
   // 启动服务器
   try {
-    await app.listen({ port: config.port, host: '0.0.0.0' });
+    await app.listen({ port: config.port, host: process.env.PERF_HOST || '0.0.0.0' });
     console.log(`\n🚀 Perf Dashboard Server running at http://localhost:${config.port}`);
     console.log(`   Data directory: ${config.dataDir}\n`);
   } catch (err) {
@@ -134,6 +136,7 @@ process.on('SIGTERM', async () => {
   await app.close();
   process.exit(0);
 });
+
 
 function parseSize(size: string): number {
   const match = size.match(/^(\d+)(mb|gb|kb)?$/i);

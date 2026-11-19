@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Card, Table, Tag, Button, Typography, message } from 'antd';
+import { Alert, Card, Table, Tag, Button, Typography, Pagination, message } from 'antd';
 import { EyeOutlined, SwapOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { listRuns, type RunListItem } from '../services/api';
@@ -13,6 +13,8 @@ const SOURCE_COLORS: Record<string, string> = {
   perfetto: 'purple',
 };
 
+const PAGE_SIZE = 20;
+
 const Runs: React.FC = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<RunListItem[]>([]);
@@ -20,16 +22,23 @@ const Runs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    listRuns()
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    listRuns(PAGE_SIZE, (page - 1) * PAGE_SIZE)
       .then(res => {
-        setItems(res.items);
-        setTotal(res.total);
+        if (!cancelled) {
+          setItems(res.items);
+          setTotal(res.total);
+        }
       })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(e => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [page]);
 
   function onCompareSelectChange(keys: React.Key[]) {
     const ids = keys as string[];
@@ -54,10 +63,11 @@ const Runs: React.FC = () => {
       title: 'Run ID',
       dataIndex: 'id',
       key: 'id',
+      width: 300,
       render: (id: string, row: RunListItem) => (
         <div>
-          <Text strong style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{id}</Text>
-          {row.label && <div><Text type="secondary" style={{ fontSize: 11 }}>{row.label}</Text></div>}
+          <Text strong title={id} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{id}</Text>
+          {row.label && <Text type="secondary" title={row.label} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11 }}>{row.label}</Text>}
         </div>
       ),
     },
@@ -65,6 +75,7 @@ const Runs: React.FC = () => {
       title: '源',
       dataIndex: 'sources',
       key: 'sources',
+      width: 150,
       render: (sources: string[]) => sources.map(s => (
         <Tag key={s} color={SOURCE_COLORS[s] ?? 'default'} style={{ fontSize: 11 }}>{s}</Tag>
       )),
@@ -72,6 +83,7 @@ const Runs: React.FC = () => {
     {
       title: '项目 / 场景',
       key: 'meta',
+      width: 180,
       render: (_: unknown, row: RunListItem) => (
         <span style={{ fontSize: 12 }}>
           {row.projectName || '—'} / {row.scene || '—'}
@@ -82,6 +94,7 @@ const Runs: React.FC = () => {
       title: '设备',
       dataIndex: 'device',
       key: 'device',
+      width: 120,
       render: (v: string) => <span style={{ fontSize: 12 }}>{v || '—'}</span>,
     },
     {
@@ -102,7 +115,7 @@ const Runs: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 80,
-      render: (s: string) => <Tag color={s === 'ready' ? 'success' : 'default'}>{s}</Tag>,
+      render: (s: string) => <Tag color={s === 'ready' ? 'success' : s === 'failed' ? 'error' : 'default'}>{s === 'ready' ? '可分析' : s === 'pending' ? '待解析' : s === 'failed' ? '失败' : s}</Tag>,
     },
     {
       title: '创建时间',
@@ -132,7 +145,7 @@ const Runs: React.FC = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h1 style={{ color: 'var(--text-primary)', margin: 0, fontSize: 16, fontWeight: 600 }}>
-          Runs
+          采集记录
           <Text type="secondary" style={{ fontSize: 12, fontWeight: 400, marginLeft: 8 }}>({total})</Text>
         </h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -142,17 +155,17 @@ const Runs: React.FC = () => {
             disabled={compareIds.length !== 2}
             onClick={goCompare}
           >
-            去对比 ({compareIds.length}/2)
+            同源对比 ({compareIds.length}/2)
           </Button>
-          <Button icon={<SwapOutlined />} onClick={() => navigate('/compare')}>对比页</Button>
+          <Button icon={<SwapOutlined />} onClick={() => navigate('/compare')}>专项对比</Button>
         </div>
       </div>
       <Alert
         showIcon
         type="info"
         style={{ marginBottom: 16 }}
-        message="单次分析入口"
-        description="点击 Run 进入详情。勾选 2 个 Run 后点「去对比」跳转 /compare（带 base/current 参数）。"
+        message="每条记录对应一轮采集"
+        description="打开详情查看指标、证据与报告；勾选两条记录后可进行对比分析。待解析记录不计入正式趋势。"
       />
       {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
       <Card size="small">
@@ -162,17 +175,28 @@ const Runs: React.FC = () => {
           loading={loading}
           columns={columns}
           dataSource={items}
+          scroll={{ x: 1220 }}
           rowSelection={{
             selectedRowKeys: compareIds,
             onChange: onCompareSelectChange,
             preserveSelectedRowKeys: true,
+            getCheckboxProps: row => ({disabled: row.status !== 'ready'}),
           }}
-          pagination={{ pageSize: 20, total, showTotal: t => `共 ${t} 条` }}
+          pagination={false}
           onRow={row => ({
             onClick: () => navigate(`/runs/${row.id}`),
             style: { cursor: 'pointer' },
           })}
         />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Pagination
+            current={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onChange={setPage}
+            showTotal={count => `共 ${count} 条`}
+          />
+        </div>
       </Card>
     </div>
   );

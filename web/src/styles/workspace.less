@@ -1,0 +1,33 @@
+/* Performance workspace */
+.work-content { min-width:0; padding:18px clamp(16px,2.4vw,44px) 42px; }
+.workbar { background:white; border:1px solid var(--border-primary); border-radius:16px; min-height:48px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:26px; }
+.crumb, .workbar nav { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.crumb { font-size:12px; color:var(--text-secondary); }
+.crumb strong { color:#203548; } .crumb .anticon-right {font-size:9px}
+.workbar nav {gap:4px} .workbar nav a {padding:6px 11px;border-radius:7px;text-decoration:none;color:#576c7b}
+.workbar nav a.active,.workbar nav a:hover { background:#e8f0f5; color:#224c6a; }
+.workspace-brand { justify-content:flex-start; padding:22px 18px; gap:10px; font:700 20px/1 var(--font-body); letter-spacing:-.6px; color:#223e54; border:0; }
+.workspace-brand-accent { display:grid; place-items:center; width:32px;height:32px;border-radius:10px;background:#294e6d;color:white; font:700 23px/1 var(--font-body); }
+.workspace-primary-menu,.workspace-settings-menu { padding:4px 8px; }
+.workspace-sider-caption {padding-top:16px;}
+.ant-menu-inline .ant-menu-item-selected {box-shadow:inset 3px 0 #406983;}
+.workspace-page {max-width:1520px;margin:auto;}
+.page-heading,.section-title {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.page-heading {margin-bottom:18px}.page-heading h1 {font-size:clamp(24px,2.3vw,34px);letter-spacing:-.04em;color:#193447;margin:0}
+.section-title {margin:25px 0 12px}.section-title h2 {font-size:18px;line-height:1.2; margin:0;padding-left:11px;border-left:3px solid #477896}
+.filter-strip {display:flex;align-items:center;gap:12px;margin:0 0 20px;color:#506171;font-size:13px}.filter-strip .ant-select {width:min(660px,80%)}
+.kpi-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi {border-radius:16px; padding:18px clamp(14px,1.6vw,28px);min-height:110px;box-sizing:border-box;color:white;}
+.kpi>div {display:flex;justify-content:space-between;gap:5px;align-items:center;font-size:13px}.kpi .anticon {opacity:.72;font-size:17px}
+.kpi strong {display:inline-block;max-width:100%;overflow-wrap:anywhere;font-size:clamp(26px,2.8vw,42px);line-height:1.2;font-weight:620;letter-spacing:-.035em;margin-top:12px;font-variant-numeric:tabular-nums}
+.kpi strong.long-value {font-size:18px}.kpi small {margin-left:6px}
+.kpi-0 {background:#2c4c68}.kpi-1 {background:#4076a1}.kpi-2 {background:#527761}.kpi-3 {background:white;color:#1f3d50;border:1px solid #dce4e8}
+.surface {background:white;border:1px solid #dde5e9;box-shadow:0 4px 20px rgba(37,61,82,.035);border-radius:16px;padding:20px;min-width:0}
+.surface>header {display:flex;align-items:baseline;gap:12px;justify-content:space-between;flex-wrap:wrap;padding-bottom:12px;margin-bottom:10px;border-bottom:1px solid #edf1f4}
+.surface h3 {font-size:16px;color:#203d50;margin:0}.surface>header span,.muted {color:#596e7c;font-size:13px}.chart-empty {height:320px;display:grid;place-items:center}
+.sample-list>a {display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:12px;color:#315e7d;text-decoration:none;overflow-wrap:anywhere;border-bottom:1px solid #edf1f4}.sample-list>a:last-child {border:none}
+.evidence-list {display:grid;gap:12px}.evidence-list article {padding-bottom:14px;border-bottom:1px solid #e3e9ec}.evidence-list article:last-child {border:0;padding:0}.evidence-list figure {margin:12px 0}.evidence-list img {max-width:100%;max-height:360px;object-fit:contain;border:1px solid #dce3e8;border-radius:8px}.evidence-list figcaption {color:#526a7c;overflow-wrap:anywhere}
+@media(max-width:991px){.workspace-brand{padding:18px 10px;justify-content:center}.workspace-primary-menu,.workspace-settings-menu{padding:0}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.work-content{padding:10px 10px 24px}.workbar{padding:8px 10px;margin-bottom:16px}.kpi{padding:12px;min-height:88px}.kpi-grid{gap:8px}.surface{padding:12px}.workbar nav{gap:0}.workbar nav a{padding:4px}.filter-strip{flex-wrap:wrap}.filter-strip .ant-select{width:100%}.kpi .anticon{display:none}}
+.evidence-form,.evidence-form label{display:grid;gap:8px}.evidence-form{gap:16px}.evidence-list h3{overflow-wrap:anywhere}
+.saved-report{max-width:1000px;overflow-wrap:anywhere}.saved-report img{max-width:100%;max-height:520px;border-radius:8px}

@@ -139,7 +139,7 @@ const RunDetail: React.FC = () => {
 
       setSavedPaths({ markdownPath: res.markdownPath, digestPath: res.digestPath });
 
-      message.success(res.markdownPath ? `报告已生成并落盘: ${res.markdownPath}` : '交叉分析报告已生成');
+      message.success(res.markdownPath ? `报告已生成并落盘: ${res.markdownPath}` : '各源热点报告已保存至性能报告目录');
 
       setActiveTab('report');
 
@@ -362,9 +362,9 @@ const RunDetail: React.FC = () => {
 
           style={{ marginBottom: 16 }}
 
-          message="暂无交叉分析报告"
+          message="暂无已保存的分析报告"
 
-          description="点击下方「生成报告」从已入库的三源数据生成 insights 与 Markdown。"
+          description="用已解析的采集数据生成各源热点报告。"
 
           action={
 
@@ -416,7 +416,7 @@ const RunDetail: React.FC = () => {
             loading={generating}
             onClick={handleGenerateReport}
           >
-            {analysis ? '重新生成交叉报告' : '生成交叉报告'}
+            {analysis ? '更新热点报告' : '生成热点报告'}
           </Button>
           {analysis?.report?.markdown && (
             <Button
@@ -430,7 +430,7 @@ const RunDetail: React.FC = () => {
             </Button>
           )}
           <Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
-            交叉分析 builder; 落盘 output/p-web-cross/
+            各源热点报告保存至性能报告目录
           </Text>
           {savedPaths.markdownPath && (
             <div style={{ marginTop: 8 }}>

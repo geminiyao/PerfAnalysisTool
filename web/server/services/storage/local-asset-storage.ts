@@ -66,6 +66,8 @@ export class LocalAssetStorage implements AssetStorage {
       case 'report_json':
       case 'report_md':
         return path.join('generated', 'reports');
+      case 'hotspot_image':
+        return path.join('generated', 'screenshots');
       case 'flamegraph_svg':
         return path.join('generated', 'flamegraphs');
       case 'folded_stack':
