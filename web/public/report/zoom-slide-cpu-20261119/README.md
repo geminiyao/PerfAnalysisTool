@@ -9,4 +9,4 @@
 - [A · F375 · BatchViewMgr.OnUpdate](report.html#timeline-A-375) · [PNG](Timeline_A_F375_BatchViewMgr.png)
 - [A · F391 · BatchViewMgr.OnUpdate](report.html#timeline-A-391) · [PNG](Timeline_A_F391_BatchViewMgr.png)
 - [C · F513 · Hud_Top](report.html#timeline-C-513) · [PNG](Timeline_C_F513_Hud_Top.png)
-- [TimeWheel 下 Hud_Top 的出现间隔](report.html#g52-C) · [PNG](TimeWheel_Hud_Top出现间隔.png)
+- [TimeWheel 下 Hud_Top 的出现间隔与逐帧调用树](report.html#hudtick-308) · [F308 的 C#Invoke](report.html#hudtick-308?marker=C%23Invoke) · [间隔图 PNG](TimeWheel_Hud_Top出现间隔.png)

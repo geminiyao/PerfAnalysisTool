@@ -219,7 +219,35 @@ const FrameTimeline = (() => {
      const observer=new ResizeObserver(()=>{if(host.isConnected){if(Math.max(680,Math.round(canvas.parentNode.clientWidth))!==width)draw()}else observer.disconnect()});observer.observe(canvas.parentNode);
    }).catch(err=>{status.textContent='无法读取本帧 Timeline · '+err.message;host.dataset.error=err.message});
  }
- return {html,mount};
+ async function callbackBranch(encoded,chain){
+   const {tracks,names}=await unpack(encoded);
+   const rows=tracks.find(t=>t.name==='Main Thread').rows;
+   const levels=chain.map(()=>new Set()), children=new Map();
+   rows.forEach((row,i)=>{
+     if(names[row.id]!==chain.at(-1))return;
+     const path=[];
+     for(let depth=chain.length-1;depth>=0;depth--){
+       if(i<0||names[rows[i].id]!==chain[depth])return;
+       path[depth]=i;i=rows[i].parent;
+     }
+     path.forEach((index,depth)=>levels[depth].add(index));
+   });
+   const frameInvokes=[];
+   for(const row of rows){
+     const name=names[row.id];
+     if(name==='C#Invoke')frameInvokes.push(row.duration);
+     if(!levels.at(-1).has(row.parent))continue;
+     if(!children.has(name))children.set(name,[]);
+     children.get(name).push(row.duration);
+   }
+   const summary=times=>({count:times.length,ms:times.reduce((a,b)=>a+b,0),peak:Math.max(0,...times)});
+   return {
+     parents:levels.map((indices,depth)=>({name:chain[depth],...summary(Array.from(indices,i=>rows[i].duration))})),
+     children:Array.from(children,([name,times])=>({name,...summary(times)})).sort((a,b)=>b.ms-a.ms),
+     frameInvoke:summary(frameInvokes)
+   };
+ }
+ return {html,mount,callbackBranch};
 })();
 
 'use strict';
@@ -254,7 +282,7 @@ function tree(text,label=''){
 }
 function sidebarNav(active){
  const group=(name,items)=>`<div class="navgroup">${name}</div>${items.map(([id,label,n])=>`<a class="sideitem" href="#${id}"${active===id?' aria-current="page"':''}><i></i>${label}${n!=null?`<span class="navcount">${n}</span>`:''}</a>`).join('')}`;
- document.querySelector('.navlinks').innerHTML=group('报告',[['overview','采样概览'],['timeline-A-375','CPU Timeline'],['coverage-C','热点覆盖与补图'],['frames-A','慢帧回看'],['entities','重要度任务与实体类型']])+group('模块热点',modules.map(([id,n,ids])=>[id==='load'?'loading':'mod-'+id,n,ids.length]))+group('证据',[['shots-0','截图对照',D.shots.length],['search','Marker 索引',issues.length],['method','采样与口径']]);
+ document.querySelector('.navlinks').innerHTML=group('报告',[['overview','采样概览'],['timeline-A-375','CPU Timeline'],['coverage-C','热点覆盖与补图'],['frames-A','慢帧回看'],['entities','重要度任务与实体类型']])+group('模块热点',modules.map(([id,n,ids])=>[id==='load'?'loading':'mod-'+id,n,ids.length]))+group('证据',[['hudtick-308','TimeWheel · Hud_Top'],['shots-0','截图对照',D.shots.length],['search','Marker 索引'],['method','采样与口径']]);
 }
 function capture(k){
  const s=D.stats[k];
@@ -304,7 +332,8 @@ function summaryFinding([id,k,note],repeat){
      caption=`C · 回调累计 ${fmt(total,3)} ms`;
    }
  }
- return `<a class="finding" href="#g${id}-${k}"><div>${name}<p>${esc(note)}</p>${findingBranches(id,k,v.frame)}</div><div class="reading"><strong>${esc(value)}</strong><small>${esc(caption)}</small></div><span class="arrow">›</span></a>`;
+ const href=repeat&&id===52?'hudtick-308':'g'+id+'-'+k;
+ return `<a class="finding" href="#${href}"><div>${name}<p>${esc(note)}</p>${findingBranches(id,k,v.frame)}</div><div class="reading"><strong>${esc(value)}</strong><small>${esc(caption)}</small></div><span class="arrow">›</span></a>`;
 }
 function overview(tab){
  const repeat=tab==='repeat';
@@ -349,7 +378,18 @@ const moduleLeads={
 function modulePage(m){
  const [id,n,ids]=m;
  return title(n,moduleLeads[id])+(id==='load'?loadNav('markers'):'')+
+ (['ui','runtime'].includes(id)?'<p>'+link('hudtick-308','采样 C · TimeWheel 下的 LUA:Hud_Top.func 与 C#Invoke ›')+'</p>':'')+
  section('Marker',`<small class="meta">${ids.length} 项 · 缩进表示调用关系。右侧为各采样的帧内峰值，帧号可能不同。</small>`)+panel(indexRows(ids.map(i=>issues[i]).sort((a,b)=>b.caps[maxcap(b)].peak-a.caps[maxcap(a)].peak),true))+'<p class="statnote">各行取各自峰值帧；同一帧、同一条父链的累计见慢帧回看。</p>';
+}
+function hudTickPage(){
+ const {events,valid}=D.hudTicks;
+ const sum=events.reduce((s,e)=>s+e.ms,0),peak=events.reduce((a,b)=>a.ms>=b.ms?a:b);
+ const invokes=events.filter(e=>Object.hasOwn(e.children,'C#Invoke'));
+ return title('TimeWheel · LUA:Hud_Top.func','采样 C · 缩放层滑动掉帧-mixfold4-2-UpdateTimeWheel.data')+
+   '<div class="panel strip">'+metric('回调出现帧',events.length+' / '+valid,'帧')+
+   metric('回调累计',fmt(sum,2),'ms')+metric('出现帧均值',fmt(sum/events.length,2),'ms')+
+   metric('单帧最高 · F'+peak.frame,fmt(peak.ms,2),'ms')+'</div>'+
+   '<p class="desc">其中 '+invokes.length+' 帧在回调内执行了 C#Invoke，合计 '+fmt(invokes.reduce((s,e)=>s+e.children['C#Invoke'],0),2)+' ms。选择图中的帧可查看每个子项的调用次数和耗时。</p>'+hudTickSection();
 }
 function hudTickSection(){
  const d=D.hudTicks, events=d.events, name=d.chain.at(-1);
@@ -359,8 +399,29 @@ function hudTickSection(){
  const rows=events.map((e,i)=>[String(e.frame),fmt(e.time/1000,3),i?String(e.frame-events[i-1].frame):'—',i?fmt(e.time-events[i-1].time,1):'—',fmt(e.ms,3),fmt(e.cpu,2),esc(Object.entries(e.children).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([n,t])=>n+' '+fmt(t,3)+' ms').join(' · '))]);
  return section(name+' 出现在哪些帧')+'<div class="panel tickpanel" id="hud-ticks">'+
  '<div class="tickheading"><div><b>TimeWheel → '+esc(name)+'　·　采样 C　'+events.length+' / '+d.valid+' 帧</b><p>'+periodic.length+' 帧含 C#internetReachability，相邻间隔 '+range(0,3)+' 秒（'+range(1,0)+' 帧）。'+sprite.map(e=>'F'+e.frame).join('、')+' 含 C#SetSpriteData。</p></div><label>横轴 <select class="tickaxis"><option value="time">经过时间</option><option value="frame">显示帧号</option></select></label></div>'+
- '<p class="tickkey"><i></i>C#internetReachability <i></i>C#SetSpriteData</p><div class="tickplot"></div><p class="tickread" aria-live="polite"></p></div>'+
+ '<p class="tickkey"><i></i>C#internetReachability <i></i>C#SetSpriteData</p><div class="tickplot"></div><p class="tickread" aria-live="polite"></p></div><div id="tickbranch"></div>'+
  disclosure('展开全部出现帧和相邻间隔',tdtable(['显示帧','经过时间 s','距上次帧数','距上次 ms','回调 ms','整帧 CPU ms','耗时最高的直接子项'],rows));
+}
+const tickBranches=new Map();
+async function showTickBranch(frame,focus){
+ const host=document.getElementById('tickbranch');
+ if(!host)return;
+ host.dataset.frame=frame;
+ const chain=['LUA:TimeWheelMgr.OnTick',...D.hudTicks.chain];
+ if(!tickBranches.has(frame))tickBranches.set(frame,FrameTimeline.callbackBranch(D.timelines.C[frame],chain));
+ try{
+   const branch=await tickBranches.get(frame);
+   if(!host.isConnected||Number(host.dataset.frame)!==frame)return;
+   const row=(v,depth)=>`<tr${v.name===focus?' class="focus"':''}><td>${indent(esc(v.name),depth)}</td><td class="num">${v.count}</td><td class="num">${fmt(v.ms,3)}</td><td class="num">${fmt(v.peak,3)}</td></tr>`;
+   const invoke=branch.children.find(x=>x.name==='C#Invoke'),whole=branch.frameInvoke;
+   host.innerHTML=section('F'+frame+' · 主线程调用树')+
+     '<p class="statnote">沿本帧实际进入 LUA:Hud_Top.func 的调用展开。父行包含子行耗时。</p>'+
+     '<div class="panel treebox"><table class="treetable"><thead><tr><th>Marker</th><th class="num">调用次数</th><th class="num">累计 ms</th><th class="num">单次最高 ms</th></tr></thead><tbody>'+
+     branch.parents.map(row).join('')+branch.children.map(v=>row(v,chain.length)).join('')+'</tbody></table></div>'+
+     (invoke?`<p class="statnote">本回调内 C#Invoke 共 ${invoke.count} 次，合计 ${fmt(invoke.ms,3)} ms。主线程整帧同名调用共 ${whole.count} 次，合计 ${fmt(whole.ms,3)} ms。</p>`:'');
+ }catch(error){
+   if(host.isConnected&&Number(host.dataset.frame)===frame)host.textContent='读取 F'+frame+' 调用树失败。'+error.message;
+ }
 }
 function renderHudTicks(axis='time',selected=513){
  const panel=document.getElementById('hud-ticks');if(!panel)return;
@@ -383,6 +444,7 @@ function renderHudTicks(axis='time',selected=513){
    let jump=panel.querySelector('.ftlink');if(!jump){jump=document.createElement('a');jump.className='ftlink';panel.append(jump)}
    jump.href='#timeline-C-'+e.frame+'?marker='+encodeURIComponent('LUA:Hud_Top.func');jump.textContent='查看 F'+e.frame+' 的 CPU Timeline ›';
    panel.querySelector('.tickread').textContent='F'+e.frame+'　'+fmt(e.time/1000,3)+' s　·　回调 '+fmt(e.ms,3)+' ms　·　整帧 '+fmt(e.cpu,2)+' ms'+(prev?'　·　距上次 '+(e.frame-prev.frame)+' 帧 / '+fmt(e.time-prev.time,1)+' ms':'　·　首次出现');
+   showTickBranch(e.frame,new URLSearchParams(location.hash.split('?')[1]).get('marker')||'LUA:Hud_Top.func');
  };
  const select=e=>{const g=e.target.closest('.tickmark');if(g)show(Number(g.dataset.frame))};
  const plot=panel.querySelector('.tickplot');plot.onpointerover=plot.onclick=select;
@@ -405,6 +467,26 @@ function issuePage(g,want){
  (matching.length?section('Profiler 截图')+`<div class="chips">${matching.map(({s,j})=>`<a class="chip" href="#shots-${j}">${s.k} F${s.frame} · ${esc(s.name)} ›</a>`).join('')}</div>`:'')+
  (g.module==='load'?`<p class="detailnote">${link('loading','按加载阶段查看 ›')}</p>`:'');
 }
+function tickIndexRows(term,mod){
+ if(mod&&!['runtime','ui'].includes(mod))return [];
+ const {chain,events}=D.hudTicks,callback=chain.at(-1);
+ const children=new Set(events.flatMap(e=>Object.keys(e.children)));
+ const words=term.split(/\s+/).filter(Boolean);
+ const rows=[];
+ for(const name of [callback,...children]){
+   const isRoot=name===callback;
+   const path=[...chain,...(isRoot?[]:[name]),'Main Thread'].join(' ').toLowerCase();
+   if(!words.every(w=>path.includes(w)))continue;
+   if(!isRoot&&!words.some(w=>name.toLowerCase().includes(w)))continue;
+   const hits=isRoot?events:events.filter(e=>Object.hasOwn(e.children,name));
+   const ms=e=>isRoot?e.ms:e.children[name],peak=hits.reduce((a,b)=>ms(a)>=ms(b)?a:b);
+   const href=f=>'#hudtick-'+f+'?marker='+encodeURIComponent(name);
+   rows.push({name,level:0,href:href(hits.some(e=>e.frame===308)?308:peak.frame),
+     context:(isRoot?'TimeWheel → '+chain[2]:callback+' 的直接子项')+' · '+hits.length+' 个出现帧，累计 '+fmt(hits.reduce((sum,e)=>sum+ms(e),0),3)+' ms',
+     samples:[{label:'采样 C',href:href(peak.frame),frame:peak.frame,ms:ms(peak),heavy:hits.filter(e=>ms(e)>=2).length}]});
+ }
+ return rows;
+}
 function searchPage(){
  return title('Marker 索引','搜索原始 marker 名称、线程或资源路径范围。')+`<div class="filters"><input id="query" type="search" placeholder="搜索 marker，例如 MapObjInit" aria-label="搜索 marker"><select id="modfilter" aria-label="按模块筛选"><option value="">全部模块</option>${modules.map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}</select><span id="matchcount" class="meta" aria-live="polite"></span></div><div id="results" class="panel tablepanel"></div>`;
 }
@@ -412,8 +494,10 @@ function filter(){
  const box=document.getElementById('results');if(!box)return;
  const term=document.getElementById('query').value.trim().toLowerCase(),mod=document.getElementById('modfilter').value;
  const list=issues.filter(g=>(!mod||g.module===mod)&&[g.name,g.scope,g.thread].join(' ').toLowerCase().includes(term)).sort((a,b)=>a.name.localeCompare(b.name));
- document.getElementById('matchcount').textContent=list.length+' 项';
- box.innerHTML=list.length?indexRows(list):'<p class="pad">没有匹配的 marker。可缩短关键词或切换模块。</p>';
+ const callbacks=tickIndexRows(term,mod);
+ document.getElementById('matchcount').textContent=[list.length+' 个热点组',...(callbacks.length?[callbacks.length+' 个回调路径结果']:[])].join(' · ');
+ box.innerHTML=(callbacks.length?section('采样 C · TimeWheel 下的 Hud_Top')+markerPeakList(callbacks):'')+
+   (list.length?indexRows(list):callbacks.length?'':'<p class="pad">没有匹配的 marker。可缩短关键词或切换模块。</p>');
 }
 
 function indent(content,depth){
@@ -530,6 +614,7 @@ function route(){
    const m=modules.find(m=>m[0]===part);body=modulePage(m);nav=part==='load'?'loading':'mod-'+part;crumb=m[1];
  }else if(page==='timeline'){body=title('CPU Timeline','从原始录制按实际起点和耗时绘制。上方是整段录制的 CPU 帧耗时，下方是选中帧的线程与 marker。')+FrameTimeline.html();nav='timeline-A-375';crumb='CPU Timeline'}
  else if(page==='loading'){body=loadingPage(part,cap);nav='loading';crumb='资源加载'}
+ else if(page==='hudtick'){body=hudTickPage();nav='hudtick-308';crumb='TimeWheel · Hud_Top'}
  else if(page==='search'||page==='rank'||page==='tree'){body=searchPage();nav='search';crumb='Marker 索引'}
  else if(page==='shots'||page==='screen'){body=screenPage(Number(part));nav='shots-0';crumb='截图对照'}
  else if(page==='frames'){body=framesPage(part,cap);nav='frames-A';crumb='慢帧回看'}
@@ -544,7 +629,8 @@ function route(){
  document.title=crumb+' · 无极缩放 CPU 分析';
  sidebar.classList.remove('open');document.querySelector('.menubtn').setAttribute('aria-expanded','false');
  document.getElementById('query')?.addEventListener('input',filter);
- document.getElementById('modfilter')?.addEventListener('change',filter);filter();plots();renderHudTicks();
+ document.getElementById('modfilter')?.addEventListener('change',filter);filter();plots();
+ renderHudTicks('time',page==='hudtick'?(Number(part)||308):513);
  document.documentElement.scrollTop=0;document.body.scrollTop=0;
 }
 document.querySelector('.menubtn').onclick=()=>{const shown=sidebar.classList.toggle('open');document.querySelector('.menubtn').setAttribute('aria-expanded',String(shown))};

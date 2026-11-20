@@ -19,6 +19,11 @@
   "threadSwitch": true,
   "entitySubreport": true,
   "hudTopOccurrencesAndTimelineLink": 21,
+  "hudTopMarkerSearch": [
+    "LUA:Hud_Top.func",
+    "C#Invoke"
+  ],
+  "hudTopFrameBranchesChecked": 21,
   "verifiedSummaryViews": [
     "BatchViewMgr 30-frame interval",
     "Hud_Top 21 frames and total time"
