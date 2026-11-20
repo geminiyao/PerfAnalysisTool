@@ -26,5 +26,17 @@
     "F314 creation count and time",
     "recurring marker averages",
     "18 branch rows and both sample totals"
-  ]
+  ],
+  "thresholdExamples": {
+    "movingSlowFrames": 66,
+    "switched": 50,
+    "atLeast2ms": 50,
+    "atLeast5ms": 50,
+    "atLeast8ms": 38
+  },
+  "modulePeakLists": {
+    "modules": 7,
+    "rows": 46,
+    "sampleLinksAndMobileWidth": true
+  }
 }

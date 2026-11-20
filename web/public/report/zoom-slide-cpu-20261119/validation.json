@@ -22,5 +22,17 @@
   "verifiedSummaryViews": [
     "BatchViewMgr 30-frame interval",
     "Hud_Top 21 frames and total time"
-  ]
+  ],
+  "thresholdExamples": {
+    "marker": "[Terrain] AddTileStaticMesh",
+    "capture": "A",
+    "atLeast1ms": 313,
+    "atLeast2ms": 236,
+    "atLeast5ms": 63
+  },
+  "modulePeakLists": {
+    "modules": 6,
+    "rows": 72,
+    "sampleLinksAndMobileWidth": true
+  }
 }

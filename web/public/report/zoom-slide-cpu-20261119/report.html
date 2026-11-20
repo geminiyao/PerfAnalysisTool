@@ -55,6 +55,30 @@ table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:10px 14p
 .ft-status,.ft-detail{padding:7px 12px;color:#465b70;font-size:13px;overflow-wrap:anywhere}.ft-detail{font-variant-numeric:tabular-nums}
 .ft-tip{position:fixed;z-index:10;max-width:min(340px,90vw);padding:9px 12px;background:#111b23f2;color:#f1f5f9;border-radius:6px;font-size:12px;pointer-events:none;overflow-wrap:anywhere}
 .ftlink{display:inline-block;margin:6px 0 12px;font-weight:600}
+
+.peak-list{list-style:none;margin:0;padding:0;color:var(--ink)}
+.peak-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,min(53%,calc(var(--samples)*10rem)));align-items:center;gap:22px;padding:15px 20px}
+.peak-row+.peak-row{border-top:1px solid var(--line)}
+.peak-row:hover,.peak-row:focus-within{background:#f6f9ff}
+.peak-name{position:relative;min-width:0;padding-inline-start:calc(var(--level)*1.35rem);overflow-wrap:anywhere}
+.peak-name.child:before{content:"";position:absolute;top:.28em;left:calc((var(--level) - 1)*1.35rem + .2rem);width:.7rem;height:.65rem;border:solid #a9bacf;border-width:0 0 1px 1px}
+.peak-name .marker{font-size:15px;color:var(--ink)}
+.peak-name a:hover,.peak-value:hover strong{text-decoration:underline;color:var(--blue)}
+.peak-name small,.peak-value small{display:block;font:12px/1.45 var(--sans);color:var(--muted)}
+.peak-name small{margin-top:4px}
+.peak-readings{display:grid;grid-template-columns:repeat(var(--samples),minmax(0,1fr));gap:12px}
+.peak-value{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.peak-value strong{display:block;font-size:19px;line-height:1.4}
+.peak-value strong span{font-size:12px;font-weight:500}
+.empty-value span{color:var(--muted);font-size:14px}
+@media(max-width:800px){
+ .peak-row{grid-template-columns:minmax(0,1fr);gap:9px;padding:13px 14px}
+ .peak-name{padding-inline-start:calc(var(--level)*.85rem)}
+ .peak-name.child:before{left:calc((var(--level) - 1)*.85rem);width:.5rem}
+ .peak-readings{gap:6px;padding-inline-start:calc(var(--level)*.85rem)}
+ .peak-value{text-align:left}
+ .peak-value small{font-size:11px}
+}
 </style></head>
 <body><aside class="sidebar" id="reportnav"><a href="#overview" class="brand"><span class="logomark" aria-hidden="true"><i></i><i></i><i></i></span>Unity Profiler</a><nav class="navlinks" aria-label="报告导航"></nav><div class="sidefoot">Xiaomi MIX Fold 4 · Android</div></aside>
 <div class="shell"><header class="bar"><button type="button" class="menubtn" aria-controls="reportnav" aria-expanded="false">目录</button><div class="crumb"><b class="path">CPU 性能分析</b><span>/</span><b id="location">采样概览</b></div><a class="searchlink" href="#search">查找 Marker</a></header><main></main></div>
@@ -288,12 +312,31 @@ function overview(tab){
  `<div class="pair threecaps">${Object.keys(D.stats).map(capture).join('')}</div>`+
  section('主要发现',seg([['单帧尖刺','overview',!repeat],['反复出现','overview-repeat',repeat]]))+
  `<div class="panel findings">${findings[repeat?'repeat':'spike'].map(row=>summaryFinding(row,repeat)).join('')}</div>`+
+ (repeat?'<p class="statnote">“帧内累计 ≥2 ms”表示该 marker 在一帧内的调用合计达到 2 ms。这个数用于筛选。'+link('method','查看不同门槛下的帧数')+'</p>':'')+
  section('B F106 · 同帧调用层级')+disclosure('查看切层、道路与 VT 的实测父链',localBranches('B',106))+
  section('按模块查看')+`<div class="indexgrid">${modules.map(([id,n,ids])=>`<a class="panel indexlink" href="#${id==='load'?'loading':'mod-'+id}">${n}<small>${ids.length} 项 ›</small></a>`).join('')}</div>`;
 }
+function markerPeakList(rows){
+ const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function reading(sample){
+   const label=escape(sample.label);
+   if(!sample.href)return `<div class="peak-value empty-value"><small>${label}</small><span>无样本</span></div>`;
+   return `<a class="peak-value" href="${escape(sample.href)}"><small>${label} · F${sample.frame}</small><strong>${sample.ms.toFixed(2)} <span>ms</span></strong><small>有 ${sample.heavy} 帧达到 2 ms</small></a>`;
+ }
+ return `<ul class="peak-list">${rows.map(row=>`<li class="peak-row" style="--level:${row.level};--samples:${row.samples.length}">
+   <div class="peak-name ${row.level?'child':''}"><a class="marker" href="${escape(row.href)}">${escape(row.name)}</a><small>${escape(row.context)}</small></div>
+   <div class="peak-readings">${row.samples.map(reading).join('')}</div></li>`).join('')}</ul>`;
+}
+
 function indexRows(list,hierarchy=false){
  const rows=hierarchy?nestedGroups(list):list.map(g=>[g,0]);
- return tdtable(['Marker','线程','A 帧内峰值','B 帧内峰值','C 帧内峰值'],rows.map(([g,depth])=>[indent(marklink(g.id),depth),esc(g.thread),...Object.keys(D.stats).map(k=>g.caps[k]?`<a href="#g${g.id}-${k}">${fmt(g.caps[k].peak)} ms</a><small>F${g.caps[k].frame} · ≥2 ms 共 ${g.caps[k].heavy} 帧</small>`:'—')]));
+ return markerPeakList(rows.map(([g,level])=>({
+   name:g.name,level,href:'#g'+g.id+'-'+maxcap(g),context:[g.scope,g.thread].filter(Boolean).join(' · '),
+   samples:Object.keys(D.stats).map(k=>{
+     const v=g.caps[k],label='采样 '+k;
+     return v?{label,href:'#g'+g.id+'-'+k,ms:v.peak,frame:v.frame,heavy:v.heavy}:{label};
+   })
+ })));
 }
 const moduleLeads={
  terrain:'[Terrain] AddTileStaticMesh 在 A 中反复出现。B 的 VT4.LateUpdate 与 VT4.BeforeCameraRender 同帧叠加，分别落在两个渲染阶段。',
@@ -306,7 +349,7 @@ const moduleLeads={
 function modulePage(m){
  const [id,n,ids]=m;
  return title(n,moduleLeads[id])+(id==='load'?loadNav('markers'):'')+
- section('Marker',`<small class="meta">${ids.length} 项 · 缩进表示各命中录制共有的祖先，同级按峰值排序</small>`)+panel(indexRows(ids.map(i=>issues[i]).sort((a,b)=>b.caps[maxcap(b)].peak-a.caps[maxcap(a)].peak),true))+'<p class="statnote">各行取各自峰值帧；同一帧、同一条父链的累计见慢帧回看。</p>';
+ section('Marker',`<small class="meta">${ids.length} 项 · 缩进表示调用关系。右侧为各采样的帧内峰值，帧号可能不同。</small>`)+panel(indexRows(ids.map(i=>issues[i]).sort((a,b)=>b.caps[maxcap(b)].peak-a.caps[maxcap(a)].peak),true))+'<p class="statnote">各行取各自峰值帧；同一帧、同一条父链的累计见慢帧回看。</p>';
 }
 function hudTickSection(){
  const d=D.hudTicks, events=d.events, name=d.chain.at(-1);
@@ -473,7 +516,7 @@ function methodPage(){
  const filenames=['热点调用树.md','资源加载调用树.md','资源加载逐帧.csv','加载资源明细.csv','逐帧.csv','热点逐帧.csv','全部marker.csv','完整调用树.zip','采样索引.json'];
  return title('采样与口径','测试设备 Xiaomi MIX Fold 4 · Android · 三份初次采样')+
  section('采样文件')+panel(tdtable(['采样','文件','有效 / 导出帧','时长','均值','P50 / P95 / P99'],Object.keys(D.stats).map(k=>{const x=stats[k];return [badge(k),esc(x[0].replace('.pdata','.data')),x[1]+' / '+x[2],fmt(x[3])+' s',fmt(x[4])+' ms',[x[5],x[6],x[7]].map(v=>fmt(v)).join(' / ')+' ms']})))+
- section('统计口径')+`<div class="panel pad method"><h3>显示帧与分母</h3><p>A、B 导出后各有 1 帧缺少有效 PlayerLoop，C 导出的 599 帧均有效。共纳入 577 + 501 + 599 = 1,677 帧。显示帧 = Profiler 索引 + 1。全帧均值和分位数计入零命中帧。16.67 ms、33.33 ms 分别作为 60 FPS、30 FPS 参考线。</p><h3>父子关系与线程</h3><p>按原始 depth 重建父子关系，同线程同帧同父路径合并。Self 等于累计耗时减去直接子项。普通线程空等不作为业务热点，实际同步资源等待保留原始父链。主线程已列范围 Self 并集覆盖 PlayerLoop 时间的 A ${fmt(stats.A[13],1)}%、B ${fmt(stats.B[13],1)}%、C ${fmt(stats.C[13],1)}%。后台线程耗时可能与主线程重叠。</p><h3>可以判断的范围</h3><p>缺少 GPU 帧时间、目标帧率、操作阶段、温控及缓存状态，三份录制分别统计，UpdateTimeWheel 为文件名标识，未据此推定改动收益。B F358 的 MapObjInit 共 36.62 ms，其中 LogStringToConsole 为 1.88 ms。采样中缺少 ShowRopeLine 或 gridX 异常文本，该日志与异常的关联仍需同帧设备日志确认。</p></div>`+
+ section('统计口径')+`<div class="panel pad method"><h3>显示帧与分母</h3><p>A、B 导出后各有 1 帧缺少有效 PlayerLoop，C 导出的 599 帧均有效。共纳入 577 + 501 + 599 = 1,677 帧。显示帧 = Profiler 索引 + 1。全帧均值和分位数计入零命中帧。16.67 ms、33.33 ms 分别作为 60 FPS、30 FPS 参考线。</p><h3>为什么统计 2 ms 和 5 ms</h3><p>这两个数由分析者选作筛选值，缺少项目验收标准、设备基线或实测拐点的校准。2 ms 用来数反复出现的开销，5 ms 用来筛选单帧内更集中的开销。“帧内累计”比较同一帧内所选调用的总耗时，“单次”只比较一次调用。</p><p>以采样 A 的 [Terrain] AddTileStaticMesh 为例。按帧内累计统计，门槛取 1 ms、2 ms、5 ms，分别有 313、236、63 帧达到。三个数字来自同一份采样。</p><h3>父子关系与线程</h3><p>按原始 depth 重建父子关系，同线程同帧同父路径合并。Self 等于累计耗时减去直接子项。普通线程空等不作为业务热点，实际同步资源等待保留原始父链。主线程已列范围 Self 并集覆盖 PlayerLoop 时间的 A ${fmt(stats.A[13],1)}%、B ${fmt(stats.B[13],1)}%、C ${fmt(stats.C[13],1)}%。后台线程耗时可能与主线程重叠。</p><h3>可以判断的范围</h3><p>缺少 GPU 帧时间、目标帧率、操作阶段、温控及缓存状态，三份录制分别统计，UpdateTimeWheel 为文件名标识，未据此推定改动收益。B F358 的 MapObjInit 共 36.62 ms，其中 LogStringToConsole 为 1.88 ms。采样中缺少 ShowRopeLine 或 gridX 异常文本，该日志与异常的关联仍需同帧设备日志确认。</p></div>`+
  section('完整统计')+disclosure('查看帧率与超时分布',tdtable(['采样','平均 FPS','>16.67 ms','>33.33 ms','>50 ms','>33.33 ms 连续段'],Object.keys(D.stats).map(k=>{const x=stats[k];return [badge(k),fmt(x[1]/x[3]),x[11],x[9],x[10],x[12]]})))+
  section('证据文件')+`<div class="panel pad files"><p>HTML 内嵌图表和截图。证据包解压后可打开以下文件。</p>${filenames.map(f=>`<a href="${encodeURI(f)}" download>${esc(f)}</a>`).join('')}</div>`;
 }
