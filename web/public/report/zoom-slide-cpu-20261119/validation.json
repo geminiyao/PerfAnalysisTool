@@ -1,10 +1,22 @@
 {
-  "verifiedOn": "2026-11-19",
-  "httpFilesWithMatchingSHA256": 12,
+  "verifiedOn": "2026-11-20",
+  "source": "Git index served over local HTTP",
+  "httpFilesWithMatchingSHA256": 16,
   "evidenceDownloadLinks": 9,
-  "reportCatalogSearch": true,
-  "charts": true,
-  "profilerScreenshot": true,
-  "callTree": true,
-  "entitySubreport": true
+  "catalogEntryOpened": true,
+  "hotspotGroups": 72,
+  "screenshots": 6,
+  "timelineFrames": {
+    "A": 52,
+    "B": 44,
+    "C": 69
+  },
+  "timelineRoutesAndPngExport": [
+    "timeline-A-375",
+    "timeline-A-391",
+    "timeline-C-513"
+  ],
+  "threadSwitch": true,
+  "entitySubreport": true,
+  "hudTopOccurrencesAndTimelineLink": 21
 }

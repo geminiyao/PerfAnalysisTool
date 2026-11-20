@@ -2,70 +2,90 @@
   "id": "zoom-slide-cpu-20261119",
   "entry": "report.html",
   "basePath": "/cpu/report/zoom-slide-cpu-20261119/",
-  "preparedAt": "2026-11-19",
-  "sourceReportSha256": "f909b04510f7bce464f652fe21d5fb508b7eec32dd36729ea915fa7264060825",
-  "fileCount": 12,
-  "totalBytes": 42749968,
+  "preparedAt": "2026-11-20",
+  "sourceReportSha256": "acb829cd0757e3dbb0594feffadbcf562eaf98cd95acd81f6f4ef052cbbbbcfc",
+  "fileCount": 16,
+  "totalBytes": 90293738,
   "files": [
     {
       "file": "report.html",
-      "bytes": 4288208,
-      "sha256": "f909b04510f7bce464f652fe21d5fb508b7eec32dd36729ea915fa7264060825"
+      "bytes": 21215629,
+      "sha256": "acb829cd0757e3dbb0594feffadbcf562eaf98cd95acd81f6f4ef052cbbbbcfc"
     },
     {
       "file": "热点调用树.md",
-      "bytes": 297482,
-      "sha256": "835186a48d18bd27f1d6b8324ad862f12a701fbf672969e6948b52c12d811b5b"
+      "bytes": 658737,
+      "sha256": "548c47ca0baab0693aeaa3d727ccb8d665575b22460fa46289dea9cc377f6a10"
     },
     {
       "file": "资源加载调用树.md",
-      "bytes": 124846,
-      "sha256": "640a130e3a253edbe6d0769a01f8cb066f23470bd0e8d09dc5119db31c74ae44"
+      "bytes": 183124,
+      "sha256": "616bc7bc74e360133a181f018401d829cb10921149d04119a70bdccc70853ecf"
     },
     {
       "file": "资源加载逐帧.csv",
-      "bytes": 69440,
-      "sha256": "22cb58a89d8e4871fcacb73f61fdece222f30db93a1de5c4116dd48bcbce486d"
+      "bytes": 108498,
+      "sha256": "59de99ba03dc05bdebfacc16c6b09ee937abc45076175a2d194695d207720b57"
     },
     {
       "file": "加载资源明细.csv",
-      "bytes": 3713660,
-      "sha256": "a081228773f085ba02542ede176dc75a5bf3a5af0a44cf1232291258708af9a1"
+      "bytes": 6142736,
+      "sha256": "9558439ad58fd743ec8c235db755964e0d634a710649eba6813a4eb2f22436ec"
     },
     {
       "file": "逐帧.csv",
-      "bytes": 443767,
-      "sha256": "08b1fabe083758077445da5ef34047eae85f700fd0557c074ae2b987feda7e3f"
+      "bytes": 673879,
+      "sha256": "094a3175c42eb6b7c10b2310bd2d08e4eac2a4c02b838f07ee2b5f89715a3c7f"
     },
     {
       "file": "热点逐帧.csv",
-      "bytes": 1821332,
-      "sha256": "2c34ec019b925a0104ef8eebe03adce5eaee50310348ea7b5403a9db22ee6d3d"
+      "bytes": 3496656,
+      "sha256": "b0761e6a55fc0d2339710f62e835670cc246f8f16b78da6a9b51133ed3169314"
     },
     {
       "file": "全部marker.csv",
-      "bytes": 3141645,
-      "sha256": "a81c2a261d4b2f5b6e0a6c9b272eff70766ef1d73f0658bc97eda0ba691b46ab"
+      "bytes": 5623995,
+      "sha256": "04e7e92bc739cc4bd36c529b8e7988656fb1ec293e2f027ae6a4cd3cee47fd8c"
     },
     {
       "file": "完整调用树.zip",
-      "bytes": 26348959,
-      "sha256": "fe2a411f8592d806d80d5dde6ba0c05a85448cb1fea92d079f37938b71af5a68"
+      "bytes": 48499104,
+      "sha256": "ed13129900a54db635697ff4a76fc971746a2803658e537b3c57ab8a712bf333"
     },
     {
       "file": "采样索引.json",
-      "bytes": 917,
-      "sha256": "c7f8dfa13ec7e94c6f610f2a6b4a310a59ee5a1c26dec991cf4bbfc6cad9c814"
+      "bytes": 1516,
+      "sha256": "ee4ac8a7df464039b92ee099660431a9c64199ccc1441591aec11e0e9fb2abc6"
     },
     {
       "file": "重要度任务与实体类型.html",
-      "bytes": 1496196,
-      "sha256": "b4ddb468707fc4004cc973c970badf630098faf87497072c0c552e936980547c"
+      "bytes": 1782048,
+      "sha256": "0ddc6206fbb31cd43555c99e29b0776ca5910a5e32aa41d9c10dabc6176b630b"
     },
     {
       "file": "重要度任务逐帧.csv",
-      "bytes": 1003516,
-      "sha256": "1afef96a25b36947d675e0a99b0d831a5763163c427cbd2a93d22306dc5f483a"
+      "bytes": 1525475,
+      "sha256": "668bd0561b0b3dad77cbc1a74b9e64652b777a8f94b15ba6d498efc05230fe69"
+    },
+    {
+      "file": "Timeline_A_F375_BatchViewMgr.png",
+      "bytes": 123361,
+      "sha256": "8e90bc202794a504bd4df51c9dc0c94d0f46ca4c2ad2f8cb6b588e24e05ebd2a"
+    },
+    {
+      "file": "Timeline_A_F391_BatchViewMgr.png",
+      "bytes": 113373,
+      "sha256": "cb4b841c61b6fc27c364ec37fb504e3abf8a6705e5e71398936508b9db9e5fe1"
+    },
+    {
+      "file": "Timeline_C_F513_Hud_Top.png",
+      "bytes": 115823,
+      "sha256": "23eed3d170e062f092408f8724d25bb52994ee6dca987ff84a5281d31f1ad405"
+    },
+    {
+      "file": "TimeWheel_Hud_Top出现间隔.png",
+      "bytes": 29784,
+      "sha256": "628b4505e7d4b52042e40189d2cbbc8baabdebb09514cb7851425436e4687bd7"
     }
   ]
 }

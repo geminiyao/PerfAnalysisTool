@@ -1,22 +1,24 @@
 {
-  "verifiedOn": "2026-11-19",
-  "httpFilesWithMatchingSHA256": 12,
-  "evidenceDownloadLinks": 11,
-  "reportCatalogSearch": true,
-  "charts": true,
-  "profilerScreenshot": true,
+  "verifiedOn": "2026-11-20",
+  "source": "Git index served over local HTTP",
+  "httpFilesWithMatchingSHA256": 16,
+  "evidenceDownloadLinks": 13,
+  "catalogEntryOpened": true,
+  "hotspotGroups": 46,
+  "screenshots": 17,
+  "timelineFrames": {
+    "O1": 18,
+    "O2": 27
+  },
+  "timelineRoutesAndPngExport": [
+    "timeline/2/116",
+    "timeline/2/280"
+  ],
+  "threadSwitch": true,
+  "entitySubreport": true,
   "homeScreenshot": {
     "frame": 143,
-    "sha256": "375b84ff65d11bfdebe361ddedda908f98cfd1e84cc3e02d6b7c9ebaecddf164",
     "originalSizeViewer": true,
-    "wholeImageVisibleOnOpen": true,
     "callTreeHref": "#framecase/143"
-  },
-  "callTree": true,
-  "entitySubreport": true,
-  "screenshotIndex": {
-    "newScreensVerified": 8,
-    "screensInReport": 13,
-    "hotspotGroups": 46
   }
 }

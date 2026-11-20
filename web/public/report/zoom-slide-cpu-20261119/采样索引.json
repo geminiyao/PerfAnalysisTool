@@ -7,7 +7,8 @@
     "pdata": "缩放层滑动掉帧-mixfold4.pdata",
     "pdata_sha256": "a14b22e85593bd89fd6b4aeaab54b2ca4e8249fc02d86c0263e4d537c7e63302",
     "validFrames": 577,
-    "exportFrames": 578
+    "exportFrames": 578,
+    "device": "Xiaomi MIX Fold 4"
   },
   {
     "label": "B",
@@ -17,6 +18,18 @@
     "pdata": "缩放层滑动掉帧-mixfold4-1.pdata",
     "pdata_sha256": "edd12ae99f8e39be2900610fe7c2702358b090614cd446962ec985317ecaa4e9",
     "validFrames": 501,
-    "exportFrames": 502
+    "exportFrames": 502,
+    "device": "Xiaomi MIX Fold 4"
+  },
+  {
+    "label": "C",
+    "source": "H:\\AOE专区\\远征2.0\\性能优化\\CPU\\261119无极缩放卡顿\\缩放层滑动掉帧-mixfold4-2-UpdateTimeWheel.data",
+    "size": 243068364,
+    "sha256": "350890fec441dcd79a3cdcd3d54f2a6b287f6cd82a04c6ae9fd203328722df44",
+    "pdata": "缩放层滑动掉帧-mixfold4-2-UpdateTimeWheel.pdata",
+    "pdata_sha256": "40425be9132f7acaf79a21e564e9bd3bf2d67ab8fe5cb7354d43e3d6af865344",
+    "validFrames": 599,
+    "exportFrames": 599,
+    "device": "Xiaomi MIX Fold 4"
   }
 ]

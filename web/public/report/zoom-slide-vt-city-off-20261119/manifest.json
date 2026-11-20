@@ -2,15 +2,15 @@
   "id": "zoom-slide-vt-city-off-20261119",
   "entry": "report.html",
   "basePath": "/cpu/report/zoom-slide-vt-city-off-20261119/",
-  "preparedAt": "2026-11-19",
-  "sourceReportSha256": "e707902af5356fc501e9cc8fa51fdd7c8f73f382b944508b5f610fc2a0d5dbce",
-  "fileCount": 12,
-  "totalBytes": 21182250,
+  "preparedAt": "2026-11-20",
+  "sourceReportSha256": "552cf695f78514edd1dff9ef3631d865f9f037ab0fec516076e4d2c3a38af0bd",
+  "fileCount": 16,
+  "totalBytes": 30811089,
   "files": [
     {
       "file": "report.html",
-      "bytes": 9123314,
-      "sha256": "02e9f7a985b2fc6ef269dc9867f0d4454d17ef7614b4188cdae011299f4d688a"
+      "bytes": 17422225,
+      "sha256": "6bac775cffa492fbc6f8e65d6451582197be465d38c3cc6602db901e664316b0"
     },
     {
       "file": "逐帧完整调用树.zip",
@@ -58,14 +58,34 @@
       "sha256": "f1905f9e25c784edc17803d2b74056515c51bb853beb65769ca4e5c7afe6cc7e"
     },
     {
+      "file": "F116与F280_实体遍历与名城图标_完整子树.txt",
+      "bytes": 104931,
+      "sha256": "53aadb88fdab97948b7aaeaf1cf34e4bcd608856115aa6c9feec3a5a5371f50b"
+    },
+    {
+      "file": "地图实体数量快照.lua",
+      "bytes": 1467,
+      "sha256": "1433ae9e640d7779537c4b6a4f0da612b7577eadab766527eff95bccc587454f"
+    },
+    {
       "file": "重要度任务与实体类型.html",
-      "bytes": 1496196,
-      "sha256": "b4ddb468707fc4004cc973c970badf630098faf87497072c0c552e936980547c"
+      "bytes": 1782048,
+      "sha256": "0ddc6206fbb31cd43555c99e29b0776ca5910a5e32aa41d9c10dabc6176b630b"
     },
     {
       "file": "重要度任务逐帧.csv",
-      "bytes": 1003516,
-      "sha256": "1afef96a25b36947d675e0a99b0d831a5763163c427cbd2a93d22306dc5f483a"
+      "bytes": 1525475,
+      "sha256": "668bd0561b0b3dad77cbc1a74b9e64652b777a8f94b15ba6d498efc05230fe69"
+    },
+    {
+      "file": "Timeline_off2_F116_RefreshBigCityIconLegacy.png",
+      "bytes": 203204,
+      "sha256": "13ac090e92a552b992b460244c661e65450819a82218f70d76f022266da686f1"
+    },
+    {
+      "file": "Timeline_off2_F280_RefreshBigCityIconLegacy.png",
+      "bytes": 212515,
+      "sha256": "059dc858f6a14e988dc9214fb59168f99c34513ce1227e52f33f3e2383e08374"
     }
   ]
 }
