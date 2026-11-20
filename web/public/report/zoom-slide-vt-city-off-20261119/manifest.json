@@ -3,14 +3,14 @@
   "entry": "report.html",
   "basePath": "/cpu/report/zoom-slide-vt-city-off-20261119/",
   "preparedAt": "2026-11-20",
-  "sourceReportSha256": "552cf695f78514edd1dff9ef3631d865f9f037ab0fec516076e4d2c3a38af0bd",
+  "sourceReportSha256": "5b3f45c8fc5894b43c2b9d0b8e154e19d0f674a549388f733069f359acdcf283",
   "fileCount": 16,
-  "totalBytes": 30811089,
+  "totalBytes": 30813950,
   "files": [
     {
       "file": "report.html",
-      "bytes": 17422225,
-      "sha256": "6bac775cffa492fbc6f8e65d6451582197be465d38c3cc6602db901e664316b0"
+      "bytes": 17425086,
+      "sha256": "61b1c1d805ed339ff7f0599f6bc5dca0227b6f5cbf952ef0a45ac0eb73b2cddc"
     },
     {
       "file": "逐帧完整调用树.zip",

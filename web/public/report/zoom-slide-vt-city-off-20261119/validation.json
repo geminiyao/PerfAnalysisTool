@@ -20,5 +20,11 @@
     "frame": 143,
     "originalSizeViewer": true,
     "callTreeHref": "#framecase/143"
-  }
+  },
+  "verifiedSummaryViews": [
+    "F339 whole frame and layer counts",
+    "F314 creation count and time",
+    "recurring marker averages",
+    "18 branch rows and both sample totals"
+  ]
 }

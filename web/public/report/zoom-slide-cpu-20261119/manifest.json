@@ -3,14 +3,14 @@
   "entry": "report.html",
   "basePath": "/cpu/report/zoom-slide-cpu-20261119/",
   "preparedAt": "2026-11-20",
-  "sourceReportSha256": "acb829cd0757e3dbb0594feffadbcf562eaf98cd95acd81f6f4ef052cbbbbcfc",
+  "sourceReportSha256": "4abf1ba5ec3d4adbfb3478a7af09454d2457a48a5db6832e597a1bf902578c5e",
   "fileCount": 16,
-  "totalBytes": 90293738,
+  "totalBytes": 90294421,
   "files": [
     {
       "file": "report.html",
-      "bytes": 21215629,
-      "sha256": "acb829cd0757e3dbb0594feffadbcf562eaf98cd95acd81f6f4ef052cbbbbcfc"
+      "bytes": 21216312,
+      "sha256": "4abf1ba5ec3d4adbfb3478a7af09454d2457a48a5db6832e597a1bf902578c5e"
     },
     {
       "file": "热点调用树.md",

@@ -34,6 +34,7 @@ table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:10px 14p
 .findingchildren{display:block;margin-top:7px}
 .findingchild{display:block;margin:3px 0 0 calc(var(--level)*12px);padding-left:9px;border-left:1px solid #c4d1e1;color:#42556b;font:12px/1.5 var(--mono);overflow-wrap:anywhere}
 .findingchild b{white-space:nowrap;color:#344c69}
+@media(max-width:650px){.finding:not(.branch-row) .reading{max-width:9rem}.finding .reading small{white-space:normal}}
 .tickpanel{padding:20px 24px;margin-bottom:12px}
 .tickheading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
 .tickheading p{margin:7px 0;color:#465971}.tickheading label{color:#465971;white-space:nowrap;font-size:13px}
@@ -62,6 +63,21 @@ table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:10px 14p
 .screen-index td:first-child,.branch-label{overflow-wrap:anywhere}.screen-index small,.reading small{white-space:normal}
 .comparison{margin:12px 0}.comparison th:not(:first-child),.comparison td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:650px){.finding-branch,.branch-label{padding-inline-start:calc(var(--level,0)*.85rem)}.finding-branch.child::before,.branch-label.child::before{left:calc((var(--level) - 1)*.85rem);width:.45rem}.screen-body{padding:8px}}
+.branch-caption{margin:-3px 0 12px;color:var(--muted);font-size:13px}
+.branch-list ul{list-style:none;margin:0;padding:0}
+.branch-list .branch-row{grid-template-columns:minmax(0,1fr) 8rem 11rem 14px;border-top:1px solid var(--line);align-items:center;text-decoration:none}
+.branch-list>ul>li:first-child>.branch-row{border-top:0}
+.branch-list .baseline strong{font-size:15px;font-weight:550;color:var(--muted)}
+.branch-list .reading{font-variant-numeric:tabular-nums}
+.branch-list a:focus-visible{outline:2px solid var(--blue);outline-offset:-3px}
+.branch-list div.branch-row:hover{background:transparent}
+@media(max-width:780px){
+ .branch-list .branch-row{grid-template-columns:1fr 1fr;gap:6px 15px}
+ .branch-list .finding-branch{grid-column:1/-1}
+ .branch-list .reading{text-align:left}
+ .branch-list .baseline{padding-inline-start:calc(var(--level)*.85rem)}
+ .branch-list .arrow{display:none}
+}
 
 .bar .crumb{min-width:0}.scope{white-space:normal}.idx{cursor:pointer}.idx:hover{background:#f4f7fd}.subcaption{padding:6px 12px;color:var(--muted);font-size:12px}.herofoot{margin:10px 0 0;font-size:12px}.node{white-space:normal}.treetable{min-width:590px}.treetable .node{padding-left:calc(min(var(--dep),22)*9px)}.trace{overflow-wrap:anywhere}.tools{margin:12px 0}.chart{height:78px}.tabbtn{cursor:pointer}.jump{margin:10px 0 0}.chartkeys{font-size:12px;color:var(--muted)}.keyline{display:inline-block;width:14px;height:3px;margin:0 4px 3px 9px}.panehint{font-size:13px;color:var(--muted)}.shortshot{max-height:310px;object-fit:contain;background:#28313b}.actionlist li{margin:.55rem 0}.si{font-size:16px}.src{overflow-wrap:anywhere}.sidebar .navlinks{padding-top:3px}.sidebar .navgroup{margin-top:13px}.sidebar .sideitem{padding-top:6px;padding-bottom:6px;min-height:32px}.checkcase{color:#215397;font-size:13px}.plotaxis{margin-left:auto}.empty{padding:18px}.selected[role=button]{background:#e9efff}
 .cover-evidence {margin:0 0 20px;padding:12px;display:grid;grid-template-columns:minmax(175px,33%) minmax(0,1fr);align-items:center;gap:clamp(14px,2.4vw,32px)}
@@ -271,11 +287,15 @@ function plot(){
  c.onpointermove=ev=>{let i=Math.min(v.length-1,Math.max(0,Math.round((ev.clientX-c.getBoundingClientRect().left)/w*(v.length-1))));s.textContent='F'+v[i][0]+'　'+(v[i][col]==null?'缺测':f(v[i][col],col===1?2:0)+unit)+(col===1?'　切层 '+f(v[i][2])+' ms':'')};
  });
 }
+const lookup339 = R[2].lookup;
+const lookupTotal = rows => rows.reduce((v, row) => ({count:v.count + row.n, ms:v.ms + row.ms}), {count:0, ms:0});
+const wholeLookup = lookupTotal(lookup339), layerLookup = lookupTotal(lookup339.filter(row => row.inside));
+const iconPeak = R[2].issues.icon;
 const pick=[
  ['focus','InfiniteZoomMgr.RefreshLayerLevel','第二份 66 个相机移动慢帧中，50 个进入切层且这棵树至少占 5 ms。第一份是 9 / 21。','50 / 66','相机移动慢帧 · -2'],
- ['framecase/339/army','LUA:Hud_Common_Army.SetVisible','F339 显示军队 HUD 后进入 OnShow 和 ReBuildArmyList，另有 Hud_Top 与动画的独立开销。','6.38 ms','-2 F339 · 军队显隐'],
- ['instances','LUA:MapSignificanceFlatTask.GetEntitySignificanceTask','切层内 1,027 次。整帧同名方法共 1,105 次、0.255 ms。','0.218 ms','-2 F339 · 切层内'],
- ['issue/icon/2','LUA:InfiniteZoomMapEntityCtrl.CreateMapEntityIcon','F143、F314 分别创建 15 和 23 个图标，各自还有 111 次 AddCityLinkedLines。','15.97 ms','-2 F314 · 图标创建'],
+ ['framecase/339/army','LUA:Hud_Common_Army.SetVisible',`显示军队 HUD 时进入 OnShow，其中 ReBuildArmyList 占 ${f(R[2].ex.list.ms)} ms。`,f(R[2].ex.army.ms)+' ms','-2 F339 · 显示军队 HUD'],
+ ['instances','LUA:MapSignificanceFlatTask.GetEntitySignificanceTask',`切层树内有 ${nfmt(layerLookup.count)} 次查询，累计 ${f(layerLookup.ms,3)} ms。这批查询约占当帧切层耗时的 ${f(100*layerLookup.ms/R[2].series.find(row=>row[0]===339)[2],1)}%。`,nfmt(wholeLookup.count)+' 次',`-2 F339 · 整帧累计 ${f(wholeLookup.ms,3)} ms`],
+ ['issue/icon/2','LUA:InfiniteZoomMapEntityCtrl.CreateMapEntityIcon','F143 创建 15 个图标。F143、F314 各有 111 次 AddCityLinkedLines，连线另计。',f(iconPeak.peak)+' ms',`-2 F${iconPeak.f} · ${iconPeak.pc} 次创建合计`],
  ['issue/wts/2','[WTS] Refresh','-2 F447 的地形刷新包含 8 次 [res]assetLoader_sync，共 20.98 ms，当帧切层另占 24.84 ms。','30.20 ms','-2 F447 · 地形刷新']
 ];
 function story(rows,levels=[]){return `<div class="panel findings">${rows.map(([url,n,sub,val,frame],i)=>`<a class="finding" href="#${url}"><div class="finding-branch ${levels[i] ? 'child' : levels.length ? 'root' : ''}" style="--level:${levels[i]||0}"><span class="marker">${e(n)}</span><p>${e(sub)}</p></div><div class="reading"><strong>${e(val)}</strong><small>${e(frame)}</small></div><span class="arrow">›</span></a>`).join('')}</div>`}
@@ -286,7 +306,12 @@ const outside=[
  ['issue/canvas/2','UGUI.Rendering.UpdateBatches','F153 在 PlayerUpdateCanvases 阶段产生另一段主线程耗时，当帧切层已占 22.59 ms。','10.45 ms','-2 F153 · 主线程']
 ];
 function home(mode){
- const repeat=['mesh','signif','jobs','urp'].map(key=>{const v=R[2].issues[key];return ['issue/'+key+'/2',G[key].name,`全帧均值 ${f(v.avg)} ms，帧内峰值 ${f(v.peak)} ms（F${v.f}）。`,f(v.avg)+' ms','-2 · 全帧均值']});
+ const repeat=['mesh','signif','jobs','urp'].map(key=>{
+   const v=R[2].issues[key], totalFrames=R[2].metrics.all.N;
+   return ['issue/'+key+'/2',G[key].name,
+     `采样 -2 共 ${nfmt(v.n)} 次，累计 ${f(v.sum)} ms。F${v.f} 帧内峰值 ${f(v.peak)} ms，${v.h2} 帧达到 2 ms。`,
+     `${v.active} / ${totalFrames} 帧`,`出现帧均值 ${f(v.sum/v.active)} ms`];
+ });
  return title('无极缩放 CPU 分析','测试设备 Xiaomi MIX Fold 4 · Android。关闭 VT 和名城后，切层的主要开销随帧而变。图标集中创建、HUD 显隐和同帧地形刷新需要分别定位。')+
  `${document.getElementById('home-capture').innerHTML}<div class="inlinebar tools"><b>两份采样</b><select aria-label="时间线指标" id="curve"><option value="1">CPU / RefreshLayerLevel（ms）</option><option value="7">Triangles</option><option value="8">Batches</option><option value="9">SetPass</option><option value="10">GC Allocated（B）</option></select></div><div class="pair">${capture(1)}${capture(2)}</div>`+
  sec('主要发现',tabs([['滑动与切层','home',!mode],['树外尖刺','home/out',mode==='out'],['反复出现','home/repeat',mode==='repeat']]))+
@@ -307,16 +332,43 @@ function issue(key,k){
  sec('跨帧统计')+panel(tbl(['录制','出现帧','总调用','全帧均值 ms','全帧 P50 / P95 / P99 ms','单次峰值 ms','单次 ≥2 ms / 涉及帧'],[1,2].filter(q=>R[q].issues[key]).map(q=>{const x=R[q].issues[key];return [badge(q),x.active,nfmt(x.n),f(x.avg,3),[x.p50,x.p95,x.p99].map(z=>f(z,3)).join(' / '),f(x.single,3)+' · F'+x.sf,`${x.slowCalls} 次 / ${x.slowCallFrames} 帧`]})))+
  (src[key]?`<p class="callout">${e(src[key])}</p>`:'')+(R[2].ex[key]?`<p class="tools">${a('framecase/339/'+key,'查看截图帧 -2 F339 的同一分支 ›')}</p>`:'');
 }
+const layerBranches = [['go'], ['entities'], ['ui'], ['event']];
+const hudBranches = [
+ ['event', [['hud', [['army', [['list']]], ['anim']]]]],
+ ['ui', [['top', [['topshow', [['topui']]]]], ['world2d'], ['terrainui', [['toggle']]]]]
+];
+function slowFrameBranches(nodes, showShare=false){
+ const notes = {go:'名城图标与城际连线', entities:'含 MapCoreMgr.OnInfiniteLayerLevelChange_MapEntity',
+   ui:'Hud_Top、2DWorldMap 与 Terrain', event:'切层事件分发', remainder:'从切层总量扣除上列四个分支'};
+ function elapsed(key,k){
+   const issues=R[k].issues;
+   if(key==='remainder')return issues.root.slowTotal-layerBranches.reduce((sum,[id])=>sum+issues[id].slowTotal,0);
+   return issues[key].slowTotal;
+ }
+ function list(items,level){
+   return '<ul>'+items.map(([key,children])=>{
+     const residual=key==='remainder', name=residual?'其余子项与自身':G[key].name;
+     const ms=elapsed(key,2), share=showShare?' · 占切层 '+f(100*ms/R[2].issues.root.slowTotal,1)+'%':'';
+     const tag=residual?'div':'a', href=residual?'':` href="#issue/${key}/2"`;
+     const note=showShare&&notes[key]?`<p>${e(notes[key])}</p>`:'';
+     const row=`<${tag}${href} class="finding branch-row" style="--level:${level}">
+       <div class="finding-branch ${level?'child':'root'}"><span class="marker">${e(name)}</span>${note}</div>
+       <div class="reading baseline"><strong>${f(elapsed(key,1))} ms</strong><small>采样 -1</small></div>
+       <div class="reading"><strong>${f(ms)} ms</strong><small>采样 -2${share}</small></div>
+       <span class="arrow" aria-hidden="true">${residual?'':'›'}</span></${tag}>`;
+     return '<li>'+row+(children?list(children,level+1):'')+'</li>';
+   }).join('')+'</ul>';
+ }
+ return '<div class="panel findings branch-list">'+list(nodes,0)+'</div>';
+}
 function focus(){
  return title('InfiniteZoomMgr.RefreshLayerLevel','按实际进入 Post_InfiniteZoomEvt.SwitchOutsideLayerLevel 判定切层事件。仅调用 RefreshLayerLevel 的帧也可能快速返回。')+
  panel(tbl(['采样','有效帧','全部慢帧','相机移动慢帧','切层事件帧 / 其中慢帧','慢帧中切层 ≥5 ms','切层占整帧 ≥50%','扣除切层后 ≤33.33 ms¹'],[1,2].map(k=>{const r=R[k],x=r.metrics.thresholds['33.333'];return [badge(k),r.series.length,slow(k).length,slow(k).filter(f=>f.move).length,r.series.filter(x=>x[4]).length+' / '+slow(k).filter(x=>x.switch).length,x.refresh_at_least5,x.refresh_at_least_half,x.remainder_under_threshold]})))+
  `<p class="statnote">¹ 单帧算术剩余时间。优化收益需以相同动作复测。</p>`+sec('切层树内的工作')+
- panel(tbl(['切层调用树','-1 慢帧累计 ms','-2 慢帧累计 ms','-2 占切层累计'],[...['root','go','entities','ui','event'].map(key=>{const ms=R[2].issues[key].slowTotal;return [branchLabel(issueLink(key,2),key==='root'?0:1,key==='root'),f(R[1].issues[key].slowTotal),f(ms),f(ms*100/R[2].issues.root.slowTotal,1)+'%']}),[branchLabel('其余子项与自身',1),...[1,2].map(k=>f(R[k].issues.root.slowTotal-['go','entities','ui','event'].reduce((sum,id)=>sum+R[k].issues[id].slowTotal,0))),'—']]))+
- sec('HUD 子分支')+panel(tbl(['调用层级（省略中间 marker）','-1 慢帧累计 ms','-2 慢帧累计 ms'],
- ['event','hud','army','list','anim','ui','top','topshow','topui','world2d','terrainui','toggle'].map((key,i)=>[
-   branchLabel(issueLink(key,2),[0,1,2,3,2,0,1,2,3,1,1,2][i],['event','ui'].includes(key)),
-   ...[1,2].map(k=>R[k].issues[key]?f(R[k].issues[key].slowTotal):'—') ])))+
- '<p class="statnote">父行计时包含缩进子行。军队显隐和纯净模式动画属于同一个事件监听器；Hud_Top、2DWorldMap 和 Terrain 在另一条 InfiniteZoomUICtrl 分支。此表仅列所选路径。</p>'+
+ `<p class="branch-caption">慢帧累计耗时 · 采样 -1 共 ${slow(1).length} 个慢帧，采样 -2 共 ${slow(2).length} 个慢帧。百分比以采样 -2 的切层总耗时为分母。</p>`+
+ slowFrameBranches([['root',[...layerBranches,['remainder']]]],true)+
+ sec('HUD 子分支')+'<p class="branch-caption">沿用上方的慢帧范围。缩进表示调用关系，省略中间 marker。父行耗时包含子行。</p>'+
+ slowFrameBranches(hudBranches)+
  sec('代表帧')+story([pick[1],pick[3],['issue/cfg/2','C#LoadPbin_Native','F283 · 2DWorldMap → GetMapNameCfgList → InfiniteZoomProvinceName.pbin 的读取出现在切层树内。','6.16 ms','-2 F283 · 配置读取']])+
  `<p class="tools">${a('issue/root/2','展开两份采样的切层峰值调用树 ›')}　${a('framecase/143','对照 F143 原截图 ›')}</p>`;
 }

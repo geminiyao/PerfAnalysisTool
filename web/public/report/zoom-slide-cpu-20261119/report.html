@@ -35,6 +35,7 @@ table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:10px 14p
 .findingchildren{display:block;margin-top:7px}
 .findingchild{display:block;margin:3px 0 0 calc(var(--level)*12px);padding-left:9px;border-left:1px solid #c4d1e1;color:#42556b;font:12px/1.5 var(--mono);overflow-wrap:anywhere}
 .findingchild b{white-space:nowrap;color:#344c69}
+@media(max-width:650px){.finding:not(.branch-row) .reading{max-width:9rem}.finding .reading small{white-space:normal}}
 .tickpanel{padding:20px 24px;margin-bottom:12px}
 .tickheading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
 .tickheading p{margin:7px 0;color:#465971}.tickheading label{color:#465971;white-space:nowrap;font-size:13px}
@@ -256,19 +257,37 @@ const findings={
         [12,'B','F106 · 3 次道路 prefab 同步请求占 28.04 ms，CommonRes.pbin 读取另占 10.74 ms。'],
         [6,'C','F234 · C#Invoke 内一次 GC.Collect 占 73.55 ms，整帧 97.62 ms。'],
         [7,'A','F360 · 两次调用合计 42.98 ms，其中 41.43 ms 落在自身耗时。']],
- repeat:[[2,'A','A 有 236 帧达到 2 ms，B 有 77 帧。A F269 的 26 次调用合计 5.78 ms。'],
-         [19,'A','F363–F392 连续 30 帧达到 4 ms，区间平均 4.137 ms。F375 耗在 ApplyInstance，F391 峰值主要来自 ProcessPendingRemoves。'],
-         [36,'A','A 有 108 帧达到 2 ms，位于主线程的透明渲染阶段。'],
-         [21,'A','A 有 68 帧达到 2 ms，B 有 34 帧。展开可区分调度、实例化和完成回调。'],
-         [52,'C','22 帧达到 2 ms。查看 LUA:Hud_Top.func 的 21 个出现帧，其中 19 帧约每秒出现一次。'],
-         [8,'A','A 有 52 帧达到 2 ms，B 有 28 帧。按实体类型和同帧调用数可进一步拆解。']]
+ repeat:[[2,'A','A 的 F269 调用 26 次，合计 5.78 ms。另一份采样 B 有 77 帧达到 2 ms。'],
+         [19,'A','F363–F392 每帧至少 4 ms。F375 的耗时集中在 ApplyInstance，F391 的峰值主要来自 ProcessPendingRemoves。'],
+         [36,'A','这段工作位于主线程的透明渲染阶段。'],
+         [21,'A','采样 B 有 34 帧达到 2 ms。调用树可区分调度、实例化和完成回调。'],
+         [52,'C','其中 19 帧约每秒出现一次。打开间隔图可逐帧查看回调和对应的 CPU Timeline。'],
+         [8,'A','采样 B 有 28 帧达到 2 ms。调用树可按实体类型和同帧调用数进一步拆解。']]
 };
+function summaryFinding([id,k,note],repeat){
+ const g=issues[id],v=g.caps[k];
+ let name=marker(g),value=fmt(v.peak)+' ms',caption=`${k} F${v.frame} · ${count(v.peakCount)} 次调用合计`;
+ if(repeat){
+   value=v.heavy+' 帧';
+   caption=`${k} · 帧内累计 ≥2 ms · 峰值 ${fmt(v.peak)} ms`;
+   if(id===19){
+     value='连续 30 帧';
+     caption='A F363–F392 · 区间均值 4.137 ms';
+   }else if(id===52){
+     const events=D.hudTicks.events,total=events.reduce((sum,row)=>sum+row.ms,0);
+     name='<span class="marker">'+esc(D.hudTicks.chain[0]+' → '+D.hudTicks.chain.at(-1))+'</span>';
+     value=events.length+' 个出现帧';
+     caption=`C · 回调累计 ${fmt(total,3)} ms`;
+   }
+ }
+ return `<a class="finding" href="#g${id}-${k}"><div>${name}<p>${esc(note)}</p>${findingBranches(id,k,v.frame)}</div><div class="reading"><strong>${esc(value)}</strong><small>${esc(caption)}</small></div><span class="arrow">›</span></a>`;
+}
 function overview(tab){
  const repeat=tab==='repeat';
  return title('无极缩放 CPU 分析','测试设备 '+D.device+' · Android · 3 份录制，1,677 个有效帧。A 出现地形同步加载，B 的最慢帧包含切层和道路加载，C 的最慢帧发生帧尾 GC。')+
  `<div class="pair threecaps">${Object.keys(D.stats).map(capture).join('')}</div>`+
  section('主要发现',seg([['单帧尖刺','overview',!repeat],['反复出现','overview-repeat',repeat]]))+
- `<div class="panel findings">${findings[repeat?'repeat':'spike'].map(([id,k,note])=>{const g=issues[id],v=g.caps[k];return `<a class="finding" href="#g${id}-${k}"><div>${marker(g)}<p>${esc(note)}</p>${findingBranches(id,k,v.frame)}</div><div class="reading"><strong>${repeat?v.heavy:fmt(v.peak)}</strong><span class="unit">${repeat?'帧':'ms'}</span><small>${repeat?k+' · 累计 ≥2 ms':k+' F'+v.frame+' · 帧内累计'}</small></div><span class="arrow">›</span></a>`}).join('')}</div>`+
+ `<div class="panel findings">${findings[repeat?'repeat':'spike'].map(row=>summaryFinding(row,repeat)).join('')}</div>`+
  section('B F106 · 同帧调用层级')+disclosure('查看切层、道路与 VT 的实测父链',localBranches('B',106))+
  section('按模块查看')+`<div class="indexgrid">${modules.map(([id,n,ids])=>`<a class="panel indexlink" href="#${id==='load'?'loading':'mod-'+id}">${n}<small>${ids.length} 项 ›</small></a>`).join('')}</div>`;
 }

@@ -18,5 +18,9 @@
   ],
   "threadSwitch": true,
   "entitySubreport": true,
-  "hudTopOccurrencesAndTimelineLink": 21
+  "hudTopOccurrencesAndTimelineLink": 21,
+  "verifiedSummaryViews": [
+    "BatchViewMgr 30-frame interval",
+    "Hud_Top 21 frames and total time"
+  ]
 }
