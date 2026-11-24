@@ -4,7 +4,7 @@
   "basePath": "/cpu/report/map-roundtrip-zoom-20261124/",
   "preparedAt": "2026-11-24",
   "fileCount": 93,
-  "totalBytes": 206004884,
+  "totalBytes": 206025692,
   "files": [
     {
       "file": "capture-F.js",
@@ -28,8 +28,8 @@
     },
     {
       "file": "report.html",
-      "bytes": 1447628,
-      "sha256": "055c2c02530f080da879b62e1cf2f3ec8cd5a97c46e589bb4e30586dea88e5c8"
+      "bytes": 1468436,
+      "sha256": "d26f068ab82525eadca15405e363cace24d72bb01dd3be08349a4f2b15db89f1"
     },
     {
       "file": "timeline/F-0.js",

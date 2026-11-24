@@ -4,7 +4,7 @@
   "basePath": "/cpu/report/map220-city-slide-20261124/",
   "preparedAt": "2026-11-24",
   "fileCount": 154,
-  "totalBytes": 357649632,
+  "totalBytes": 357685074,
   "files": [
     {
       "file": "capture-A.js",
@@ -38,8 +38,8 @@
     },
     {
       "file": "report.html",
-      "bytes": 2826453,
-      "sha256": "52ad03d7e301058ad9c228844b215ad74ba0d9c2cd4d94a6f25434c8ad0a8135"
+      "bytes": 2861895,
+      "sha256": "8ab7e77a4d7915a56d1cee386e099eaa3f8cf56fe7ea3bdf8fb3891487afec30"
     },
     {
       "file": "timeline/A-0.js",
