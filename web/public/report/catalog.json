@@ -1,5 +1,18 @@
 [
   {
+    "id": "map220-city-slide-20261124",
+    "title": "相机高度 220 · 名城资源加载与相机滑动 CPU 分析",
+    "collectedAt": "2026-11-24",
+    "model": "Android · 设备型号未记录",
+    "version": "构建版本未记录",
+    "quality": "相机高度 220",
+    "href": "/cpu/report/map220-city-slide-20261124/report.html",
+    "summary": "对照两段录制的平均帧耗时、P95 和慢帧。按实体类型查看创建与移除，按业务来源追踪同步及异步加载，114 个代表帧可打开 CPU Timeline。",
+    "sources": [
+      "Unity Profiler"
+    ]
+  },
+  {
     "id": "zoom-slide-acceptance-20261124",
     "title": "无极缩放 CPU 验收对比",
     "collectedAt": "2026-11-24",

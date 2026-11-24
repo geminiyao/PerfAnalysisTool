@@ -1,0 +1,21 @@
+{
+  "id": "map220-city-slide-20261124",
+  "entry": "report.html",
+  "basePath": "/cpu/report/map220-city-slide-20261124/",
+  "preparedAt": "2026-11-24",
+  "sourceReportSha256": "8c6e3940751edde880893f00bae0e7b7b8fd7163898cb61b5f8d7fdc7a3ff4a5",
+  "fileCount": 2,
+  "totalBytes": 52693689,
+  "files": [
+    {
+      "file": "report.html",
+      "bytes": 48607623,
+      "sha256": "4841b3b8c2d37ba4cc35ad0be1e7629035580dc15aa8f91be5faa032516becd8"
+    },
+    {
+      "file": "evidence.zip",
+      "bytes": 4086066,
+      "sha256": "b1aaf14508257d64ffc85c4b09a5ae86c0fbe32d83bc5d5655b80096e475f12f"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "verifiedOn": "2026-11-24",
+  "captureFrames": { "A": 599, "B": 599 },
+  "timelineFrames": { "A": 68, "B": 46 },
+  "averageCpuFrameMs": { "A": 27.59, "B": 19.81 },
+  "sourceReportOfflineBrowser": {
+    "views": 20,
+    "desktopAndMobile": true,
+    "entityMeansCheckedAgainstEventCsv": true,
+    "timelinePngExportChecked": true
+  },
+  "webEvidenceZip": { "csvFiles": 12, "includesCaptureIndex": true, "crcChecked": true }
+}
