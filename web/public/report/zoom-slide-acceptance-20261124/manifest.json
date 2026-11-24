@@ -1,0 +1,16 @@
+{
+  "id": "zoom-slide-acceptance-20261124",
+  "entry": "report.html",
+  "basePath": "/cpu/report/zoom-slide-acceptance-20261124/",
+  "preparedAt": "2026-11-24",
+  "sourceReportSha256": "c0724e2d5c1ee612fbfacbd11358174a7d69cc780445de9f9c826fd886c412c5",
+  "fileCount": 1,
+  "totalBytes": 39879901,
+  "files": [
+    {
+      "file": "report.html",
+      "bytes": 39879901,
+      "sha256": "c0724e2d5c1ee612fbfacbd11358174a7d69cc780445de9f9c826fd886c412c5"
+    }
+  ]
+}

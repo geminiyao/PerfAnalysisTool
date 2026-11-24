@@ -1,0 +1,15 @@
+{
+  "verifiedOn": "2026-11-24",
+  "environment": "Local Vite production build served under /cpu/",
+  "catalogEntryOpened": true,
+  "productionReportSha256": "c0724e2d5c1ee612fbfacbd11358174a7d69cc780445de9f9c826fd886c412c5",
+  "sourceReportMatched": true,
+  "hotspotTreeVerified": true,
+  "diffTimelineCaptures": ["B", "N"],
+  "fullTimelineSelection": {
+    "capture": "B",
+    "frame": 272,
+    "marker": "VT4.Decals.ApplyChanges",
+    "durationMs": 9.452
+  }
+}

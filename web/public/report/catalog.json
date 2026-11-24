@@ -1,5 +1,18 @@
 [
   {
+    "id": "zoom-slide-acceptance-20261124",
+    "title": "无极缩放 CPU 验收对比",
+    "collectedAt": "2026-11-24",
+    "model": "Xiaomi MIX Fold 4 · Android",
+    "version": "构建版本未记录",
+    "quality": "验收开启 VT 和名城",
+    "href": "/cpu/report/zoom-slide-acceptance-20261124/report.html",
+    "summary": "新版本与五份历史录制逐项对照。按调用树查看热点的出现帧均耗时、单帧峰值和验收状态，点击 Diff 可回到两侧原始 CPU Timeline。",
+    "sources": [
+      "Unity Profiler"
+    ]
+  },
+  {
     "id": "zoom-slide-vt-city-off-20261119",
     "title": "无极缩放层滑动 CPU 热点 · 关闭 VT 和名城",
     "collectedAt": "2026-11-19",
