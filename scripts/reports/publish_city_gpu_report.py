@@ -64,7 +64,7 @@ for row in data['draws']:
 for row in data['xcode_summary'].values():
  evidence=row['source'];assert sha((DEST/evidence['portable']).read_bytes())==evidence['sha256']
 
-entry={'id':ID,'title':'帝国1 vs 帝国2：内城全盛·精致 GPU对比','collectedAt':'2026-10-02（报告更新：2026-10-08）','model':'iPhone（具体型号未核定）','version':'未提供构建版本号','quality':'精致 · 内城全盛','href':BASE+'report.html','summary':'对比两份内城捕获的GPU耗时、纹理与Buffer容量、提交三角形及实际Shader复杂度；重点标注片元计算、几何密度和纹理预算，并提供源码、截图及逐Draw证据。','sources':['Xcode GPU Trace','Xcode Summary','Metal Shader']}
+entry={'id':ID,'title':'帝国1 vs 帝国2：内城全盛·精致 GPU对比','collectedAt':'2026-10-02 18:31–18:37','updatedAt':'2026-10-08','model':'iPhone（具体型号未核定）','version':'未提供构建版本号','quality':'精致 · 内城全盛','href':BASE+'report.html','summary':'对比两份内城捕获的GPU耗时、纹理与Buffer容量、提交三角形及实际Shader复杂度；重点标注片元计算、几何密度和纹理预算，并提供源码、截图及逐Draw证据。','sources':['Xcode GPU Trace','Xcode Summary','Metal Shader']}
 catalog_path=PUBLIC/'catalog.json';catalog=json.loads(catalog_path.read_text('utf8'));original=[x for x in catalog if x['id']!=ID]
 catalog=original+[entry];assert len({x['id'] for x in catalog})==len(catalog)
 write_json(catalog_path,catalog)

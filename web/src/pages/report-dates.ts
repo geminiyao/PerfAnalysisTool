@@ -10,6 +10,14 @@ export type Period = typeof periods[number]['value'];
 const shanghaiDate = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
 });
+const shanghaiClock = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
+export function savedReportTime(timestamp: number) {
+  const day = reportDay(timestamp);
+  return day ? day + ' ' + shanghaiClock.format(timestamp) : '';
+}
 
 export function reportDay(value: string | number): string {
   if (typeof value === 'number') {
@@ -42,9 +50,14 @@ export function periodBounds(period: Period, today: string) {
 
 export function monthlyReports<T>(items: T[], dateOf: (item: T) => string | number, bounds: ReturnType<typeof periodBounds>) {
   const groups = new Map<string, T[]>();
-  const dated = items.map(item => ({ item, day: reportDay(dateOf(item)) }))
+  const dated = items.map(item => {
+    const value = dateOf(item);
+    const label = typeof value === 'number' ? savedReportTime(value) : value;
+    const clock = /^\d{4}-\d{2}-\d{2}[ T](\d{2}:\d{2})/.exec(label)?.[1] ?? '';
+    return { item, day: reportDay(value), clock };
+  })
     .filter(({ day }) => !bounds || (day >= bounds.start && day <= bounds.end))
-    .sort((a, b) => b.day.localeCompare(a.day));
+    .sort((a, b) => b.day.localeCompare(a.day) || b.clock.localeCompare(a.clock));
   for (const { item, day } of dated) {
     const month = day.slice(0, 7);
     if (!groups.has(month)) groups.set(month, []);

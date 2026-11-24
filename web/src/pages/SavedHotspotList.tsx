@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Alert, Button, Empty, Spin } from 'antd';
 import { sourceNames, type ReportEntry } from '../../shared/hotspot-report';
 import { listHotspotReports } from '../services/api';
-import { monthlyReports, monthLabel, reportDay } from './report-dates';
+import { monthlyReports, monthLabel, savedReportTime } from './report-dates';
 import type { ReportFilters } from './PerformanceReports';
 
 export default function SavedHotspotList({ query, bounds }: ReportFilters) {
@@ -30,7 +30,7 @@ export default function SavedHotspotList({ query, bounds }: ReportFilters) {
       <h3 className="report-month">{monthLabel(month)}</h3>
       <div className="surface sample-list">{rows.map(r =>
         <Link key={r.id} to={'/performance-reports/' + r.id}><span><strong>{r.title}</strong><br/><small>{r.runId}</small></span>
-          <span>{sourceNames[r.source] ?? r.source} · {reportDay(r.createdAt) || '日期未记录'}</span></Link>)}</div>
+          <span>{sourceNames[r.source] ?? r.source} · {savedReportTime(r.createdAt) || '日期未记录'}</span></Link>)}</div>
     </section>)}
     {state === 'ready' && !reports.count && <div className="surface">
       <Empty description={term || bounds ? '没有匹配的热点报告' : '暂无已保存的热点报告'}><Link to="/runs">查看采集记录</Link></Empty>

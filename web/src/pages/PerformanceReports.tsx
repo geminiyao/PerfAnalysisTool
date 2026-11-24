@@ -1,11 +1,58 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Alert, Button, Empty, Input, Radio, Space, Spin, Tag } from 'antd';
-import { ArrowUpOutlined, SearchOutlined } from '@ant-design/icons';
+import { Alert, Button, Empty, Input, Popover, Radio, Space, Spin } from 'antd';
+import { AreaChartOutlined, ArrowUpOutlined, ClockCircleOutlined, InfoCircleOutlined, MobileOutlined, SearchOutlined } from '@ant-design/icons';
 import { monthlyReports, monthLabel, periodBounds, periods, reportDay, type Period } from './report-dates';
 import './PerformanceReports.css';
 
-interface PublishedReport { id:string; title:string; collectedAt:string; model:string; version:string; quality:string; href:string; summary:string; sources:string[] }
+interface PublishedReport {
+  id: string;
+  title: string;
+  collectedAt: string;
+  timeLabel?: string;
+  updatedAt?: string;
+  model: string;
+  version: string;
+  quality: string;
+  href: string;
+  summary: string;
+  sources: string[];
+}
+
+function ReportTile({ report }: { report: PublishedReport }) {
+  const { title, collectedAt, model, version, quality, sources, summary, href, updatedAt } = report;
+  const details = <div className="report-card-details">
+    <p>{summary}</p>
+    <dl>
+      <dt>{report.timeLabel ?? '采集时间'}</dt><dd>{collectedAt}（北京时间）</dd>
+      {updatedAt && <><dt>报告更新</dt><dd>{updatedAt}</dd></>}
+      <dt>设备</dt><dd>{model}</dd>
+      <dt>版本</dt><dd>{version}</dd>
+      <dt>测试条件</dt><dd>{quality}</dd>
+      <dt>数据源</dt><dd>{sources.join('、')}</dd>
+    </dl>
+  </div>;
+
+  return <article className="report-tile" aria-label={title}>
+    <div className="report-stamp">
+      <ClockCircleOutlined aria-hidden />
+      <time dateTime={reportDay(collectedAt) || undefined}>{collectedAt}</time>
+      {report.timeLabel && <small>{report.timeLabel}</small>}
+    </div>
+    <h3 title={title}>{title}</h3>
+    <p className="report-summary">{summary}</p>
+    <div className="report-model"><MobileOutlined aria-hidden /><span>{model}</span></div>
+    <div className="report-sources">
+      {sources.map((s, i) => <span key={s}>{i === 0 && <AreaChartOutlined aria-hidden />}{s}</span>)}
+    </div>
+    <footer>
+      <Popover title={title} content={details} trigger="click">
+        <button type="button" className="report-info"><InfoCircleOutlined aria-hidden />采集信息</button>
+      </Popover>
+      <a className="open-report" href={href} target="_blank" rel="noopener noreferrer">打开报告 <ArrowUpOutlined rotate={45} aria-hidden /></a>
+    </footer>
+  </article>;
+}
 
 export interface ReportFilters { query: string; bounds: ReturnType<typeof periodBounds> }
 
@@ -51,11 +98,7 @@ export default function PerformanceReports({ savedReports: SavedReports }: { sav
       <div className="section-title"><h2>历史专题</h2><span className="muted">按采集日 · {published.count} 份报告</span></div>
       {published.groups.map(([month, entries]) => <section key={month}>
         <h3 className="report-month">{monthLabel(month)}</h3>
-        <div className="report-grid">{entries.map(r => <article key={r.id} className="surface report-tile">
-          <time dateTime={reportDay(r.collectedAt) || undefined}>{r.collectedAt}</time><h3>{r.title}</h3><p>{r.summary}</p>
-          <Space wrap>{r.sources.map(s => <Tag key={s}>{s}</Tag>)}</Space><p>{r.model} · {r.version} · {r.quality}</p>
-          <footer><a className="open-report" href={r.href} target="_blank" rel="noopener noreferrer">打开报告 <ArrowUpOutlined rotate={45} /></a></footer>
-        </article>)}</div>
+        <div className="report-grid">{entries.map(report => <ReportTile key={report.id} report={report} />)}</div>
       </section>)}
       {!published.count && !failed && <Empty description="没有匹配的历史报告" />}
     </>}

@@ -2,7 +2,7 @@
   {
     "id": "map220-city-slide-20261124",
     "title": "相机高度 220 · 名城资源加载与相机滑动 CPU 分析",
-    "collectedAt": "2026-11-24",
+    "collectedAt": "2026-11-24 11:28–11:53",
     "model": "Android · 设备型号未记录",
     "version": "构建版本未记录",
     "quality": "相机高度 220",
@@ -15,7 +15,7 @@
   {
     "id": "zoom-slide-acceptance-20261124",
     "title": "无极缩放 CPU 验收对比",
-    "collectedAt": "2026-11-24",
+    "collectedAt": "2026-11-24 11:01",
     "model": "Xiaomi MIX Fold 4 · Android",
     "version": "构建版本未记录",
     "quality": "验收开启 VT 和名城",
@@ -28,7 +28,8 @@
   {
     "id": "zoom-slide-vt-city-off-20261119",
     "title": "无极缩放层滑动 CPU 热点 · 关闭 VT 和名城",
-    "collectedAt": "2026-11-19",
+    "collectedAt": "2026-11-19 17:16–17:17",
+    "timeLabel": "文件保存",
     "model": "小米 MIX Fold 4 · Android",
     "version": "构建版本未记录",
     "quality": "画质未记录",
@@ -41,7 +42,8 @@
   {
     "id": "zoom-slide-cpu-20261119",
     "title": "无极缩放层滑动 CPU 热点 · 初次采样",
-    "collectedAt": "2026-11-19",
+    "collectedAt": "2026-11-19 14:25–17:05",
+    "timeLabel": "文件保存",
     "model": "小米 MIX Fold 4 · Android",
     "version": "构建版本未记录",
     "quality": "画质未记录",
@@ -54,7 +56,8 @@
   {
     "id": "ferry-stress-20261006",
     "title": "抢渡口压测性能采集报告",
-    "collectedAt": "2026-10-06",
+    "collectedAt": "2026-10-06 21:37–22:22",
+    "timeLabel": "记录保存",
     "model": "24072PX77C",
     "version": "0.0.999.1020",
     "quality": "精致",
@@ -69,7 +72,8 @@
   {
     "id": "city-gpu-compare-20261002",
     "title": "帝国1 vs 帝国2：内城全盛·精致 GPU对比",
-    "collectedAt": "2026-10-02（报告更新：2026-10-08）",
+    "collectedAt": "2026-10-02 18:31–18:37",
+    "updatedAt": "2026-10-08",
     "model": "iPhone（具体型号未核定）",
     "version": "未提供构建版本号",
     "quality": "精致 · 内城全盛",
