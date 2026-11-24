@@ -1,13 +1,29 @@
 {
   "verifiedOn": "2026-11-24",
-  "captureFrames": { "A": 599, "B": 599 },
-  "timelineFrames": { "A": 68, "B": 46 },
-  "averageCpuFrameMs": { "A": 27.59, "B": 19.81 },
-  "sourceReportOfflineBrowser": {
-    "views": 20,
-    "desktopAndMobile": true,
-    "entityMeansCheckedAgainstEventCsv": true,
-    "timelinePngExportChecked": true
+  "captures": {
+    "A": {
+      "frames": 599,
+      "timelineFrames": 599
+    },
+    "B": {
+      "frames": 599,
+      "timelineFrames": 599
+    },
+    "C": {
+      "frames": 599,
+      "timelineFrames": 599
+    },
+    "D": {
+      "frames": 597,
+      "timelineFrames": 597
+    },
+    "E": {
+      "frames": 536,
+      "timelineFrames": 536
+    }
   },
-  "webEvidenceZip": { "csvFiles": 12, "includesCaptureIndex": true, "crcChecked": true }
+  "frameSignalsVerifiedAgainstPdata": true,
+  "categorySelfReconciled": true,
+  "entityEventsChecked": true,
+  "offlineAndWebsiteBrowser": true
 }

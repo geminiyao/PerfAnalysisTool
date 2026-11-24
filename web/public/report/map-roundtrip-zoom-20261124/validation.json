@@ -1,0 +1,21 @@
+{
+  "verifiedOn": "2026-11-24",
+  "captures": {
+    "F": {
+      "frames": 600,
+      "timelineFrames": 600
+    },
+    "G": {
+      "frames": 523,
+      "timelineFrames": 523
+    },
+    "H": {
+      "frames": 599,
+      "timelineFrames": 599
+    }
+  },
+  "frameSignalsVerifiedAgainstPdata": true,
+  "categorySelfReconciled": true,
+  "entityEventsChecked": true,
+  "offlineAndWebsiteBrowser": true
+}

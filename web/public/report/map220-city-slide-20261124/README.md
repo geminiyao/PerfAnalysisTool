@@ -1,12 +1,14 @@
-# 相机高度 220 · 名城资源加载与相机滑动 CPU 分析
+# 固定高度滑动 · 大地图 CPU 分析
 
-2026 年 11 月 24 日的两份 Android Unity CPU 录制各有 599 个有效帧。名城加载的平均帧耗时为 27.59 ms，滑动为 19.81 ms。报告可从网站「性能报告」打开。
+高度 220 的四份录制与高度 110 的实体进出分别统计。两份 MeshUI 录制均出现尖刺，名城加载的持续压力最高。
 
-- [采样概览与主要发现](report.html)
-- [各类型实体创建与移除明细](report.html#entities)
-- [资源请求的业务发起方](report.html#resources)
-- [帧首、帧尾与 Loading 线程](report.html#stages)
-- [114 个代表帧的 CPU Timeline](report.html#timeline)
-- [下载逐帧、逐次事件和 marker 路径 CSV 及采样索引](evidence.zip)
+2,930 个有效帧，2930 帧可打开原始 Timeline。
 
-页面内嵌图表、调用树和时间线，单独保存 HTML 即可离线查看。
+- [阅读报告](report.html)
+- [实体创建与移除](report.html#entities)
+- [资源加载来源](report.html#resources)
+- [逐帧调用树](report.html#tree)
+- [CPU Timeline](report.html#timeline)
+- [CSV 与采样索引](evidence.zip)
+
+网站按需读取同目录的 capture-*.js。各帧 Timeline 位于 timeline/。离线分享请解压 HTML 与配套文件。

@@ -1,13 +1,28 @@
 [
   {
     "id": "map220-city-slide-20261124",
-    "title": "相机高度 220 · 名城资源加载与相机滑动 CPU 分析",
-    "collectedAt": "2026-11-24 11:28–11:53",
-    "model": "Android · 设备型号未记录",
+    "title": "固定高度滑动 · 大地图 CPU 分析",
+    "collectedAt": "2026-11-24 11:28–14:20",
+    "timeLabel": "文件名采样时间",
+    "model": "Android · 型号未核实",
     "version": "构建版本未记录",
-    "quality": "相机高度 220",
+    "quality": "固定高度 220 / 110",
     "href": "/cpu/report/map220-city-slide-20261124/report.html",
-    "summary": "对照两段录制的平均帧耗时、P95 和慢帧。按实体类型查看创建与移除，按业务来源追踪同步及异步加载，114 个代表帧可打开 CPU Timeline。",
+    "summary": "五份固定高度滑动录制并列比较。两次 MeshUI 尖刺分别展开 GC 与自身开销，同时核对名城加载、高度 110 的实体进出和全部 2,930 帧 CPU Timeline。",
+    "sources": [
+      "Unity Profiler"
+    ]
+  },
+  {
+    "id": "map-roundtrip-zoom-20261124",
+    "title": "来回缩放 · 大地图 CPU 分析",
+    "collectedAt": "2026-11-24 14:20",
+    "timeLabel": "文件名采样时间",
+    "model": "Android · 型号未核实",
+    "version": "构建版本未记录",
+    "quality": "压测场景来回缩放",
+    "href": "/cpu/report/map-roundtrip-zoom-20261124/report.html",
+    "summary": "三份来回缩放录制。分别定位阴影重载、LOD 同步网格请求与 SDF 字形读取，提供全部 1,722 帧 CPU Timeline 及逐帧实体和资源证据。",
     "sources": [
       "Unity Profiler"
     ]
