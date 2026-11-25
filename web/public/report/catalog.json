@@ -1,5 +1,20 @@
 [
   {
+    "id": "map-entity-lifecycle-20261125",
+    "title": "大地图重要度任务调度分析",
+    "collectedAt": "2026-11-24 11:28–14:20",
+    "timeLabel": "A–H 文件名采样时间",
+    "updatedAt": "2026-11-25",
+    "model": "Android · Xiaomi MIX Fold 4",
+    "version": "0.0.999.1153",
+    "quality": "固定高度滑图与来回缩放",
+    "href": "/cpu/report/map-entity-lifecycle-20261125/report.html",
+    "summary": "A–H 共 4,652 帧。按调度通道和业务核对 MapSignificanceMgr 耗时，从原始 marker 跳到命中帧 Timeline，查看实体初始化与清理的优化排期和收益假设。",
+    "sources": [
+      "Unity Profiler"
+    ]
+  },
+  {
     "id": "map220-city-slide-20261124",
     "title": "固定高度滑动 · 大地图 CPU 分析",
     "collectedAt": "2026-11-24 11:28–14:20",

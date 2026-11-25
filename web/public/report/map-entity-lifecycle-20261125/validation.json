@@ -1,0 +1,17 @@
+{
+  "verifiedOn": "2026-11-25",
+  "scope": "本地 HTTP 网站报告入口和 A–H 采样证据",
+  "effectiveFrames": 4652,
+  "captures": 8,
+  "rawCaptureSha256Matches": 8,
+  "checkedReportLinks": 327,
+  "checkedRawTimelineFrames": 92,
+  "checkedRawOccurrences": 130,
+  "browserChecks": [
+    "从性能报告卡片打开正确的静态页面",
+    "从 C F555 切换到 P95，再跳到固定高度报告的原始事件",
+    "从 H 的 Self 热点跳到来回缩放报告的原始事件",
+    "下载 evidence.zip 与 scheduler-loads.csv",
+    "在线源码链接定位到对应项目路径与行号"
+  ]
+}

@@ -4,6 +4,7 @@
 
 | 报告 | 目录 | 部署后的相对地址 |
 | --- | --- | --- |
+| 大地图重要度任务调度分析 | `map-entity-lifecycle-20261125/` | `/cpu/report/map-entity-lifecycle-20261125/report.html` |
 | 固定高度滑动 · 大地图 CPU 分析 | `map220-city-slide-20261124/` | `/cpu/report/map220-city-slide-20261124/report.html` |
 | 来回缩放 · 大地图 CPU 分析 | `map-roundtrip-zoom-20261124/` | `/cpu/report/map-roundtrip-zoom-20261124/report.html` |
 | 无极缩放 CPU 验收对比 | `zoom-slide-acceptance-20261124/` | `/cpu/report/zoom-slide-acceptance-20261124/report.html` |

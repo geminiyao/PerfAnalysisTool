@@ -1,0 +1,79 @@
+{
+  "id": "map-entity-lifecycle-20261125",
+  "entry": "report.html",
+  "basePath": "/cpu/report/map-entity-lifecycle-20261125/",
+  "preparedAt": "2026-11-25",
+  "dependencies": [
+    "../map220-city-slide-20261124/",
+    "../map-roundtrip-zoom-20261124/"
+  ],
+  "fileCount": 13,
+  "totalBytes": 12444356,
+  "files": [
+    {
+      "file": "consume-icon-states-direct.png",
+      "bytes": 169645,
+      "sha256": "84e0fa9fd358a1b7d49c8c035a7d45e0fdbd61878b0d9b3bfc682c502e37a17f"
+    },
+    {
+      "file": "evidence.zip",
+      "bytes": 2359600,
+      "sha256": "f8fdb2b2d501a117e315544329d67f12a1123d1596c650bea8e9a802731a0613"
+    },
+    {
+      "file": "float-ui-A-F66.png",
+      "bytes": 254201,
+      "sha256": "49caa164c95c3104b6dbe1f65142235bce0c60fe99761626c6bcf4e4ed4deace"
+    },
+    {
+      "file": "function-timeline.png",
+      "bytes": 369730,
+      "sha256": "9ef29939aa8f7daa6e0578daf2c237e7d9851216e71cdce33f7a14c99de51072"
+    },
+    {
+      "file": "grand-tactics-icon-timeline.png",
+      "bytes": 123474,
+      "sha256": "5fc1201141a09658045e77231c36ecfdc2b5ecf04bf2e9777e4114440d737fd2"
+    },
+    {
+      "file": "README.md",
+      "bytes": 898,
+      "sha256": "799e541ba4928c39314fa9463732d50989e68b744c11e735b0fc99258587211a"
+    },
+    {
+      "file": "refresh-supply-grid-C-F555.png",
+      "bytes": 124037,
+      "sha256": "0e085f50642c6f7baa3e2f178f591d8c1179582c792ab6f40b368aabc700bbb7"
+    },
+    {
+      "file": "report-overview.png",
+      "bytes": 257084,
+      "sha256": "f3bd069f4bc705d621b5939933377370fe5e7fb31f68327e9a2f74c775e44d4f"
+    },
+    {
+      "file": "report.html",
+      "bytes": 8161673,
+      "sha256": "2f6c9faf01534521eaa7c4dccded37f3363bb7da8141e4032c8747d25986814b"
+    },
+    {
+      "file": "scheduler-loads.csv",
+      "bytes": 60274,
+      "sha256": "c1ac6a95f58dde1ffab0e5fe32110412d13ad927ba45328e2fecf98d66831e1a"
+    },
+    {
+      "file": "scheduler-loads.png",
+      "bytes": 424112,
+      "sha256": "2ae2614e9825b6f01ab9f4b431ab80397b73496f56e6a379a3abe5c586790e14"
+    },
+    {
+      "file": "timeline-A-F172.png",
+      "bytes": 139018,
+      "sha256": "4557b18f9f9b2127db67d918e3c39d2abe774bc9eca1e15cbb76543f26b91691"
+    },
+    {
+      "file": "validation.json",
+      "bytes": 610,
+      "sha256": "fdd88d94031cb2f2c819338522b166ad322d290ab54c4f44fea8e8cfa7ab46e2"
+    }
+  ]
+}
