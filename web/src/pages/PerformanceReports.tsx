@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Button, Empty, Input, Popover, Radio, Space, Spin } from 'antd';
-import { AreaChartOutlined, ArrowUpOutlined, ClockCircleOutlined, InfoCircleOutlined, MobileOutlined, SearchOutlined } from '@ant-design/icons';
+import { AreaChartOutlined, ArrowUpOutlined, ClockCircleOutlined, InfoCircleOutlined, MobileOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons';
 import { monthlyReports, monthLabel, periodBounds, periods, reportDay, type Period } from './report-dates';
 import './PerformanceReports.css';
 
@@ -41,7 +41,10 @@ function ReportTile({ report }: { report: PublishedReport }) {
     </div>
     <h3 title={title}>{title}</h3>
     <p className="report-summary">{summary}</p>
-    <div className="report-model"><MobileOutlined aria-hidden /><span>{model}</span></div>
+    <div className="report-metadata">
+      <div className="report-model"><MobileOutlined aria-hidden /><span>{model}</span></div>
+      <div className="report-version"><TagOutlined aria-hidden /><span>测试版本　{version}</span></div>
+    </div>
     <div className="report-sources">
       {sources.map((s, i) => <span key={s}>{i === 0 && <AreaChartOutlined aria-hidden />}{s}</span>)}
     </div>
